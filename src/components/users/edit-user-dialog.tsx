@@ -114,96 +114,98 @@ export function EditUserDialog({ user, onUpdateUser, children }: EditUserDialogP
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nome completo" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="email@exemplo.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Papel</FormLabel>
-                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto p-1">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um papel" />
-                      </SelectTrigger>
+                      <Input placeholder="Nome completo" {...field} />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Admin">Admin</SelectItem>
-                      <SelectItem value="Funcionário">Funcionário</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nova Senha</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="Deixe em branco para não alterar" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="space-y-2">
-                <FormLabel>Permissões</FormLabel>
-                <FormDescription>Selecione as ações que este usuário pode realizar.</FormDescription>
-                <div className="grid gap-2">
-                {Object.keys(user.permissions).map((key) => (
-                    <FormField
-                    key={key}
-                    control={form.control}
-                    name={`permissions.${key as keyof User['permissions']}`}
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
-                        <FormControl>
-                            <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                            />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                            {permissionLabels[key as keyof User['permissions']]}
-                        </FormLabel>
-                        </FormItem>
-                    )}
-                    />
-                ))}
-                </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="email@exemplo.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Papel</FormLabel>
+                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um papel" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Admin">Admin</SelectItem>
+                        <SelectItem value="Funcionário">Funcionário</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nova Senha</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Deixe em branco para não alterar" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="space-y-2">
+                  <FormLabel>Permissões</FormLabel>
+                  <FormDescription>Selecione as ações que este usuário pode realizar.</FormDescription>
+                  <div className="grid gap-2">
+                  {Object.keys(user.permissions).map((key) => (
+                      <FormField
+                      key={key}
+                      control={form.control}
+                      name={`permissions.${key as keyof User['permissions']}`}
+                      render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
+                          <FormControl>
+                              <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                              />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                              {permissionLabels[key as keyof User['permissions']]}
+                          </FormLabel>
+                          </FormItem>
+                      )}
+                      />
+                  ))}
+                  </div>
+              </div>
             </div>
-
-            <DialogFooter className="mt-4">
+            
+            <DialogFooter className="pt-4 border-t">
                 <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
                 <Button type="submit">Salvar Alterações</Button>
             </DialogFooter>
