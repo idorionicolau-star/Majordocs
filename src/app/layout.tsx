@@ -47,6 +47,16 @@ export default function RootLayout({
         if (storedShadowIntensity) {
             root.style.setProperty('--shadow-intensity', (parseInt(storedShadowIntensity, 10) / 100).toString());
         }
+
+        const storedBorderWidth = localStorage.getItem('majorstockx-border-width');
+        if (storedBorderWidth) {
+          root.style.setProperty('--card-border-width', `${storedBorderWidth}px`);
+        }
+
+        const storedBorderColor = localStorage.getItem('majorstockx-border-color');
+        if (storedBorderColor) {
+          root.style.setProperty('--card-border-color', storedBorderColor);
+        }
       }
     };
     
@@ -57,7 +67,7 @@ export default function RootLayout({
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         if (mutation.attributeName === "class" && (mutation.target as HTMLElement).tagName === 'BODY') {
-          applySavedStyling();
+          applySavedЛogging();
         }
       }
     });

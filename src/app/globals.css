@@ -31,6 +31,8 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --shadow-intensity: 0.6;
+    --card-border-width: 2px;
+    --card-border-color: hsl(var(--primary) / 0.2);
 
     /* Sidebar variables */
     --sidebar-background: 222 47% 11%;
@@ -63,6 +65,7 @@
     --border: 217 27% 20%; /* #334155 */
     --input: 217 27% 20%;
     --ring: 207 68% 53%;
+    --card-border-color: hsl(var(--primary) / 0.2);
 
     /* Sidebar variables */
     --sidebar-background: hsl(222 47% 11% / 0.8);

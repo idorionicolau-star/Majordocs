@@ -9,11 +9,23 @@ import { Slider } from "@/components/ui/slider";
 import { LocationsManager } from "@/components/settings/locations-manager";
 import { currentUser } from "@/lib/data";
 import { EmployeeManager } from "@/components/settings/employee-manager";
+import { cn } from "@/lib/utils";
+
+const colorOptions = [
+  { name: 'Primary', value: 'hsl(var(--primary))', className: 'bg-primary' },
+  { name: 'Accent', value: 'hsl(var(--accent))', className: 'bg-accent' },
+  { name: 'Destructive', value: 'hsl(var(--destructive))', className: 'bg-destructive' },
+  { name: 'Foreground', value: 'hsl(var(--foreground))', className: 'bg-foreground' },
+  { name: 'Border', value: 'hsl(var(--border))', className: 'bg-border' },
+];
 
 export default function SettingsPage() {
   const [isClient, setIsClient] = useState(false);
   const [radius, setRadius] = useState(0.8);
   const [shadowIntensity, setShadowIntensity] = useState(60);
+  const [borderWidth, setBorderWidth] = useState(2);
+  const [borderColor, setBorderColor] = useState('hsl(var(--primary))');
+
 
   useEffect(() => {
     setIsClient(true);
@@ -28,6 +40,16 @@ export default function SettingsPage() {
       const storedShadowIntensity = localStorage.getItem('majorstockx-shadow-intensity');
       if (storedShadowIntensity) {
         setShadowIntensity(parseInt(storedShadowIntensity, 10));
+      }
+
+      const storedBorderWidth = localStorage.getItem('majorstockx-border-width');
+      if (storedBorderWidth) {
+        setBorderWidth(parseInt(storedBorderWidth, 10));
+      }
+
+      const storedBorderColor = localStorage.getItem('majorstockx-border-color');
+      if (storedBorderColor) {
+        setBorderColor(storedBorderColor);
       }
     }
   }, []);
@@ -46,6 +68,20 @@ export default function SettingsPage() {
     }
   }, [shadowIntensity, isClient]);
 
+   useEffect(() => {
+    if (typeof window !== 'undefined' && isClient) {
+      const root = document.documentElement;
+      root.style.setProperty('--card-border-width', `${borderWidth}px`);
+    }
+  }, [borderWidth, isClient]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isClient) {
+      const root = document.documentElement;
+      root.style.setProperty('--card-border-color', borderColor);
+    }
+  }, [borderColor, isClient]);
+
 
   const handleRadiusChange = (value: number[]) => {
     const newRadius = value[0];
@@ -60,6 +96,21 @@ export default function SettingsPage() {
     setShadowIntensity(newIntensity);
     if (typeof window !== 'undefined') {
       localStorage.setItem('majorstockx-shadow-intensity', newIntensity.toString());
+    }
+  };
+
+  const handleBorderWidthChange = (value: number[]) => {
+    const newWidth = value[0];
+    setBorderWidth(newWidth);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('majorstockx-border-width', newWidth.toString());
+    }
+  };
+
+  const handleBorderColorChange = (color: string) => {
+    setBorderColor(color);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('majorstockx-border-color', color);
     }
   };
 
@@ -120,6 +171,42 @@ export default function SettingsPage() {
               <span className="w-12 text-right font-mono text-sm text-muted-foreground">
                 {shadowIntensity}
               </span>
+            </div>
+          </div>
+           <div className="space-y-2">
+            <Label htmlFor="border-width">Largura da Borda do Card</Label>
+             <p className="text-sm text-muted-foreground">Ajuste a espessura da borda dos cards.</p>
+            <div className="flex items-center gap-4">
+              <Slider
+                id="border-width"
+                min={0}
+                max={4}
+                step={0.5}
+                value={[borderWidth]}
+                onValueChange={handleBorderWidthChange}
+                className="w-[calc(100%-4rem)]"
+              />
+              <span className="w-12 text-right font-mono text-sm text-muted-foreground">
+                {borderWidth.toFixed(1)}px
+              </span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="border-color">Cor da Borda do Card</Label>
+             <p className="text-sm text-muted-foreground">Selecione a cor da borda para os cards.</p>
+            <div className="flex items-center gap-2 pt-2">
+              {colorOptions.map(color => (
+                <button
+                  key={color.name}
+                  onClick={() => handleBorderColorChange(color.value)}
+                  className={cn(
+                    "h-8 w-8 rounded-full border-2 transition-all",
+                    borderColor === color.value ? 'border-ring' : 'border-transparent',
+                    color.className
+                  )}
+                  title={color.name}
+                />
+              ))}
             </div>
           </div>
         </CardContent>
