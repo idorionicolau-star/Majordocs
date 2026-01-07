@@ -86,8 +86,10 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
             </div>
         `);
         
-        printWindow.document.write('<table><thead><tr><th>Produto</th><th>Quantidade</th></tr></thead><tbody>');
-        printWindow.document.write(`<tr><td>${sale.productName}</td><td>${sale.quantity}</td></tr>`);
+        printWindow.document.write('<table><thead><tr><th>Produto</th><th>Quantidade</th><th>Preço Unit.</th><th>Total</th></tr></thead><tbody>');
+        const unitPrice = sale.totalValue / sale.quantity;
+        printWindow.document.write(`<tr><td>${sale.productName}</td><td>${sale.quantity}</td><td>${unitPrice.toFixed(2)} MT</td><td>${sale.totalValue.toFixed(2)} MT</td></tr>`);
+        printWindow.document.write(`<tr class="total-row"><td colspan="3" style="text-align: right;"><strong>Total Geral:</strong></td><td><strong>${sale.totalValue.toFixed(2)} MT</strong></td></tr>`);
         printWindow.document.write('</tbody></table>');
 
         printWindow.document.write('<div style="margin-top: 4rem;"><p>Recebido por: ___________________________________</p><p>Data: ____/____/______</p></div>');
@@ -130,6 +132,17 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
     {
       accessorKey: "quantity",
       header: "Quantidade",
+    },
+    {
+      accessorKey: "totalValue",
+      header: "Valor Total",
+      cell: ({ row }) => {
+        const formatted = new Intl.NumberFormat('pt-MZ', {
+          style: 'currency',
+          currency: 'MZN',
+        }).format(row.original.totalValue);
+        return <div className="text-right font-medium">{formatted}</div>
+      }
     },
     {
       accessorKey: "date",

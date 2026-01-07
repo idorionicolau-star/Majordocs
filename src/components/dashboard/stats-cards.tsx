@@ -4,7 +4,7 @@ import { products, sales, users } from "@/lib/data";
 
 export function StatsCards() {
     const lowStockCount = products.filter(p => p.stock < p.lowStockThreshold).length;
-    const totalSalesValue = sales.reduce((sum, sale) => sum + sale.quantity * 5, 0); // Assuming average price 5
+    const totalSalesValue = sales.reduce((sum, sale) => sum + sale.totalValue, 0);
 
   const stats = [
     {
@@ -15,7 +15,7 @@ export function StatsCards() {
     },
     {
       title: "Volume de Vendas (Mês)",
-      value: `MT ${totalSalesValue.toLocaleString()}`,
+      value: `MT ${totalSalesValue.toLocaleString('pt-MZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: DollarSign,
       description: "Valor total das vendas",
     },

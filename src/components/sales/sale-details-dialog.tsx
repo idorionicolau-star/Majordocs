@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import type { Sale, Location } from "@/lib/types";
-import { Calendar, Clock, Box, User, Hash, MapPin } from "lucide-react";
+import { Calendar, Clock, Box, User, Hash, MapPin, DollarSign } from "lucide-react";
 
 interface SaleDetailsDialogProps {
   sale: Sale;
@@ -32,6 +32,11 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
 export function SaleDetailsDialog({ sale, locations, isMultiLocation }: SaleDetailsDialogProps) {
   const saleDate = new Date(sale.date);
   const locationName = isMultiLocation ? locations.find(l => l.id === sale.location)?.name || 'N/A' : null;
+  const formattedTotalValue = new Intl.NumberFormat('pt-MZ', {
+    style: 'currency',
+    currency: 'MZN',
+  }).format(sale.totalValue);
+
 
   return (
     <Dialog>
@@ -49,6 +54,7 @@ export function SaleDetailsDialog({ sale, locations, isMultiLocation }: SaleDeta
         </DialogHeader>
         <div className="grid gap-6 py-4">
           <DetailItem icon={Box} label="Produto" value={sale.productName} />
+           <DetailItem icon={DollarSign} label="Valor Total da Venda" value={formattedTotalValue} />
           <div className="grid grid-cols-2 gap-4">
             <DetailItem icon={Hash} label="Quantidade" value={sale.quantity} />
             <DetailItem icon={User} label="Vendedor" value={sale.soldBy} />

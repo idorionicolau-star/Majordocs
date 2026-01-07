@@ -66,18 +66,18 @@ export const users: User[] = [
 ];
 
 export const products: Product[] = [
-  { id: 'PROD001', name: 'Grelha 30x30 Floriada', category: 'Grelhas', stock: 150, lowStockThreshold: 50, criticalStockThreshold: 20, lastUpdated: '2024-05-20' },
-  { id: 'PROD002', name: 'Pavê 6cm Cinza', category: 'Pavê', stock: 2500, lowStockThreshold: 1000, criticalStockThreshold: 500, lastUpdated: '2024-05-21' },
-  { id: 'PROD003', name: 'Lancis de Concreto 1m', category: 'Lancis', stock: 45, lowStockThreshold: 30, criticalStockThreshold: 10, lastUpdated: '2024-05-22' },
-  { id: 'PROD004', name: 'Tanque Duplo 2m', category: 'Tanques', stock: 12, lowStockThreshold: 10, criticalStockThreshold: 5, lastUpdated: '2024-05-19' },
-  { id: 'PROD005', name: 'Tampa de Concreto 60x60', category: 'Tampas', stock: 80, lowStockThreshold: 40, criticalStockThreshold: 15, lastUpdated: '2024-05-21' },
-  { id: 'PROD006', name: 'Parede 3D Modelo Onda', category: 'Parede Rústica e 3D', stock: 300, lowStockThreshold: 100, criticalStockThreshold: 50, lastUpdated: '2024-05-22' },
+  { id: 'PROD001', name: 'Grelha 30x30 Floriada', category: 'Grelhas', stock: 150, price: 120.50, lowStockThreshold: 50, criticalStockThreshold: 20, lastUpdated: '2024-05-20' },
+  { id: 'PROD002', name: 'Pavê 6cm Cinza', category: 'Pavê', stock: 2500, price: 15.00, lowStockThreshold: 1000, criticalStockThreshold: 500, lastUpdated: '2024-05-21' },
+  { id: 'PROD003', name: 'Lancis de Concreto 1m', category: 'Lancis', stock: 45, price: 250.00, lowStockThreshold: 30, criticalStockThreshold: 10, lastUpdated: '2024-05-22' },
+  { id: 'PROD004', name: 'Tanque Duplo 2m', category: 'Tanques', stock: 12, price: 3500.00, lowStockThreshold: 10, criticalStockThreshold: 5, lastUpdated: '2024-05-19' },
+  { id: 'PROD005', name: 'Tampa de Concreto 60x60', category: 'Tampas', stock: 80, price: 450.00, lowStockThreshold: 40, criticalStockThreshold: 15, lastUpdated: '2024-05-21' },
+  { id: 'PROD006', name: 'Parede 3D Modelo Onda', category: 'Parede Rústica e 3D', stock: 300, price: 85.00, lowStockThreshold: 100, criticalStockThreshold: 50, lastUpdated: '2024-05-22' },
 ];
 
 export const sales: Sale[] = [
-  { id: 'SALE001', date: '2024-05-22T10:30:00Z', productName: 'Grelha 30x30 Floriada', quantity: 20, soldBy: 'João Silva', guideNumber: 'GT20240522-001' },
-  { id: 'SALE002', date: '2024-05-22T14:15:00Z', productName: 'Pavê 6cm Cinza', quantity: 500, soldBy: 'João Silva', guideNumber: 'GT20240522-002' },
-  { id: 'SALE003', date: '2024-05-21T11:00:00Z', productName: 'Lancis de Concreto 1m', quantity: 10, soldBy: 'João Silva', guideNumber: 'GT20240521-001' },
+  { id: 'SALE001', date: '2024-05-22T10:30:00Z', productName: 'Grelha 30x30 Floriada', quantity: 20, totalValue: 2410.00, soldBy: 'João Silva', guideNumber: 'GT20240522-001' },
+  { id: 'SALE002', date: '2024-05-22T14:15:00Z', productName: 'Pavê 6cm Cinza', quantity: 500, totalValue: 7500.00, soldBy: 'João Silva', guideNumber: 'GT20240522-002' },
+  { id: 'SALE003', date: '2024-05-21T11:00:00Z', productName: 'Lancis de Concreto 1m', quantity: 10, totalValue: 2500.00, soldBy: 'João Silva', guideNumber: 'GT20240521-001' },
 ];
 
 export const productions: Production[] = [

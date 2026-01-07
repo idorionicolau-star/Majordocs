@@ -31,6 +31,7 @@ export default function SalesPage() {
       date: now.toISOString(),
       productName: product.name,
       quantity: newSaleData.quantity,
+      totalValue: newSaleData.quantity * product.price,
       soldBy: currentUser.name,
       guideNumber: `GT${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${(sales.length + 1).toString().padStart(3, '0')}`,
       location: newSaleData.location,

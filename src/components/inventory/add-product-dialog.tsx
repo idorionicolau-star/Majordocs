@@ -39,6 +39,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   category: z.string().min(2, { message: "A categoria deve ter pelo menos 2 caracteres." }),
+  price: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
   stock: z.coerce.number().min(0, { message: "O estoque não pode ser negativo." }),
   lowStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
   criticalStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
@@ -61,6 +62,7 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations }: A
     defaultValues: {
       name: "",
       category: "",
+      price: 0,
       stock: 0,
       lowStockThreshold: 10,
       criticalStockThreshold: 5,
@@ -105,7 +107,7 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations }: A
             </Tooltip>
         </TooltipProvider>
 
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Adicionar Novo Produto</DialogTitle>
           <DialogDescription>
@@ -114,32 +116,34 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations }: A
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do Produto</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Grelha 30x30" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Categoria</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Grelhas" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Nome do Produto</FormLabel>
+                    <FormControl>
+                        <Input placeholder="Ex: Grelha 30x30" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Categoria</FormLabel>
+                    <FormControl>
+                        <Input placeholder="Ex: Grelhas" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
              {isMultiLocation && (
               <FormField
                 control={form.control}
@@ -166,6 +170,19 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations }: A
                 )}
               />
             )}
+             <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Preço Unitário (MT)</FormLabel>
+                    <FormControl>
+                        <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
             <div className="grid grid-cols-3 gap-4">
                 <FormField
                 control={form.control}

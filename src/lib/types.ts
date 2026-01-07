@@ -20,6 +20,7 @@ export type Product = {
   name: string;
   category: string;
   stock: number;
+  price: number;
   lowStockThreshold: number;
   criticalStockThreshold: number;
   lastUpdated: string;
@@ -31,6 +32,7 @@ export type Sale = {
   date: string;
   productName: string;
   quantity: number;
+  totalValue: number;
   soldBy: string;
   guideNumber: string;
   location?: string;
