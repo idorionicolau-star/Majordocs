@@ -84,7 +84,6 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => [
                   Editar Produto
                 </DropdownMenuItem>
              </EditProductDialog>
-            <DropdownMenuItem>Ver Histórico</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="text-destructive focus:bg-destructive/10 focus:text-destructive"
