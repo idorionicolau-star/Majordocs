@@ -57,7 +57,7 @@ export function ProductionDataTable<TData, TValue>({
                 <TableRow key={headerGroup.id} className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800">
                   {headerGroup.headers.map((header) => {
                     return (
-                      <TableHead key={header.id} className="px-8 py-6 text-[11px] font-[800] text-slate-400 uppercase tracking-[0.1em]">
+                      <TableHead key={header.id} className="px-4 sm:px-8 py-6 text-[11px] font-[800] text-slate-400 uppercase tracking-[0.1em]">
                         {header.isPlaceholder
                           ? null
                           : flexRender(
@@ -79,7 +79,7 @@ export function ProductionDataTable<TData, TValue>({
                      className="dark:border-slate-800/50 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-all group"
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="px-8 py-4">
+                      <TableCell key={cell.id} className="px-4 sm:px-8 py-4">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
