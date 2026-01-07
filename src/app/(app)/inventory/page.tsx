@@ -28,8 +28,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<Product[]>(initialProducts);
@@ -256,42 +256,56 @@ export default function InventoryPage() {
                       Gerencie os produtos do seu estoque.
                   </p>
               </div>
-              <div className="flex flex-row gap-2">
-                {isMultiLocation && (
-                    <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="shadow-lg">
-                        <ListFilter className="mr-2 h-4 w-4" />
-                        {locations.find(l => l.id === selectedLocation)?.name || "Todas as Localizações"}
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <ScrollArea className="h-[200px]">
-                        <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuCheckboxItem
-                        checked={selectedLocation === 'all'}
-                        onCheckedChange={() => setSelectedLocation('all')}
-                        >
-                        Todas as Localizações
-                        </DropdownMenuCheckboxItem>
-                        {locations.map(location => (
-                        <DropdownMenuCheckboxItem
-                            key={location.id}
-                            checked={selectedLocation === location.id}
-                            onCheckedChange={() => setSelectedLocation(location.id)}
-                        >
-                            {location.name}
-                        </DropdownMenuCheckboxItem>
-                        ))}
-                      </ScrollArea>
-                    </DropdownMenuContent>
-                    </DropdownMenu>
-                )}
-                <Button variant="outline" onClick={handlePrintCountForm} className="shadow-lg">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Form. Contagem
-                </Button>
+              <div className="flex items-center gap-2">
+                <TooltipProvider>
+                    {isMultiLocation && (
+                        <DropdownMenu>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" size="icon" className="shadow-lg">
+                                            <ListFilter className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Filtrar por Localização</p>
+                                </TooltipContent>
+                            </Tooltip>
+                            <DropdownMenuContent align="end">
+                                <ScrollArea className="h-[200px]">
+                                <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuCheckboxItem
+                                    checked={selectedLocation === 'all'}
+                                    onCheckedChange={() => setSelectedLocation('all')}
+                                >
+                                    Todas as Localizações
+                                </DropdownMenuCheckboxItem>
+                                {locations.map(location => (
+                                <DropdownMenuCheckboxItem
+                                    key={location.id}
+                                    checked={selectedLocation === location.id}
+                                    onCheckedChange={() => setSelectedLocation(location.id)}
+                                >
+                                    {location.name}
+                                </DropdownMenuCheckboxItem>
+                                ))}
+                                </ScrollArea>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="outline" size="icon" onClick={handlePrintCountForm} className="shadow-lg">
+                                <FileText className="h-4 w-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Imprimir Formulário de Contagem</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
               </div>
           </div>
         <InventoryDataTable 
