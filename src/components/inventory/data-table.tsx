@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -26,13 +27,14 @@ import { Input } from "@/components/ui/input"
 import { products } from "@/lib/data"
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from "lucide-react"
+import type { Product } from "@/lib/types"
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[]
+interface DataTableProps<TData extends Product, TValue> {
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
 }
 
-export function InventoryDataTable<TData, TValue>({
+export function InventoryDataTable<TData extends Product, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
@@ -55,9 +57,9 @@ export function InventoryDataTable<TData, TValue>({
   })
   
   const categories = React.useMemo(() => {
-    const categorySet = new Set(products.map(p => p.category));
+    const categorySet = new Set(data.map(p => p.category));
     return Array.from(categorySet);
-  }, []);
+  }, [data]);
 
   return (
     <div>

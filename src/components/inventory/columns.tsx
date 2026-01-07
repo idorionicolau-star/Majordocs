@@ -1,3 +1,4 @@
+
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
@@ -14,6 +15,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal } from "lucide-react"
 
+interface ColumnsOptions {
+  onAttemptDelete: (product: Product) => void;
+}
+
 const getStockStatus = (product: Product) => {
   if (product.stock <= product.criticalStockThreshold) {
     return "crítico";
@@ -24,7 +29,7 @@ const getStockStatus = (product: Product) => {
   return "ok";
 };
 
-export const columns: ColumnDef<Product>[] = [
+export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => [
   {
     accessorKey: "name",
     header: "Produto",
@@ -75,7 +80,12 @@ export const columns: ColumnDef<Product>[] = [
             <DropdownMenuItem>Editar Produto</DropdownMenuItem>
             <DropdownMenuItem>Ver Histórico</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">Apagar Produto</DropdownMenuItem>
+            <DropdownMenuItem 
+              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+              onClick={() => options.onAttemptDelete(product)}
+            >
+              Apagar Produto
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )

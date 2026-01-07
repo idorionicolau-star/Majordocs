@@ -9,9 +9,22 @@ import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const { toast } = useToast();
 
   const handleAddProduct = (newProduct: Omit<Product, 'id' | 'lastUpdated'>) => {
     const product: Product = {
@@ -20,6 +33,17 @@ export default function InventoryPage() {
       lastUpdated: new Date().toISOString().split('T')[0],
     };
     setProducts([product, ...products]);
+  };
+
+  const confirmDeleteProduct = () => {
+    if (productToDelete) {
+      setProducts(products.filter(p => p.id !== productToDelete.id));
+      toast({
+        title: "Produto Apagado",
+        description: `O produto "${productToDelete.name}" foi removido do inventário.`,
+      });
+      setProductToDelete(null);
+    }
   };
 
   const handlePrintCountForm = () => {
@@ -168,23 +192,44 @@ export default function InventoryPage() {
 
 
   return (
-    <div className="flex flex-col gap-6">
-        <div className="flex justify-between items-center">
-            <div>
-                <h1 className="text-3xl font-headline font-bold">Inventário</h1>
-                <p className="text-muted-foreground">
-                    Gerencie os produtos do seu estoque.
-                </p>
-            </div>
-            <div className="flex gap-2">
-                <Button variant="outline" onClick={handlePrintCountForm}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Form. Contagem
-                </Button>
-                <AddProductDialog onAddProduct={handleAddProduct} />
-            </div>
-        </div>
-      <InventoryDataTable columns={columns} data={products} />
-    </div>
+    <>
+      <AlertDialog open={!!productToDelete} onOpenChange={(open) => !open && setProductToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isto irá apagar permanentemente o produto
+              "{productToDelete?.name}" do seu inventário.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteProduct}>Apagar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="flex flex-col gap-6">
+          <div className="flex justify-between items-center">
+              <div>
+                  <h1 className="text-3xl font-headline font-bold">Inventário</h1>
+                  <p className="text-muted-foreground">
+                      Gerencie os produtos do seu estoque.
+                  </p>
+              </div>
+              <div className="flex gap-2">
+                  <Button variant="outline" onClick={handlePrintCountForm}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Form. Contagem
+                  </Button>
+                  <AddProductDialog onAddProduct={handleAddProduct} />
+              </div>
+          </div>
+        <InventoryDataTable 
+          columns={columns({ onAttemptDelete: (product) => setProductToDelete(product) })} 
+          data={products} 
+        />
+      </div>
+    </>
   );
 }
