@@ -11,10 +11,10 @@ export function Header() {
   const companyName = "Construções & Filhos, Lda";
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 sm:h-20 items-center gap-4 border-b px-4 sm:px-6 bg-primary text-primary-foreground border-blue-400/50 dark:border-blue-500/50">
+    <header className="sticky top-0 z-30 flex h-16 sm:h-20 items-center gap-4 border-b px-4 sm:px-6 bg-primary/90 backdrop-blur-lg text-primary-foreground border-primary/20">
         <div className="flex items-center gap-3">
             <Link href="/dashboard" className="flex items-center gap-2.5 font-semibold">
-                <Image src="/logo.svg" alt="MajorStockX Logo" width={28} height={28} className="text-primary invert brightness-0" />
+                <Image src="/logo.svg" alt="MajorStockX Logo" width={28} height={28} className="invert brightness-0" />
                 <span className="text-xl font-headline font-bold sm:inline-block">MajorStockX</span>
             </Link>
         </div>
