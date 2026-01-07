@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -28,12 +29,22 @@ export function SalesDataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+    const [isClient, setIsClient] = React.useState(false)
+
+    React.useEffect(() => {
+        setIsClient(true)
+    }, [])
+
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   })
+
+  if (!isClient) {
+    return null
+  }
 
   return (
     <div>

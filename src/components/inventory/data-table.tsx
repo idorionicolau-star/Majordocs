@@ -40,6 +40,11 @@ export function InventoryDataTable<TData extends Product, TValue>({
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [isClient, setIsClient] = React.useState(false)
+
+  React.useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   const table = useReactTable({
     data,
@@ -67,6 +72,10 @@ export function InventoryDataTable<TData extends Product, TValue>({
   }, [data]);
 
   const selectedCategories = (table.getColumn("category")?.getFilterValue() as string[]) || [];
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <div>
