@@ -13,8 +13,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal } from "lucide-react"
+import { Edit, MoreHorizontal, Trash2 } from "lucide-react"
 import { EditProductDialog } from "./edit-product-dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
 
 interface ColumnsOptions {
   onAttemptDelete: (product: Product) => void;
@@ -79,29 +80,39 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => [
       const product = row.original
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0 focus-visible:ring-offset-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Ações</DropdownMenuLabel>
-             <EditProductDialog product={product} onUpdateProduct={options.onUpdateProduct}>
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  Editar Produto
-                </DropdownMenuItem>
-             </EditProductDialog>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-              onClick={() => options.onAttemptDelete(product)}
-            >
-              Apagar Produto
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center justify-end gap-2">
+            <TooltipProvider>
+                <EditProductDialog product={product} onUpdateProduct={options.onUpdateProduct}>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Edit className="h-4 w-4" />
+                                <span className="sr-only">Editar</span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Editar Produto</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </EditProductDialog>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => options.onAttemptDelete(product)}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Apagar</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Apagar Produto</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        </div>
       )
     },
   },
