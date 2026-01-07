@@ -94,7 +94,7 @@ export function InventoryDataTable<TData extends Product, TValue>({
                      className="dark:border-slate-800/50 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-all group"
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="px-8 py-6">
+                      <TableCell key={cell.id} className="px-8 py-4">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
