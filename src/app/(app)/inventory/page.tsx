@@ -25,39 +25,140 @@ export default function InventoryPage() {
   const handlePrintCountForm = () => {
     const printWindow = window.open('', '', 'height=800,width=800');
     if (printWindow) {
-      printWindow.document.write('<html><head><title>Formulário de Contagem de Estoque</title>');
+      printWindow.document.write('<!DOCTYPE html><html><head><title>Formulário de Contagem de Estoque</title>');
+      printWindow.document.write(`
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+      `);
       printWindow.document.write(`
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; padding: 20px; }
-          h1 { text-align: center; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-          th { background-color: #f2f2f2; }
+          @media screen {
+            body {
+              background-color: #f0f2f5;
+            }
+          }
+          body { 
+            font-family: 'PT Sans', sans-serif; 
+            line-height: 1.6; 
+            color: #333;
+            margin: 0;
+            padding: 2rem;
+          }
+          .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 2rem;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            border-radius: 8px;
+          }
+          .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+          }
+          .header h1 { 
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2rem;
+            color: #2074d4; /* primary color */
+            margin: 0;
+          }
+          .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          }
+          .logo span {
+             font-family: 'Space Grotesk', sans-serif;
+             font-size: 1.5rem;
+             font-weight: bold;
+             color: #2074d4;
+          }
+          p { margin-bottom: 1rem; }
+          table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 1.5rem; 
+          }
+          thead {
+            display: table-header-group; /* Important for repeating headers */
+          }
+          th, td { 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            text-align: left; 
+          }
+          th { 
+            background-color: #f9fafb;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            color: #374151;
+          }
           .count-col { width: 150px; }
+          .signature-line {
+            border-top: 1px solid #999;
+            width: 250px;
+            margin-top: 3rem;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 3rem;
+            font-size: 0.8rem;
+            color: #999;
+          }
+          @page {
+            size: A4;
+            margin: 1in;
+          }
           @media print {
             .no-print { display: none; }
-            body { -webkit-print-color-adjust: exact; }
+            body { -webkit-print-color-adjust: exact; padding: 0; }
+            .container { box-shadow: none; border-radius: 0; }
           }
         </style>
       `);
-      printWindow.document.write('</head><body>');
-      printWindow.document.write('<h1>Formulário de Contagem de Estoque</h1>');
-      printWindow.document.write(`<p>Data: ${new Date().toLocaleDateString('pt-BR')}</p>`);
+      printWindow.document.write('</head><body><div class="container">');
+      
+      printWindow.document.write(`
+        <div class="header">
+          <h1>Contagem de Estoque</h1>
+          <div class="logo">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #2074d4;">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></line>
+            </svg>
+            <span>MajorStockX</span>
+          </div>
+        </div>
+      `);
+
+      printWindow.document.write(`<p><b>Data da Contagem:</b> ${new Date().toLocaleDateString('pt-BR')}</p>`);
+      printWindow.document.write(`<p><b>Responsável:</b> _________________________</p>`);
+
       printWindow.document.write('<table>');
-      printWindow.document.write('<thead><tr><th>Produto</th><th class="count-col">Quantidade Contada</th></tr></thead>');
+      printWindow.document.write('<thead><tr><th>Produto</th><th>Categoria</th><th class="count-col">Qtd. Contada</th></tr></thead>');
       printWindow.document.write('<tbody>');
-      products.forEach(product => {
-        printWindow.document.write(`<tr><td>${product.name}</td><td></td></tr>`);
+      products.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)).forEach(product => {
+        printWindow.document.write(`<tr><td>${product.name}</td><td>${product.category}</td><td></td></tr>`);
       });
       printWindow.document.write('</tbody></table>');
-      printWindow.document.write('</body></html>');
+
+      printWindow.document.write('<div class="signature-line"><p>Assinatura do Responsável</p></div>');
+      printWindow.document.write('<div class="footer"><p>MajorStockX &copy; ' + new Date().getFullYear() + '</p></div>');
+      
+      printWindow.document.write('</div></body></html>');
       printWindow.document.close();
       printWindow.focus();
       
       setTimeout(() => {
         printWindow.print();
         printWindow.close();
-      }, 250);
+      }, 500);
     }
   };
 
