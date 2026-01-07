@@ -9,11 +9,11 @@ import { Users } from "lucide-react"
 export function MobileNav() {
   const pathname = usePathname()
 
-  const mainNavItems = navItems.filter(item => item.href !== '/users');
+  const mainNavItems = navItems.filter(item => item.href !== '/settings');
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm">
-      <nav className="grid grid-cols-5 items-center max-w-2xl mx-auto">
+    <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm sm:hidden">
+      <nav className="grid grid-cols-4 items-center max-w-2xl mx-auto">
         {mainNavItems.map((item) => (
           <Link
             key={item.href}
