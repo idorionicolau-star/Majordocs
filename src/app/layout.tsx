@@ -74,7 +74,7 @@ export default function RootLayout({
         <title>MajorStockX</title>
         <meta name="description" content="Sistema de gestão de estoque e produção para materiais de construção." />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
         <meta name="theme-color" content="#f0f2f5" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#1a2233" media="(prefers-color-scheme: dark)" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -87,7 +87,7 @@ export default function RootLayout({
           storageKey="majorstockx-theme"
         >
           {isClient ? children : null}
-          {isClient ? <Toaster /> : null}
+          {isClient && <Toaster />}
         </ThemeProvider>
       </body>
     </html>
