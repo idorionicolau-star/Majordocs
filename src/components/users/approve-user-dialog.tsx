@@ -1,7 +1,6 @@
 
 "use client";
 
-import { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +12,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@/lib/types";
 
@@ -24,7 +22,6 @@ interface ApproveUserDialogProps {
 }
 
 export function ApproveUserDialog({ user, onApprove, children }: ApproveUserDialogProps) {
-  const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
   const handleApprove = () => {
@@ -32,12 +29,12 @@ export function ApproveUserDialog({ user, onApprove, children }: ApproveUserDial
     toast({
       title: "Usuário aprovado",
       description: `${user.name} foi aprovado com sucesso.`,
+      duration: 1000,
     });
-    setOpen(false);
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog>
       <AlertDialogTrigger asChild>
         {children}
       </AlertDialogTrigger>
