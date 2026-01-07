@@ -10,7 +10,7 @@ export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <div className="glass-nav fixed bottom-0 left-0 right-0 z-40 border-t md:hidden">
+    <div className="glass-nav fixed bottom-0 left-0 right-0 z-40 border-t">
       <nav className="grid grid-cols-5 items-center max-w-2xl mx-auto">
         {mainNavItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
