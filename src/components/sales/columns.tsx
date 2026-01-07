@@ -6,10 +6,14 @@ import { Sale, Location, Product } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { MoreHorizontal, Edit, Printer, FileSearch } from "lucide-react"
 import { useEffect, useState } from "react"
-import { SaleDetailsDialog } from "./sale-details-dialog"
+import { SaleDetailsDialog, SaleDetailsDialogContent } from "./sale-details-dialog"
 import { formatCurrency } from "@/lib/utils"
 import { EditSaleDialog } from "./edit-sale-dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
+import {
+  Dialog,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 interface ColumnsOptions {
   locations: Location[];
@@ -156,21 +160,24 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
         const sale = row.original;
         return (
           <div className="flex items-center justify-end gap-2">
-            <SaleDetailsDialog sale={sale} locations={options.locations} isMultiLocation={isMultiLocation}>
-              <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <FileSearch className="h-4 w-4" />
-                            <span className="sr-only">Ver Detalhes</span>
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Ver Detalhes</p>
-                    </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </SaleDetailsDialog>
+            <Dialog>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <FileSearch className="h-4 w-4" />
+                                    <span className="sr-only">Ver Detalhes</span>
+                                </Button>
+                            </DialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Ver Detalhes</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+                <SaleDetailsDialogContent sale={sale} locations={options.locations} isMultiLocation={isMultiLocation} />
+            </Dialog>
 
             <EditSaleDialog 
               sale={sale}
