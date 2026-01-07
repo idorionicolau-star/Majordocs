@@ -94,19 +94,12 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  
-  html {
-    --radius: 1rem;
-    --shadow-y: 8px;
-    --shadow-blur: 25px;
-    --shadow-opacity: 0.1;
-  }
 }
 
 @layer components {
   /* Cards and major elements */
   .card {
-    box-shadow: 0 var(--shadow-y) var(--shadow-blur) calc(var(--shadow-spread) + var(--shadow-y) / 2) hsla(var(--shadow-color), var(--shadow-opacity));
+    box-shadow: 0 var(--shadow-y) var(--shadow-blur) rgba(var(--shadow-color), var(--shadow-opacity));
     @apply transition-all duration-300 ease-out;
   }
   .card:hover {

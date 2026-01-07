@@ -37,28 +37,30 @@ export default function RootLayout({
     setIsClient(true);
     const applySavedStyling = () => {
       if (typeof window !== 'undefined') {
+        const root = document.documentElement;
+
         const storedRadius = localStorage.getItem('majorstockx-radius');
         if (storedRadius) {
-          document.documentElement.style.setProperty('--radius', `${storedRadius}rem`);
+          root.style.setProperty('--radius', `${storedRadius}rem`);
         }
         
-        const shadowsEnabled = localStorage.getItem('majorstockx-shadows-enabled') 
-          ? JSON.parse(localStorage.getItem('majorstockx-shadows-enabled')!)
-          : true;
+        const shadowsEnabled = localStorage.getItem('majorstockx-shadows-enabled') === 'true';
 
         const storedShadowY = localStorage.getItem('majorstockx-shadow-y');
         if (storedShadowY) {
-          document.documentElement.style.setProperty('--shadow-y', `${storedShadowY}px`);
+          root.style.setProperty('--shadow-y', `${storedShadowY}px`);
         }
 
         const storedShadowBlur = localStorage.getItem('majorstockx-shadow-blur');
         if (storedShadowBlur) {
-          document.documentElement.style.setProperty('--shadow-blur', `${storedShadowBlur}px`);
+          root.style.setProperty('--shadow-blur', `${storedShadowBlur}px`);
         }
-
+        
         const storedShadowOpacity = localStorage.getItem('majorstockx-shadow-opacity');
         if (storedShadowOpacity) {
-          document.documentElement.style.setProperty('--shadow-opacity', shadowsEnabled ? storedShadowOpacity : '0');
+            root.style.setProperty('--shadow-opacity', shadowsEnabled ? storedShadowOpacity : '0');
+        } else {
+             root.style.setProperty('--shadow-opacity', shadowsEnabled ? '0.1' : '0');
         }
       }
     };
