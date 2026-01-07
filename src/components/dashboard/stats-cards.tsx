@@ -1,7 +1,8 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Box, DollarSign, AlertTriangle, Users } from "lucide-react";
 import { products, sales, users } from "@/lib/data";
 import { formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 export function StatsCards() {
     const lowStockCount = products.filter(p => p.stock < p.lowStockThreshold).length;
@@ -15,16 +16,16 @@ export function StatsCards() {
       description: "Tipos de produto distintos",
     },
     {
-      title: "Volume de Vendas (Mês)",
+      title: "Vendas (Mês)",
       value: formatCurrency(totalSalesValue),
       icon: DollarSign,
       description: "Valor total das vendas",
     },
     {
-      title: "Itens com Estoque Baixo",
+      title: "Estoque Baixo",
       value: lowStockCount,
       icon: AlertTriangle,
-      description: "Produtos que precisam de reposição",
+      description: "Itens que precisam de reposição",
       isWarning: true,
     },
     {
@@ -36,17 +37,22 @@ export function StatsCards() {
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
       {stats.map((stat) => (
-        <Card key={stat.title}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-            <stat.icon className={`h-4 w-4 text-muted-foreground ${stat.isWarning ? 'text-destructive' : ''}`} />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${stat.isWarning ? 'text-destructive' : ''}`}>{stat.value}</div>
-            <p className="text-xs text-muted-foreground">{stat.description}</p>
-          </CardContent>
+        <Card key={stat.title} className="flex flex-col justify-between p-6">
+            <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                 <div className={cn(
+                    "flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 shadow-inner-soft",
+                    stat.isWarning ? "from-destructive/20 to-destructive/5" : ""
+                 )}>
+                    <stat.icon className={cn("h-6 w-6 text-primary/80", stat.isWarning ? "text-destructive/80" : "")} />
+                </div>
+            </div>
+            <div>
+                <h3 className={cn("text-3xl font-extrabold", stat.isWarning ? 'text-destructive' : '')}>{stat.value}</h3>
+                <p className="text-xs text-muted-foreground">{stat.description}</p>
+            </div>
         </Card>
       ))}
     </div>
