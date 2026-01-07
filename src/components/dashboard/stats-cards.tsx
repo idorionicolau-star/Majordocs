@@ -60,11 +60,23 @@ export function StatsCards() {
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
       {stats.map((stat) => (
         <Card key={stat.title} className="glass-card flex items-center gap-6 p-6 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 group">
-             <div className={cn(
-                "flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300",
-                colorClasses[stat.color as keyof typeof colorClasses]
-             )}>
-                <stat.icon className="h-7 w-7" strokeWidth={2.5} />
+             <div 
+                className={cn(
+                  "flex items-center justify-center rounded-2xl bg-gradient-to-br flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300",
+                  colorClasses[stat.color as keyof typeof colorClasses]
+                )}
+                style={{ 
+                  height: 'calc(var(--stats-icon-size, 16px) * 3.5)', 
+                  width: 'calc(var(--stats-icon-size, 16px) * 3.5)' 
+                }}
+             >
+                <stat.icon 
+                  strokeWidth={2.5} 
+                  style={{ 
+                    height: 'calc(var(--stats-icon-size, 16px) * 1.5)', 
+                    width: 'calc(var(--stats-icon-size, 16px) * 1.5)' 
+                  }} 
+                />
             </div>
             <div className="flex flex-col">
                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>

@@ -24,6 +24,7 @@ export default function SettingsPage() {
   const [radius, setRadius] = useState(0.8);
   const [borderWidth, setBorderWidth] = useState(1);
   const [borderColor, setBorderColor] = useState('hsl(var(--primary))');
+  const [iconSize, setIconSize] = useState(16);
 
 
   useEffect(() => {
@@ -44,6 +45,10 @@ export default function SettingsPage() {
       const storedBorderColor = localStorage.getItem('majorstockx-border-color');
       if (storedBorderColor) {
         setBorderColor(storedBorderColor);
+      }
+       const storedIconSize = localStorage.getItem('majorstockx-icon-size');
+      if (storedIconSize) {
+        setIconSize(parseFloat(storedIconSize));
       }
     }
   }, []);
@@ -68,6 +73,13 @@ export default function SettingsPage() {
       root.style.setProperty('--card-border-color', borderColor);
     }
   }, [borderColor, isClient]);
+  
+    useEffect(() => {
+    if (typeof window !== 'undefined' && isClient) {
+      const root = document.documentElement;
+      root.style.setProperty('--stats-icon-size', `${iconSize}px`);
+    }
+  }, [iconSize, isClient]);
 
 
   const handleRadiusChange = (value: number[]) => {
@@ -92,6 +104,15 @@ export default function SettingsPage() {
       localStorage.setItem('majorstockx-border-color', color);
     }
   };
+
+  const handleIconSizeChange = (value: number[]) => {
+    const newSize = value[0];
+    setIconSize(newSize);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('majorstockx-icon-size', newSize.toString());
+    }
+  };
+
 
   if (!isClient) {
     return null; // Or a loading skeleton
@@ -168,6 +189,24 @@ export default function SettingsPage() {
                   title={color.name}
                 />
               ))}
+            </div>
+          </div>
+           <div className="space-y-2">
+            <Label htmlFor="icon-size">Tamanho do Ícone do Dashboard</Label>
+             <p className="text-sm text-muted-foreground">Ajuste o tamanho dos ícones nos cards de estatísticas.</p>
+            <div className="flex items-center gap-4">
+              <Slider
+                id="icon-size"
+                min={12}
+                max={24}
+                step={1}
+                value={[iconSize]}
+                onValueChange={handleIconSizeChange}
+                className="w-[calc(100%-4rem)]"
+              />
+              <span className="w-12 text-right font-mono text-sm text-muted-foreground">
+                {iconSize.toFixed(0)}px
+              </span>
             </div>
           </div>
         </CardContent>
