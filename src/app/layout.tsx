@@ -45,16 +45,6 @@ export default function RootLayout({
         
         const storedShadowsEnabled = localStorage.getItem('majorstockx-shadows-enabled');
         const shadowsEnabled = storedShadowsEnabled ? JSON.parse(storedShadowsEnabled) : true;
-
-        const storedShadowY = localStorage.getItem('majorstockx-shadow-y');
-        if (storedShadowY) {
-          root.style.setProperty('--shadow-y', `${storedShadowY}px`);
-        }
-
-        const storedShadowBlur = localStorage.getItem('majorstockx-shadow-blur');
-        if (storedShadowBlur) {
-          root.style.setProperty('--shadow-blur', `${storedShadowBlur}px`);
-        }
         
         const storedShadowOpacity = localStorage.getItem('majorstockx-shadow-opacity');
         const currentTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
