@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +9,6 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -38,8 +38,15 @@ const formSchema = z.object({
   role: z.enum(["Admin", "Funcionário"]),
 });
 
-export function AddUserDialog() {
-  const form = useForm<z.infer<typeof formSchema>>({
+type AddUserFormValues = z.infer<typeof formSchema>;
+
+interface AddUserDialogProps {
+    onAddUser: (user: AddUserFormValues) => void;
+}
+
+export function AddUserDialog({ onAddUser }: AddUserDialogProps) {
+  const [open, setOpen] = useState(false);
+  const form = useForm<AddUserFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
@@ -48,13 +55,14 @@ export function AddUserDialog() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    // Here you would typically handle the form submission, e.g., by calling an API.
+  function onSubmit(values: AddUserFormValues) {
+    onAddUser(values);
+    form.reset();
+    setOpen(false);
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
@@ -118,9 +126,7 @@ export function AddUserDialog() {
               )}
             />
             <DialogFooter>
-                <DialogClose asChild>
-                    <Button type="button" variant="secondary">Cancelar</Button>
-                </DialogClose>
+                <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
                 <Button type="submit">Adicionar Usuário</Button>
             </DialogFooter>
           </form>
