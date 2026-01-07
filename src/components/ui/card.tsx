@@ -18,7 +18,7 @@ const Card = React.forwardRef<
         borderWidth: 'var(--card-border-width, 1px)',
         borderColor: 'var(--card-border-color, hsl(var(--border)))',
         borderStyle: 'solid',
-        boxShadow: `0 1px 2px 0 rgba(0,0,0,0.05), 0 0 0 0 transparent`,
+        boxShadow: `0 0 0 0px var(--card-border-color), 0 1px 2px 0 rgba(0,0,0,0.05)`,
     }}
     {...props}
   />

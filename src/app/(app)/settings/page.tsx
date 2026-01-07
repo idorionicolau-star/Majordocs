@@ -23,7 +23,7 @@ export default function SettingsPage() {
   const [isClient, setIsClient] = useState(false);
   const [radius, setRadius] = useState(0.8);
   const [shadowIntensity, setShadowIntensity] = useState(60);
-  const [borderWidth, setBorderWidth] = useState(2);
+  const [borderWidth, setBorderWidth] = useState(1);
   const [borderColor, setBorderColor] = useState('hsl(var(--primary))');
 
 
