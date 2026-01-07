@@ -6,13 +6,10 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 
 export default function SettingsPage() {
   const [isClient, setIsClient] = useState(false);
   const [radius, setRadius] = useState(1);
-  const [shadowsEnabled, setShadowsEnabled] = useState(true);
-  const [shadowOpacity, setShadowOpacity] = useState(0.1);
 
   useEffect(() => {
     setIsClient(true);
@@ -23,20 +20,6 @@ export default function SettingsPage() {
       if (storedRadius) {
         setRadius(parseFloat(storedRadius));
       }
-
-      const storedShadowsEnabled = localStorage.getItem('majorstockx-shadows-enabled');
-      const shadowsAreEnabled = storedShadowsEnabled ? JSON.parse(storedShadowsEnabled) : true;
-      setShadowsEnabled(shadowsAreEnabled);
-      
-      const currentTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
-      const defaultOpacity = currentTheme === 'dark' ? 0.25 : 0.1;
-      
-      const storedShadowOpacity = localStorage.getItem('majorstockx-shadow-opacity');
-      if (storedShadowOpacity) {
-        setShadowOpacity(parseFloat(storedShadowOpacity));
-      } else {
-        setShadowOpacity(defaultOpacity);
-      }
     }
   }, []);
 
@@ -44,39 +27,14 @@ export default function SettingsPage() {
     if (typeof window !== 'undefined' && isClient) {
       const root = document.documentElement;
       root.style.setProperty('--radius', `${radius}rem`);
-      root.style.setProperty('--shadow-opacity', shadowsEnabled ? `${shadowOpacity}` : '0');
     }
-  }, [radius, shadowsEnabled, shadowOpacity, isClient]);
+  }, [radius, isClient]);
 
   const handleRadiusChange = (value: number[]) => {
     const newRadius = value[0];
     setRadius(newRadius);
     if (typeof window !== 'undefined') {
       localStorage.setItem('majorstockx-radius', newRadius.toString());
-    }
-  };
-
-  const handleShadowsEnabledChange = (checked: boolean) => {
-    setShadowsEnabled(checked);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('majorstockx-shadows-enabled', JSON.stringify(checked));
-      const root = document.documentElement;
-      if (checked) {
-        const storedOpacity = localStorage.getItem('majorstockx-shadow-opacity');
-        const currentTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
-        const defaultOpacity = currentTheme === 'dark' ? '0.25' : '0.1';
-        root.style.setProperty('--shadow-opacity', storedOpacity || defaultOpacity);
-      } else {
-        root.style.setProperty('--shadow-opacity', '0');
-      }
-    }
-  };
-
-  const handleShadowOpacityChange = (value: number[]) => {
-    const newShadowOpacity = value[0];
-    setShadowOpacity(newShadowOpacity);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('majorstockx-shadow-opacity', newShadowOpacity.toString());
     }
   };
 
@@ -118,34 +76,6 @@ export default function SettingsPage() {
               />
               <span className="w-12 text-right font-mono text-sm text-muted-foreground">
                 {radius.toFixed(1)}rem
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-             <Label htmlFor="shadows-enabled" className={`${!shadowsEnabled ? 'text-muted-foreground' : ''}`}>
-                Sombras
-             </Label>
-             <Switch
-                id="shadows-enabled"
-                checked={shadowsEnabled}
-                onCheckedChange={handleShadowsEnabledChange}
-             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="shadow-opacity" className={`${!shadowsEnabled ? 'text-muted-foreground' : ''}`}>Intensidade da Sombra</Label>
-            <div className="flex items-center gap-4">
-              <Slider
-                id="shadow-opacity"
-                min={0.05}
-                max={0.3}
-                step={0.01}
-                value={[shadowOpacity]}
-                onValueChange={handleShadowOpacityChange}
-                className="w-[calc(100%-4rem)]"
-                disabled={!shadowsEnabled}
-              />
-              <span className="w-12 text-right font-mono text-sm text-muted-foreground">
-                {shadowOpacity.toFixed(2)}
               </span>
             </div>
           </div>

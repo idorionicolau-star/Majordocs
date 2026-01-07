@@ -42,18 +42,6 @@ export default function RootLayout({
         if (storedRadius) {
           root.style.setProperty('--radius', `${storedRadius}rem`);
         }
-        
-        const storedShadowsEnabled = localStorage.getItem('majorstockx-shadows-enabled');
-        const shadowsEnabled = storedShadowsEnabled ? JSON.parse(storedShadowsEnabled) : true;
-        
-        if (shadowsEnabled) {
-          const storedShadowOpacity = localStorage.getItem('majorstockx-shadow-opacity');
-          const currentTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
-          const defaultOpacity = currentTheme === 'dark' ? '0.25' : '0.1';
-          root.style.setProperty('--shadow-opacity', storedShadowOpacity || defaultOpacity);
-        } else {
-            root.style.setProperty('--shadow-opacity', '0');
-        }
       }
     };
     
