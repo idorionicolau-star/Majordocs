@@ -1,8 +1,7 @@
 import { users } from "@/lib/data";
 import { columns } from "@/components/users/columns";
 import { UsersDataTable } from "@/components/users/data-table";
-import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { AddUserDialog } from "@/components/users/add-user-dialog";
 
 export default function UsersPage() {
   return (
@@ -14,10 +13,7 @@ export default function UsersPage() {
                     Gerencie os usuários e permissões do sistema.
                 </p>
             </div>
-            <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Adicionar Usuário
-            </Button>
+            <AddUserDialog />
         </div>
       <UsersDataTable columns={columns} data={users} />
     </div>
