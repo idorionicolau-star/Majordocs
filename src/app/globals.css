@@ -14,7 +14,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 224 71% 4%;
 
-    --primary: 220 89% 63%; /* blue-500 */
+    --primary: 347 90% 57%; /* rose-500 */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 96%;
@@ -31,13 +31,13 @@
 
     --border: 220 13% 88%; /* slate-200 */
     --input: 220 13% 88%;
-    --ring: 220 89% 63%;
+    --ring: 347 90% 57%;
     
-    --radius: 0.3rem; /* 8px */
+    --radius: 0.3rem;
     
-    --chart-1: 220 89% 63%;
+    --chart-1: 347 90% 57%;
     --chart-2: 142 71% 45%;
-    --chart-3: 347 90% 57%;
+    --chart-3: 220 89% 63%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
   }
@@ -52,7 +52,7 @@
     --popover: 222 47% 9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 220 89% 63%; /* blue-500 */
+    --primary: 340 82% 64%; /* rose-500 dark */
     --primary-foreground: 210 40% 98%;
 
     --secondary: 224 30% 15%;
@@ -69,7 +69,7 @@
 
     --border: 217 27% 20%; /* slate-800 */
     --input: 217 27% 20%;
-    --ring: 220 89% 63%;
+    --ring: 340 82% 64%;
   }
 }
 
