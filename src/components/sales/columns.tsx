@@ -6,7 +6,7 @@ import { Sale, Location, Product } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { MoreHorizontal, Edit, Printer, FileSearch } from "lucide-react"
 import { useEffect, useState } from "react"
-import { SaleDetailsDialog, SaleDetailsDialogContent } from "./sale-details-dialog"
+import { SaleDetailsDialogContent } from "./sale-details-dialog"
 import { formatCurrency } from "@/lib/utils"
 import { EditSaleDialog } from "./edit-sale-dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
@@ -23,6 +23,10 @@ interface ColumnsOptions {
 
 export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
   const [isMultiLocation, setIsMultiLocation] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -160,11 +164,11 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
         const sale = row.original;
         return (
           <div className="flex items-center justify-end gap-2">
-            <Dialog>
+            <Dialog onOpenChange={(open) => { if(!open) setSelectedSale(null); setIsDetailsOpen(open); }}>
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <DialogTrigger asChild>
+                            <DialogTrigger asChild onClick={() => setSelectedSale(sale)}>
                                 <Button variant="ghost" size="icon" className="h-8 w-8">
                                     <FileSearch className="h-4 w-4" />
                                     <span className="sr-only">Ver Detalhes</span>
@@ -176,28 +180,36 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
                         </TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
-                <SaleDetailsDialogContent sale={sale} locations={options.locations} isMultiLocation={isMultiLocation} />
+                {selectedSale && isDetailsOpen && selectedSale.id === sale.id && (
+                     <SaleDetailsDialogContent sale={selectedSale} locations={options.locations} isMultiLocation={isMultiLocation} />
+                )}
             </Dialog>
 
-            <EditSaleDialog 
-              sale={sale}
-              products={options.products}
-              onUpdateSale={options.onUpdateSale}
-            >
-               <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Edit className="h-4 w-4" />
-                      <span className="sr-only">Editar Venda</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Editar Venda</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </EditSaleDialog>
+            <Dialog onOpenChange={(open) => { if(!open) setSelectedSale(null); setIsEditDialogOpen(open) }}>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <DialogTrigger asChild onClick={() => setSelectedSale(sale)}>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <Edit className="h-4 w-4" />
+                                    <span className="sr-only">Editar Venda</span>
+                                </Button>
+                            </DialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Editar Venda</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+                 {selectedSale && isEditDialogOpen && selectedSale.id === sale.id && (
+                    <EditSaleDialog 
+                        sale={selectedSale}
+                        products={options.products}
+                        onUpdateSale={options.onUpdateSale}
+                        onOpenChange={setIsEditDialogOpen}
+                    />
+                )}
+            </Dialog>
             
             <TooltipProvider>
               <Tooltip>

@@ -45,12 +45,10 @@ interface EditSaleDialogProps {
     sale: Sale;
     products: Product[];
     onUpdateSale: (sale: Sale) => void;
-    children: React.ReactNode;
+    onOpenChange: (open: boolean) => void;
 }
 
-export function EditSaleDialog({ sale, products, onUpdateSale, children }: EditSaleDialogProps) {
-  const [open, setOpen] = useState(false);
-  
+export function EditSaleDialog({ sale, products, onUpdateSale, onOpenChange }: EditSaleDialogProps) {
   const form = useForm<EditSaleFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -78,14 +76,13 @@ export function EditSaleDialog({ sale, products, onUpdateSale, children }: EditS
   }, [selectedProduct, form, sale.productId, products]);
 
   useEffect(() => {
-    if (open) {
-      form.reset({
+    form.reset({
         productId: sale.productId,
         quantity: sale.quantity,
         unitPrice: sale.unitPrice,
-      });
-    }
-  }, [open, sale, form]);
+    });
+  }, [sale, form]);
+
 
   const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
 
@@ -99,14 +96,10 @@ export function EditSaleDialog({ sale, products, onUpdateSale, children }: EditS
       productName: product.name,
       totalValue: values.quantity * values.unitPrice,
     });
-    setOpen(false);
+    onOpenChange(false);
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Editar Venda #{sale.guideNumber}</DialogTitle>
@@ -170,12 +163,11 @@ export function EditSaleDialog({ sale, products, onUpdateSale, children }: EditS
             </div>
 
             <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+                <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
                 <Button type="submit">Salvar Alterações</Button>
             </DialogFooter>
           </form>
         </Form>
       </DialogContent>
-    </Dialog>
   );
 }
