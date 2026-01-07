@@ -46,7 +46,6 @@
     --shadow-opacity: 0.1;
     --shadow-y: 8px;
     --shadow-blur: 25px;
-    --shadow-spread: -5px;
   }
 
   .dark {
@@ -100,10 +99,6 @@
   /* Cards and major elements */
   .card {
     box-shadow: 0 var(--shadow-y) var(--shadow-blur) rgba(var(--shadow-color), var(--shadow-opacity));
-    @apply transition-all duration-300 ease-out;
-  }
-  .card:hover {
-    @apply shadow-2xl -translate-y-1;
   }
 
   /* Buttons */
