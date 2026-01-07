@@ -88,10 +88,10 @@
 @layer components {
   /* Cards and major elements */
   .card {
-    @apply shadow-lg transition-all duration-300 ease-out;
+    @apply shadow-sm transition-all duration-300 ease-out;
   }
   .card:hover {
-    @apply shadow-2xl -translate-y-2;
+    @apply shadow-2xl -translate-y-1;
   }
 
   /* Buttons */
