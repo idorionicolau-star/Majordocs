@@ -38,9 +38,6 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
       header: "Material",
       cell: ({ row }) => (
         <div className="flex items-center gap-4">
-          <div className="h-10 w-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
-              {row.original.name.charAt(0)}
-          </div>
           <div className="flex flex-col">
               <span className="text-sm font-[800] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">{row.original.name}</span>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">SKU: {row.original.id.toUpperCase()}</span>
