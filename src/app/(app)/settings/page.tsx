@@ -21,15 +21,20 @@ const colorOptions = [
 
 export default function SettingsPage() {
   const [isClient, setIsClient] = useState(false);
+  const [borderRadius, setBorderRadius] = useState(1);
   const [borderWidth, setBorderWidth] = useState(1);
   const [borderColor, setBorderColor] = useState('hsl(var(--primary))');
   const [iconSize, setIconSize] = useState(16);
-
 
   useEffect(() => {
     setIsClient(true);
     if (typeof window !== 'undefined') {
       const root = document.documentElement;
+
+      const storedRadius = localStorage.getItem('majorstockx-border-radius');
+      if (storedRadius) {
+        setBorderRadius(parseFloat(storedRadius));
+      }
 
       const storedBorderWidth = localStorage.getItem('majorstockx-border-width');
       if (storedBorderWidth) {
@@ -46,6 +51,12 @@ export default function SettingsPage() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isClient) {
+      document.documentElement.style.setProperty('--radius', `${borderRadius}rem`);
+    }
+  }, [borderRadius, isClient]);
 
    useEffect(() => {
     if (typeof window !== 'undefined' && isClient) {
@@ -67,6 +78,14 @@ export default function SettingsPage() {
       root.style.setProperty('--stats-icon-size', `${iconSize}px`);
     }
   }, [iconSize, isClient]);
+
+  const handleBorderRadiusChange = (value: number[]) => {
+    const newRadius = value[0];
+    setBorderRadius(newRadius);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('majorstockx-border-radius', newRadius.toString());
+    }
+  };
 
   const handleBorderWidthChange = (value: number[]) => {
     const newWidth = value[0];
@@ -97,24 +116,42 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8 pb-20 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-3xl font-[900] text-slate-900 dark:text-white tracking-tighter">Configurações</h1>
+        <h1 className="text-2xl md:text-3xl font-headline font-[900] text-slate-900 dark:text-white tracking-tighter">Configurações</h1>
         <p className="text-sm font-medium text-slate-500 mt-1">
           Ajuste as preferências da aplicação e da sua empresa.
         </p>
       </div>
-      <Card className="glass-card rounded-[2.5rem] shadow-sm">
-        <CardHeader className="p-8">
-          <CardTitle className="font-headline font-[900] tracking-tighter text-2xl">Aparência</CardTitle>
+      <Card className="glass-card rounded-[1.5rem] sm:rounded-[2.5rem] shadow-sm">
+        <CardHeader className="p-6 sm:p-8">
+          <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl">Aparência</CardTitle>
           <CardDescription>
             Personalize a aparência da aplicação.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6 p-8 pt-0">
+        <CardContent className="space-y-6 p-6 sm:p-8 pt-0">
           <div className="flex items-center justify-between">
             <Label htmlFor="theme">Tema</Label>
             <ThemeSwitcher />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="border-radius">Arredondamento dos Cantos</Label>
+             <p className="text-sm text-muted-foreground">Ajuste o raio das bordas dos elementos.</p>
+            <div className="flex items-center gap-4">
+              <Slider
+                id="border-radius"
+                min={0}
+                max={2}
+                step={0.1}
+                value={[borderRadius]}
+                onValueChange={handleBorderRadiusChange}
+                className="w-[calc(100%-4rem)]"
+              />
+              <span className="w-12 text-right font-mono text-sm text-muted-foreground">
+                {borderRadius.toFixed(1)}rem
+              </span>
+            </div>
           </div>
            <div className="space-y-2">
             <Label htmlFor="border-width">Largura da Borda do Card</Label>
@@ -175,25 +212,25 @@ export default function SettingsPage() {
 
       {currentUser.role === 'Admin' && (
         <>
-          <Card className="glass-card rounded-[2.5rem] shadow-sm">
-            <CardHeader className="p-8">
-              <CardTitle className="font-headline font-[900] tracking-tighter text-2xl">Gestão de Localizações</CardTitle>
+          <Card className="glass-card rounded-[1.5rem] sm:rounded-[2.5rem] shadow-sm">
+            <CardHeader className="p-6 sm:p-8">
+              <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl">Gestão de Localizações</CardTitle>
               <CardDescription>
                 Ative e gerencie múltiplas localizações para o seu negócio.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-8 pt-0">
+            <CardContent className="p-6 sm:p-8 pt-0">
               <LocationsManager />
             </CardContent>
           </Card>
-           <Card className="glass-card rounded-[2.5rem] shadow-sm">
-            <CardHeader className="p-8">
-              <CardTitle className="font-headline font-[900] tracking-tighter text-2xl">Gestão de Funcionários</CardTitle>
+           <Card className="glass-card rounded-[1.5rem] sm:rounded-[2.5rem] shadow-sm">
+            <CardHeader className="p-6 sm:p-8">
+              <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl">Gestão de Funcionários</CardTitle>
               <CardDescription>
                 Convide e gerencie os funcionários da sua empresa.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-8 pt-0">
+            <CardContent className="p-6 sm:p-8 pt-0">
               <EmployeeManager />
             </CardContent>
           </Card>
@@ -202,5 +239,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    

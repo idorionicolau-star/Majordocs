@@ -272,7 +272,7 @@ export default function InventoryPage() {
       <div className="flex flex-col gap-6">
           <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
               <div>
-                  <h1 className="text-3xl font-headline font-bold">Inventário</h1>
+                  <h1 className="text-2xl md:text-3xl font-headline font-bold">Inventário</h1>
                   <p className="text-muted-foreground">
                       Gerencie os produtos do seu estoque.
                   </p>
@@ -284,7 +284,7 @@ export default function InventoryPage() {
                           <Tooltip>
                               <TooltipTrigger asChild>
                                   <DropdownMenuTrigger asChild>
-                                      <Button variant="outline" size="icon" className="shadow-lg">
+                                      <Button variant="outline" size="sm" className="shadow-lg h-10 w-10 p-0">
                                           <MapPin className="h-4 w-4" />
                                       </Button>
                                   </DropdownMenuTrigger>
@@ -320,7 +320,7 @@ export default function InventoryPage() {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="icon" className="shadow-lg relative">
+                              <Button variant="outline" size="sm" className="shadow-lg relative h-10 w-10 p-0">
                                   <ListFilter className="h-4 w-4" />
                                   {categoryFilter.length > 0 && (
                                       <span className="absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs px-1">
@@ -359,7 +359,7 @@ export default function InventoryPage() {
                 </DropdownMenu>
                   <Tooltip>
                       <TooltipTrigger asChild>
-                          <Button variant="outline" size="icon" onClick={handlePrintCountForm} className="shadow-lg">
+                          <Button variant="outline" size="sm" onClick={handlePrintCountForm} className="shadow-lg h-10 w-10 p-0">
                               <FileText className="h-4 w-4" />
                           </Button>
                       </TooltipTrigger>
@@ -375,7 +375,7 @@ export default function InventoryPage() {
               placeholder="Filtrar por nome..."
               value={nameFilter}
               onChange={(event) => setNameFilter(event.target.value)}
-              className="w-full md:max-w-sm shadow-lg"
+              className="w-full md:max-w-sm shadow-lg h-12 text-sm"
             />
         </div>
         <InventoryDataTable 

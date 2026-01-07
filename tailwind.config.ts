@@ -11,8 +11,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['var(--font-inter)', 'sans-serif'],
-        headline: ['var(--font-inter)', 'sans-serif'],
+        body: ['var(--font-body)', 'sans-serif'],
+        headline: ['var(--font-headline)', 'sans-serif'],
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -57,12 +57,12 @@ export default {
         },
       },
       borderRadius: {
-        '3xl': 'calc(1rem + 16px)',
-        '2xl': 'calc(1rem + 8px)',
-        xl: 'calc(1rem + 4px)',
-        lg: '1rem',
-        md: 'calc(1rem - 4px)',
-        sm: 'calc(1rem - 8px)',
+        '3xl': 'calc(var(--radius) + 16px)',
+        '2xl': 'calc(var(--radius) + 8px)',
+        xl: 'calc(var(--radius) + 4px)',
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 4px)',
+        sm: 'calc(var(--radius) - 8px)',
       },
       boxShadow: {
         'sm': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
@@ -108,5 +108,3 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
-
-    

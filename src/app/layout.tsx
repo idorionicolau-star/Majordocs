@@ -7,13 +7,20 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { useEffect, useState } from 'react';
 
 // Using Inter font for a modern, clean look
-import { Inter } from 'next/font/google'
+import { Inter, Space_Grotesk } from 'next/font/google'
 
 const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-inter',
+  variable: '--font-body',
 })
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-headline',
+});
+
 
 export default function RootLayout({
   children,
@@ -28,7 +35,7 @@ export default function RootLayout({
 
 
   return (
-    <html lang="pt-BR" suppressHydrationWarning className={inter.variable}>
+    <html lang="pt-BR" suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <head>
         <title>MajorStockX</title>
         <meta name="description" content="Sistema de gestão de estoque e produção para materiais de construção." />

@@ -19,12 +19,12 @@ export function MobileNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-1 p-3 text-muted-foreground transition-colors hover:text-primary",
+                "flex flex-col items-center gap-1 p-2 sm:p-3 text-muted-foreground transition-colors hover:text-primary",
                 isActive && "text-primary bg-primary/10"
               )}
             >
               <item.icon className={cn("h-5 w-5", isActive && "fill-current")} />
-              <span className="text-xs font-medium">{item.title}</span>
+              <span className="text-xs font-medium hidden sm:inline">{item.title}</span>
             </Link>
           )
         })}
