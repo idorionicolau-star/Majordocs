@@ -6,12 +6,11 @@ import { columns } from '@/components/users/columns';
 import { UsersDataTable } from '@/components/users/data-table';
 import { AddUserDialog } from '@/components/users/add-user-dialog';
 import type { User } from '@/lib/types';
-import { EditUserDialog } from '@/components/users/edit-user-dialog';
-import { ApproveUserDialog } from '@/components/users/approve-user-dialog';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { useToast } from '@/hooks/use-toast';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>(initialUsers);
+  const { toast } = useToast();
 
   const handleAddUser = (newUser: Omit<User, 'id' | 'avatar' | 'status' | 'permissions'>) => {
     const user: User = {
@@ -34,31 +33,27 @@ export default function UsersPage() {
     // In a real app, this would be an API call to Firestore
     console.log(`Updating user ${userId}`, data);
     setUsers(users.map(u => u.id === userId ? { ...u, ...data } : u));
+    toast({
+      title: "Usuário atualizado",
+      description: `Os dados de ${data.name} foram atualizados com sucesso.`,
+    });
   };
   
-  const handleApproveUser = (userId: string) => {
+  const handleToggleStatus = (userId: string, currentStatus: 'Ativo' | 'Pendente') => {
+    const newStatus = currentStatus === 'Ativo' ? 'Pendente' : 'Ativo';
     // In a real app, this would be an API call to Firestore
-    console.log(`Approving user ${userId}`);
-    setUsers(users.map(u => u.id === userId ? { ...u, status: 'Ativo' } : u));
+    console.log(`Toggling status for user ${userId} to ${newStatus}`);
+    setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+     toast({
+      title: "Status do usuário alterado",
+      description: `O status foi alterado para ${newStatus}.`,
+      duration: 3000,
+    });
   };
 
   const userColumns = columns({
-    renderActions: (user) => (
-      <>
-        <EditUserDialog user={user} onUpdateUser={handleUpdateUser}>
-            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                Editar Usuário
-            </DropdownMenuItem>
-        </EditUserDialog>
-        {user.status === 'Pendente' && (
-            <ApproveUserDialog user={user} onApprove={handleApproveUser}>
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    Aprovar Usuário
-                </DropdownMenuItem>
-            </ApproveUserDialog>
-        )}
-      </>
-    )
+    onUpdateUser: handleUpdateUser,
+    onToggleStatus: handleToggleStatus,
   });
 
   return (
