@@ -1,10 +1,30 @@
-import { productions } from "@/lib/data";
+"use client";
+
+import { useState } from "react";
+import { productions as initialProductions, products } from "@/lib/data";
 import { columns } from "@/components/production/columns";
 import { ProductionDataTable } from "@/components/production/data-table";
-import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { AddProductionDialog } from "@/components/production/add-production-dialog";
+import type { Production } from "@/lib/types";
+import { currentUser } from "@/lib/data";
 
 export default function ProductionPage() {
+  const [productions, setProductions] = useState<Production[]>(initialProductions);
+
+  const handleAddProduction = (newProductionData: { productId: string; quantity: number; }) => {
+    const product = products.find(p => p.id === newProductionData.productId);
+    if (!product) return;
+
+    const newProduction: Production = {
+      id: `PRODREC${(productions.length + 1).toString().padStart(3, '0')}`,
+      date: new Date().toISOString().split('T')[0],
+      productName: product.name,
+      quantity: newProductionData.quantity,
+      registeredBy: currentUser.name,
+    };
+    setProductions([newProduction, ...productions]);
+  };
+
   return (
     <div className="flex flex-col gap-6">
         <div className="flex justify-between items-center">
@@ -14,10 +34,7 @@ export default function ProductionPage() {
                     Visualize e registre a produção de novos itens.
                 </p>
             </div>
-            <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Registrar Produção
-            </Button>
+            <AddProductionDialog products={products} onAddProduction={handleAddProduction} />
         </div>
       <ProductionDataTable columns={columns} data={productions} />
     </div>
