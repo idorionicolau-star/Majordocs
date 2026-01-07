@@ -1,0 +1,21 @@
+{
+  "name": "MajorStockX",
+  "short_name": "MajorStockX",
+  "description": "Sistema completo de gestão de estoque e produção para uma empresa de materiais de construção.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f2f5",
+  "theme_color": "#3498db",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
