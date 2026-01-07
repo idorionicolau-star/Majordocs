@@ -1,6 +1,14 @@
+
 import { StatsCards } from "@/components/dashboard/stats-cards";
-import { StockChart } from "@/components/dashboard/stock-chart";
 import { currentUser } from "@/lib/data";
+import dynamic from "next/dynamic";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Dynamically import the StockChart component with SSR turned off
+const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[438px] w-full" />,
+});
 
 export default function DashboardPage() {
   return (
