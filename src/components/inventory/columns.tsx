@@ -5,19 +5,13 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Product } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Edit, MoreHorizontal, Trash2 } from "lucide-react"
+import { Edit, Trash2 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
+import { EditProductDialog } from "./edit-product-dialog"
 
 interface ColumnsOptions {
   onAttemptDelete: (product: Product) => void;
+  onProductUpdate: (product: Product) => void;
 }
 
 const getStockStatus = (product: Product) => {
@@ -79,6 +73,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => [
 
       return (
         <div className="flex items-center justify-end gap-2">
+            <EditProductDialog product={product} onProductUpdate={options.onProductUpdate} />
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>

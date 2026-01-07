@@ -34,6 +34,14 @@ export default function InventoryPage() {
     };
     setProducts([product, ...products]);
   };
+  
+  const handleUpdateProduct = (updatedProduct: Product) => {
+    setProducts(products.map(p => p.id === updatedProduct.id ? { ...updatedProduct, lastUpdated: new Date().toISOString().split('T')[0] } : p));
+    toast({
+        title: "Produto Atualizado",
+        description: `O produto "${updatedProduct.name}" foi atualizado com sucesso.`,
+    });
+  };
 
   const confirmDeleteProduct = () => {
     if (productToDelete) {
@@ -228,6 +236,7 @@ export default function InventoryPage() {
         <InventoryDataTable 
           columns={columns({ 
             onAttemptDelete: (product) => setProductToDelete(product),
+            onProductUpdate: handleUpdateProduct,
           })} 
           data={products} 
         />
