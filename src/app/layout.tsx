@@ -33,10 +33,30 @@ export default function RootLayout({
 }>) {
 
   useEffect(() => {
-    const storedRadius = localStorage.getItem('majorstockx-radius');
-    if (storedRadius) {
-      document.body.style.setProperty('--radius', `${storedRadius}rem`);
-    }
+    const applySavedStyling = () => {
+      if (typeof window !== 'undefined') {
+        const storedRadius = localStorage.getItem('majorstockx-radius');
+        if (storedRadius) {
+          document.documentElement.style.setProperty('--radius', `${storedRadius}rem`);
+        }
+        
+        const storedShadowY = localStorage.getItem('majorstockx-shadow-y');
+        if (storedShadowY) {
+          document.documentElement.style.setProperty('--shadow-y', `${storedShadowY}px`);
+        }
+
+        const storedShadowBlur = localStorage.getItem('majorstockx-shadow-blur');
+        if (storedShadowBlur) {
+          document.documentElement.style.setProperty('--shadow-blur', `${storedShadowBlur}px`);
+        }
+
+        const storedShadowOpacity = localStorage.getItem('majorstockx-shadow-opacity');
+        if (storedShadowOpacity) {
+          document.documentElement.style.setProperty('--shadow-opacity', storedShadowOpacity);
+        }
+      }
+    };
+    applySavedStyling();
   }, []);
 
 
