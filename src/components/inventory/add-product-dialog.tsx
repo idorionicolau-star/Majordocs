@@ -28,12 +28,13 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusCircle } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from '@/hooks/use-toast';
 import type { Location } from '@/lib/types';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -89,12 +90,21 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations }: A
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="shadow-lg">
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Adicionar Produto
-        </Button>
-      </DialogTrigger>
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <DialogTrigger asChild>
+                        <Button className="fixed bottom-24 right-4 h-16 w-16 rounded-full shadow-2xl z-50">
+                            <Plus className="h-6 w-6" />
+                        </Button>
+                    </DialogTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                    <p>Adicionar Produto</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle>Adicionar Novo Produto</DialogTitle>
@@ -216,9 +226,8 @@ export function AddProductDialog(props: AddProductDialogProps) {
   }, []);
 
   return isClient ? <AddProductDialogContent {...props} /> : (
-     <Button disabled>
-        <PlusCircle className="mr-2 h-4 w-4" />
-        Adicionar Produto
+     <Button disabled className="fixed bottom-24 right-4 h-16 w-16 rounded-full shadow-2xl z-50">
+        <Plus className="h-6 w-6" />
     </Button>
   );
 }

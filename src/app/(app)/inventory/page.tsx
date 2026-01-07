@@ -255,45 +255,42 @@ export default function InventoryPage() {
                       Gerencie os produtos do seu estoque.
                   </p>
               </div>
-              <div className="flex gap-2 flex-wrap">
-                  {isMultiLocation && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="shadow-lg">
-                          <ListFilter className="mr-2 h-4 w-4" />
-                          {locations.find(l => l.id === selectedLocation)?.name || "Todas as Localizações"}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuCheckboxItem
-                          checked={selectedLocation === 'all'}
-                          onCheckedChange={() => setSelectedLocation('all')}
-                        >
-                          Todas as Localizações
-                        </DropdownMenuCheckboxItem>
-                        {locations.map(location => (
-                          <DropdownMenuCheckboxItem
-                            key={location.id}
-                            checked={selectedLocation === location.id}
-                            onCheckedChange={() => setSelectedLocation(location.id)}
-                          >
-                            {location.name}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                  <Button variant="outline" onClick={handlePrintCountForm} className="shadow-lg">
-                      <FileText className="mr-2 h-4 w-4" />
-                      Form. Contagem
-                  </Button>
-                  <AddProductDialog 
-                    onAddProduct={handleAddProduct}
-                    isMultiLocation={isMultiLocation}
-                    locations={locations}
-                  />
+              <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {isMultiLocation && (
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="shadow-lg">
+                            <ListFilter className="mr-2 h-4 w-4" />
+                            {locations.find(l => l.id === selectedLocation)?.name || "Todas as Localizações"}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuCheckboxItem
+                            checked={selectedLocation === 'all'}
+                            onCheckedChange={() => setSelectedLocation('all')}
+                            >
+                            Todas as Localizações
+                            </DropdownMenuCheckboxItem>
+                            {locations.map(location => (
+                            <DropdownMenuCheckboxItem
+                                key={location.id}
+                                checked={selectedLocation === location.id}
+                                onCheckedChange={() => setSelectedLocation(location.id)}
+                            >
+                                {location.name}
+                            </DropdownMenuCheckboxItem>
+                            ))}
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
+                    <Button variant="outline" onClick={handlePrintCountForm} className="shadow-lg">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Form. Contagem
+                    </Button>
+                  </div>
               </div>
           </div>
         <InventoryDataTable 
@@ -306,6 +303,11 @@ export default function InventoryPage() {
           data={filteredProducts} 
         />
       </div>
+      <AddProductDialog 
+        onAddProduct={handleAddProduct}
+        isMultiLocation={isMultiLocation}
+        locations={locations}
+      />
     </>
   );
 }
