@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "../ui/card"
+import { Card, CardContent, CardFooter } from "../ui/card"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -48,16 +48,16 @@ export function ProductionDataTable<TData, TValue>({
   }
 
   return (
-     <Card>
+     <Card className="overflow-hidden">
       <CardContent className="p-0">
         <div className="overflow-auto">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
+                <TableRow key={headerGroup.id} className="border-slate-100 dark:border-slate-800/50">
                   {headerGroup.headers.map((header) => {
                     return (
-                      <TableHead key={header.id}>
+                      <TableHead key={header.id} className="px-6 py-5 text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
                         {header.isPlaceholder
                           ? null
                           : flexRender(
@@ -76,9 +76,10 @@ export function ProductionDataTable<TData, TValue>({
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
+                     className="dark:border-slate-800/50"
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
+                      <TableCell key={cell.id} className="px-6 py-4">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
@@ -95,7 +96,7 @@ export function ProductionDataTable<TData, TValue>({
           </Table>
         </div>
        </CardContent>
-       <div className="flex items-center justify-end space-x-2 py-4 p-4 border-t">
+       <CardFooter className="flex items-center justify-end space-x-2 py-4 p-4 border-t dark:border-slate-800/50">
           <Button
             variant="outline"
             size="sm"
@@ -104,6 +105,9 @@ export function ProductionDataTable<TData, TValue>({
           >
             Anterior
           </Button>
+           <span className="text-sm">
+              Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
+          </span>
           <Button
             variant="outline"
             size="sm"
@@ -112,7 +116,7 @@ export function ProductionDataTable<TData, TValue>({
           >
             Próximo
           </Button>
-        </div>
+        </CardFooter>
     </Card>
   )
 }

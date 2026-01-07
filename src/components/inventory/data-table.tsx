@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import type { Product } from "@/lib/types"
-import { Card, CardContent } from "../ui/card"
+import { Card, CardContent, CardFooter } from "../ui/card"
 
 interface DataTableProps<TData extends Product, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -63,16 +63,16 @@ export function InventoryDataTable<TData extends Product, TValue>({
   }
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardContent className="p-0">
         <div className="overflow-auto">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
+                <TableRow key={headerGroup.id} className="border-slate-100 dark:border-slate-800/50">
                   {headerGroup.headers.map((header) => {
                     return (
-                      <TableHead key={header.id}>
+                      <TableHead key={header.id} className="px-6 py-5 text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
                         {header.isPlaceholder
                           ? null
                           : flexRender(
@@ -91,9 +91,10 @@ export function InventoryDataTable<TData extends Product, TValue>({
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
+                     className="dark:border-slate-800/50"
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
+                      <TableCell key={cell.id} className="px-6 py-4">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
@@ -110,7 +111,7 @@ export function InventoryDataTable<TData extends Product, TValue>({
           </Table>
         </div>
       </CardContent>
-      <div className="flex items-center justify-between space-x-2 p-4 border-t">
+      <CardFooter className="flex items-center justify-between space-x-2 p-4 border-t dark:border-slate-800/50">
         <div className="text-sm text-muted-foreground">
             {table.getFilteredRowModel().rows.length} de {data.length} produto(s).
         </div>
@@ -135,7 +136,7 @@ export function InventoryDataTable<TData extends Product, TValue>({
             Próximo
             </Button>
         </div>
-      </div>
+      </CardFooter>
     </Card>
   )
 }
