@@ -91,19 +91,12 @@ export default function RootLayout({
         <link rel="icon" href="/logo.svg" type="image/svg+xml" />
       </head>
       <body className="font-body antialiased">
-        {isClient ? (
-          <ThemeProvider
-            storageKey="majorstockx-theme"
-          >
-            {children}
-            <Toaster />
-          </ThemeProvider>
-        ) : (
-          <div style={{ visibility: 'hidden' }}>
-            {children}
-            <Toaster />
-          </div>
-        )}
+        <ThemeProvider
+          storageKey="majorstockx-theme"
+        >
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

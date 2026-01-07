@@ -22,30 +22,31 @@ export default function SettingsPage() {
       const storedRadius = localStorage.getItem('majorstockx-radius');
       if (storedRadius) {
         setRadius(parseFloat(storedRadius));
-        root.style.setProperty('--radius', `${parseFloat(storedRadius)}rem`);
       }
 
       const storedShadowsEnabled = localStorage.getItem('majorstockx-shadows-enabled');
       const shadowsAreEnabled = storedShadowsEnabled ? JSON.parse(storedShadowsEnabled) : true;
       setShadowsEnabled(shadowsAreEnabled);
-
+      
+      const currentTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
+      const defaultOpacity = currentTheme === 'dark' ? 0.25 : 0.1;
+      
       const storedShadowOpacity = localStorage.getItem('majorstockx-shadow-opacity');
       if (storedShadowOpacity) {
         setShadowOpacity(parseFloat(storedShadowOpacity));
-        root.style.setProperty('--shadow-opacity', shadowsAreEnabled ? storedShadowOpacity : '0');
       } else {
-        root.style.setProperty('--shadow-opacity', shadowsAreEnabled ? '0.1' : '0');
+        setShadowOpacity(defaultOpacity);
       }
     }
   }, []);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && isClient) {
       const root = document.documentElement;
       root.style.setProperty('--radius', `${radius}rem`);
       root.style.setProperty('--shadow-opacity', shadowsEnabled ? `${shadowOpacity}` : '0');
     }
-  }, [radius, shadowsEnabled, shadowOpacity]);
+  }, [radius, shadowsEnabled, shadowOpacity, isClient]);
 
   const handleRadiusChange = (value: number[]) => {
     const newRadius = value[0];

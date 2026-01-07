@@ -42,7 +42,7 @@
     --sidebar-ring: 207 68% 53%;
 
     /* Dynamic Shadow Variables */
-    --shadow-color: 0, 0, 0;
+    --shadow-color-rgb: 0, 0, 0;
     --shadow-opacity: 0.1;
     --shadow-y: 8px;
     --shadow-blur: 25px;
@@ -98,7 +98,7 @@
 @layer components {
   /* Cards and major elements */
   .card {
-    box-shadow: 0 var(--shadow-y) var(--shadow-blur) rgba(var(--shadow-color), var(--shadow-opacity));
+    box-shadow: 0 var(--shadow-y) var(--shadow-blur) rgba(var(--shadow-color-rgb), var(--shadow-opacity));
   }
 
   /* Buttons */
