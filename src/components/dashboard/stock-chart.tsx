@@ -36,54 +36,56 @@ export function StockChart() {
 
   return (
     <Card className="glass-card rounded-[2.5rem] shadow-sm overflow-hidden">
-      <CardHeader className="p-8">
-        <CardTitle className="font-headline font-[900] tracking-tighter text-2xl">Estoque por Categoria</CardTitle>
-        <CardDescription>Distribuição percentual do total de itens em estoque</CardDescription>
+      <CardHeader className="p-6 md:p-8">
+        <CardTitle className="font-headline font-[900] tracking-tighter text-xl md:text-2xl">Estoque por Categoria</CardTitle>
+        <CardDescription>Distribuição do total de itens em estoque</CardDescription>
       </CardHeader>
-      <CardContent className="p-8 pt-0">
-        <ChartContainer config={chartConfig} className="min-h-[200px] w-full aspect-square">
-            <ResponsiveContainer width="100%" height={350}>
+      <CardContent className="p-0 md:p-6 md:pt-0">
+        <ChartContainer
+          config={chartConfig}
+          className="mx-auto aspect-square max-h-[350px]"
+        >
+          <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-                <Tooltip
-                    content={<ChartTooltipContent
-                        className="dark:bg-slate-900/80 dark:border-slate-700/50 backdrop-blur-md rounded-xl"
-                        nameKey="name"
-                        labelKey="value"
-                        formatter={(value, name) => `${value} unidades`}
-                    />}
-                />
-                <Pie
-                  data={chartData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={80}
-                  outerRadius={120}
-                  strokeWidth={5}
-                  paddingAngle={5}
-                  cornerRadius={8}
-                >
-                  {chartData.map((entry) => (
-                    <Cell key={`cell-${entry.name}`} fill={entry.fill} className="focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-primary/20 rounded-lg" />
-                  ))}
-                </Pie>
-                <Legend 
-                  content={({ payload }) => {
-                    return (
-                      <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center mt-4">
-                        {payload?.map((entry, index) => (
-                          <div key={`item-${index}`} className="flex items-center gap-2 text-sm">
-                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                            <span>{entry.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  }}
-                />
+              <Tooltip
+                cursor={false}
+                content={<ChartTooltipContent 
+                    hideLabel 
+                    className="dark:bg-slate-900/80 dark:border-slate-700/50 backdrop-blur-md rounded-xl"
+                />}
+              />
+              <Pie
+                data={chartData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={90}
+                strokeWidth={5}
+                paddingAngle={5}
+                cornerRadius={8}
+              >
+                {chartData.map((entry) => (
+                  <Cell key={`cell-${entry.name}`} fill={entry.fill} className="focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-primary/20 rounded-lg" />
+                ))}
+              </Pie>
+              <Legend 
+                content={({ payload }) => {
+                  return (
+                    <ul className="flex flex-wrap gap-x-4 gap-y-1 justify-center mt-4 text-xs">
+                      {payload?.map((entry, index) => (
+                        <li key={`item-${index}`} className="flex items-center gap-2 font-medium text-muted-foreground">
+                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                          {entry.value}
+                        </li>
+                      ))}
+                    </ul>
+                  )
+                }}
+              />
             </PieChart>
-            </ResponsiveContainer>
+          </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
     </Card>
