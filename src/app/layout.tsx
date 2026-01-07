@@ -46,12 +46,11 @@ export default function RootLayout({
         const storedShadowsEnabled = localStorage.getItem('majorstockx-shadows-enabled');
         const shadowsEnabled = storedShadowsEnabled ? JSON.parse(storedShadowsEnabled) : true;
         
-        const storedShadowOpacity = localStorage.getItem('majorstockx-shadow-opacity');
-        const currentTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
-        const defaultOpacity = currentTheme === 'dark' ? '0.25' : '0.1';
-        
         if (shadowsEnabled) {
-            root.style.setProperty('--shadow-opacity', storedShadowOpacity || defaultOpacity);
+          const storedShadowOpacity = localStorage.getItem('majorstockx-shadow-opacity');
+          const currentTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
+          const defaultOpacity = currentTheme === 'dark' ? '0.25' : '0.1';
+          root.style.setProperty('--shadow-opacity', storedShadowOpacity || defaultOpacity);
         } else {
             root.style.setProperty('--shadow-opacity', '0');
         }
@@ -94,7 +93,7 @@ export default function RootLayout({
         <ThemeProvider
           storageKey="majorstockx-theme"
         >
-          {children}
+          {isClient ? children : null}
           <Toaster />
         </ThemeProvider>
       </body>

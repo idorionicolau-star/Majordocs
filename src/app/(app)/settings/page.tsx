@@ -60,6 +60,15 @@ export default function SettingsPage() {
     setShadowsEnabled(checked);
     if (typeof window !== 'undefined') {
       localStorage.setItem('majorstockx-shadows-enabled', JSON.stringify(checked));
+      const root = document.documentElement;
+      if (checked) {
+        const storedOpacity = localStorage.getItem('majorstockx-shadow-opacity');
+        const currentTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
+        const defaultOpacity = currentTheme === 'dark' ? '0.25' : '0.1';
+        root.style.setProperty('--shadow-opacity', storedOpacity || defaultOpacity);
+      } else {
+        root.style.setProperty('--shadow-opacity', '0');
+      }
     }
   };
 
