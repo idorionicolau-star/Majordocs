@@ -14,9 +14,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal } from "lucide-react"
+import { EditProductDialog } from "./edit-product-dialog"
 
 interface ColumnsOptions {
   onAttemptDelete: (product: Product) => void;
+  onUpdateProduct: (productId: string, updatedData: Partial<Omit<Product, 'id'>>) => void;
 }
 
 const getStockStatus = (product: Product) => {
@@ -77,7 +79,11 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Ações</DropdownMenuLabel>
-            <DropdownMenuItem>Editar Produto</DropdownMenuItem>
+             <EditProductDialog product={product} onUpdateProduct={options.onUpdateProduct}>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  Editar Produto
+                </DropdownMenuItem>
+             </EditProductDialog>
             <DropdownMenuItem>Ver Histórico</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 

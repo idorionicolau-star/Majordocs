@@ -35,6 +35,14 @@ export default function InventoryPage() {
     setProducts([product, ...products]);
   };
 
+  const handleUpdateProduct = (productId: string, updatedData: Partial<Omit<Product, 'id'>>) => {
+    setProducts(products.map(p => 
+      p.id === productId 
+        ? { ...p, ...updatedData, lastUpdated: new Date().toISOString().split('T')[0] } 
+        : p
+    ));
+  };
+
   const confirmDeleteProduct = () => {
     if (productToDelete) {
       setProducts(products.filter(p => p.id !== productToDelete.id));
@@ -226,7 +234,10 @@ export default function InventoryPage() {
               </div>
           </div>
         <InventoryDataTable 
-          columns={columns({ onAttemptDelete: (product) => setProductToDelete(product) })} 
+          columns={columns({ 
+            onAttemptDelete: (product) => setProductToDelete(product),
+            onUpdateProduct: handleUpdateProduct,
+          })} 
           data={products} 
         />
       </div>
