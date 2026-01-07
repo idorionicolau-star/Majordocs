@@ -46,12 +46,13 @@ export default function InventoryPage() {
             padding: 2rem;
           }
           .container {
-            max-width: 800px;
+            width: 100%;
             margin: 0 auto;
             background-color: #fff;
             padding: 2rem;
             box-shadow: 0 0 20px rgba(0,0,0,0.05);
             border-radius: 8px;
+            box-sizing: border-box;
           }
           .header {
             display: flex;
@@ -83,13 +84,14 @@ export default function InventoryPage() {
             width: 100%; 
             border-collapse: collapse; 
             margin-top: 1.5rem; 
+            font-size: 11px;
           }
           thead {
             display: table-header-group; /* Important for repeating headers */
           }
           th, td { 
             border: 1px solid #ddd; 
-            padding: 12px; 
+            padding: 8px; 
             text-align: left; 
           }
           th { 
@@ -98,7 +100,9 @@ export default function InventoryPage() {
             font-weight: 700;
             color: #374151;
           }
-          .count-col { width: 150px; }
+          .count-col { width: 80px; }
+          .color-col { width: 90px; }
+          .obs-col { width: 200px; }
           .signature-line {
             border-top: 1px solid #999;
             width: 250px;
@@ -111,13 +115,13 @@ export default function InventoryPage() {
             color: #999;
           }
           @page {
-            size: A4;
-            margin: 1in;
+            size: A4 landscape;
+            margin: 0.5in;
           }
           @media print {
             .no-print { display: none; }
-            body { -webkit-print-color-adjust: exact; padding: 0; }
-            .container { box-shadow: none; border-radius: 0; }
+            body { -webkit-print-color-adjust: exact; padding: 0; margin: 0; }
+            .container { box-shadow: none; border-radius: 0; border: none; }
           }
         </style>
       `);
@@ -141,10 +145,10 @@ export default function InventoryPage() {
       printWindow.document.write(`<p><b>Responsável:</b> _________________________</p>`);
 
       printWindow.document.write('<table>');
-      printWindow.document.write('<thead><tr><th>Produto</th><th>Categoria</th><th class="count-col">Qtd. Contada</th></tr></thead>');
+      printWindow.document.write('<thead><tr><th>Produto</th><th>Categoria</th><th class="color-col">Cor</th><th class="count-col">Qtd. Contada</th><th class="count-col">Danificados</th><th class="obs-col">Observações</th></tr></thead>');
       printWindow.document.write('<tbody>');
       products.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)).forEach(product => {
-        printWindow.document.write(`<tr><td>${product.name}</td><td>${product.category}</td><td></td></tr>`);
+        printWindow.document.write(`<tr><td>${product.name}</td><td>${product.category}</td><td></td><td></td><td></td><td></td></tr>`);
       });
       printWindow.document.write('</tbody></table>');
 
