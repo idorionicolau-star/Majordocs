@@ -24,11 +24,11 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { products } from "@/lib/data"
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ChevronDown, ListFilter } from "lucide-react"
+import { ListFilter } from "lucide-react"
 import type { Product } from "@/lib/types"
 import { ScrollArea } from "../ui/scroll-area"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
 
 interface DataTableProps<TData extends Product, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -89,42 +89,52 @@ export function InventoryDataTable<TData extends Product, TValue>({
             }
             className="w-full md:max-w-sm shadow-lg"
             />
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full md:w-auto md:ml-auto shadow-lg">
-                        <ListFilter className="mr-2 h-4 w-4" />
-                        Categoria
-                        {selectedCategories.length > 0 && (
-                            <span className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
-                                {selectedCategories.length}
-                            </span>
-                        )}
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <ScrollArea className="h-48">
-                    {categories.map((category) => {
-                    return (
-                        <DropdownMenuCheckboxItem
-                        key={category}
-                        className="capitalize"
-                        checked={selectedCategories.includes(category)}
-                        onCheckedChange={(value) => {
-                            const currentFilter = selectedCategories;
-                            if (value) {
-                                table.getColumn("category")?.setFilterValue([...currentFilter, category]);
-                            } else {
-                                table.getColumn("category")?.setFilterValue(currentFilter.filter(c => c !== category));
-                            }
-                        }}
-                        >
-                        {category}
-                        </DropdownMenuCheckboxItem>
-                    )
-                    })}
-                  </ScrollArea>
-                </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-2 md:ml-auto">
+              <DropdownMenu>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon" className="shadow-lg relative">
+                                <ListFilter className="h-4 w-4" />
+                                {selectedCategories.length > 0 && (
+                                    <span className="absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
+                                        {selectedCategories.length}
+                                    </span>
+                                )}
+                            </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Filtrar por Categoria</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <DropdownMenuContent align="end">
+                    <ScrollArea className="h-48">
+                      {categories.map((category) => {
+                      return (
+                          <DropdownMenuCheckboxItem
+                          key={category}
+                          className="capitalize"
+                          checked={selectedCategories.includes(category)}
+                          onCheckedChange={(value) => {
+                              const currentFilter = selectedCategories;
+                              if (value) {
+                                  table.getColumn("category")?.setFilterValue([...currentFilter, category]);
+                              } else {
+                                  table.getColumn("category")?.setFilterValue(currentFilter.filter(c => c !== category));
+                              }
+                          }}
+                          >
+                          {category}
+                          </DropdownMenuCheckboxItem>
+                      )
+                      })}
+                    </ScrollArea>
+                  </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
         </div>
       <div className="rounded-md border">
         <Table>

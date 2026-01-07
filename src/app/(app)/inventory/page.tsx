@@ -256,7 +256,7 @@ export default function InventoryPage() {
                       Gerencie os produtos do seu estoque.
                   </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 self-end">
                 <TooltipProvider>
                     {isMultiLocation && (
                         <DropdownMenu>
