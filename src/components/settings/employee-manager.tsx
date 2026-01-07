@@ -1,5 +1,5 @@
 
-'use client';
+"use client";
 
 import { useState } from 'react';
 import { users as initialUsers } from '@/lib/data';
@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export default function UsersPage() {
+export function EmployeeManager() {
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const { toast } = useToast();
@@ -44,8 +44,8 @@ export default function UsersPage() {
   const handleUpdateUser = (userId: string, data: Partial<User>) => {
     setUsers(users.map(u => u.id === userId ? { ...u, ...data } : u));
     toast({
-      title: "Usuário atualizado",
-      description: `Os dados de ${data.name || 'do usuário'} foram atualizados com sucesso.`,
+      title: "Funcionário atualizado",
+      description: `Os dados de ${data.name || 'do funcionário'} foram atualizados.`,
     });
   };
 
@@ -53,8 +53,8 @@ export default function UsersPage() {
     if (userToDelete) {
       setUsers(users.filter(u => u.id !== userToDelete.id));
       toast({
-        title: "Usuário Removido",
-        description: `O usuário "${userToDelete.name}" foi removido do sistema.`,
+        title: "Funcionário Removido",
+        description: `O funcionário "${userToDelete.name}" foi removido do sistema.`,
       });
       setUserToDelete(null);
     }
@@ -64,7 +64,7 @@ export default function UsersPage() {
     const newStatus = currentStatus === 'Ativo' ? 'Pendente' : 'Ativo';
     setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u));
      toast({
-      title: "Status do usuário alterado",
+      title: "Status do funcionário alterado",
       description: `O status foi alterado para ${newStatus}.`,
       duration: 3000,
     });
@@ -83,8 +83,8 @@ export default function UsersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isto irá apagar permanentemente o usuário
-              "{userToDelete?.name}" e todos os seus dados.
+              Esta ação não pode ser desfeita. Isto irá apagar permanentemente o funcionário
+              "{userToDelete?.name}" e remover o seu acesso à empresa.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -93,14 +93,8 @@ export default function UsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <div className="flex flex-col gap-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-headline font-bold">Usuários</h1>
-            <p className="text-muted-foreground">
-              Gerencie os usuários e permissões do sistema.
-            </p>
-          </div>
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-end items-center">
           <AddUserDialog onAddUser={handleAddUser} />
         </div>
         <UsersDataTable columns={userColumns} data={users} />
@@ -108,3 +102,4 @@ export default function UsersPage() {
     </>
   );
 }
+

@@ -20,7 +20,7 @@ interface ColumnsOptions {
 export const columns = (options: ColumnsOptions): ColumnDef<User>[] => [
   {
     accessorKey: "name",
-    header: "Nome",
+    header: "Funcionário",
     cell: ({ row }) => (
       <div className="flex items-center gap-2">
         <Avatar className="h-8 w-8">
@@ -78,7 +78,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<User>[] => [
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                        <p>Apagar Usuário</p>
+                        <p>Apagar Funcionário</p>
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>

@@ -6,6 +6,8 @@ import { UserNav } from "@/components/user-nav"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
 
 export function Header() {
+  const companyName = "Construções & Filhos, Lda"; // Mock data
+
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
       <div className="container mx-auto flex h-14 max-w-7xl items-center gap-4">
@@ -13,7 +15,10 @@ export function Header() {
           <div className="block">
             <Image src="/logo.svg" alt="MajorStockX Logo" width={24} height={24} className="text-primary" />
           </div>
-          <h1 className="font-headline text-xl font-semibold block">MajorStockX</h1>
+          <div className="flex flex-col">
+             <h1 className="font-headline text-xl font-semibold block">MajorStockX</h1>
+             <p className="text-xs text-muted-foreground -mt-1">{companyName}</p>
+          </div>
         </div>
         
         <div className="ml-auto flex items-center gap-2 md:gap-4">

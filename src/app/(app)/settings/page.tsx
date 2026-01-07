@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { LocationsManager } from "@/components/settings/locations-manager";
 import { currentUser } from "@/lib/data";
+import { EmployeeManager } from "@/components/settings/employee-manager";
 
 export default function SettingsPage() {
   const [isClient, setIsClient] = useState(false);
@@ -71,7 +72,7 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-3xl font-headline font-bold">Configurações</h1>
         <p className="text-muted-foreground">
-          Ajuste as preferências da aplicação.
+          Ajuste as preferências da aplicação e da sua empresa.
         </p>
       </div>
       <Card>
@@ -125,17 +126,30 @@ export default function SettingsPage() {
       </Card>
 
       {currentUser.role === 'Admin' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Gestão de Localizações</CardTitle>
-            <CardDescription>
-              Ative e gerencie múltiplas localizações para o seu negócio.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <LocationsManager />
-          </CardContent>
-        </Card>
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Gestão de Localizações</CardTitle>
+              <CardDescription>
+                Ative e gerencie múltiplas localizações para o seu negócio.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LocationsManager />
+            </CardContent>
+          </Card>
+           <Card>
+            <CardHeader>
+              <CardTitle>Gestão de Funcionários</CardTitle>
+              <CardDescription>
+                Convide e gerencie os funcionários da sua empresa.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmployeeManager />
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );

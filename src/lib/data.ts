@@ -4,7 +4,6 @@ import {
   Box,
   ShoppingCart,
   Hammer,
-  Users,
   Settings,
 } from 'lucide-react';
 
@@ -13,7 +12,6 @@ export const navItems: NavItem[] = [
   { title: 'Inventário', href: '/inventory', icon: Box },
   { title: 'Vendas', href: '/sales', icon: ShoppingCart },
   { title: 'Produção', href: '/production', icon: Hammer },
-  { title: 'Usuários', href: '/users', icon: Users },
   { title: 'Configurações', href: '/settings', icon: Settings },
 ];
 

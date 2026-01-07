@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -60,8 +61,8 @@ function AddUserDialogContent({ onAddUser }: AddUserDialogProps) {
   function onSubmit(values: AddUserFormValues) {
     onAddUser(values);
     toast({
-        title: "Usuário adicionado",
-        description: `${values.name} foi adicionado com sucesso e está pendente de aprovação.`,
+        title: "Convite Enviado",
+        description: `Um convite foi enviado para ${values.name} (${values.email}).`,
     })
     form.reset();
     setOpen(false);
@@ -70,16 +71,16 @@ function AddUserDialogContent({ onAddUser }: AddUserDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button size="sm">
           <PlusCircle className="mr-2 h-4 w-4" />
-          Adicionar Usuário
+          Convidar Funcionário
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Adicionar Novo Usuário</DialogTitle>
+          <DialogTitle>Convidar Novo Funcionário</DialogTitle>
           <DialogDescription>
-            Preencha os detalhes abaixo para adicionar um novo usuário ao sistema.
+            Preencha os detalhes abaixo para enviar um convite para um novo funcionário se juntar à sua empresa.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -91,7 +92,7 @@ function AddUserDialogContent({ onAddUser }: AddUserDialogProps) {
                 <FormItem>
                   <FormLabel>Nome</FormLabel>
                   <FormControl>
-                    <Input placeholder="Nome completo" {...field} />
+                    <Input placeholder="Nome completo do funcionário" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -104,7 +105,7 @@ function AddUserDialogContent({ onAddUser }: AddUserDialogProps) {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="email@exemplo.com" {...field} />
+                    <Input type="email" placeholder="email.funcionario@exemplo.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -133,7 +134,7 @@ function AddUserDialogContent({ onAddUser }: AddUserDialogProps) {
             />
             <DialogFooter>
                 <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button type="submit">Adicionar Usuário</Button>
+                <Button type="submit">Enviar Convite</Button>
             </DialogFooter>
           </form>
         </Form>

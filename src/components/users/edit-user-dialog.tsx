@@ -107,15 +107,15 @@ function EditUserDialogContent({ user, onUpdateUser }: EditUserDialogProps) {
             </DialogTrigger>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Editar Usuário</p>
+            <p>Editar Funcionário</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Editar Usuário</DialogTitle>
+          <DialogTitle>Editar Funcionário</DialogTitle>
           <DialogDescription>
-            Atualize os dados e permissões do usuário.
+            Atualize os dados e permissões do funcionário.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
