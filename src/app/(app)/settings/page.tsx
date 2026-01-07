@@ -21,7 +21,6 @@ const colorOptions = [
 
 export default function SettingsPage() {
   const [isClient, setIsClient] = useState(false);
-  const [radius, setRadius] = useState(0.8);
   const [borderWidth, setBorderWidth] = useState(1);
   const [borderColor, setBorderColor] = useState('hsl(var(--primary))');
   const [iconSize, setIconSize] = useState(16);
@@ -31,11 +30,6 @@ export default function SettingsPage() {
     setIsClient(true);
     if (typeof window !== 'undefined') {
       const root = document.documentElement;
-
-      const storedRadius = localStorage.getItem('majorstockx-radius');
-      if (storedRadius) {
-        setRadius(parseFloat(storedRadius));
-      }
 
       const storedBorderWidth = localStorage.getItem('majorstockx-border-width');
       if (storedBorderWidth) {
@@ -52,13 +46,6 @@ export default function SettingsPage() {
       }
     }
   }, []);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && isClient) {
-      const root = document.documentElement;
-      root.style.setProperty('--radius', `${radius}rem`);
-    }
-  }, [radius, isClient]);
 
    useEffect(() => {
     if (typeof window !== 'undefined' && isClient) {
@@ -80,15 +67,6 @@ export default function SettingsPage() {
       root.style.setProperty('--stats-icon-size', `${iconSize}px`);
     }
   }, [iconSize, isClient]);
-
-
-  const handleRadiusChange = (value: number[]) => {
-    const newRadius = value[0];
-    setRadius(newRadius);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('majorstockx-radius', newRadius.toString());
-    }
-  };
 
   const handleBorderWidthChange = (value: number[]) => {
     const newWidth = value[0];
@@ -137,23 +115,6 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <Label htmlFor="theme">Tema</Label>
             <ThemeSwitcher />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="radius">Aredondamento dos Cantos</Label>
-            <div className="flex items-center gap-4">
-              <Slider
-                id="radius"
-                min={0}
-                max={2}
-                step={0.1}
-                value={[radius]}
-                onValueChange={handleRadiusChange}
-                className="w-[calc(100%-4rem)]"
-              />
-              <span className="w-12 text-right font-mono text-sm text-muted-foreground">
-                {radius.toFixed(1)}rem
-              </span>
-            </div>
           </div>
            <div className="space-y-2">
             <Label htmlFor="border-width">Largura da Borda do Card</Label>
@@ -241,3 +202,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
