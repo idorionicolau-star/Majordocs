@@ -61,7 +61,6 @@ export default function SalesPage() {
                     Visualize e registre as vendas de produtos.
                 </p>
             </div>
-            <AddSaleDialog products={allProducts} onAddSale={handleAddSale} />
         </div>
       <SalesDataTable 
         columns={columns({ 
@@ -71,6 +70,7 @@ export default function SalesPage() {
         })} 
         data={sales} 
       />
+       <AddSaleDialog products={allProducts} onAddSale={handleAddSale} />
     </div>
   );
 }
