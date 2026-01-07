@@ -8,7 +8,6 @@ import {
   Settings,
 } from 'lucide-react';
 
-// All items except Dashboard and Settings
 export const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Inventário', href: '/inventory', icon: Box },
@@ -17,19 +16,12 @@ export const mainNavItems: NavItem[] = [
   { title: 'Ajustes', href: '/settings', icon: Settings },
 ];
 
-// Just dashboard
-export const dashboardNavItem: NavItem = { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard };
-
-// Just settings
-export const settingsNavItem: NavItem = { title: 'Configurações', href: '/settings', icon: Settings };
-
-
 export const users: User[] = [
   {
     id: 'USR001',
     name: 'Admin Geral',
     email: 'admin@majorstockx.com',
-    avatar: '/avatars/01.png',
+    avatar: 'https://picsum.photos/seed/1/40/40',
     role: 'Admin',
     status: 'Ativo',
     permissions: {
@@ -44,7 +36,7 @@ export const users: User[] = [
     id: 'USR002',
     name: 'João Silva',
     email: 'joao.silva@majorstockx.com',
-    avatar: '/avatars/02.png',
+    avatar: 'https://picsum.photos/seed/2/40/40',
     role: 'Funcionário',
     status: 'Ativo',
     permissions: {
@@ -59,7 +51,7 @@ export const users: User[] = [
     id: 'USR003',
     name: 'Maria Santos',
     email: 'maria.santos@majorstockx.com',
-    avatar: '/avatars/03.png',
+    avatar: 'https://picsum.photos/seed/3/40/40',
     role: 'Funcionário',
     status: 'Pendente',
     permissions: {

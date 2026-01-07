@@ -6,24 +6,14 @@ import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 import { useEffect, useState } from 'react';
 
-// This is a client component, so metadata is not used here.
-// We keep the export for reference, but it won't be used by Next.js.
-// export const metadata: Metadata = {
-//   title: 'MajorStockX',
-//   description: 'Sistema de gestão de estoque e produção para materiais de construção.',
-//   manifest: '/manifest.json',
-// };
+// Using Inter font for a modern, clean look
+import { Inter } from 'next/font/google'
 
-// export const viewport: Viewport = {
-//   themeColor: [
-//     { media: "(prefers-color-scheme: light)", color: "#f0f2f5" },
-//     { media: "(prefers-color-scheme: dark)", color: "#1a2233" },
-//   ],
-//   width: 'device-width',
-//   initialScale: 1,
-//   maximumScale: 1,
-//   userScalable: false,
-// }
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+})
 
 export default function RootLayout({
   children,
@@ -34,52 +24,11 @@ export default function RootLayout({
 
   useEffect(() => {
     setIsClient(true);
-    const applySavedStyling = () => {
-      if (typeof window !== 'undefined') {
-        const root = document.documentElement;
-
-        const storedRadius = localStorage.getItem('majorstockx-radius');
-        if (storedRadius) {
-          root.style.setProperty('--radius', `${storedRadius}rem`);
-        }
-
-        const storedShadowIntensity = localStorage.getItem('majorstockx-shadow-intensity');
-        if (storedShadowIntensity) {
-            root.style.setProperty('--shadow-intensity', (parseInt(storedShadowIntensity, 10) / 100).toString());
-        }
-
-        const storedBorderWidth = localStorage.getItem('majorstockx-border-width');
-        if (storedBorderWidth) {
-          root.style.setProperty('--card-border-width', `${storedBorderWidth}px`);
-        }
-
-        const storedBorderColor = localStorage.getItem('majorstockx-border-color');
-        if (storedBorderColor) {
-          root.style.setProperty('--card-border-color', storedBorderColor);
-        }
-      }
-    };
-    
-    // Run on initial mount
-    applySavedStyling();
-    
-    // Also apply on theme change
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.attributeName === "class" && (mutation.target as HTMLElement).tagName === 'BODY') {
-          applySavedyling();
-        }
-      }
-    });
-    
-    observer.observe(document.body, { attributes: true });
-
-    return () => observer.disconnect();
   }, []);
 
 
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning className={inter.variable}>
       <head>
         <title>MajorStockX</title>
         <meta name="description" content="Sistema de gestão de estoque e produção para materiais de construção." />
@@ -87,9 +36,6 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
         <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
         <link rel="icon" href="/logo.svg" type="image/svg+xml" />
       </head>
       <body className="font-body antialiased">

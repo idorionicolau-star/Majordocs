@@ -22,14 +22,14 @@ export const columns = (options: ColumnsOptions): ColumnDef<User>[] => [
     accessorKey: "name",
     header: "Funcionário",
     cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <Avatar className="h-8 w-8">
+      <div className="flex items-center gap-3">
+        <Avatar className="h-10 w-10 rounded-xl">
             <AvatarImage src={row.original.avatar} alt={row.original.name} />
-            <AvatarFallback>{row.original.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+            <AvatarFallback className="rounded-xl">{row.original.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
         </Avatar>
         <div className="flex flex-col">
-            <span className="font-medium">{row.original.name}</span>
-            <span className="text-xs text-muted-foreground">{row.original.email}</span>
+            <span className="font-bold text-slate-800 dark:text-white">{row.original.name}</span>
+            <span className="text-xs text-slate-500">{row.original.email}</span>
         </div>
       </div>
     ),
@@ -37,6 +37,9 @@ export const columns = (options: ColumnsOptions): ColumnDef<User>[] => [
   {
     accessorKey: "role",
     header: "Papel",
+    cell: ({ row }) => (
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{row.original.role}</span>
+    )
   },
   {
     accessorKey: "status",
@@ -44,12 +47,13 @@ export const columns = (options: ColumnsOptions): ColumnDef<User>[] => [
     cell: ({ row }) => {
       const user = row.original;
       const status = user.status;
+      const isActive = status === 'Ativo';
       return (
         <Button
-          variant={status === "Ativo" ? "default" : "outline"}
+          variant="ghost"
           size="sm"
           onClick={() => options.onToggleStatus(user.id, user.status)}
-          className={`h-auto px-2 py-0.5 text-xs font-semibold ${status === "Ativo" ? "border-transparent bg-green-500/20 text-green-700 dark:text-green-400 hover:bg-green-500/30" : "border-transparent bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/30"}`}
+          className={`h-auto px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${isActive ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600" : "bg-amber-50 dark:bg-amber-500/10 text-amber-600"}`}
         >
           {status}
         </Button>
@@ -62,7 +66,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<User>[] => [
       const user = row.original
 
       return (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <EditUserDialog user={user} onUpdateUser={options.onUpdateUser} />
             <TooltipProvider>
                 <Tooltip>
@@ -70,7 +74,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<User>[] => [
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="p-3 h-auto w-auto text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all"
                             onClick={() => options.onAttemptDelete(user)}
                         >
                             <Trash2 className="h-4 w-4" />

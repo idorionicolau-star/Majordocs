@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit } from "lucide-react";
+import { Edit2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -100,8 +100,8 @@ function EditUserDialogContent({ user, onUpdateUser }: EditUserDialogProps) {
         <Tooltip>
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Edit className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="p-3 h-auto w-auto text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all">
+                    <Edit2 className="h-4 w-4" />
                     <span className="sr-only">Editar</span>
                 </Button>
             </DialogTrigger>
@@ -210,7 +210,7 @@ export function EditUserDialog(props: EditUserDialogProps) {
 
     return isClient ? <EditUserDialogContent {...props} /> : (
         <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
-            <Edit className="h-4 w-4" />
+            <Edit2 className="h-4 w-4" />
             <span className="sr-only">Editar</span>
         </Button>
     );
