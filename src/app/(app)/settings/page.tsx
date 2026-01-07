@@ -6,9 +6,11 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 
 export default function SettingsPage() {
   const [radius, setRadius] = useState(1);
+  const [shadowsEnabled, setShadowsEnabled] = useState(true);
   const [shadowY, setShadowY] = useState(8);
   const [shadowBlur, setShadowBlur] = useState(25);
   const [shadowOpacity, setShadowOpacity] = useState(0.1);
@@ -17,6 +19,9 @@ export default function SettingsPage() {
     if (typeof window !== 'undefined') {
       const storedRadius = localStorage.getItem('majorstockx-radius');
       if (storedRadius) setRadius(parseFloat(storedRadius));
+
+      const storedShadowsEnabled = localStorage.getItem('majorstockx-shadows-enabled');
+      if (storedShadowsEnabled) setShadowsEnabled(JSON.parse(storedShadowsEnabled));
 
       const storedShadowY = localStorage.getItem('majorstockx-shadow-y');
       if (storedShadowY) setShadowY(parseFloat(storedShadowY));
@@ -34,15 +39,22 @@ export default function SettingsPage() {
       document.documentElement.style.setProperty('--radius', `${radius}rem`);
       document.documentElement.style.setProperty('--shadow-y', `${shadowY}px`);
       document.documentElement.style.setProperty('--shadow-blur', `${shadowBlur}px`);
-      document.documentElement.style.setProperty('--shadow-opacity', `${shadowOpacity}`);
+      document.documentElement.style.setProperty('--shadow-opacity', shadowsEnabled ? `${shadowOpacity}` : '0');
     }
-  }, [radius, shadowY, shadowBlur, shadowOpacity]);
+  }, [radius, shadowsEnabled, shadowY, shadowBlur, shadowOpacity]);
 
   const handleRadiusChange = (value: number[]) => {
     const newRadius = value[0];
     setRadius(newRadius);
     if (typeof window !== 'undefined') {
       localStorage.setItem('majorstockx-radius', newRadius.toString());
+    }
+  };
+
+  const handleShadowsEnabledChange = (checked: boolean) => {
+    setShadowsEnabled(checked);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('majorstockx-shadows-enabled', JSON.stringify(checked));
     }
   };
 
@@ -108,8 +120,18 @@ export default function SettingsPage() {
               </span>
             </div>
           </div>
+          <div className="flex items-center justify-between">
+             <Label htmlFor="shadows-enabled" className={`${!shadowsEnabled ? 'text-muted-foreground' : ''}`}>
+                Sombras
+             </Label>
+             <Switch
+                id="shadows-enabled"
+                checked={shadowsEnabled}
+                onCheckedChange={handleShadowsEnabledChange}
+             />
+          </div>
            <div className="space-y-2">
-            <Label htmlFor="shadow-y">Deslocamento da Sombra</Label>
+            <Label htmlFor="shadow-y" className={`${!shadowsEnabled ? 'text-muted-foreground' : ''}`}>Deslocamento da Sombra</Label>
             <div className="flex items-center gap-4">
               <Slider
                 id="shadow-y"
@@ -119,6 +141,7 @@ export default function SettingsPage() {
                 value={[shadowY]}
                 onValueChange={handleShadowYChange}
                 className="w-[calc(100%-4rem)]"
+                disabled={!shadowsEnabled}
               />
               <span className="w-12 text-right font-mono text-sm text-muted-foreground">
                 {shadowY}px
@@ -126,7 +149,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="shadow-blur">Desfoque da Sombra</Label>
+            <Label htmlFor="shadow-blur" className={`${!shadowsEnabled ? 'text-muted-foreground' : ''}`}>Desfoque da Sombra</Label>
             <div className="flex items-center gap-4">
               <Slider
                 id="shadow-blur"
@@ -136,6 +159,7 @@ export default function SettingsPage() {
                 value={[shadowBlur]}
                 onValueChange={handleShadowBlurChange}
                 className="w-[calc(100%-4rem)]"
+                disabled={!shadowsEnabled}
               />
               <span className="w-12 text-right font-mono text-sm text-muted-foreground">
                 {shadowBlur}px
@@ -143,7 +167,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="shadow-opacity">Intensidade da Sombra</Label>
+            <Label htmlFor="shadow-opacity" className={`${!shadowsEnabled ? 'text-muted-foreground' : ''}`}>Intensidade da Sombra</Label>
             <div className="flex items-center gap-4">
               <Slider
                 id="shadow-opacity"
@@ -153,6 +177,7 @@ export default function SettingsPage() {
                 value={[shadowOpacity]}
                 onValueChange={handleShadowOpacityChange}
                 className="w-[calc(100%-4rem)]"
+                disabled={!shadowsEnabled}
               />
               <span className="w-12 text-right font-mono text-sm text-muted-foreground">
                 {shadowOpacity.toFixed(2)}

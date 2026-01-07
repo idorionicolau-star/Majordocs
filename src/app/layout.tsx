@@ -40,6 +40,10 @@ export default function RootLayout({
           document.documentElement.style.setProperty('--radius', `${storedRadius}rem`);
         }
         
+        const shadowsEnabled = localStorage.getItem('majorstockx-shadows-enabled') 
+          ? JSON.parse(localStorage.getItem('majorstockx-shadows-enabled')!)
+          : true;
+
         const storedShadowY = localStorage.getItem('majorstockx-shadow-y');
         if (storedShadowY) {
           document.documentElement.style.setProperty('--shadow-y', `${storedShadowY}px`);
@@ -52,7 +56,7 @@ export default function RootLayout({
 
         const storedShadowOpacity = localStorage.getItem('majorstockx-shadow-opacity');
         if (storedShadowOpacity) {
-          document.documentElement.style.setProperty('--shadow-opacity', storedShadowOpacity);
+          document.documentElement.style.setProperty('--shadow-opacity', shadowsEnabled ? storedShadowOpacity : '0');
         }
       }
     };
