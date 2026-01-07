@@ -22,7 +22,6 @@ const colorOptions = [
 export default function SettingsPage() {
   const [isClient, setIsClient] = useState(false);
   const [radius, setRadius] = useState(0.8);
-  const [shadowIntensity, setShadowIntensity] = useState(60);
   const [borderWidth, setBorderWidth] = useState(1);
   const [borderColor, setBorderColor] = useState('hsl(var(--primary))');
 
@@ -35,11 +34,6 @@ export default function SettingsPage() {
       const storedRadius = localStorage.getItem('majorstockx-radius');
       if (storedRadius) {
         setRadius(parseFloat(storedRadius));
-      }
-
-      const storedShadowIntensity = localStorage.getItem('majorstockx-shadow-intensity');
-      if (storedShadowIntensity) {
-        setShadowIntensity(parseInt(storedShadowIntensity, 10));
       }
 
       const storedBorderWidth = localStorage.getItem('majorstockx-border-width');
@@ -61,13 +55,6 @@ export default function SettingsPage() {
     }
   }, [radius, isClient]);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && isClient) {
-      const root = document.documentElement;
-      root.style.setProperty('--shadow-intensity', (shadowIntensity / 100).toString());
-    }
-  }, [shadowIntensity, isClient]);
-
    useEffect(() => {
     if (typeof window !== 'undefined' && isClient) {
       const root = document.documentElement;
@@ -88,14 +75,6 @@ export default function SettingsPage() {
     setRadius(newRadius);
     if (typeof window !== 'undefined') {
       localStorage.setItem('majorstockx-radius', newRadius.toString());
-    }
-  };
-
-  const handleShadowIntensityChange = (value: number[]) => {
-    const newIntensity = value[0];
-    setShadowIntensity(newIntensity);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('majorstockx-shadow-intensity', newIntensity.toString());
     }
   };
 
@@ -152,24 +131,6 @@ export default function SettingsPage() {
               />
               <span className="w-12 text-right font-mono text-sm text-muted-foreground">
                 {radius.toFixed(1)}rem
-              </span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="shadow-intensity">Intensidade das Sombras</Label>
-             <p className="text-sm text-muted-foreground">Ajuste a profundidade das sombras dos elementos.</p>
-            <div className="flex items-center gap-4">
-              <Slider
-                id="shadow-intensity"
-                min={0}
-                max={100}
-                step={1}
-                value={[shadowIntensity]}
-                onValueChange={handleShadowIntensityChange}
-                className="w-[calc(100%-4rem)]"
-              />
-              <span className="w-12 text-right font-mono text-sm text-muted-foreground">
-                {shadowIntensity}
               </span>
             </div>
           </div>
