@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 
 export default function SettingsPage() {
+  const [isClient, setIsClient] = useState(false);
   const [radius, setRadius] = useState(1);
   const [shadowsEnabled, setShadowsEnabled] = useState(true);
   const [shadowY, setShadowY] = useState(8);
@@ -16,6 +17,7 @@ export default function SettingsPage() {
   const [shadowOpacity, setShadowOpacity] = useState(0.1);
 
   useEffect(() => {
+    setIsClient(true);
     if (typeof window !== 'undefined') {
       const storedRadius = localStorage.getItem('majorstockx-radius');
       if (storedRadius) setRadius(parseFloat(storedRadius));
@@ -82,6 +84,9 @@ export default function SettingsPage() {
     }
   };
 
+  if (!isClient) {
+    return null; // Or a loading skeleton
+  }
 
   return (
     <div className="flex flex-col gap-6">

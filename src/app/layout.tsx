@@ -5,7 +5,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 // This is a client component, so metadata is not used here.
 // We keep the export for reference, but it won't be used by Next.js.
@@ -31,8 +31,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const applySavedStyling = () => {
       if (typeof window !== 'undefined') {
         const storedRadius = localStorage.getItem('majorstockx-radius');
@@ -83,7 +85,7 @@ export default function RootLayout({
           defaultTheme="system"
           storageKey="majorstockx-theme"
         >
-          {children}
+          {isClient ? children : null}
           <Toaster />
         </ThemeProvider>
       </body>
