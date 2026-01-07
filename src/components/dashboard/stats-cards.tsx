@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Box, DollarSign, AlertTriangle, Users } from "lucide-react";
+import { Box, DollarSign, AlertTriangle, Users, ArrowUp, ArrowDown } from "lucide-react";
 import { products, sales, users } from "@/lib/data";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -15,57 +15,66 @@ export function StatsCards() {
       value: products.length,
       icon: Box,
       color: "blue",
+      trend: "+2.5%",
+      trendDirection: "up" as "up" | "down",
     },
     {
       title: "Vendas (Mês)",
       value: formatCurrency(totalSalesValue),
       icon: DollarSign,
       color: "emerald",
+      trend: "+15%",
+      trendDirection: "up" as "up" | "down",
     },
     {
       title: "Estoque Baixo",
       value: lowStockCount,
       icon: AlertTriangle,
-      color: lowStockCount > 0 ? "amber" : "emerald",
+      color: "amber",
+      trend: "-3",
+      trendDirection: "down" as "up" | "down",
     },
     {
       title: "Usuários Ativos",
       value: users.filter(u => u.status === 'Ativo').length,
       icon: Users,
       color: "slate",
+      trend: "+1",
+      trendDirection: "up" as "up" | "down",
     },
   ];
 
   const colorClasses = {
-      blue: 'from-blue-500/20 to-blue-50/5 text-blue-600 dark:text-blue-400',
-      emerald: 'from-emerald-500/20 to-emerald-50/5 text-emerald-600 dark:text-emerald-400',
-      amber: 'from-amber-500/20 to-amber-50/5 text-amber-600 dark:text-amber-400',
-      slate: 'from-slate-500/20 to-slate-50/5 text-slate-600 dark:text-slate-400',
+      blue: 'from-blue-500 to-blue-400 text-white',
+      emerald: 'from-emerald-500 to-emerald-400 text-white',
+      amber: 'from-amber-500 to-amber-400 text-white',
+      slate: 'from-slate-600 to-slate-500 text-white',
   }
-
-  const textColors = {
-      blue: 'text-blue-600 dark:text-blue-400',
-      emerald: 'text-emerald-600 dark:text-emerald-400',
-      amber: 'text-amber-600 dark:text-amber-400',
-      slate: 'text-slate-600 dark:text-slate-400'
+  
+  const trendColors = {
+      up: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10',
+      down: 'text-rose-600 bg-rose-50 dark:bg-rose-500/10'
   }
 
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
       {stats.map((stat) => (
-        <Card key={stat.title} className="flex flex-col justify-between p-6">
-            <div className="flex items-center justify-between">
-                <p className="text-sm font-bold text-muted-foreground">{stat.title}</p>
-                 <div className={cn(
-                    "flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br shadow-inner",
-                    colorClasses[stat.color as keyof typeof colorClasses]
-                 )}>
-                    <stat.icon className="h-6 w-6" />
-                </div>
+        <Card key={stat.title} className="glass-card flex items-center gap-6 p-6 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 group">
+             <div className={cn(
+                "flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300",
+                colorClasses[stat.color as keyof typeof colorClasses]
+             )}>
+                <stat.icon className="h-7 w-7" strokeWidth={2.5} />
             </div>
-            <div>
-                <h3 className="text-3xl font-black text-slate-900 dark:text-white">{stat.value}</h3>
-                <p className={cn("text-xs font-bold", textColors[stat.color as keyof typeof textColors])}>{stat.description}</p>
+            <div className="flex flex-col">
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
+                <div className="flex items-end gap-3">
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white">{stat.value}</h3>
+                    <div className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold", trendColors[stat.trendDirection])}>
+                        {stat.trendDirection === 'up' ? <ArrowUp size={12} strokeWidth={3}/> : <ArrowDown size={12} strokeWidth={3}/> }
+                        <span>{stat.trend}</span>
+                    </div>
+                </div>
             </div>
         </Card>
       ))}
