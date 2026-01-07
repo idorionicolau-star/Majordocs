@@ -10,9 +10,11 @@ import {
 
 // All items except Dashboard and Settings
 export const mainNavItems: NavItem[] = [
+  { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Inventário', href: '/inventory', icon: Box },
   { title: 'Vendas', href: '/sales', icon: ShoppingCart },
   { title: 'Produção', href: '/production', icon: Hammer },
+  { title: 'Ajustes', href: '/settings', icon: Settings },
 ];
 
 // Just dashboard
