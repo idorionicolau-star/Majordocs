@@ -1,7 +1,6 @@
 
 "use client";
 
-import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -58,10 +57,13 @@ export default function RootLayout({
         }
         
         const storedShadowOpacity = localStorage.getItem('majorstockx-shadow-opacity');
-        if (storedShadowOpacity) {
-            root.style.setProperty('--shadow-opacity', shadowsEnabled ? storedShadowOpacity : '0');
+        const currentTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
+        const defaultOpacity = currentTheme === 'dark' ? '0.25' : '0.1';
+        
+        if (shadowsEnabled) {
+            root.style.setProperty('--shadow-opacity', storedShadowOpacity || defaultOpacity);
         } else {
-             root.style.setProperty('--shadow-opacity', shadowsEnabled ? (document.body.classList.contains('dark') ? '0.25' : '0.1') : '0');
+            root.style.setProperty('--shadow-opacity', '0');
         }
       }
     };
@@ -96,13 +98,17 @@ export default function RootLayout({
         <link rel="icon" href="/logo.svg" type="image/svg+xml" />
       </head>
       <body className="font-body antialiased">
-        <ThemeProvider
-          defaultTheme="system"
-          storageKey="majorstockx-theme"
-        >
-          {isClient ? children : null}
-          <Toaster />
-        </ThemeProvider>
+        {isClient ? (
+          <ThemeProvider
+            defaultTheme="system"
+            storageKey="majorstockx-theme"
+          >
+            {children}
+            <Toaster />
+          </ThemeProvider>
+        ) : (
+          children
+        )}
       </body>
     </html>
   );
