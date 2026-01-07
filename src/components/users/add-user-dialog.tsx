@@ -31,6 +31,7 @@ import { PlusCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -46,6 +47,7 @@ interface AddUserDialogProps {
 
 export function AddUserDialog({ onAddUser }: AddUserDialogProps) {
   const [open, setOpen] = useState(false);
+  const { toast } = useToast();
   const form = useForm<AddUserFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -57,6 +59,10 @@ export function AddUserDialog({ onAddUser }: AddUserDialogProps) {
 
   function onSubmit(values: AddUserFormValues) {
     onAddUser(values);
+    toast({
+        title: "Usuário adicionado",
+        description: `${values.name} foi adicionado com sucesso e está pendente de aprovação.`,
+    })
     form.reset();
     setOpen(false);
   }

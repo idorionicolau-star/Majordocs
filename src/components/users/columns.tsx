@@ -5,10 +5,15 @@ import { User } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal } from "lucide-react"
+import React from "react"
 
-export const columns: ColumnDef<User>[] = [
+interface ColumnsOptions {
+  renderActions: (user: User) => React.ReactNode;
+}
+
+export const columns = (options: ColumnsOptions): ColumnDef<User>[] => [
   {
     accessorKey: "name",
     header: "Nome",
@@ -54,8 +59,7 @@ export const columns: ColumnDef<User>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Ações</DropdownMenuLabel>
-            <DropdownMenuItem>Editar Usuário</DropdownMenuItem>
-            {row.original.status === 'Pendente' && <DropdownMenuItem>Aprovar Usuário</DropdownMenuItem>}
+            {options.renderActions(row.original)}
           </DropdownMenuContent>
         </DropdownMenu>
       )
