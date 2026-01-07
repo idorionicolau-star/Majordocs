@@ -7,7 +7,7 @@ import type { Product, Location } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter } from "lucide-react";
+import { FileText, MapPin } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -264,7 +264,7 @@ export default function InventoryPage() {
                                 <TooltipTrigger asChild>
                                     <DropdownMenuTrigger asChild>
                                         <Button variant="outline" size="icon" className="shadow-lg">
-                                            <ListFilter className="h-4 w-4" />
+                                            <MapPin className="h-4 w-4" />
                                         </Button>
                                     </DropdownMenuTrigger>
                                 </TooltipTrigger>
