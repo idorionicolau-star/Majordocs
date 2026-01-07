@@ -90,7 +90,7 @@ export function InventoryDataTable<TData extends Product, TValue>({
             />
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="ml-auto">
+                    <Button variant="outline" className="ml-auto shadow-lg">
                         <ListFilter className="mr-2 h-4 w-4" />
                         Categoria
                         {selectedCategories.length > 0 && (
