@@ -42,7 +42,7 @@
     --sidebar-ring: 207 68% 53%;
 
     /* Dynamic Shadow Variables */
-    --shadow-color: 0 0 0;
+    --shadow-color: 0, 0, 0;
     --shadow-opacity: 0.1;
     --shadow-y: 8px;
     --shadow-blur: 25px;

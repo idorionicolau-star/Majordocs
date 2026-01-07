@@ -19,29 +19,47 @@ export default function SettingsPage() {
   useEffect(() => {
     setIsClient(true);
     if (typeof window !== 'undefined') {
+      const root = document.documentElement;
+
       const storedRadius = localStorage.getItem('majorstockx-radius');
-      if (storedRadius) setRadius(parseFloat(storedRadius));
+      if (storedRadius) {
+        setRadius(parseFloat(storedRadius));
+        root.style.setProperty('--radius', `${parseFloat(storedRadius)}rem`);
+      }
 
       const storedShadowsEnabled = localStorage.getItem('majorstockx-shadows-enabled');
-      if (storedShadowsEnabled) setShadowsEnabled(JSON.parse(storedShadowsEnabled));
+      const shadowsAreEnabled = storedShadowsEnabled ? JSON.parse(storedShadowsEnabled) : true;
+      setShadowsEnabled(shadowsAreEnabled);
 
       const storedShadowY = localStorage.getItem('majorstockx-shadow-y');
-      if (storedShadowY) setShadowY(parseFloat(storedShadowY));
+      if (storedShadowY) {
+        setShadowY(parseFloat(storedShadowY));
+        root.style.setProperty('--shadow-y', `${parseFloat(storedShadowY)}px`);
+      }
 
       const storedShadowBlur = localStorage.getItem('majorstockx-shadow-blur');
-      if (storedShadowBlur) setShadowBlur(parseFloat(storedShadowBlur));
+      if (storedShadowBlur) {
+        setShadowBlur(parseFloat(storedShadowBlur));
+        root.style.setProperty('--shadow-blur', `${parseFloat(storedShadowBlur)}px`);
+      }
 
       const storedShadowOpacity = localStorage.getItem('majorstockx-shadow-opacity');
-      if (storedShadowOpacity) setShadowOpacity(parseFloat(storedShadowOpacity));
+      if (storedShadowOpacity) {
+        setShadowOpacity(parseFloat(storedShadowOpacity));
+        root.style.setProperty('--shadow-opacity', shadowsAreEnabled ? storedShadowOpacity : '0');
+      } else {
+        root.style.setProperty('--shadow-opacity', shadowsAreEnabled ? '0.1' : '0');
+      }
     }
   }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      document.documentElement.style.setProperty('--radius', `${radius}rem`);
-      document.documentElement.style.setProperty('--shadow-y', `${shadowY}px`);
-      document.documentElement.style.setProperty('--shadow-blur', `${shadowBlur}px`);
-      document.documentElement.style.setProperty('--shadow-opacity', shadowsEnabled ? `${shadowOpacity}` : '0');
+      const root = document.documentElement;
+      root.style.setProperty('--radius', `${radius}rem`);
+      root.style.setProperty('--shadow-y', `${shadowY}px`);
+      root.style.setProperty('--shadow-blur', `${shadowBlur}px`);
+      root.style.setProperty('--shadow-opacity', shadowsEnabled ? `${shadowOpacity}` : '0');
     }
   }, [radius, shadowsEnabled, shadowY, shadowBlur, shadowOpacity]);
 

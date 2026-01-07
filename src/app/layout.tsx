@@ -44,7 +44,8 @@ export default function RootLayout({
           root.style.setProperty('--radius', `${storedRadius}rem`);
         }
         
-        const shadowsEnabled = localStorage.getItem('majorstockx-shadows-enabled') === 'true';
+        const storedShadowsEnabled = localStorage.getItem('majorstockx-shadows-enabled');
+        const shadowsEnabled = storedShadowsEnabled ? JSON.parse(storedShadowsEnabled) : true;
 
         const storedShadowY = localStorage.getItem('majorstockx-shadow-y');
         if (storedShadowY) {
@@ -60,11 +61,23 @@ export default function RootLayout({
         if (storedShadowOpacity) {
             root.style.setProperty('--shadow-opacity', shadowsEnabled ? storedShadowOpacity : '0');
         } else {
-             root.style.setProperty('--shadow-opacity', shadowsEnabled ? '0.1' : '0');
+             root.style.setProperty('--shadow-opacity', shadowsEnabled ? (document.body.classList.contains('dark') ? '0.25' : '0.1') : '0');
         }
       }
     };
     applySavedStyling();
+    
+    // Also apply on theme change
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === "class" && (mutation.target as HTMLElement).tagName === 'BODY') {
+          applySavedStyling();
+        }
+      });
+    });
+    observer.observe(document.body, { attributes: true });
+
+    return () => observer.disconnect();
   }, []);
 
 
