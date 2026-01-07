@@ -10,6 +10,13 @@ import { LocationsManager } from "@/components/settings/locations-manager";
 import { currentUser } from "@/lib/data";
 import { EmployeeManager } from "@/components/settings/employee-manager";
 import { cn } from "@/lib/utils";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import { ChevronDown } from "lucide-react";
 
 const colorOptions = [
   { name: 'Primary', value: 'hsl(var(--primary))', className: 'bg-primary' },
@@ -123,119 +130,150 @@ export default function SettingsPage() {
           Ajuste as preferências da aplicação e da sua empresa.
         </p>
       </div>
-      <Card className="glass-card shadow-sm">
-        <CardHeader className="p-6 sm:p-8">
-          <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl">Aparência</CardTitle>
-          <CardDescription>
-            Personalize a aparência da aplicação.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6 p-6 sm:p-8 pt-0">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="theme">Tema</Label>
-            <ThemeSwitcher />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="border-radius">Arredondamento dos Cantos</Label>
-             <p className="text-sm text-muted-foreground">Ajuste o raio das bordas dos elementos.</p>
-            <div className="flex items-center gap-4">
-              <Slider
-                id="border-radius"
-                min={0}
-                max={2}
-                step={0.1}
-                value={[borderRadius]}
-                onValueChange={handleBorderRadiusChange}
-                className="w-[calc(100%-4rem)]"
-              />
-              <span className="w-12 text-right font-mono text-sm text-muted-foreground">
-                {borderRadius.toFixed(1)}rem
-              </span>
-            </div>
-          </div>
-           <div className="space-y-2">
-            <Label htmlFor="border-width">Largura da Borda do Card</Label>
-             <p className="text-sm text-muted-foreground">Ajuste a espessura da borda dos cards.</p>
-            <div className="flex items-center gap-4">
-              <Slider
-                id="border-width"
-                min={0}
-                max={4}
-                step={0.1}
-                value={[borderWidth]}
-                onValueChange={handleBorderWidthChange}
-                className="w-[calc(100%-4rem)]"
-              />
-              <span className="w-12 text-right font-mono text-sm text-muted-foreground">
-                {borderWidth.toFixed(1)}px
-              </span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="border-color">Cor da Borda do Card</Label>
-             <p className="text-sm text-muted-foreground">Selecione a cor da borda para os cards.</p>
-            <div className="flex items-center gap-2 pt-2">
-              {colorOptions.map(color => (
-                <button
-                  key={color.name}
-                  onClick={() => handleBorderColorChange(color.value)}
-                  className={cn(
-                    "h-8 w-8 rounded-full border-2 transition-all",
-                    borderColor === color.value ? 'border-ring' : 'border-transparent',
-                    color.className
-                  )}
-                  title={color.name}
-                />
-              ))}
-            </div>
-          </div>
-           <div className="space-y-2">
-            <Label htmlFor="icon-size">Tamanho do Ícone do Dashboard</Label>
-             <p className="text-sm text-muted-foreground">Ajuste o tamanho dos ícones nos cards de estatísticas.</p>
-            <div className="flex items-center gap-4">
-              <Slider
-                id="icon-size"
-                min={12}
-                max={24}
-                step={1}
-                value={[iconSize]}
-                onValueChange={handleIconSizeChange}
-                className="w-[calc(100%-4rem)]"
-              />
-              <span className="w-12 text-right font-mono text-sm text-muted-foreground">
-                {iconSize.toFixed(0)}px
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {currentUser.role === 'Admin' && (
-        <>
+      <Accordion type="single" collapsible className="w-full space-y-6">
+        <AccordionItem value="item-1" className="border-0">
           <Card className="glass-card shadow-sm">
-            <CardHeader className="p-6 sm:p-8">
-              <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl">Gestão de Localizações</CardTitle>
-              <CardDescription>
-                Ative e gerencie múltiplas localizações para o seu negócio.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6 sm:p-8 pt-0">
-              <LocationsManager />
-            </CardContent>
+            <AccordionTrigger className="w-full hover:no-underline">
+              <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
+                <div>
+                  <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Aparência</CardTitle>
+                  <CardDescription className="text-left">
+                    Personalize a aparência da aplicação.
+                  </CardDescription>
+                </div>
+                 <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+              </CardHeader>
+            </AccordionTrigger>
+            <AccordionContent>
+              <CardContent className="space-y-6 p-6 sm:p-8 pt-0">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="theme">Tema</Label>
+                  <ThemeSwitcher />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="border-radius">Arredondamento dos Cantos</Label>
+                  <p className="text-sm text-muted-foreground">Ajuste o raio das bordas dos elementos.</p>
+                  <div className="flex items-center gap-4">
+                    <Slider
+                      id="border-radius"
+                      min={0}
+                      max={2}
+                      step={0.1}
+                      value={[borderRadius]}
+                      onValueChange={handleBorderRadiusChange}
+                      className="w-[calc(100%-4rem)]"
+                    />
+                    <span className="w-12 text-right font-mono text-sm text-muted-foreground">
+                      {borderRadius.toFixed(1)}rem
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="border-width">Largura da Borda do Card</Label>
+                  <p className="text-sm text-muted-foreground">Ajuste a espessura da borda dos cards.</p>
+                  <div className="flex items-center gap-4">
+                    <Slider
+                      id="border-width"
+                      min={0}
+                      max={4}
+                      step={0.1}
+                      value={[borderWidth]}
+                      onValueChange={handleBorderWidthChange}
+                      className="w-[calc(100%-4rem)]"
+                    />
+                    <span className="w-12 text-right font-mono text-sm text-muted-foreground">
+                      {borderWidth.toFixed(1)}px
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="border-color">Cor da Borda do Card</Label>
+                  <p className="text-sm text-muted-foreground">Selecione a cor da borda para os cards.</p>
+                  <div className="flex items-center gap-2 pt-2">
+                    {colorOptions.map(color => (
+                      <button
+                        key={color.name}
+                        onClick={() => handleBorderColorChange(color.value)}
+                        className={cn(
+                          "h-8 w-8 rounded-full border-2 transition-all",
+                          borderColor === color.value ? 'border-ring' : 'border-transparent',
+                          color.className
+                        )}
+                        title={color.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="icon-size">Tamanho do Ícone do Dashboard</Label>
+                  <p className="text-sm text-muted-foreground">Ajuste o tamanho dos ícones nos cards de estatísticas.</p>
+                  <div className="flex items-center gap-4">
+                    <Slider
+                      id="icon-size"
+                      min={12}
+                      max={24}
+                      step={1}
+                      value={[iconSize]}
+                      onValueChange={handleIconSizeChange}
+                      className="w-[calc(100%-4rem)]"
+                    />
+                    <span className="w-12 text-right font-mono text-sm text-muted-foreground">
+                      {iconSize.toFixed(0)}px
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </AccordionContent>
           </Card>
-           <Card className="glass-card shadow-sm">
-            <CardHeader className="p-6 sm:p-8">
-              <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl">Gestão de Funcionários</CardTitle>
-              <CardDescription>
-                Convide e gerencie os funcionários da sua empresa.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6 sm:p-8 pt-0">
-              <EmployeeManager />
-            </CardContent>
-          </Card>
-        </>
-      )}
+        </AccordionItem>
+
+        {currentUser.role === 'Admin' && (
+          <>
+            <AccordionItem value="item-2" className="border-0">
+              <Card className="glass-card shadow-sm">
+                <AccordionTrigger className="w-full hover:no-underline">
+                  <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
+                     <div>
+                      <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Gestão de Localizações</CardTitle>
+                      <CardDescription className="text-left">
+                        Ative e gerencie múltiplas localizações para o seu negócio.
+                      </CardDescription>
+                     </div>
+                     <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                  </CardHeader>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <CardContent className="p-6 sm:p-8 pt-0">
+                    <LocationsManager />
+                  </CardContent>
+                </AccordionContent>
+              </Card>
+            </AccordionItem>
+            
+            <AccordionItem value="item-3" className="border-0">
+               <Card className="glass-card shadow-sm">
+                <AccordionTrigger className="w-full hover:no-underline">
+                  <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
+                    <div>
+                      <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Gestão de Funcionários</CardTitle>
+                      <CardDescription className="text-left">
+                        Convide e gerencie os funcionários da sua empresa.
+                      </CardDescription>
+                    </div>
+                     <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                  </CardHeader>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <CardContent className="p-6 sm:p-8 pt-0">
+                    <EmployeeManager />
+                  </CardContent>
+                </AccordionContent>
+              </Card>
+            </AccordionItem>
+          </>
+        )}
+      </Accordion>
     </div>
   );
 }
