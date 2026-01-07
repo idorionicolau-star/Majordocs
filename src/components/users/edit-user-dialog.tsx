@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -66,7 +66,7 @@ const permissionLabels: Record<keyof User['permissions'], string> = {
     canViewReports: "Ver relatórios",
 }
 
-export function EditUserDialog({ user, onUpdateUser, children }: EditUserDialogProps) {
+function EditUserDialogContent({ user, onUpdateUser, children }: EditUserDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
@@ -214,4 +214,14 @@ export function EditUserDialog({ user, onUpdateUser, children }: EditUserDialogP
       </DialogContent>
     </Dialog>
   );
+}
+
+export function EditUserDialog(props: EditUserDialogProps) {
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  return isClient ? <EditUserDialogContent {...props} /> : null;
 }

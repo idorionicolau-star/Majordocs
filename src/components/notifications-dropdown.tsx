@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from 'react';
 import { Bell } from "lucide-react"
 import {
   DropdownMenu,
@@ -13,7 +14,7 @@ import { Button } from "@/components/ui/button"
 import { notifications } from "@/lib/data"
 import { Badge } from "@/components/ui/badge"
 
-export function NotificationsDropdown() {
+function NotificationsDropdownContent() {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
@@ -44,4 +45,14 @@ export function NotificationsDropdown() {
       </DropdownMenuContent>
     </DropdownMenu>
   )
+}
+
+export function NotificationsDropdown() {
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  return isClient ? <NotificationsDropdownContent /> : null;
 }

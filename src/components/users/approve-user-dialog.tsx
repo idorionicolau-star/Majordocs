@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState, useEffect } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +22,7 @@ interface ApproveUserDialogProps {
   children: React.ReactNode;
 }
 
-export function ApproveUserDialog({ user, onApprove, children }: ApproveUserDialogProps) {
+function ApproveUserDialogContent({ user, onApprove, children }: ApproveUserDialogProps) {
   const { toast } = useToast();
 
   const handleApprove = () => {
@@ -52,4 +53,14 @@ export function ApproveUserDialog({ user, onApprove, children }: ApproveUserDial
       </AlertDialogContent>
     </AlertDialog>
   );
+}
+
+export function ApproveUserDialog(props: ApproveUserDialogProps) {
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  return isClient ? <ApproveUserDialogContent {...props} /> : null;
 }

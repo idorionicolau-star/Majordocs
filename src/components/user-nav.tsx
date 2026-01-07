@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from 'react';
 import {
   Avatar,
   AvatarFallback,
@@ -18,7 +19,7 @@ import {
 import { currentUser } from "@/lib/data"
 import Link from "next/link"
 
-export function UserNav() {
+function UserNavContent() {
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('');
   }
@@ -55,4 +56,14 @@ export function UserNav() {
       </DropdownMenuContent>
     </DropdownMenu>
   )
+}
+
+export function UserNav() {
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  return isClient ? <UserNavContent /> : null;
 }

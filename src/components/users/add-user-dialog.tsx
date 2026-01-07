@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -45,7 +45,7 @@ interface AddUserDialogProps {
     onAddUser: (user: AddUserFormValues) => void;
 }
 
-export function AddUserDialog({ onAddUser }: AddUserDialogProps) {
+function AddUserDialogContent({ onAddUser }: AddUserDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const form = useForm<AddUserFormValues>({
@@ -140,4 +140,14 @@ export function AddUserDialog({ onAddUser }: AddUserDialogProps) {
       </DialogContent>
     </Dialog>
   );
+}
+
+export function AddUserDialog(props: AddUserDialogProps) {
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    return isClient ? <AddUserDialogContent {...props} /> : null;
 }
