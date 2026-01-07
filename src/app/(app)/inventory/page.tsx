@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<Product[]>(initialProducts);
@@ -265,6 +266,7 @@ export default function InventoryPage() {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <ScrollArea className="h-[200px]">
                         <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuCheckboxItem
@@ -282,6 +284,7 @@ export default function InventoryPage() {
                             {location.name}
                         </DropdownMenuCheckboxItem>
                         ))}
+                      </ScrollArea>
                     </DropdownMenuContent>
                     </DropdownMenu>
                 )}
