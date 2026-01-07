@@ -1,9 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ConnectionStatus } from "@/components/connection-status"
 import { UserNav } from "@/components/user-nav"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
-import Logo from "../../../public/logo.svg";
 
 export function Header() {
   return (
@@ -11,7 +11,7 @@ export function Header() {
       <SidebarTrigger className="sm:hidden" />
       <div className="flex items-center gap-2">
         <div className="hidden sm:block">
-          <Logo className="h-6 w-6 text-primary" />
+          <Image src="/logo.svg" alt="MajorStockX Logo" width={24} height={24} className="text-primary" />
         </div>
         <h1 className="font-headline text-xl font-semibold hidden sm:block">MajorStockX</h1>
       </div>

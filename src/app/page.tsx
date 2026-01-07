@@ -1,9 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Logo from "../../../public/logo.svg";
 
 export default function LoginPage() {
   return (
@@ -11,7 +11,7 @@ export default function LoginPage() {
       <Card className="mx-auto w-full max-w-sm shadow-2xl">
         <CardHeader className="text-center">
            <div className="flex justify-center items-center gap-3 mb-4">
-             <Logo className="h-10 w-10 text-primary" />
+             <Image src="/logo.svg" alt="MajorStockX Logo" width={40} height={40} className="text-primary" />
              <h1 className="text-3xl font-headline font-bold text-primary">MajorStockX</h1>
            </div>
           <CardTitle className="text-2xl font-headline">Bem-vindo de volta</CardTitle>
