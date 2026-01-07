@@ -69,9 +69,11 @@ function AddSaleDialogContent({ products, onAddSale }: AddSaleDialogProps) {
   const watchedProductId = useWatch({ control: form.control, name: 'productId' });
   const watchedQuantity = useWatch({ control: form.control, name: 'quantity' });
   const watchedUnitPrice = useWatch({ control: form.control, name: 'unitPrice' });
+  const watchedLocation = useWatch({ control: form.control, name: 'location' });
 
   const selectedProduct = products.find(p => p.id === watchedProductId);
-  
+  const isStockSufficient = selectedProduct ? watchedQuantity <= selectedProduct.stock : false;
+
   useEffect(() => {
     if (selectedProduct) {
       form.setValue('unitPrice', selectedProduct.price);
@@ -79,6 +81,22 @@ function AddSaleDialogContent({ products, onAddSale }: AddSaleDialogProps) {
       form.setValue('unitPrice', 0);
     }
   }, [selectedProduct, form]);
+
+  useEffect(() => {
+    if(selectedProduct){
+      const stockIsSufficient = watchedQuantity <= selectedProduct.stock;
+      const locationIsCorrect = !isMultiLocation || selectedProduct.location === watchedLocation;
+      if (!stockIsSufficient) {
+        form.setError("quantity", { type: "manual", message: `Estoque insuficiente. Disponível: ${selectedProduct.stock}` });
+      } else if (!locationIsCorrect) {
+        form.setError("productId", { type: "manual", message: `Produto não existe nesta localização.` });
+      } else {
+        form.clearErrors("quantity");
+        form.clearErrors("productId");
+      }
+    }
+  }, [watchedQuantity, selectedProduct, watchedLocation, isMultiLocation, form]);
+
 
   const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
 
@@ -100,12 +118,34 @@ function AddSaleDialogContent({ products, onAddSale }: AddSaleDialogProps) {
 
 
   function onSubmit(values: AddSaleFormValues) {
-     if (isMultiLocation && !values.location) {
+    if (isMultiLocation && !values.location) {
       form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
       return;
     }
+
+    const product = products.find(p => p.id === values.productId);
+    if (!product) return;
+
+    if (values.quantity > product.stock) {
+      toast({
+        variant: "destructive",
+        title: "Estoque Insuficiente",
+        description: `Não há estoque suficiente para ${product.name}. Disponível: ${product.stock}, Solicitado: ${values.quantity}.`,
+      });
+      return;
+    }
+    
+    if (isMultiLocation && product.location !== values.location) {
+        toast({
+            variant: "destructive",
+            title: "Localização Incorreta",
+            description: `O produto ${product.name} não está disponível na localização selecionada.`,
+        });
+        return;
+    }
+
     onAddSale(values);
-    const productName = products.find(p => p.id === values.productId)?.name || 'Produto';
+    const productName = product.name;
     toast({
         title: "Venda Registrada",
         description: `A venda de ${values.quantity} unidades de ${productName} foi registrada.`,
@@ -116,6 +156,8 @@ function AddSaleDialogContent({ products, onAddSale }: AddSaleDialogProps) {
     }
     setOpen(false);
   }
+  
+  const isSubmitDisabled = !form.formState.isValid || form.formState.isSubmitting;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -218,7 +260,7 @@ function AddSaleDialogContent({ products, onAddSale }: AddSaleDialogProps) {
 
             <DialogFooter>
                 <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button type="submit">Registrar Venda</Button>
+                <Button type="submit" disabled={isSubmitDisabled}>Registrar Venda</Button>
             </DialogFooter>
           </form>
         </Form>
