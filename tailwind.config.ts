@@ -65,9 +65,9 @@ export default {
         sm: 'calc(var(--radius) - 8px)',
       },
       boxShadow: {
-        'lg': '0 calc(8px * var(--shadow-intensity)) calc(25px * var(--shadow-intensity)) calc(-5px * var(--shadow-intensity)) rgba(0, 0, 0, 0.1), 0 calc(4px * var(--shadow-intensity)) calc(10px * var(--shadow-intensity)) calc(-6px * var(--shadow-intensity)) rgba(0, 0, 0, 0.1)',
-        'xl': '0 calc(15px * var(--shadow-intensity)) calc(40px * var(--shadow-intensity)) calc(-10px * var(--shadow-intensity)) rgba(0, 0, 0, 0.15), 0 calc(5px * var(--shadow-intensity)) calc(15px * var(--shadow-intensity)) calc(-8px * var(--shadow-intensity)) rgba(0, 0, 0, 0.15)',
-        '2xl': '0 calc(25px * var(--shadow-intensity)) calc(50px * var(--shadow-intensity)) calc(-12px * var(--shadow-intensity)) rgba(0, 0, 0, 0.25)',
+        'lg': '0 calc(8px * var(--shadow-intensity)) calc(25px * var(--shadow-intensity)) calc(-5px * var(--shadow-intensity)) hsl(var(--primary) / 0.1), 0 calc(4px * var(--shadow-intensity)) calc(10px * var(--shadow-intensity)) calc(-6px * var(--shadow-intensity)) hsl(var(--primary) / 0.1)',
+        'xl': '0 calc(15px * var(--shadow-intensity)) calc(40px * var(--shadow-intensity)) calc(-10px * var(--shadow-intensity)) hsl(var(--primary) / 0.15), 0 calc(5px * var(--shadow-intensity)) calc(15px * var(--shadow-intensity)) calc(-8px * var(--shadow-intensity)) hsl(var(--primary) / 0.15)',
+        '2xl': '0 calc(25px * var(--shadow-intensity)) calc(50px * var(--shadow-intensity)) calc(-12px * var(--shadow-intensity)) hsl(var(--primary) / 0.25)',
       },
       keyframes: {
         'accordion-down': {
@@ -96,11 +96,33 @@ export default {
                 transform: 'translate(-50%, -50%) scale(1)'
             }
         },
+        'slide-in-from-bottom-2': {
+          from: {
+            transform: 'translateY(4px)',
+            opacity: '0',
+          },
+          to: {
+            transform: 'translateY(0)',
+            opacity: '1',
+          },
+        },
+         'slide-in-from-bottom-4': {
+          from: {
+            transform: 'translateY(8px)',
+            opacity: '0',
+          },
+          to: {
+            transform: 'translateY(0)',
+            opacity: '1',
+          },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'content-show': 'content-show 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        'in-fast': 'fade-in 0.3s ease-out, slide-in-from-bottom-2 0.3s ease-out',
+        'in-slow': 'fade-in 0.5s ease-out, slide-in-from-bottom-4 0.5s ease-out',
       },
     },
   },
