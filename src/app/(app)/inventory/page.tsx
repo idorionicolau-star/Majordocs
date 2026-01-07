@@ -277,7 +277,15 @@ export default function InventoryPage() {
                       Gerencie os produtos do seu estoque.
                   </p>
               </div>
-              <div className="flex items-center justify-start md:justify-end gap-2">
+          </div>
+          <div className="py-4 space-y-4">
+            <Input
+              placeholder="Filtrar por nome..."
+              value={nameFilter}
+              onChange={(event) => setNameFilter(event.target.value)}
+              className="w-full md:max-w-sm shadow-lg h-12 text-sm"
+            />
+            <div className="flex items-center justify-center gap-2">
               <TooltipProvider>
                   {isMultiLocation && (
                       <DropdownMenu>
@@ -369,14 +377,6 @@ export default function InventoryPage() {
                   </Tooltip>
               </TooltipProvider>
             </div>
-          </div>
-          <div className="py-4">
-            <Input
-              placeholder="Filtrar por nome..."
-              value={nameFilter}
-              onChange={(event) => setNameFilter(event.target.value)}
-              className="w-full md:max-w-sm shadow-lg h-12 text-sm"
-            />
         </div>
         <InventoryDataTable 
           columns={columns({ 
