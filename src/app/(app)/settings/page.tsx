@@ -44,7 +44,7 @@ export default function SettingsPage() {
 
       const storedBorderWidth = localStorage.getItem('majorstockx-border-width');
       if (storedBorderWidth) {
-        setBorderWidth(parseInt(storedBorderWidth, 10));
+        setBorderWidth(parseFloat(storedBorderWidth));
       }
 
       const storedBorderColor = localStorage.getItem('majorstockx-border-color');
@@ -181,7 +181,7 @@ export default function SettingsPage() {
                 id="border-width"
                 min={0}
                 max={4}
-                step={0.5}
+                step={0.1}
                 value={[borderWidth]}
                 onValueChange={handleBorderWidthChange}
                 className="w-[calc(100%-4rem)]"
