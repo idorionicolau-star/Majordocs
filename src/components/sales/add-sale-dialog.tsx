@@ -39,6 +39,7 @@ import { formatCurrency } from '@/lib/utils';
 const formSchema = z.object({
   productId: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
+  unitPrice: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
   location: z.string().optional(),
 });
 
@@ -60,17 +61,26 @@ function AddSaleDialogContent({ products, onAddSale }: AddSaleDialogProps) {
     defaultValues: {
       productId: "",
       quantity: 1,
+      unitPrice: 0,
       location: "",
     },
   });
   
   const watchedProductId = useWatch({ control: form.control, name: 'productId' });
   const watchedQuantity = useWatch({ control: form.control, name: 'quantity' });
+  const watchedUnitPrice = useWatch({ control: form.control, name: 'unitPrice' });
 
   const selectedProduct = products.find(p => p.id === watchedProductId);
-  const unitPrice = selectedProduct?.price ?? 0;
-  const totalValue = unitPrice * (watchedQuantity || 0);
+  
+  useEffect(() => {
+    if (selectedProduct) {
+      form.setValue('unitPrice', selectedProduct.price);
+    } else {
+      form.setValue('unitPrice', 0);
+    }
+  }, [selectedProduct, form]);
 
+  const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -172,29 +182,38 @@ function AddSaleDialogContent({ products, onAddSale }: AddSaleDialogProps) {
                 )}
               />
             )}
-            <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Quantidade Vendida</FormLabel>
-                  <FormControl>
-                    <Input type="number" min="1" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4 rounded-lg bg-muted p-4">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Preço Unit.</p>
-                <p className="text-lg font-bold">{formatCurrency(unitPrice)}</p>
-              </div>
-              <div className="space-y-1 text-right">
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="quantity"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Quantidade Vendida</FormLabel>
+                    <FormControl>
+                        <Input type="number" min="1" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                    control={form.control}
+                    name="unitPrice"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Preço Unitário</FormLabel>
+                        <FormControl>
+                            <Input type="number" step="0.01" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+            
+            <div className="rounded-lg bg-muted p-4 text-right">
                 <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
-                <p className="text-lg font-bold">{formatCurrency(totalValue)}</p>
-              </div>
+                <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
             </div>
 
             <DialogFooter>

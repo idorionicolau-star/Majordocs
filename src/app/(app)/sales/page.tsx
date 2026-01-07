@@ -21,7 +21,7 @@ export default function SalesPage() {
     }
   }, []);
 
-  const handleAddSale = (newSaleData: { productId: string; quantity: number; location?: string; }) => {
+  const handleAddSale = (newSaleData: { productId: string; quantity: number; unitPrice: number; location?: string; }) => {
     const product = products.find(p => p.id === newSaleData.productId);
     if (!product) return;
 
@@ -31,7 +31,7 @@ export default function SalesPage() {
       date: now.toISOString(),
       productName: product.name,
       quantity: newSaleData.quantity,
-      totalValue: newSaleData.quantity * product.price,
+      totalValue: newSaleData.quantity * newSaleData.unitPrice,
       soldBy: currentUser.name,
       guideNumber: `GT${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${(sales.length + 1).toString().padStart(3, '0')}`,
       location: newSaleData.location,
