@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -47,7 +47,7 @@ interface AddSaleDialogProps {
     onAddSale: (data: AddSaleFormValues) => void;
 }
 
-export function AddSaleDialog({ products, onAddSale }: AddSaleDialogProps) {
+function AddSaleDialogContent({ products, onAddSale }: AddSaleDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const form = useForm<AddSaleFormValues>({
@@ -130,4 +130,14 @@ export function AddSaleDialog({ products, onAddSale }: AddSaleDialogProps) {
       </DialogContent>
     </Dialog>
   );
+}
+
+export function AddSaleDialog(props: AddSaleDialogProps) {
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  return isClient ? <AddSaleDialogContent {...props} /> : null;
 }
