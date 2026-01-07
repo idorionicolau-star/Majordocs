@@ -44,9 +44,10 @@ interface EditSaleDialogProps {
     products: Product[];
     onUpdateSale: (sale: Sale) => void;
     onOpenChange: (open: boolean) => void;
+    open: boolean;
 }
 
-export function EditSaleDialog({ sale, products, onUpdateSale, onOpenChange }: EditSaleDialogProps) {
+export function EditSaleDialog({ sale, products, onUpdateSale, onOpenChange, open }: EditSaleDialogProps) {
   const form = useForm<EditSaleFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -62,24 +63,26 @@ export function EditSaleDialog({ sale, products, onUpdateSale, onOpenChange }: E
 
   const selectedProduct = products.find(p => p.id === watchedProductId);
 
-  // This effect updates the price only when the product changes,
-  // but allows manual override.
   useEffect(() => {
-    if (selectedProduct) {
-        // Only update unit price if it's still the default from the original product
-        if (form.getValues('unitPrice') === (products.find(p => p.id === sale.productId)?.price || 0)) {
-            form.setValue('unitPrice', selectedProduct.price);
-        }
-    }
-  }, [selectedProduct, form, sale.productId, products]);
-
-  useEffect(() => {
-    form.reset({
+    if (open) {
+      form.reset({
         productId: sale.productId,
         quantity: sale.quantity,
         unitPrice: sale.unitPrice,
-    });
-  }, [sale, form]);
+      });
+    }
+  }, [open, sale, form]);
+
+  useEffect(() => {
+    if (selectedProduct) {
+        if (watchedProductId !== sale.productId) {
+            form.setValue('unitPrice', selectedProduct.price);
+        } else {
+             // If we go back to the original product, restore its original price in the sale
+            form.setValue('unitPrice', sale.unitPrice);
+        }
+    }
+  }, [watchedProductId, selectedProduct, sale, form]);
 
 
   const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
