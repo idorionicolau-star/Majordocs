@@ -28,6 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<Product[]>(initialProducts);
@@ -247,14 +248,14 @@ export default function InventoryPage() {
       </AlertDialog>
 
       <div className="flex flex-col gap-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
               <div>
                   <h1 className="text-3xl font-headline font-bold">Inventário</h1>
                   <p className="text-muted-foreground">
                       Gerencie os produtos do seu estoque.
                   </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                   {isMultiLocation && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

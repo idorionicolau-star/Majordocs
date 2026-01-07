@@ -79,18 +79,18 @@ export function InventoryDataTable<TData extends Product, TValue>({
 
   return (
     <div>
-        <div className="flex items-center py-4 gap-2">
+        <div className="flex flex-col md:flex-row items-center py-4 gap-2">
             <Input
             placeholder="Filtrar por nome..."
             value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
             onChange={(event) =>
                 table.getColumn("name")?.setFilterValue(event.target.value)
             }
-            className="max-w-sm shadow-lg"
+            className="w-full md:max-w-sm shadow-lg"
             />
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="ml-auto shadow-lg">
+                    <Button variant="outline" className="w-full md:w-auto md:ml-auto shadow-lg">
                         <ListFilter className="mr-2 h-4 w-4" />
                         Categoria
                         {selectedCategories.length > 0 && (
