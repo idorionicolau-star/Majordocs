@@ -67,7 +67,7 @@ export default function RootLayout({
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         if (mutation.attributeName === "class" && (mutation.target as HTMLElement).tagName === 'BODY') {
-          applySavedStyling();
+          applySavedyling();
         }
       }
     });

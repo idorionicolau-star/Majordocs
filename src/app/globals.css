@@ -43,7 +43,7 @@
 
     --shadow-intensity: 0.5;
     --card-border-width: 1px;
-    --card-border-color: hsl(var(--border));
+    --card-border-color: hsl(var(--primary) / 0.2);
   }
 
   .dark {
@@ -75,7 +75,7 @@
     --input: 217 27% 20%;
     --ring: 216 98% 75%;
 
-    --card-border-color: hsl(var(--border));
+    --card-border-color: hsl(var(--primary) / 0.2);
   }
 }
 
@@ -109,7 +109,6 @@
   .card {
     @apply transition-all duration-300;
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    border: var(--card-border-width) solid var(--card-border-color);
   }
   .card:hover {
      transform: translateY(calc(-2px * var(--shadow-intensity)));
