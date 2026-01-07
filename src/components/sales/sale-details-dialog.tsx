@@ -9,7 +9,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import type { Sale, Location } from "@/lib/types";
 import { Calendar, Clock, Box, User, Hash, MapPin, DollarSign, Tag } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
@@ -18,6 +17,7 @@ interface SaleDetailsDialogProps {
   sale: Sale;
   locations: Location[];
   isMultiLocation: boolean;
+  children: React.ReactNode;
 }
 
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
@@ -30,7 +30,7 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
     </div>
 );
 
-export function SaleDetailsDialog({ sale, locations, isMultiLocation }: SaleDetailsDialogProps) {
+export function SaleDetailsDialog({ sale, locations, isMultiLocation, children }: SaleDetailsDialogProps) {
   const saleDate = new Date(sale.date);
   const locationName = isMultiLocation ? locations.find(l => l.id === sale.location)?.name || 'N/A' : null;
   const unitPrice = sale.quantity > 0 ? sale.totalValue / sale.quantity : 0;
@@ -42,9 +42,7 @@ export function SaleDetailsDialog({ sale, locations, isMultiLocation }: SaleDeta
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-          Ver Detalhes
-        </DropdownMenuItem>
+        {children}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

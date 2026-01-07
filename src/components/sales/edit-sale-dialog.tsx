@@ -32,7 +32,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Product, Sale } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { DropdownMenuItem } from '../ui/dropdown-menu';
 
 const formSchema = z.object({
   productId: z.string().nonempty({ message: "Por favor, selecione um produto." }),
@@ -46,9 +45,10 @@ interface EditSaleDialogProps {
     sale: Sale;
     products: Product[];
     onUpdateSale: (sale: Sale) => void;
+    children: React.ReactNode;
 }
 
-export function EditSaleDialog({ sale, products, onUpdateSale }: EditSaleDialogProps) {
+export function EditSaleDialog({ sale, products, onUpdateSale, children }: EditSaleDialogProps) {
   const [open, setOpen] = useState(false);
   
   const form = useForm<EditSaleFormValues>({
@@ -105,9 +105,7 @@ export function EditSaleDialog({ sale, products, onUpdateSale }: EditSaleDialogP
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-          Editar
-        </DropdownMenuItem>
+        {children}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

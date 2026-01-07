@@ -4,19 +4,12 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Sale, Location, Product } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { MoreHorizontal } from "lucide-react"
+import { MoreHorizontal, Edit, Printer, FileSearch } from "lucide-react"
 import { useEffect, useState } from "react"
 import { SaleDetailsDialog } from "./sale-details-dialog"
 import { formatCurrency } from "@/lib/utils"
 import { EditSaleDialog } from "./edit-sale-dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
 
 interface ColumnsOptions {
   locations: Location[];
@@ -160,27 +153,59 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
     {
       id: "actions",
       cell: ({ row }) => {
+        const sale = row.original;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              <SaleDetailsDialog sale={row.original} locations={options.locations} isMultiLocation={isMultiLocation} />
-               <EditSaleDialog 
-                sale={row.original}
-                products={options.products}
-                onUpdateSale={options.onUpdateSale}
-              />
-              <DropdownMenuItem onClick={() => handlePrintGuide(row.original)}>
-                Imprimir Guia
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center justify-end gap-2">
+            <SaleDetailsDialog sale={sale} locations={options.locations} isMultiLocation={isMultiLocation}>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <FileSearch className="h-4 w-4" />
+                      <span className="sr-only">Ver Detalhes</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Ver Detalhes</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </SaleDetailsDialog>
+
+            <EditSaleDialog 
+              sale={sale}
+              products={options.products}
+              onUpdateSale={options.onUpdateSale}
+            >
+               <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Edit className="h-4 w-4" />
+                      <span className="sr-only">Editar Venda</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Editar Venda</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </EditSaleDialog>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrintGuide(sale)}>
+                    <Printer className="h-4 w-4" />
+                    <span className="sr-only">Imprimir Guia</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Imprimir Guia</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         )
       },
     }
