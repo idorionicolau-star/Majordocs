@@ -159,15 +159,15 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
             <SaleDetailsDialog sale={sale} locations={options.locations} isMultiLocation={isMultiLocation}>
               <TooltipProvider>
                 <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <FileSearch className="h-4 w-4" />
-                      <span className="sr-only">Ver Detalhes</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Ver Detalhes</p>
-                  </TooltipContent>
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <FileSearch className="h-4 w-4" />
+                            <span className="sr-only">Ver Detalhes</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Ver Detalhes</p>
+                    </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </SaleDetailsDialog>
