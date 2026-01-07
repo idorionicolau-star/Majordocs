@@ -1,4 +1,6 @@
 
+"use client";
+
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { currentUser } from "@/lib/data";
 import dynamic from "next/dynamic";
