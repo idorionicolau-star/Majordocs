@@ -8,15 +8,16 @@ import { UserNav } from "@/components/user-nav"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "../ui/button";
-import { Menu, Package2 } from "lucide-react";
-import { navItems } from "@/lib/data";
+import { Menu } from "lucide-react";
+import { mainNavItems, dashboardNavItem, settingsNavItem } from "@/lib/data";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 
 export function Header() {
-  const companyName = "Construções & Filhos, Lda"; // Mock data
   const pathname = usePathname();
+
+  const allNavItems = [dashboardNavItem, ...mainNavItems, settingsNavItem];
 
   return (
     <header className="fixed top-0 left-0 right-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 sm:py-4">
@@ -37,7 +38,7 @@ export function Header() {
                     <Image src="/logo.svg" alt="MajorStockX Logo" width={24} height={24} className="text-primary" />
                     <span className="sr-only">MajorStockX</span>
                     </Link>
-                    {navItems.map((item) => (
+                    {allNavItems.map((item) => (
                     <Link
                         key={item.href}
                         href={item.href}
