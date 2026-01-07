@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -40,7 +41,7 @@ interface AddProductDialogProps {
     onAddProduct: (product: AddProductFormValues) => void;
 }
 
-export function AddProductDialog({ onAddProduct }: AddProductDialogProps) {
+function AddProductDialogContent({ onAddProduct }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const form = useForm<AddProductFormValues>({
@@ -157,4 +158,14 @@ export function AddProductDialog({ onAddProduct }: AddProductDialogProps) {
       </DialogContent>
     </Dialog>
   );
+}
+
+export function AddProductDialog(props: AddProductDialogProps) {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  return isClient ? <AddProductDialogContent {...props} /> : null;
 }

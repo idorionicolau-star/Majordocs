@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from 'react';
@@ -54,5 +55,14 @@ export function NotificationsDropdown() {
     setIsClient(true)
   }, [])
 
-  return isClient ? <NotificationsDropdownContent /> : null;
+  if (!isClient) {
+    return (
+      <Button variant="ghost" size="icon" className="relative">
+        <Bell className="h-5 w-5" />
+        <span className="sr-only">Toggle notifications</span>
+      </Button>
+    )
+  }
+
+  return <NotificationsDropdownContent />;
 }

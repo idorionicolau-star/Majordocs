@@ -57,16 +57,19 @@ export default function RootLayout({
         }
       }
     };
+    
+    // Run on initial mount
     applySavedStyling();
     
     // Also apply on theme change
     const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
+      for (const mutation of mutations) {
         if (mutation.attributeName === "class" && (mutation.target as HTMLElement).tagName === 'BODY') {
           applySavedStyling();
         }
-      });
+      }
     });
+    
     observer.observe(document.body, { attributes: true });
 
     return () => observer.disconnect();
@@ -90,14 +93,16 @@ export default function RootLayout({
       <body className="font-body antialiased">
         {isClient ? (
           <ThemeProvider
-            defaultTheme="system"
             storageKey="majorstockx-theme"
           >
             {children}
             <Toaster />
           </ThemeProvider>
         ) : (
-          children
+          <div style={{ visibility: 'hidden' }}>
+            {children}
+            <Toaster />
+          </div>
         )}
       </body>
     </html>
