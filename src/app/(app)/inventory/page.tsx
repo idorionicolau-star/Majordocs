@@ -258,7 +258,7 @@ export default function InventoryPage() {
                   {isMultiLocation && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline">
+                        <Button variant="outline" className="shadow-lg">
                           <ListFilter className="mr-2 h-4 w-4" />
                           {locations.find(l => l.id === selectedLocation)?.name || "Todas as Localizações"}
                         </Button>
