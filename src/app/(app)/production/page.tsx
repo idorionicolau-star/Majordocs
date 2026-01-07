@@ -1,17 +1,28 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { productions as initialProductions, products } from "@/lib/data";
 import { columns } from "@/components/production/columns";
 import { ProductionDataTable } from "@/components/production/data-table";
 import { AddProductionDialog } from "@/components/production/add-production-dialog";
-import type { Production } from "@/lib/types";
+import type { Production, Location } from "@/lib/types";
 import { currentUser } from "@/lib/data";
 
 export default function ProductionPage() {
   const [productions, setProductions] = useState<Production[]>(initialProductions);
+  const [locations, setLocations] = useState<Location[]>([]);
 
-  const handleAddProduction = (newProductionData: { productId: string; quantity: number; }) => {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedLocations = localStorage.getItem('majorstockx-locations');
+      if (storedLocations) {
+        setLocations(JSON.parse(storedLocations));
+      }
+    }
+  }, []);
+
+  const handleAddProduction = (newProductionData: { productId: string; quantity: number; location?: string; }) => {
     const product = products.find(p => p.id === newProductionData.productId);
     if (!product) return;
 
@@ -21,6 +32,7 @@ export default function ProductionPage() {
       productName: product.name,
       quantity: newProductionData.quantity,
       registeredBy: currentUser.name,
+      location: newProductionData.location,
     };
     setProductions([newProduction, ...productions]);
   };
@@ -36,7 +48,7 @@ export default function ProductionPage() {
             </div>
             <AddProductionDialog products={products} onAddProduction={handleAddProduction} />
         </div>
-      <ProductionDataTable columns={columns} data={productions} />
+      <ProductionDataTable columns={columns({ locations })} data={productions} />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+
 export type User = {
   id: string;
   name: string;
@@ -22,6 +23,7 @@ export type Product = {
   lowStockThreshold: number;
   criticalStockThreshold: number;
   lastUpdated: string;
+  location?: string;
 };
 
 export type Sale = {
@@ -31,6 +33,7 @@ export type Sale = {
   quantity: number;
   soldBy: string;
   guideNumber: string;
+  location?: string;
 };
 
 export type Production = {
@@ -39,6 +42,7 @@ export type Production = {
   productName: string;
   quantity: number;
   registeredBy: string;
+  location?: string;
 };
 
 export type Notification = {
@@ -53,4 +57,9 @@ export type NavItem = {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
+};
+
+export type Location = {
+  id: string;
+  name: string;
 };

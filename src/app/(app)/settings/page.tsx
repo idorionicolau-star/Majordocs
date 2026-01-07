@@ -6,11 +6,12 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
+import { LocationsManager } from "@/components/settings/locations-manager";
+import { currentUser } from "@/lib/data";
 
 export default function SettingsPage() {
   const [isClient, setIsClient] = useState(false);
-  const [radius, setRadius] = useState(1);
+  const [radius, setRadius] = useState(0.8);
   const [shadowIntensity, setShadowIntensity] = useState(60);
 
   useEffect(() => {
@@ -122,6 +123,20 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {currentUser.role === 'Admin' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Gestão de Localizações</CardTitle>
+            <CardDescription>
+              Ative e gerencie múltiplas localizações para o seu negócio.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LocationsManager />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

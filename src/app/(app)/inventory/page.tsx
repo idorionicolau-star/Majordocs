@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { products as initialProducts } from "@/lib/data";
-import type { Product } from "@/lib/types";
+import type { Product, Location } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText } from "lucide-react";
+import { FileText, ListFilter } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -20,17 +20,41 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isMultiLocation, setIsMultiLocation] = useState(false);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const multiLocationEnabled = localStorage.getItem('majorstockx-multi-location-enabled') === 'true';
+      setIsMultiLocation(multiLocationEnabled);
+      
+      const storedLocations = localStorage.getItem('majorstockx-locations');
+      if (storedLocations) {
+        setLocations(JSON.parse(storedLocations));
+      }
+    }
+  }, []);
 
   const handleAddProduct = (newProduct: Omit<Product, 'id' | 'lastUpdated'>) => {
     const product: Product = {
       ...newProduct,
       id: `PROD${(products.length + 1).toString().padStart(3, '0')}`,
       lastUpdated: new Date().toISOString().split('T')[0],
+      location: newProduct.location || (locations.length > 0 ? locations[0].id : 'Principal'),
     };
     setProducts([product, ...products]);
   };
@@ -179,7 +203,7 @@ export default function InventoryPage() {
       printWindow.document.write('<table>');
       printWindow.document.write('<thead><tr><th>Produto</th><th>Categoria</th><th class="color-col">Cor</th><th class="count-col">Qtd. Contada</th><th class="count-col">Danificados</th><th class="obs-col">Observações</th></tr></thead>');
       printWindow.document.write('<tbody>');
-      products.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)).forEach(product => {
+      filteredProducts.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)).forEach(product => {
         printWindow.document.write(`<tr><td>${product.name}</td><td>${product.category}</td><td></td><td></td><td></td><td></td></tr>`);
       });
       printWindow.document.write('</tbody></table>');
@@ -197,6 +221,11 @@ export default function InventoryPage() {
       }, 500);
     }
   };
+
+  const filteredProducts = useMemo(() => {
+    if (selectedLocation === 'all') return products;
+    return products.filter(p => p.location === selectedLocation);
+  }, [products, selectedLocation]);
 
 
   return (
@@ -226,19 +255,54 @@ export default function InventoryPage() {
                   </p>
               </div>
               <div className="flex gap-2">
+                  {isMultiLocation && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline">
+                          <ListFilter className="mr-2 h-4 w-4" />
+                          {locations.find(l => l.id === selectedLocation)?.name || "Todas as Localizações"}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuCheckboxItem
+                          checked={selectedLocation === 'all'}
+                          onCheckedChange={() => setSelectedLocation('all')}
+                        >
+                          Todas as Localizações
+                        </DropdownMenuCheckboxItem>
+                        {locations.map(location => (
+                          <DropdownMenuCheckboxItem
+                            key={location.id}
+                            checked={selectedLocation === location.id}
+                            onCheckedChange={() => setSelectedLocation(location.id)}
+                          >
+                            {location.name}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                   <Button variant="outline" onClick={handlePrintCountForm}>
                       <FileText className="mr-2 h-4 w-4" />
                       Form. Contagem
                   </Button>
-                  <AddProductDialog onAddProduct={handleAddProduct} />
+                  <AddProductDialog 
+                    onAddProduct={handleAddProduct}
+                    isMultiLocation={isMultiLocation}
+                    locations={locations}
+                  />
               </div>
           </div>
         <InventoryDataTable 
           columns={columns({ 
             onAttemptDelete: (product) => setProductToDelete(product),
             onProductUpdate: handleUpdateProduct,
+            isMultiLocation: isMultiLocation,
+            locations: locations,
           })} 
-          data={products} 
+          data={filteredProducts} 
         />
       </div>
     </>

@@ -1,17 +1,27 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { sales as initialSales, products, currentUser } from "@/lib/data";
-import type { Sale } from "@/lib/types";
+import type { Sale, Location } from "@/lib/types";
 import { columns } from "@/components/sales/columns";
 import { SalesDataTable } from "@/components/sales/data-table";
 import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
 
 export default function SalesPage() {
   const [sales, setSales] = useState<Sale[]>(initialSales);
+  const [locations, setLocations] = useState<Location[]>([]);
 
-  const handleAddSale = (newSaleData: { productId: string; quantity: number; }) => {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedLocations = localStorage.getItem('majorstockx-locations');
+      if (storedLocations) {
+        setLocations(JSON.parse(storedLocations));
+      }
+    }
+  }, []);
+
+  const handleAddSale = (newSaleData: { productId: string; quantity: number; location?: string; }) => {
     const product = products.find(p => p.id === newSaleData.productId);
     if (!product) return;
 
@@ -22,6 +32,7 @@ export default function SalesPage() {
       quantity: newSaleData.quantity,
       soldBy: currentUser.name,
       guideNumber: `GT${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${(sales.length + 1).toString().padStart(3, '0')}`,
+      location: newSaleData.location,
     };
     setSales([newSale, ...sales]);
   };
@@ -37,7 +48,7 @@ export default function SalesPage() {
             </div>
             <AddSaleDialog products={products} onAddSale={handleAddSale} />
         </div>
-      <SalesDataTable columns={columns} data={sales} />
+      <SalesDataTable columns={columns({ locations })} data={sales} />
     </div>
   );
 }

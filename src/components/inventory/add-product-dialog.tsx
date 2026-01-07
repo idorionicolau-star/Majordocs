@@ -19,6 +19,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlusCircle } from "lucide-react";
@@ -26,6 +33,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from '@/hooks/use-toast';
+import type { Location } from '@/lib/types';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -33,15 +41,18 @@ const formSchema = z.object({
   stock: z.coerce.number().min(0, { message: "O estoque não pode ser negativo." }),
   lowStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
   criticalStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
+  location: z.string().optional(),
 });
 
 type AddProductFormValues = z.infer<typeof formSchema>;
 
 interface AddProductDialogProps {
     onAddProduct: (product: AddProductFormValues) => void;
+    isMultiLocation: boolean;
+    locations: Location[];
 }
 
-function AddProductDialogContent({ onAddProduct }: AddProductDialogProps) {
+function AddProductDialogContent({ onAddProduct, isMultiLocation, locations }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const form = useForm<AddProductFormValues>({
@@ -52,10 +63,21 @@ function AddProductDialogContent({ onAddProduct }: AddProductDialogProps) {
       stock: 0,
       lowStockThreshold: 10,
       criticalStockThreshold: 5,
+      location: locations.length > 0 ? locations[0].id : '',
     },
   });
 
+   useEffect(() => {
+    if (locations.length > 0 && !form.getValues('location')) {
+      form.setValue('location', locations[0].id);
+    }
+  }, [locations, form]);
+
   function onSubmit(values: AddProductFormValues) {
+    if (isMultiLocation && !values.location) {
+      form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
+      return;
+    }
     onAddProduct(values);
     toast({
         title: "Produto adicionado",
@@ -108,6 +130,32 @@ function AddProductDialogContent({ onAddProduct }: AddProductDialogProps) {
                 </FormItem>
               )}
             />
+             {isMultiLocation && (
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Localização</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma localização" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {locations.map(location => (
+                          <SelectItem key={location.id} value={location.id}>
+                            {location.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             <div className="grid grid-cols-3 gap-4">
                 <FormField
                 control={form.control}
@@ -167,5 +215,10 @@ export function AddProductDialog(props: AddProductDialogProps) {
     setIsClient(true);
   }, []);
 
-  return isClient ? <AddProductDialogContent {...props} /> : null;
+  return isClient ? <AddProductDialogContent {...props} /> : (
+     <Button disabled>
+        <PlusCircle className="mr-2 h-4 w-4" />
+        Adicionar Produto
+    </Button>
+  );
 }
