@@ -14,12 +14,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Edit, MoreHorizontal, Trash2 } from "lucide-react"
-import { EditProductDialog } from "./edit-product-dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
 
 interface ColumnsOptions {
   onAttemptDelete: (product: Product) => void;
-  onUpdateProduct: (productId: string, updatedData: Partial<Omit<Product, 'id'>>) => void;
 }
 
 const getStockStatus = (product: Product) => {
@@ -82,19 +80,6 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => [
       return (
         <div className="flex items-center justify-end gap-2">
             <TooltipProvider>
-                <EditProductDialog product={product} onUpdateProduct={options.onUpdateProduct}>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <Edit className="h-4 w-4" />
-                                <span className="sr-only">Editar</span>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Editar Produto</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </EditProductDialog>
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button
