@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal } from "lucide-react"
 import { useEffect, useState } from "react"
+import { SaleDetailsDialog } from "./sale-details-dialog"
 
 interface ColumnsOptions {
   locations: Location[];
@@ -133,6 +134,10 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
     {
       accessorKey: "date",
       header: "Data",
+       cell: ({ row }) => {
+        const date = new Date(row.original.date);
+        return date.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+      }
     },
     {
       accessorKey: "soldBy",
@@ -151,7 +156,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
+              <SaleDetailsDialog sale={row.original} locations={options.locations} isMultiLocation={isMultiLocation} />
               <DropdownMenuItem onClick={() => handlePrintGuide(row.original)}>
                 Imprimir Guia
               </DropdownMenuItem>

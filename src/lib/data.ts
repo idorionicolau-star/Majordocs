@@ -75,9 +75,9 @@ export const products: Product[] = [
 ];
 
 export const sales: Sale[] = [
-  { id: 'SALE001', date: '2024-05-22', productName: 'Grelha 30x30 Floriada', quantity: 20, soldBy: 'João Silva', guideNumber: 'GT20240522-001' },
-  { id: 'SALE002', date: '2024-05-22', productName: 'Pavê 6cm Cinza', quantity: 500, soldBy: 'João Silva', guideNumber: 'GT20240522-002' },
-  { id: 'SALE003', date: '2024-05-21', productName: 'Lancis de Concreto 1m', quantity: 10, soldBy: 'João Silva', guideNumber: 'GT20240521-001' },
+  { id: 'SALE001', date: '2024-05-22T10:30:00Z', productName: 'Grelha 30x30 Floriada', quantity: 20, soldBy: 'João Silva', guideNumber: 'GT20240522-001' },
+  { id: 'SALE002', date: '2024-05-22T14:15:00Z', productName: 'Pavê 6cm Cinza', quantity: 500, soldBy: 'João Silva', guideNumber: 'GT20240522-002' },
+  { id: 'SALE003', date: '2024-05-21T11:00:00Z', productName: 'Lancis de Concreto 1m', quantity: 10, soldBy: 'João Silva', guideNumber: 'GT20240521-001' },
 ];
 
 export const productions: Production[] = [

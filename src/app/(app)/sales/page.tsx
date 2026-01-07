@@ -25,13 +25,14 @@ export default function SalesPage() {
     const product = products.find(p => p.id === newSaleData.productId);
     if (!product) return;
 
+    const now = new Date();
     const newSale: Sale = {
       id: `SALE${(sales.length + 1).toString().padStart(3, '0')}`,
-      date: new Date().toISOString().split('T')[0],
+      date: now.toISOString(),
       productName: product.name,
       quantity: newSaleData.quantity,
       soldBy: currentUser.name,
-      guideNumber: `GT${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${(sales.length + 1).toString().padStart(3, '0')}`,
+      guideNumber: `GT${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${(sales.length + 1).toString().padStart(3, '0')}`,
       location: newSaleData.location,
     };
     setSales([newSale, ...sales]);
