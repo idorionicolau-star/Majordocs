@@ -42,6 +42,11 @@ export default function RootLayout({
         if (storedRadius) {
           root.style.setProperty('--radius', `${storedRadius}rem`);
         }
+
+        const storedShadowIntensity = localStorage.getItem('majorstockx-shadow-intensity');
+        if (storedShadowIntensity) {
+          root.style.setProperty('--shadow-intensity', (parseInt(storedShadowIntensity, 10) / 100).toString());
+        }
       }
     };
     

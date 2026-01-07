@@ -72,9 +72,9 @@ export default {
         sm: 'calc(var(--radius) - 8px)',
       },
       boxShadow: {
-        'lg': '0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 10px -6px rgba(0, 0, 0, 0.1)',
-        'xl': '0 15px 40px -10px rgba(0, 0, 0, 0.15), 0 5px 15px -8px rgba(0, 0, 0, 0.15)',
-        '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        'lg': '0 calc(8px * var(--shadow-intensity)) calc(25px * var(--shadow-intensity)) calc(-5px * var(--shadow-intensity)) rgba(0, 0, 0, 0.1), 0 calc(4px * var(--shadow-intensity)) calc(10px * var(--shadow-intensity)) calc(-6px * var(--shadow-intensity)) rgba(0, 0, 0, 0.1)',
+        'xl': '0 calc(15px * var(--shadow-intensity)) calc(40px * var(--shadow-intensity)) calc(-10px * var(--shadow-intensity)) rgba(0, 0, 0, 0.15), 0 calc(5px * var(--shadow-intensity)) calc(15px * var(--shadow-intensity)) calc(-8px * var(--shadow-intensity)) rgba(0, 0, 0, 0.15)',
+        '2xl': '0 calc(25px * var(--shadow-intensity)) calc(50px * var(--shadow-intensity)) calc(-12px * var(--shadow-intensity)) rgba(0, 0, 0, 0.25)',
       },
       keyframes: {
         'accordion-down': {

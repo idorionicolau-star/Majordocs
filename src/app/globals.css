@@ -30,6 +30,7 @@
     --chart-3: 173 58% 39%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    --shadow-intensity: 0.6;
 
     /* Sidebar variables */
     --sidebar-background: 222 47% 11%;
@@ -99,15 +100,18 @@
 
   /* Header and Sidebar */
   header.sticky {
-     @apply shadow-xl;
+     box-shadow: 0 calc(8px * var(--shadow-intensity)) calc(20px * var(--shadow-intensity)) rgba(0,0,0,0.1);
   }
 
   [data-sidebar="sidebar"] {
     @apply dark:backdrop-blur-lg;
   }
 
-  .sm\\:hidden nav {
-     @apply shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.2)] dark:shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.7)];
+  .sm\:hidden nav {
+     box-shadow: 0 calc(-10px * var(--shadow-intensity)) calc(30px * var(--shadow-intensity)) calc(-15px * var(--shadow-intensity)) rgba(0,0,0,0.2);
+  }
+  .dark .sm\:hidden nav {
+    box-shadow: 0 calc(-10px * var(--shadow-intensity)) calc(30px * var(--shadow-intensity)) calc(-15px * var(--shadow-intensity)) rgba(0,0,0,0.7);
   }
 
   /* Modals */
@@ -130,6 +134,6 @@
   }
 
   .input:focus-visible {
-    @apply shadow-[0_0_0_2px_hsl(var(--background)),_0_0_0_4px_hsl(var(--ring))];
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
   }
 }
