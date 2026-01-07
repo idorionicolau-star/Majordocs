@@ -21,7 +21,7 @@ const colorOptions = [
 
 export default function SettingsPage() {
   const [isClient, setIsClient] = useState(false);
-  const [borderRadius, setBorderRadius] = useState(1);
+  const [borderRadius, setBorderRadius] = useState(0.8);
   const [borderWidth, setBorderWidth] = useState(1);
   const [borderColor, setBorderColor] = useState('hsl(var(--primary))');
   const [iconSize, setIconSize] = useState(16);
