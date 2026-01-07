@@ -10,15 +10,15 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "bg-card text-card-foreground shadow-lg rounded-[--radius] transition-all duration-200",
+      "bg-card text-card-foreground rounded-[--radius] transition-all duration-300",
       className
     )}
     style={{
         ...style,
-        borderWidth: 'var(--card-border-width, 2px)',
-        borderColor: 'var(--card-border-color, hsl(var(--primary)/0.2))',
+        borderWidth: 'var(--card-border-width, 1px)',
+        borderColor: 'var(--card-border-color, hsl(var(--border)))',
         borderStyle: 'solid',
-        boxShadow: `0 0 12px 0 var(--card-border-color), 0 0 4px 0 var(--card-border-color)`,
+        boxShadow: `0 1px 2px 0 rgba(0,0,0,0.05), 0 0 0 0 transparent`,
     }}
     {...props}
   />
@@ -31,7 +31,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    className={cn("flex flex-col space-y-2 p-6", className)}
     {...props}
   />
 ))
@@ -44,7 +44,7 @@ const CardTitle = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
+      "text-xl font-headline font-semibold leading-none tracking-tight",
       className
     )}
     {...props}

@@ -6,29 +6,21 @@ import Image from "next/image";
 import { ConnectionStatus } from "@/components/connection-status"
 import { UserNav } from "@/components/user-nav"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Button } from "../ui/button";
-import { Menu } from "lucide-react";
-import { mainNavItems, dashboardNavItem, settingsNavItem } from "@/lib/data";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
 
 
 export function Header() {
-  const pathname = usePathname();
   const companyName = "Construções & Filhos, Lda";
 
-  const allNavItems = [dashboardNavItem, ...mainNavItems, settingsNavItem];
-
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur sm:px-6">
-        <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
-                <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-                    <Image src="/logo.svg" alt="MajorStockX Logo" width={28} height={28} className="text-primary" />
-                    <span className="hidden font-bold sm:inline-block">MajorStockX</span>
-                </Link>
-            </div>
+    <header className="glass-header sticky top-0 z-30 flex h-16 items-center gap-4 border-b px-4 sm:px-6">
+        <div className="flex items-center gap-3">
+            <Link href="/dashboard" className="flex items-center gap-2.5 font-semibold">
+                <Image src="/logo.svg" alt="MajorStockX Logo" width={28} height={28} className="text-primary" />
+                <span className="text-xl font-headline font-bold sm:inline-block">MajorStockX</span>
+            </Link>
+             <div className="hidden h-6 w-px bg-border sm:block" />
+            <p className="hidden text-sm font-medium text-muted-foreground sm:block">{companyName}</p>
         </div>
         
         <div className="ml-auto flex items-center gap-2 md:gap-4">
