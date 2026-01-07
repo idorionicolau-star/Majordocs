@@ -49,7 +49,7 @@ export function SalesDataTable<TData extends Sale, TValue>({
   }
 
   return (
-    <Card className="glass-card rounded-[2.5rem] shadow-sm overflow-hidden">
+    <Card className="glass-card shadow-sm overflow-hidden">
       <CardContent className="p-0">
          <div className="overflow-x-auto">
           <Table>

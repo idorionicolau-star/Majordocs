@@ -123,7 +123,7 @@ export default function SettingsPage() {
           Ajuste as preferências da aplicação e da sua empresa.
         </p>
       </div>
-      <Card className="glass-card rounded-[1.5rem] sm:rounded-[2.5rem] shadow-sm">
+      <Card className="glass-card shadow-sm">
         <CardHeader className="p-6 sm:p-8">
           <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl">Aparência</CardTitle>
           <CardDescription>
@@ -212,7 +212,7 @@ export default function SettingsPage() {
 
       {currentUser.role === 'Admin' && (
         <>
-          <Card className="glass-card rounded-[1.5rem] sm:rounded-[2.5rem] shadow-sm">
+          <Card className="glass-card shadow-sm">
             <CardHeader className="p-6 sm:p-8">
               <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl">Gestão de Localizações</CardTitle>
               <CardDescription>
@@ -223,7 +223,7 @@ export default function SettingsPage() {
               <LocationsManager />
             </CardContent>
           </Card>
-           <Card className="glass-card rounded-[1.5rem] sm:rounded-[2.5rem] shadow-sm">
+           <Card className="glass-card shadow-sm">
             <CardHeader className="p-6 sm:p-8">
               <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl">Gestão de Funcionários</CardTitle>
               <CardDescription>

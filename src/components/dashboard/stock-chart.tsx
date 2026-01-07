@@ -35,7 +35,7 @@ export function StockChart() {
 
 
   return (
-    <Card className="glass-card rounded-[2.5rem] shadow-sm overflow-hidden">
+    <Card className="glass-card shadow-sm overflow-hidden">
       <CardHeader className="p-6 md:p-8">
         <CardTitle className="font-headline font-[900] tracking-tighter text-xl md:text-2xl">Estoque por Categoria</CardTitle>
         <CardDescription>Distribuição do total de itens em estoque</CardDescription>
