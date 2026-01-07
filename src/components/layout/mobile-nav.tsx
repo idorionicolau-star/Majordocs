@@ -1,20 +1,21 @@
+
 "use client"
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { navItems } from "@/lib/data"
 import { cn } from "@/lib/utils"
-import { Users } from "lucide-react"
 
 export function MobileNav() {
   const pathname = usePathname()
 
-  const mainNavItems = navItems.filter(item => item.href !== '/settings');
+  // This component is now only for the bottom bar, which doesn't show settings
+  const mainNavItems = navItems.filter(item => item.href !== '/settings' && item.href !== '/dashboard');
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm sm:hidden">
-      <nav className="grid grid-cols-4 items-center max-w-2xl mx-auto">
-        {mainNavItems.map((item) => (
+      <nav className="grid grid-cols-5 items-center max-w-2xl mx-auto">
+        {navItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
