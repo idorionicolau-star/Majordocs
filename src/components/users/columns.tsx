@@ -6,11 +6,15 @@ import { User } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { Trash2 } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
 import React from "react"
+import { EditUserDialog } from "./edit-user-dialog"
 
 interface ColumnsOptions {
   onUpdateUser: (userId: string, data: Partial<User>) => void;
   onToggleStatus: (userId: string, currentStatus: 'Ativo' | 'Pendente') => void;
+  onAttemptDelete: (user: User) => void;
 }
 
 export const columns = (options: ColumnsOptions): ColumnDef<User>[] => [
@@ -45,11 +49,41 @@ export const columns = (options: ColumnsOptions): ColumnDef<User>[] => [
           variant={status === "Ativo" ? "default" : "outline"}
           size="sm"
           onClick={() => options.onToggleStatus(user.id, user.status)}
-          className={`h-auto px-2 py-0.5 text-xs font-semibold ${status === "Ativo" ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-300 hover:bg-green-200" : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-300 hover:bg-yellow-200"}`}
+          className={`h-auto px-2 py-0.5 text-xs font-semibold ${status === "Ativo" ? "border-transparent bg-green-500/20 text-green-700 dark:text-green-400 hover:bg-green-500/30" : "border-transparent bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/30"}`}
         >
           {status}
         </Button>
       );
+    },
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => {
+      const user = row.original
+
+      return (
+        <div className="flex items-center justify-end gap-2">
+            <EditUserDialog user={user} onUpdateUser={options.onUpdateUser} />
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => options.onAttemptDelete(user)}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Apagar</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Apagar Usuário</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        </div>
+      )
     },
   },
 ]
