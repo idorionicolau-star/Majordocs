@@ -28,6 +28,7 @@ import { products } from "@/lib/data"
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ChevronDown, ListFilter } from "lucide-react"
 import type { Product } from "@/lib/types"
+import { ScrollArea } from "../ui/scroll-area"
 
 interface DataTableProps<TData extends Product, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -101,6 +102,7 @@ export function InventoryDataTable<TData extends Product, TValue>({
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <ScrollArea className="h-48">
                     {categories.map((category) => {
                     return (
                         <DropdownMenuCheckboxItem
@@ -120,6 +122,7 @@ export function InventoryDataTable<TData extends Product, TValue>({
                         </DropdownMenuCheckboxItem>
                     )
                     })}
+                  </ScrollArea>
                 </DropdownMenuContent>
             </DropdownMenu>
         </div>
