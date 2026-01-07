@@ -2,7 +2,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Sale, Location } from "@/lib/types"
+import { Sale, Location, Product } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -16,9 +16,12 @@ import { MoreHorizontal } from "lucide-react"
 import { useEffect, useState } from "react"
 import { SaleDetailsDialog } from "./sale-details-dialog"
 import { formatCurrency } from "@/lib/utils"
+import { EditSaleDialog } from "./edit-sale-dialog"
 
 interface ColumnsOptions {
   locations: Location[];
+  products: Product[];
+  onUpdateSale: (sale: Sale) => void;
 }
 
 export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
@@ -168,6 +171,11 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
               <SaleDetailsDialog sale={row.original} locations={options.locations} isMultiLocation={isMultiLocation} />
+               <EditSaleDialog 
+                sale={row.original}
+                products={options.products}
+                onUpdateSale={options.onUpdateSale}
+              />
               <DropdownMenuItem onClick={() => handlePrintGuide(row.original)}>
                 Imprimir Guia
               </DropdownMenuItem>

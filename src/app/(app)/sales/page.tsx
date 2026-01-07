@@ -3,14 +3,17 @@
 
 import { useState, useEffect } from "react";
 import { sales as initialSales, products, currentUser } from "@/lib/data";
-import type { Sale, Location } from "@/lib/types";
+import type { Sale, Location, Product } from "@/lib/types";
 import { columns } from "@/components/sales/columns";
 import { SalesDataTable } from "@/components/sales/data-table";
 import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function SalesPage() {
   const [sales, setSales] = useState<Sale[]>(initialSales);
+  const [allProducts, setAllProducts] = useState<Product[]>(products);
   const [locations, setLocations] = useState<Location[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -22,21 +25,31 @@ export default function SalesPage() {
   }, []);
 
   const handleAddSale = (newSaleData: { productId: string; quantity: number; unitPrice: number; location?: string; }) => {
-    const product = products.find(p => p.id === newSaleData.productId);
+    const product = allProducts.find(p => p.id === newSaleData.productId);
     if (!product) return;
 
     const now = new Date();
     const newSale: Sale = {
       id: `SALE${(sales.length + 1).toString().padStart(3, '0')}`,
       date: now.toISOString(),
+      productId: product.id,
       productName: product.name,
       quantity: newSaleData.quantity,
+      unitPrice: newSaleData.unitPrice,
       totalValue: newSaleData.quantity * newSaleData.unitPrice,
       soldBy: currentUser.name,
       guideNumber: `GT${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${(sales.length + 1).toString().padStart(3, '0')}`,
       location: newSaleData.location,
     };
     setSales([newSale, ...sales]);
+  };
+
+  const handleUpdateSale = (updatedSale: Sale) => {
+    setSales(sales.map(s => s.id === updatedSale.id ? updatedSale : s));
+    toast({
+        title: "Venda Atualizada",
+        description: `A venda #${updatedSale.guideNumber} foi atualizada com sucesso.`,
+    });
   };
 
   return (
@@ -48,9 +61,16 @@ export default function SalesPage() {
                     Visualize e registre as vendas de produtos.
                 </p>
             </div>
-            <AddSaleDialog products={products} onAddSale={handleAddSale} />
+            <AddSaleDialog products={allProducts} onAddSale={handleAddSale} />
         </div>
-      <SalesDataTable columns={columns({ locations })} data={sales} />
+      <SalesDataTable 
+        columns={columns({ 
+            locations,
+            products: allProducts,
+            onUpdateSale: handleUpdateSale
+        })} 
+        data={sales} 
+      />
     </div>
   );
 }

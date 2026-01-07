@@ -30,8 +30,10 @@ export type Product = {
 export type Sale = {
   id: string;
   date: string;
+  productId: string;
   productName: string;
   quantity: number;
+  unitPrice: number;
   totalValue: number;
   soldBy: string;
   guideNumber: string;

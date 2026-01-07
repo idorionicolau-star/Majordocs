@@ -19,13 +19,14 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import type { Sale } from "@/lib/types";
 
-interface DataTableProps<TData, TValue> {
+interface DataTableProps<TData extends Sale, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
 }
 
-export function SalesDataTable<TData, TValue>({
+export function SalesDataTable<TData extends Sale, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {

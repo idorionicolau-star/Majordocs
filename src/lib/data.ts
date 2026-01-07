@@ -75,9 +75,9 @@ export const products: Product[] = [
 ];
 
 export const sales: Sale[] = [
-  { id: 'SALE001', date: '2024-05-22T10:30:00Z', productName: 'Grelha 30x30 Floriada', quantity: 20, totalValue: 2410.00, soldBy: 'João Silva', guideNumber: 'GT20240522-001' },
-  { id: 'SALE002', date: '2024-05-22T14:15:00Z', productName: 'Pavê 6cm Cinza', quantity: 500, totalValue: 7500.00, soldBy: 'João Silva', guideNumber: 'GT20240522-002' },
-  { id: 'SALE003', date: '2024-05-21T11:00:00Z', productName: 'Lancis de Concreto 1m', quantity: 10, totalValue: 2500.00, soldBy: 'João Silva', guideNumber: 'GT20240521-001' },
+  { id: 'SALE001', date: '2024-05-22T10:30:00Z', productId: 'PROD001', productName: 'Grelha 30x30 Floriada', quantity: 20, unitPrice: 120.50, totalValue: 2410.00, soldBy: 'João Silva', guideNumber: 'GT20240522-001' },
+  { id: 'SALE002', date: '2024-05-22T14:15:00Z', productId: 'PROD002', productName: 'Pavê 6cm Cinza', quantity: 500, unitPrice: 15.00, totalValue: 7500.00, soldBy: 'João Silva', guideNumber: 'GT20240522-002' },
+  { id: 'SALE003', date: '2024-05-21T11:00:00Z', productId: 'PROD003', productName: 'Lancis de Concreto 1m', quantity: 10, unitPrice: 250.00, totalValue: 2500.00, soldBy: 'João Silva', guideNumber: 'GT20240521-001' },
 ];
 
 export const productions: Production[] = [
