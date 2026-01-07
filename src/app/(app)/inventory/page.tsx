@@ -1,11 +1,26 @@
-import { products } from "@/lib/data";
+"use client";
+
+import { useState } from "react";
+import { products as initialProducts } from "@/lib/data";
+import type { Product } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, FileText } from "lucide-react";
-import Link from "next/link";
+import { FileText } from "lucide-react";
+import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 
 export default function InventoryPage() {
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+
+  const handleAddProduct = (newProduct: Omit<Product, 'id' | 'lastUpdated'>) => {
+    const product: Product = {
+      ...newProduct,
+      id: `PROD${(products.length + 1).toString().padStart(3, '0')}`,
+      lastUpdated: new Date().toISOString().split('T')[0],
+    };
+    setProducts([product, ...products]);
+  };
+
   return (
     <div className="flex flex-col gap-6">
         <div className="flex justify-between items-center">
@@ -20,10 +35,7 @@ export default function InventoryPage() {
                     <FileText className="mr-2 h-4 w-4" />
                     Form. Contagem
                 </Button>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Adicionar Produto
-                </Button>
+                <AddProductDialog onAddProduct={handleAddProduct} />
             </div>
         </div>
       <InventoryDataTable columns={columns} data={products} />
