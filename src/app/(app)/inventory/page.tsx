@@ -270,14 +270,14 @@ export default function InventoryPage() {
       </AlertDialog>
 
       <div className="flex flex-col gap-6">
-          <div className="relative flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
               <div>
                   <h1 className="text-3xl font-headline font-bold">Inventário</h1>
                   <p className="text-muted-foreground">
                       Gerencie os produtos do seu estoque.
                   </p>
               </div>
-              <div className="flex items-center justify-center md:justify-end gap-2 md:absolute md:top-0 md:right-0">
+              <div className="flex items-center justify-start md:justify-end gap-2">
               <TooltipProvider>
                   {isMultiLocation && (
                       <DropdownMenu>

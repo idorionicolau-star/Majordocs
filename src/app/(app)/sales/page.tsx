@@ -54,7 +54,7 @@ export default function SalesPage() {
 
   return (
     <div className="flex flex-col gap-8 pb-20 animate-in fade-in duration-500">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h1 className="text-3xl font-[900] text-slate-900 dark:text-white tracking-tighter">Vendas</h1>
                 <p className="text-sm font-medium text-slate-500 mt-1">
