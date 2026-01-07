@@ -3,11 +3,9 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -171,3 +169,5 @@ export function EditSaleDialog({ sale, products, onUpdateSale, onOpenChange }: E
       </DialogContent>
   );
 }
+
+    
