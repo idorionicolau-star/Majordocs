@@ -59,7 +59,7 @@ export function StatsCards() {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
       {stats.map((stat) => (
-        <Card key={stat.title} className="glass-card flex items-center gap-4 p-4 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 group">
+        <Card key={stat.title} className="glass-card relative flex items-center gap-4 p-4 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 group">
              <div 
                 className={cn(
                   "flex items-center justify-center rounded-2xl bg-gradient-to-br flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300 h-12 w-12 sm:h-16 sm:w-16",
@@ -69,17 +69,21 @@ export function StatsCards() {
                 <stat.icon 
                   strokeWidth={2.5} 
                   className="h-6 w-6 sm:h-7 sm:w-7"
+                  style={{ width: 'var(--stats-icon-size, 28px)', height: 'var(--stats-icon-size, 28px)' }}
                 />
             </div>
             <div className="flex flex-col">
                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
                 <div className="flex items-end gap-2">
                     <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{stat.value}</h3>
-                    <div className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold", trendColors[stat.trendDirection])}>
-                        {stat.trendDirection === 'up' ? <ArrowUp size={12} strokeWidth={3}/> : <ArrowDown size={12} strokeWidth={3}/> }
-                        <span>{stat.trend}</span>
-                    </div>
                 </div>
+            </div>
+             <div className={cn(
+                "absolute top-4 right-4 flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold", 
+                trendColors[stat.trendDirection]
+              )}>
+                {stat.trendDirection === 'up' ? <ArrowUp size={12} strokeWidth={3}/> : <ArrowDown size={12} strokeWidth={3}/> }
+                <span>{stat.trend}</span>
             </div>
         </Card>
       ))}
