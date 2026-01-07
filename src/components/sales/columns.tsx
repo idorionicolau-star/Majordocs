@@ -29,6 +29,80 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
     }
   }, []);
 
+  const handlePrintGuide = (sale: Sale) => {
+    const printWindow = window.open('', '', 'height=800,width=800');
+    if (printWindow) {
+        printWindow.document.write('<!DOCTYPE html><html><head><title>Guia de Remessa</title>');
+        printWindow.document.write(`
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+        `);
+        printWindow.document.write(`
+            <style>
+                body { font-family: 'PT Sans', sans-serif; line-height: 1.6; color: #333; margin: 2rem; }
+                .container { max-width: 800px; margin: auto; padding: 2rem; border: 1px solid #eee; border-radius: 8px; }
+                .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 1rem; margin-bottom: 2rem; }
+                .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2.5rem; color: #3498db; margin: 0; }
+                .logo { display: flex; align-items: center; gap: 0.5rem; }
+                .logo span { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: bold; color: #3498db; }
+                .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
+                .details-grid div { background-color: #f9fafb; padding: 1rem; border-radius: 6px; }
+                .details-grid strong { display: block; margin-bottom: 0.5rem; color: #374151; font-family: 'Space Grotesk', sans-serif; }
+                table { width: 100%; border-collapse: collapse; margin-top: 2rem; }
+                th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                th { background-color: #f9fafb; font-family: 'Space Grotesk', sans-serif; }
+                .total-row td { font-weight: bold; font-size: 1.1rem; }
+                .footer { text-align: center; margin-top: 3rem; font-size: 0.8rem; color: #999; }
+                @media print {
+                  body { margin: 0; }
+                  .container { border: none; box-shadow: none; }
+                }
+            </style>
+        `);
+        printWindow.document.write('</head><body><div class="container">');
+        
+        printWindow.document.write(`
+            <div class="header">
+                 <div class="logo">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #3498db;">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></line>
+                    </svg>
+                    <span>MajorStockX</span>
+                </div>
+                <h1>Guia de Remessa</h1>
+            </div>
+        `);
+        
+        printWindow.document.write(`
+            <div class="details-grid">
+                <div><strong>Data:</strong> ${new Date(sale.date).toLocaleDateString('pt-BR')}</div>
+                <div><strong>Guia N.º:</strong> ${sale.guideNumber}</div>
+                <div><strong>Vendedor:</strong> ${sale.soldBy}</div>
+                ${isMultiLocation && sale.location ? `<div><strong>Localização:</strong> ${options.locations.find(l => l.id === sale.location)?.name || 'N/A'}</div>` : ''}
+            </div>
+        `);
+        
+        printWindow.document.write('<table><thead><tr><th>Produto</th><th>Quantidade</th></tr></thead><tbody>');
+        printWindow.document.write(`<tr><td>${sale.productName}</td><td>${sale.quantity}</td></tr>`);
+        printWindow.document.write('</tbody></table>');
+
+        printWindow.document.write('<div style="margin-top: 4rem;"><p>Recebido por: ___________________________________</p><p>Data: ____/____/______</p></div>');
+        printWindow.document.write('<div class="footer"><p>MajorStockX &copy; ' + new Date().getFullYear() + '</p></div>');
+        printWindow.document.write('</div></body></html>');
+        printWindow.document.close();
+        
+        setTimeout(() => {
+          printWindow.focus();
+          printWindow.print();
+          printWindow.close();
+        }, 500);
+    }
+  };
+
+
   const baseColumns: ColumnDef<Sale>[] = [
     {
       accessorKey: "guideNumber",
@@ -78,7 +152,9 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
               <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
-              <DropdownMenuItem>Imprimir Guia</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handlePrintGuide(row.original)}>
+                Imprimir Guia
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )
