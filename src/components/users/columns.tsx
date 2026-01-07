@@ -6,9 +6,7 @@ import { User } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Edit, MoreHorizontal } from "lucide-react"
 import React from "react"
-import { EditUserDialog } from "@/components/users/edit-user-dialog"
 
 interface ColumnsOptions {
   onUpdateUser: (userId: string, data: Partial<User>) => void;
@@ -52,22 +50,6 @@ export const columns = (options: ColumnsOptions): ColumnDef<User>[] => [
           {status}
         </Button>
       );
-    },
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => {
-      const user = row.original
-      return (
-        <div className="flex items-center justify-end gap-2">
-            <EditUserDialog user={user} onUpdateUser={options.onUpdateUser}>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Edit className="h-4 w-4" />
-                    <span className="sr-only">Editar</span>
-                </Button>
-            </EditUserDialog>
-        </div>
-      )
     },
   },
 ]
