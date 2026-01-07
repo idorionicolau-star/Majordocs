@@ -45,7 +45,7 @@ export default function RootLayout({
 
         const storedShadowIntensity = localStorage.getItem('majorstockx-shadow-intensity');
         if (storedShadowIntensity) {
-          root.style.setProperty('--shadow-intensity', (parseInt(storedShadowIntensity, 10) / 100).toString());
+            root.style.setProperty('--shadow-intensity', (parseInt(storedShadowIntensity, 10) / 100).toString());
         }
       }
     };
@@ -87,7 +87,7 @@ export default function RootLayout({
           storageKey="majorstockx-theme"
         >
           {isClient ? children : null}
-          <Toaster />
+          {isClient ? <Toaster /> : null}
         </ThemeProvider>
       </body>
     </html>
