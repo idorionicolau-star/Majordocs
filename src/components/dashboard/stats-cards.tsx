@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Box, DollarSign, AlertTriangle, Users } from "lucide-react";
 import { products, sales, users } from "@/lib/data";
+import { formatCurrency } from "@/lib/utils";
 
 export function StatsCards() {
     const lowStockCount = products.filter(p => p.stock < p.lowStockThreshold).length;
@@ -15,7 +16,7 @@ export function StatsCards() {
     },
     {
       title: "Volume de Vendas (Mês)",
-      value: `MT ${totalSalesValue.toLocaleString('pt-MZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: formatCurrency(totalSalesValue),
       icon: DollarSign,
       description: "Valor total das vendas",
     },

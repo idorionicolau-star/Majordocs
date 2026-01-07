@@ -12,6 +12,7 @@ import {
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import type { Sale, Location } from "@/lib/types";
 import { Calendar, Clock, Box, User, Hash, MapPin, DollarSign, Tag } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface SaleDetailsDialogProps {
   sale: Sale;
@@ -34,15 +35,8 @@ export function SaleDetailsDialog({ sale, locations, isMultiLocation }: SaleDeta
   const locationName = isMultiLocation ? locations.find(l => l.id === sale.location)?.name || 'N/A' : null;
   const unitPrice = sale.quantity > 0 ? sale.totalValue / sale.quantity : 0;
   
-  const formattedTotalValue = new Intl.NumberFormat('pt-MZ', {
-    style: 'currency',
-    currency: 'MZN',
-  }).format(sale.totalValue);
-
-  const formattedUnitPrice = new Intl.NumberFormat('pt-MZ', {
-    style: 'currency',
-    currency: 'MZN',
-    }).format(unitPrice);
+  const formattedTotalValue = formatCurrency(sale.totalValue);
+  const formattedUnitPrice = formatCurrency(unitPrice);
 
 
   return (

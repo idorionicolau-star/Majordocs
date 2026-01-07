@@ -29,11 +29,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlusCircle } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from '@/hooks/use-toast';
 import type { Product, Location } from '@/lib/types';
+import { formatCurrency } from '@/lib/utils';
 
 const formSchema = z.object({
   productId: z.string().nonempty({ message: "Por favor, selecione um produto." }),
@@ -53,7 +54,7 @@ function AddSaleDialogContent({ products, onAddSale }: AddSaleDialogProps) {
   const [isMultiLocation, setIsMultiLocation] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const { toast } = useToast();
-
+  
   const form = useForm<AddSaleFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -62,6 +63,14 @@ function AddSaleDialogContent({ products, onAddSale }: AddSaleDialogProps) {
       location: "",
     },
   });
+  
+  const watchedProductId = useWatch({ control: form.control, name: 'productId' });
+  const watchedQuantity = useWatch({ control: form.control, name: 'quantity' });
+
+  const selectedProduct = products.find(p => p.id === watchedProductId);
+  const unitPrice = selectedProduct?.price ?? 0;
+  const totalValue = unitPrice * (watchedQuantity || 0);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -106,7 +115,7 @@ function AddSaleDialogContent({ products, onAddSale }: AddSaleDialogProps) {
           Registrar Venda
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Registrar Nova Venda</DialogTitle>
           <DialogDescription>
@@ -176,6 +185,18 @@ function AddSaleDialogContent({ products, onAddSale }: AddSaleDialogProps) {
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-2 gap-4 rounded-lg bg-muted p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Preço Unit.</p>
+                <p className="text-lg font-bold">{formatCurrency(unitPrice)}</p>
+              </div>
+              <div className="space-y-1 text-right">
+                <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
+                <p className="text-lg font-bold">{formatCurrency(totalValue)}</p>
+              </div>
+            </div>
+
             <DialogFooter>
                 <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
                 <Button type="submit">Registrar Venda</Button>
