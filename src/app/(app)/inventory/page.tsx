@@ -270,22 +270,14 @@ export default function InventoryPage() {
       </AlertDialog>
 
       <div className="flex flex-col gap-6">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div className="relative flex flex-col md:flex-row md:justify-between md:items-center gap-4">
               <div>
                   <h1 className="text-3xl font-headline font-bold">Inventário</h1>
                   <p className="text-muted-foreground">
                       Gerencie os produtos do seu estoque.
                   </p>
               </div>
-          </div>
-          <div className="flex flex-col md:flex-row items-center py-4 gap-2">
-            <Input
-              placeholder="Filtrar por nome..."
-              value={nameFilter}
-              onChange={(event) => setNameFilter(event.target.value)}
-              className="w-full md:max-w-sm shadow-lg"
-            />
-            <div className="flex items-center gap-2 md:ml-auto">
+              <div className="flex items-center gap-2 md:absolute md:top-0 md:right-0">
               <TooltipProvider>
                   {isMultiLocation && (
                       <DropdownMenu>
@@ -377,6 +369,14 @@ export default function InventoryPage() {
                   </Tooltip>
               </TooltipProvider>
             </div>
+          </div>
+          <div className="py-4">
+            <Input
+              placeholder="Filtrar por nome..."
+              value={nameFilter}
+              onChange={(event) => setNameFilter(event.target.value)}
+              className="w-full md:max-w-sm shadow-lg"
+            />
         </div>
         <InventoryDataTable 
           columns={columns({ 
