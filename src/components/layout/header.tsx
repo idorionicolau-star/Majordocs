@@ -15,7 +15,7 @@ export function Header() {
         <div className="flex items-center gap-3">
             <Link href="/dashboard" className="flex items-center gap-2.5 font-semibold">
                 <Image src="/logo.svg" alt="MajorStockX Logo" width={28} height={28} className="text-primary" />
-                <span className="text-xl font-headline font-bold hidden sm:inline-block">MajorStockX</span>
+                <span className="text-xl font-headline font-bold sm:inline-block">MajorStockX</span>
             </Link>
         </div>
         
