@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { products } from "@/lib/data"
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, ListFilter } from "lucide-react"
 import type { Product } from "@/lib/types"
 
 interface DataTableProps<TData extends Product, TValue> {
@@ -50,6 +50,11 @@ export function InventoryDataTable<TData extends Product, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
+    initialState: {
+        pagination: {
+            pageSize: 8,
+        },
+    },
     state: {
       sorting,
       columnFilters,
@@ -60,6 +65,8 @@ export function InventoryDataTable<TData extends Product, TValue>({
     const categorySet = new Set(data.map(p => p.category));
     return Array.from(categorySet);
   }, [data]);
+
+  const selectedCategories = (table.getColumn("category")?.getFilterValue() as string[]) || [];
 
   return (
     <div>
@@ -75,7 +82,13 @@ export function InventoryDataTable<TData extends Product, TValue>({
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="ml-auto">
-                    Categoria <ChevronDown className="ml-2 h-4 w-4" />
+                        <ListFilter className="mr-2 h-4 w-4" />
+                        Categoria
+                        {selectedCategories.length > 0 && (
+                            <span className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
+                                {selectedCategories.length}
+                            </span>
+                        )}
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -84,9 +97,9 @@ export function InventoryDataTable<TData extends Product, TValue>({
                         <DropdownMenuCheckboxItem
                         key={category}
                         className="capitalize"
-                        checked={table.getColumn("category")?.getFilterValue()?.toString().includes(category)}
+                        checked={selectedCategories.includes(category)}
                         onCheckedChange={(value) => {
-                            const currentFilter = (table.getColumn("category")?.getFilterValue() as string[]) || [];
+                            const currentFilter = selectedCategories;
                             if (value) {
                                 table.getColumn("category")?.setFilterValue([...currentFilter, category]);
                             } else {
@@ -145,23 +158,31 @@ export function InventoryDataTable<TData extends Product, TValue>({
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Anterior
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Próximo
-        </Button>
+      <div className="flex items-center justify-between space-x-2 py-4">
+        <div className="text-sm text-muted-foreground">
+            {table.getFilteredRowModel().rows.length} de {data.length} produto(s).
+        </div>
+        <div className="flex items-center space-x-2">
+            <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+            >
+            Anterior
+            </Button>
+            <span className="text-sm">
+                {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
+            </span>
+            <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+            >
+            Próximo
+            </Button>
+        </div>
       </div>
     </div>
   )

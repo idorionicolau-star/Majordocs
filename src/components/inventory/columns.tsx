@@ -22,6 +22,9 @@ interface ColumnsOptions {
 }
 
 const getStockStatus = (product: Product) => {
+  if (product.stock <= 0) {
+      return "sem-estoque";
+  }
   if (product.stock <= product.criticalStockThreshold) {
     return "crítico";
   }
@@ -51,11 +54,13 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => [
     header: "Estoque",
     cell: ({ row }) => {
       const status = getStockStatus(row.original);
+      const stock = row.original.stock;
       return (
         <div className="flex items-center gap-2">
-          <span>{row.original.stock}</span>
-          {status === "baixo" && <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30">Baixo</Badge>}
-          {status === "crítico" && <Badge variant="destructive">Crítico</Badge>}
+           <span className={`font-medium ${status === 'crítico' || status === 'sem-estoque' ? 'text-destructive' : ''}`}>{stock}</span>
+          {status === "baixo" && <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30">Baixo</Badge>}
+          {status === "crítico" && <Badge variant="destructive" className="bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30 hover:bg-red-500/30">Crítico</Badge>}
+           {status === "sem-estoque" && <Badge variant="destructive">Sem Estoque</Badge>}
         </div>
       );
     },
@@ -63,6 +68,10 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => [
   {
     accessorKey: "lastUpdated",
     header: "Última Atualização",
+     cell: ({ row }) => {
+      const date = new Date(row.original.lastUpdated);
+      return date.toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+    }
   },
   {
     id: "actions",
@@ -72,7 +81,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => [
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
+            <Button variant="ghost" className="h-8 w-8 p-0 focus-visible:ring-offset-0">
               <span className="sr-only">Open menu</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
