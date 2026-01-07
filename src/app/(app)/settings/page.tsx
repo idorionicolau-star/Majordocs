@@ -119,21 +119,21 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8 pb-20 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-3xl font-headline font-bold">Configurações</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-3xl font-[900] text-slate-900 dark:text-white tracking-tighter">Configurações</h1>
+        <p className="text-sm font-medium text-slate-500 mt-1">
           Ajuste as preferências da aplicação e da sua empresa.
         </p>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Aparência</CardTitle>
+      <Card className="glass-card rounded-[2.5rem] shadow-sm">
+        <CardHeader className="p-8">
+          <CardTitle className="font-headline font-[900] tracking-tighter text-2xl">Aparência</CardTitle>
           <CardDescription>
             Personalize a aparência da aplicação.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 p-8 pt-0">
           <div className="flex items-center justify-between">
             <Label htmlFor="theme">Tema</Label>
             <ThemeSwitcher />
@@ -214,25 +214,25 @@ export default function SettingsPage() {
 
       {currentUser.role === 'Admin' && (
         <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Gestão de Localizações</CardTitle>
+          <Card className="glass-card rounded-[2.5rem] shadow-sm">
+            <CardHeader className="p-8">
+              <CardTitle className="font-headline font-[900] tracking-tighter text-2xl">Gestão de Localizações</CardTitle>
               <CardDescription>
                 Ative e gerencie múltiplas localizações para o seu negócio.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-8 pt-0">
               <LocationsManager />
             </CardContent>
           </Card>
-           <Card>
-            <CardHeader>
-              <CardTitle>Gestão de Funcionários</CardTitle>
+           <Card className="glass-card rounded-[2.5rem] shadow-sm">
+            <CardHeader className="p-8">
+              <CardTitle className="font-headline font-[900] tracking-tighter text-2xl">Gestão de Funcionários</CardTitle>
               <CardDescription>
                 Convide e gerencie os funcionários da sua empresa.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-8 pt-0">
               <EmployeeManager />
             </CardContent>
           </Card>
