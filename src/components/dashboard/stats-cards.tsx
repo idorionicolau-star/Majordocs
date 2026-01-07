@@ -57,7 +57,7 @@ export function StatsCards() {
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
       {stats.map((stat) => (
         <Card key={stat.title} className="glass-card flex items-center gap-6 p-6 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 group">
              <div className={cn(
