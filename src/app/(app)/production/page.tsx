@@ -46,9 +46,9 @@ export default function ProductionPage() {
                     Visualize e registre a produção de novos itens.
                 </p>
             </div>
-            <AddProductionDialog products={products} onAddProduction={handleAddProduction} />
         </div>
       <ProductionDataTable columns={columns({ locations })} data={productions} />
+      <AddProductionDialog products={products} onAddProduction={handleAddProduction} />
     </div>
   );
 }
