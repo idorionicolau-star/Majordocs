@@ -4,11 +4,9 @@
 import * as React from "react"
 import {
   ColumnDef,
-  ColumnFiltersState,
   SortingState,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
@@ -23,12 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ListFilter } from "lucide-react"
 import type { Product } from "@/lib/types"
-import { ScrollArea } from "../ui/scroll-area"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
 
 interface DataTableProps<TData extends Product, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -40,7 +33,6 @@ export function InventoryDataTable<TData extends Product, TValue>({
   data,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [isClient, setIsClient] = React.useState(false)
 
   React.useEffect(() => {
@@ -54,8 +46,6 @@ export function InventoryDataTable<TData extends Product, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
-    onColumnFiltersChange: setColumnFilters,
-    getFilteredRowModel: getFilteredRowModel(),
     initialState: {
         pagination: {
             pageSize: 8,
@@ -63,16 +53,9 @@ export function InventoryDataTable<TData extends Product, TValue>({
     },
     state: {
       sorting,
-      columnFilters,
     },
   })
   
-  const categories = React.useMemo(() => {
-    const categorySet = new Set(data.map(p => p.category));
-    return Array.from(categorySet);
-  }, [data]);
-
-  const selectedCategories = (table.getColumn("category")?.getFilterValue() as string[]) || [];
 
   if (!isClient) {
     return null;
@@ -80,62 +63,6 @@ export function InventoryDataTable<TData extends Product, TValue>({
 
   return (
     <div>
-        <div className="flex flex-col md:flex-row items-center py-4 gap-2">
-            <Input
-            placeholder="Filtrar por nome..."
-            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-                table.getColumn("name")?.setFilterValue(event.target.value)
-            }
-            className="w-full md:max-w-sm shadow-lg"
-            />
-            <div className="flex items-center gap-2 md:ml-auto">
-              <DropdownMenu>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="icon" className="shadow-lg relative">
-                                <ListFilter className="h-4 w-4" />
-                                {selectedCategories.length > 0 && (
-                                    <span className="absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
-                                        {selectedCategories.length}
-                                    </span>
-                                )}
-                            </Button>
-                        </DropdownMenuTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Filtrar por Categoria</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <DropdownMenuContent align="end">
-                    <ScrollArea className="h-48">
-                      {categories.map((category) => {
-                      return (
-                          <DropdownMenuCheckboxItem
-                          key={category}
-                          className="capitalize"
-                          checked={selectedCategories.includes(category)}
-                          onCheckedChange={(value) => {
-                              const currentFilter = selectedCategories;
-                              if (value) {
-                                  table.getColumn("category")?.setFilterValue([...currentFilter, category]);
-                              } else {
-                                  table.getColumn("category")?.setFilterValue(currentFilter.filter(c => c !== category));
-                              }
-                          }}
-                          >
-                          {category}
-                          </DropdownMenuCheckboxItem>
-                      )
-                      })}
-                    </ScrollArea>
-                  </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-        </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>

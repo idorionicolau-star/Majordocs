@@ -7,7 +7,7 @@ import type { Product, Location } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, MapPin } from "lucide-react";
+import { FileText, ListFilter, MapPin } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Input } from "@/components/ui/input";
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<Product[]>(initialProducts);
@@ -37,6 +38,8 @@ export default function InventoryPage() {
   const [isMultiLocation, setIsMultiLocation] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
+  const [nameFilter, setNameFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -224,10 +227,28 @@ export default function InventoryPage() {
     }
   };
 
+  const categories = useMemo(() => {
+    const categorySet = new Set(products.map(p => p.category));
+    return Array.from(categorySet);
+  }, [products]);
+
   const filteredProducts = useMemo(() => {
-    if (selectedLocation === 'all') return products;
-    return products.filter(p => p.location === selectedLocation);
-  }, [products, selectedLocation]);
+    let result = products;
+
+    if (selectedLocation !== 'all') {
+      result = result.filter(p => p.location === selectedLocation);
+    }
+
+    if (nameFilter) {
+      result = result.filter(p => p.name.toLowerCase().includes(nameFilter.toLowerCase()));
+    }
+
+    if (categoryFilter.length > 0) {
+      result = result.filter(p => categoryFilter.includes(p.category));
+    }
+    
+    return result;
+  }, [products, selectedLocation, nameFilter, categoryFilter]);
 
 
   return (
@@ -256,58 +277,107 @@ export default function InventoryPage() {
                       Gerencie os produtos do seu estoque.
                   </p>
               </div>
-              <div className="flex items-center gap-2 self-end">
-                <TooltipProvider>
-                    {isMultiLocation && (
-                        <DropdownMenu>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" size="icon" className="shadow-lg">
-                                            <MapPin className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Filtrar por Localização</p>
-                                </TooltipContent>
-                            </Tooltip>
-                            <DropdownMenuContent align="end">
-                                <ScrollArea className="h-[200px]">
-                                <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuCheckboxItem
-                                    checked={selectedLocation === 'all'}
-                                    onCheckedChange={() => setSelectedLocation('all')}
-                                >
-                                    Todas as Localizações
-                                </DropdownMenuCheckboxItem>
-                                {locations.map(location => (
-                                <DropdownMenuCheckboxItem
-                                    key={location.id}
-                                    checked={selectedLocation === location.id}
-                                    onCheckedChange={() => setSelectedLocation(location.id)}
-                                >
-                                    {location.name}
-                                </DropdownMenuCheckboxItem>
-                                ))}
-                                </ScrollArea>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
-                    <Tooltip>
+          </div>
+          <div className="flex flex-col md:flex-row items-center py-4 gap-2">
+            <Input
+              placeholder="Filtrar por nome..."
+              value={nameFilter}
+              onChange={(event) => setNameFilter(event.target.value)}
+              className="w-full md:max-w-sm shadow-lg"
+            />
+            <div className="flex items-center gap-2 md:ml-auto">
+              <TooltipProvider>
+                  {isMultiLocation && (
+                      <DropdownMenu>
+                          <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <DropdownMenuTrigger asChild>
+                                      <Button variant="outline" size="icon" className="shadow-lg">
+                                          <MapPin className="h-4 w-4" />
+                                      </Button>
+                                  </DropdownMenuTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                  <p>Filtrar por Localização</p>
+                              </TooltipContent>
+                          </Tooltip>
+                          <DropdownMenuContent align="end">
+                              <ScrollArea className="h-[200px]">
+                              <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuCheckboxItem
+                                  checked={selectedLocation === 'all'}
+                                  onCheckedChange={() => setSelectedLocation('all')}
+                              >
+                                  Todas as Localizações
+                              </DropdownMenuCheckboxItem>
+                              {locations.map(location => (
+                              <DropdownMenuCheckboxItem
+                                  key={location.id}
+                                  checked={selectedLocation === location.id}
+                                  onCheckedChange={() => setSelectedLocation(location.id)}
+                              >
+                                  {location.name}
+                              </DropdownMenuCheckboxItem>
+                              ))}
+                              </ScrollArea>
+                          </DropdownMenuContent>
+                      </DropdownMenu>
+                  )}
+                  <DropdownMenu>
+                      <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="outline" size="icon" onClick={handlePrintCountForm} className="shadow-lg">
-                                <FileText className="h-4 w-4" />
-                            </Button>
+                          <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="icon" className="shadow-lg relative">
+                                  <ListFilter className="h-4 w-4" />
+                                  {categoryFilter.length > 0 && (
+                                      <span className="absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
+                                          {categoryFilter.length}
+                                      </span>
+                                  )}
+                              </Button>
+                          </DropdownMenuTrigger>
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p>Imprimir Formulário de Contagem</p>
+                          <p>Filtrar por Categoria</p>
                         </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-              </div>
-          </div>
+                      </Tooltip>
+                    <DropdownMenuContent align="end">
+                      <ScrollArea className="h-48">
+                        {categories.map((category) => {
+                        return (
+                            <DropdownMenuCheckboxItem
+                            key={category}
+                            className="capitalize"
+                            checked={categoryFilter.includes(category)}
+                            onCheckedChange={(value) => {
+                                if (value) {
+                                  setCategoryFilter([...categoryFilter, category]);
+                                } else {
+                                  setCategoryFilter(categoryFilter.filter(c => c !== category));
+                                }
+                            }}
+                            >
+                            {category}
+                            </DropdownMenuCheckboxItem>
+                        )
+                        })}
+                      </ScrollArea>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+                  <Tooltip>
+                      <TooltipTrigger asChild>
+                          <Button variant="outline" size="icon" onClick={handlePrintCountForm} className="shadow-lg">
+                              <FileText className="h-4 w-4" />
+                          </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                          <p>Imprimir Formulário de Contagem</p>
+                      </TooltipContent>
+                  </Tooltip>
+              </TooltipProvider>
+            </div>
+        </div>
         <InventoryDataTable 
           columns={columns({ 
             onAttemptDelete: (product) => setProductToDelete(product),
