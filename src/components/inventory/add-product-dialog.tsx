@@ -28,12 +28,12 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, PlusCircle, Box } from "lucide-react";
+import { Plus, Box } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from '@/hooks/use-toast';
-import type { Location } from '@/lib/types';
+import type { Location, Product } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const formSchema = z.object({
@@ -49,7 +49,7 @@ const formSchema = z.object({
 type AddProductFormValues = z.infer<typeof formSchema>;
 
 interface AddProductDialogProps {
-    onAddProduct: (product: AddProductFormValues) => void;
+    onAddProduct: (product: Product) => void;
     isMultiLocation: boolean;
     locations: Location[];
     triggerType?: 'button' | 'fab';
@@ -82,7 +82,13 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
       form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
       return;
     }
-    onAddProduct(values);
+    const newProduct: Product = {
+      ...values,
+      id: `PROD${Date.now().toString().slice(-4)}`,
+      lastUpdated: new Date().toISOString().split('T')[0],
+      location: values.location || (locations.length > 0 ? locations[0].id : 'Principal'),
+    };
+    onAddProduct(newProduct);
     toast({
         title: "Produto adicionado",
         description: `${values.name} foi adicionado ao inventário com sucesso.`,

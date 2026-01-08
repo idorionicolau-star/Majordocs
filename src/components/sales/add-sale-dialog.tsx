@@ -33,9 +33,10 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from '@/hooks/use-toast';
-import type { Product, Location } from '@/lib/types';
+import type { Product, Location, Sale } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { currentUser } from '@/lib/data';
 
 const formSchema = z.object({
   productId: z.string().nonempty({ message: "Por favor, selecione um produto." }),
@@ -48,7 +49,7 @@ type AddSaleFormValues = z.infer<typeof formSchema>;
 
 interface AddSaleDialogProps {
     products: Product[];
-    onAddSale: (data: AddSaleFormValues) => void;
+    onAddSale: (data: Sale) => void;
     triggerType?: 'button' | 'fab';
 }
 
@@ -146,7 +147,21 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
         return;
     }
 
-    onAddSale(values);
+    const now = new Date();
+    const newSale: Sale = {
+      id: `SALE${Date.now().toString().slice(-4)}`,
+      date: now.toISOString(),
+      productId: product.id,
+      productName: product.name,
+      quantity: values.quantity,
+      unitPrice: values.unitPrice,
+      totalValue: values.quantity * values.unitPrice,
+      soldBy: currentUser.name,
+      guideNumber: `GT${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${Date.now().toString().slice(-3)}`,
+      location: values.location,
+    };
+
+    onAddSale(newSale);
     const productName = product.name;
     toast({
         title: "Venda Registrada",

@@ -12,6 +12,7 @@ import { useState } from "react";
 import type { Product, Sale, Production, Location } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { currentUser } from "@/lib/data";
+import { useRouter } from "next/navigation";
 
 // Dynamically import the StockChart component with SSR turned off
 const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
@@ -26,50 +27,21 @@ export default function DashboardPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [isMultiLocation, setIsMultiLocation] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
-   const handleAddProduct = (newProduct: Omit<Product, 'id' | 'lastUpdated'>) => {
-    const product: Product = {
-      ...newProduct,
-      id: `PROD${(allProducts.length + 1).toString().padStart(3, '0')}`,
-      lastUpdated: new Date().toISOString().split('T')[0],
-      location: newProduct.location || (locations.length > 0 ? locations[0].id : 'Principal'),
-    };
-    setAllProducts([product, ...allProducts]);
+   const handleAddProduct = (newProduct: Product) => {
+    setAllProducts([newProduct, ...allProducts]);
+    router.push('/inventory');
   };
   
-  const handleAddSale = (newSaleData: { productId: string; quantity: number; unitPrice: number; location?: string; }) => {
-    const product = allProducts.find(p => p.id === newSaleData.productId);
-    if (!product) return;
-
-    const now = new Date();
-    const newSale: Sale = {
-      id: `SALE${(allSales.length + 1).toString().padStart(3, '0')}`,
-      date: now.toISOString(),
-      productId: product.id,
-      productName: product.name,
-      quantity: newSaleData.quantity,
-      unitPrice: newSaleData.unitPrice,
-      totalValue: newSaleData.quantity * newSaleData.unitPrice,
-      soldBy: currentUser.name,
-      guideNumber: `GT${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${(allSales.length + 1).toString().padStart(3, '0')}`,
-      location: newSaleData.location,
-    };
+  const handleAddSale = (newSale: Sale) => {
     setAllSales([newSale, ...allSales]);
+    router.push('/sales');
   };
   
-  const handleAddProduction = (newProductionData: { productId: string; quantity: number; location?: string; }) => {
-    const product = allProducts.find(p => p.id === newProductionData.productId);
-    if (!product) return;
-
-    const newProduction: Production = {
-      id: `PRODREC${(allProductions.length + 1).toString().padStart(3, '0')}`,
-      date: new Date().toISOString().split('T')[0],
-      productName: product.name,
-      quantity: newProductionData.quantity,
-      registeredBy: currentUser.name,
-      location: newProductionData.location,
-    };
+  const handleAddProduction = (newProduction: Production) => {
     setAllProductions([newProduction, ...allProductions]);
+    router.push('/production');
   };
 
 
@@ -105,3 +77,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

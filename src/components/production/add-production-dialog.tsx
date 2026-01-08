@@ -33,8 +33,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from '@/hooks/use-toast';
-import type { Product, Location } from '@/lib/types';
+import type { Product, Location, Production } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { currentUser } from '@/lib/data';
 
 const formSchema = z.object({
   productId: z.string().nonempty({ message: "Por favor, selecione um produto." }),
@@ -46,7 +47,7 @@ type AddProductionFormValues = z.infer<typeof formSchema>;
 
 interface AddProductionDialogProps {
     products: Product[];
-    onAddProduction: (data: AddProductionFormValues) => void;
+    onAddProduction: (data: Production) => void;
     triggerType?: 'button' | 'fab';
 }
 
@@ -86,11 +87,22 @@ export function AddProductionDialog({ products, onAddProduction, triggerType = '
       form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
       return;
     }
-    onAddProduction(values);
-    const productName = products.find(p => p.id === values.productId)?.name || 'Produto';
+    const product = products.find(p => p.id === values.productId);
+    if (!product) return;
+
+    const newProduction: Production = {
+      id: `PRODREC${Date.now().toString().slice(-4)}`,
+      date: new Date().toISOString().split('T')[0],
+      productName: product.name,
+      quantity: values.quantity,
+      registeredBy: currentUser.name,
+      location: values.location,
+    };
+    onAddProduction(newProduction);
+
     toast({
         title: "Produção Registrada",
-        description: `A produção de ${values.quantity} unidades de ${productName} foi registrada.`,
+        description: `A produção de ${values.quantity} unidades de ${product.name} foi registrada.`,
     })
     form.reset();
      if (locations.length > 0) {
