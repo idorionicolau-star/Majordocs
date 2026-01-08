@@ -444,26 +444,7 @@ export default function SettingsPage() {
                   </AccordionContent>
                 </Card>
               </AccordionItem>
-              <AccordionItem value="item-4" className="border-0">
-                <Card className="glass-card shadow-sm">
-                  <AccordionTrigger className="w-full hover:no-underline">
-                    <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
-                      <div className="flex-1">
-                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center">Gestor de Catálogo</CardTitle>
-                        <CardDescription className="text-center">
-                          Gerencie os produtos, categorias e importe dados em massa.
-                        </CardDescription>
-                      </div>
-                      <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                    </CardHeader>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <CardContent className="p-6 sm:p-8 pt-0">
-                      <CatalogManager />
-                    </CardContent>
-                  </AccordionContent>
-                </Card>
-              </AccordionItem>
+              
               <AccordionItem value="item-5" className="border-0">
                 <Card className="glass-card shadow-sm">
                   <AccordionTrigger className="w-full hover:no-underline">

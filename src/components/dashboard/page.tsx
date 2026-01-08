@@ -63,7 +63,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-6">
         <StockChart />
       </div>
-      <Card className="glass-card shadow-sm">
+       <Card className="glass-card shadow-sm">
         <CardHeader className="p-6 sm:p-8">
             <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2"><Book /> Gestor de Catálogo</CardTitle>
             <CardDescription>
