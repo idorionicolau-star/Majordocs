@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -21,7 +22,7 @@
         },
         "name": {
           "type": "string",
-          "description": "Full name of the user."
+          "description": "Full name of the user or the company name if they are an admin."
         },
         "role": {
           "type": "string",
@@ -37,6 +38,18 @@
         "status": {
           "type": "string",
           "description": "Status of the user account (e.g., Active, Pending)."
+        },
+        "phone": {
+            "type": "string",
+            "description": "Contact phone number for the company."
+        },
+        "address": {
+            "type": "string",
+            "description": "Physical address of the company."
+        },
+        "taxId": {
+            "type": "string",
+            "description": "Tax identification number (NUIT) of the company."
         }
       },
       "required": [

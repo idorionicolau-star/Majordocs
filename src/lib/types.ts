@@ -14,6 +14,9 @@ export type User = {
     canViewReports: boolean;
   };
   companyId?: string; // Links employee to an admin's company
+  phone?: string;
+  address?: string;
+  taxId?: string;
 };
 
 export type Product = {

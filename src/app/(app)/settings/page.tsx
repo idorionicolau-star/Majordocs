@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { LocationsManager } from "@/components/settings/locations-manager";
-import { useUser } from "@/firebase/auth/use-user";
+import { useUser as useAuthUser } from "@/firebase/auth/use-user";
+import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { EmployeeManager } from "@/components/settings/employee-manager";
 import { cn } from "@/lib/utils";
 import {
@@ -34,7 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { updateUserProfile } from "@/firebase/auth/auth";
 import { doc, updateDoc } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
+import type { User as AppUser } from '@/lib/types';
 
 
 const colorOptions = [
@@ -54,19 +55,45 @@ export default function SettingsPage() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
-  const { user, loading } = useUser();
+  const { user, loading } = useAuthUser();
   const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile, isLoading: profileLoading } = useDoc<AppUser>(userDocRef);
+
   
-  const [companyName, setCompanyName] = useState(user?.displayName || '');
+  const [companyDetails, setCompanyDetails] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    taxId: ''
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // This is a placeholder as the real role would come from the user object from a database
   const currentUser = user;
+  
+  useEffect(() => {
+    if (userProfile) {
+      setCompanyDetails({
+        name: userProfile.name || '',
+        email: userProfile.email || '',
+        phone: userProfile.phone || '',
+        address: userProfile.address || '',
+        taxId: userProfile.taxId || ''
+      });
+    }
+  }, [userProfile]);
 
   useEffect(() => {
     setIsClient(true);
     if (user) {
-      setCompanyName(user.displayName || '');
+      setCompanyDetails(prev => ({ ...prev, name: user.displayName || '', email: user.email || '' }));
     }
     if (typeof window !== 'undefined') {
       const root = document.documentElement;
@@ -158,41 +185,47 @@ export default function SettingsPage() {
     }
     setShowClearConfirm(false);
   };
-  
+
   const handleCompanyUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !firestore || !companyName.trim()) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'O nome da empresa não pode estar em branco.' });
+    if (!user || !userDocRef) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Utilizador não autenticado.' });
       return;
     }
 
-    if (companyName.trim() === user.displayName) {
-       toast({ title: 'Nenhuma alteração', description: 'O nome da empresa é o mesmo.' });
-       return;
-    }
-    
+    const { name, ...detailsToUpdate } = companyDetails;
+
     setIsSubmitting(true);
-    toast({ title: 'A atualizar...', description: 'A guardar o novo nome da empresa.' });
+    toast({ title: 'A atualizar...', description: 'A guardar os dados da empresa.' });
 
     try {
-      // Update Firebase Auth profile
-      await updateUserProfile(user, { displayName: companyName.trim() });
+      // Update Firebase Auth profile displayName if it changed
+      if (name.trim() !== user.displayName) {
+        await updateUserProfile(user, { displayName: name.trim() });
+      }
       
-      // Update Firestore document
-      const userDocRef = doc(firestore, 'users', user.uid);
-      await updateDoc(userDocRef, { name: companyName.trim() });
+      // Update Firestore document with all details
+      await updateDoc(userDocRef, {
+        name: name.trim(),
+        ...detailsToUpdate
+      });
 
-      toast({ title: 'Sucesso!', description: 'O nome da empresa foi atualizado.' });
+      toast({ title: 'Sucesso!', description: 'Os dados da empresa foram atualizados.' });
     } catch (error) {
-      console.error("Error updating company name:", error);
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar o nome da empresa.' });
+      console.error("Error updating company details:", error);
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar os dados da empresa.' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleDetailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setCompanyDetails(prev => ({...prev, [id]: value }));
+  }
 
-  if (!isClient || loading) {
+
+  if (!isClient || loading || profileLoading) {
     return null; // Or a loading skeleton
   }
 
@@ -240,16 +273,29 @@ export default function SettingsPage() {
                 <AccordionContent>
                     <CardContent className="p-6 sm:p-8 pt-0">
                       <form onSubmit={handleCompanyUpdate} className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="company-name">Nome da Empresa</Label>
-                            <Input
-                              id="company-name"
-                              value={companyName}
-                              onChange={(e) => setCompanyName(e.target.value)}
-                              className="max-w-md"
-                            />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Nome da Empresa</Label>
+                                <Input id="name" value={companyDetails.name} onChange={handleDetailChange} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email de Contacto</Label>
+                                <Input id="email" type="email" value={companyDetails.email} onChange={handleDetailChange} />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="phone">Telefone</Label>
+                                <Input id="phone" value={companyDetails.phone} onChange={handleDetailChange} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="taxId">NUIT</Label>
+                                <Input id="taxId" value={companyDetails.taxId} onChange={handleDetailChange} />
+                            </div>
+                            <div className="space-y-2 md:col-span-2">
+                                <Label htmlFor="address">Endereço</Label>
+                                <Input id="address" value={companyDetails.address} onChange={handleDetailChange} />
+                            </div>
                           </div>
-                          <Button type="submit" disabled={isSubmitting || companyName === user?.displayName}>
+                          <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting ? 'A guardar...' : 'Salvar Alterações'}
                           </Button>
                       </form>
