@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { currentUser } from "@/lib/data";
 import { useRouter } from "next/navigation";
 import { AddOrderDialog } from "@/components/orders/add-order-dialog";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 // Dynamically import the StockChart component with SSR turned off
 const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
@@ -58,29 +59,32 @@ export default function DashboardPage() {
         <div>
            <h1 className="text-2xl md:text-3xl font-headline font-[900] text-slate-900 dark:text-white tracking-tighter">Dashboard</h1>
         </div>
-        <div className="flex items-center gap-2">
-            <AddProductDialog 
-                onAddProduct={handleAddProduct}
-                isMultiLocation={isMultiLocation}
-                locations={locations}
+        <ScrollArea className="w-full md:w-auto pb-4">
+          <div className="flex items-center gap-2 flex-nowrap">
+              <AddProductDialog 
+                  onAddProduct={handleAddProduct}
+                  isMultiLocation={isMultiLocation}
+                  locations={locations}
+                  triggerType="button"
+              />
+              <AddSaleDialog 
+                  products={allProducts} 
+                  onAddSale={handleAddSale}
+                  triggerType="button"
+              />
+              <AddProductionDialog 
+                  products={allProducts} 
+                  onAddProduction={handleAddProduction}
+                  triggerType="button"
+              />
+              <AddOrderDialog
+                products={allProducts}
+                onAddOrder={handleAddOrder}
                 triggerType="button"
-            />
-             <AddSaleDialog 
-                products={allProducts} 
-                onAddSale={handleAddSale}
-                triggerType="button"
-            />
-            <AddProductionDialog 
-                products={allProducts} 
-                onAddProduction={handleAddProduction}
-                triggerType="button"
-            />
-            <AddOrderDialog
-              products={allProducts}
-              onAddOrder={handleAddOrder}
-              triggerType="button"
-            />
-        </div>
+              />
+          </div>
+          <ScrollBar orientation="horizontal" className="md:hidden" />
+        </ScrollArea>
       </div>
       <StatsCards />
       <div className="grid grid-cols-1 gap-6">
