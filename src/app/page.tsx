@@ -70,7 +70,7 @@ export default function LoginPage() {
         if (!userDoc.exists()) {
           // New user, create profile stub. Name will be filled in on the next page.
           await setDoc(userDocRef, {
-              name: '', // Left blank to be filled on the next step
+              name: userCredential.displayName || '', // Use Google display name or leave blank
               email: userCredential.email,
               role: 'Admin', // First user via Google is an Admin
               status: 'Ativo',
@@ -297,3 +297,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
