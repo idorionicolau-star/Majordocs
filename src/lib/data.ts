@@ -85,8 +85,8 @@ export const sales: Sale[] = [
 ];
 
 export const productions: Production[] = [
-  { id: 'PRODREC001', date: '2024-05-22', productName: 'Grelha 30x30 Floriada', quantity: 100, registeredBy: 'Maria Santos' },
-  { id: 'PRODREC002', date: '2024-05-21', productName: 'Pavê 6cm Cinza', quantity: 1000, registeredBy: 'Maria Santos' },
+  { id: 'PRODREC001', date: '2024-05-22', productName: 'Grelha 30x30 Floriada', quantity: 100, registeredBy: 'Maria Santos', status: 'Concluído' },
+  { id: 'PRODREC002', date: '2024-05-21', productName: 'Pavê 6cm Cinza', quantity: 1000, registeredBy: 'Maria Santos', status: 'Concluído' },
 ];
 
 export const orders: Order[] = [
@@ -142,5 +142,3 @@ export const notifications: Notification[] = [
 ];
 
 export const currentUser: User = users[0]; // Mock current user as Admin
-
-    

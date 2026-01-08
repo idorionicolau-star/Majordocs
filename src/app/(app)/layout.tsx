@@ -8,6 +8,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { mainNavItems } from "@/lib/data";
 import { cn } from "@/lib/utils";
+import { InventoryProvider } from "@/context/inventory-context";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
@@ -32,6 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
     touchEndRef.current = {
       x: e.targetTouches[0].clientX,
       y: e.targetTouches[0].clientY,
@@ -93,18 +95,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   } : {};
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
-      <Header />
-      <SubHeader />
-      <main 
-        key={pathname}
-        className={cn("flex-1 p-4 sm:p-6 md:p-8", isMobile && animationClass)}
-        {...touchHandlers}
-      >
-        {children}
-      </main>
-    </div>
+    <InventoryProvider>
+      <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
+        <Header />
+        <SubHeader />
+        <main 
+          key={pathname}
+          className={cn("flex-1 p-4 sm:p-6 md:p-8", isMobile && animationClass)}
+          {...touchHandlers}
+        >
+          {children}
+        </main>
+      </div>
+    </InventoryProvider>
   );
 }
-
-    

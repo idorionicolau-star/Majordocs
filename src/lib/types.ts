@@ -50,6 +50,7 @@ export type Production = {
   quantity: number;
   registeredBy: string;
   location?: string;
+  status: 'Concluído' | 'Transferido';
 };
 
 export type ProductionLog = {
@@ -93,5 +94,3 @@ export type Location = {
   id: string;
   name: string;
 };
-
-    

@@ -1,8 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { products as initialProducts } from "@/lib/data";
+import { useState, useMemo, useEffect, useContext } from "react";
 import type { Product, Location } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
@@ -36,35 +35,38 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ProductCard } from "@/components/inventory/product-card";
 import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
+import { InventoryContext } from "@/context/inventory-context";
 
 export default function InventoryPage() {
-  const [products, setProducts] = useState<Product[]>(initialProducts.map(p => ({...p, instanceId: self.crypto.randomUUID() })));
+  const inventoryContext = useContext(InventoryContext);
+  if (!inventoryContext) {
+    // Ideally, show a loading state or proper error boundary
+    return <div>A carregar...</div>;
+  }
+  const { 
+    products, 
+    locations, 
+    isMultiLocation, 
+    addProduct, 
+    updateProduct, 
+    deleteProduct, 
+    transferStock 
+  } = inventoryContext;
+  
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
-  const [isMultiLocation, setIsMultiLocation] = useState(false);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [nameFilter, setNameFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const { toast } = useToast();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // View settings from local storage
       const savedView = localStorage.getItem('majorstockx-inventory-view') as 'list' | 'grid';
       const savedGridCols = localStorage.getItem('majorstockx-inventory-grid-cols') as '3' | '4' | '5';
       if (savedView) setView(savedView);
       if (savedGridCols) setGridCols(savedGridCols);
-
-      // Multi-location settings
-      const multiLocationEnabled = localStorage.getItem('majorstockx-multi-location-enabled') === 'true';
-      setIsMultiLocation(multiLocationEnabled);
-      
-      const storedLocations = localStorage.getItem('majorstockx-locations');
-      if (storedLocations) {
-        setLocations(JSON.parse(storedLocations));
-      }
     }
   }, []);
 
@@ -80,23 +82,15 @@ export default function InventoryPage() {
 
 
   const handleAddProduct = (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => {
-    const product: Product = {
-      ...newProductData,
-      id: `PROD${(products.length + 1).toString().padStart(3, '0')}`,
-      lastUpdated: new Date().toISOString().split('T')[0],
-      location: newProductData.location || (locations.length > 0 ? locations[0].id : 'Principal'),
-      instanceId: self.crypto.randomUUID(),
-      reservedStock: 0,
-    };
-    setProducts([product, ...products]);
+    addProduct(newProductData);
       toast({
         title: "Produto adicionado",
-        description: `${product.name} foi adicionado ao inventário com sucesso.`,
+        description: `${newProductData.name} foi adicionado ao inventário com sucesso.`,
     });
   };
   
   const handleUpdateProduct = (updatedProduct: Product) => {
-    setProducts(products.map(p => p.instanceId === updatedProduct.instanceId ? { ...updatedProduct, lastUpdated: new Date().toISOString().split('T')[0] } : p));
+    updateProduct(updatedProduct.instanceId, updatedProduct);
     toast({
         title: "Produto Atualizado",
         description: `O produto "${updatedProduct.name}" foi atualizado com sucesso.`,
@@ -105,7 +99,7 @@ export default function InventoryPage() {
 
   const confirmDeleteProduct = () => {
     if (productToDelete) {
-      setProducts(products.filter(p => p.instanceId !== productToDelete.instanceId));
+      deleteProduct(productToDelete.instanceId);
       toast({
         title: "Produto Apagado",
         description: `O produto "${productToDelete.name}" foi removido do inventário.`,
@@ -120,42 +114,11 @@ export default function InventoryPage() {
     toLocationId: string,
     quantity: number
   ) => {
-    let fromProductInstance: Product | undefined;
-    let toProductInstance: Product | undefined;
-
-    const updatedProducts = products.map(p => {
-        if (p.id === productId && p.location === fromLocationId) {
-            fromProductInstance = p;
-            return { ...p, stock: p.stock - quantity, lastUpdated: new Date().toISOString().split('T')[0] };
-        }
-        if (p.id === productId && p.location === toLocationId) {
-            toProductInstance = p;
-        }
-        return p;
-    });
-
-    if (toProductInstance) {
-        // Product already exists in destination, just update stock
-        setProducts(updatedProducts.map(p => 
-            p.instanceId === toProductInstance!.instanceId 
-            ? { ...p, stock: p.stock + quantity, lastUpdated: new Date().toISOString().split('T')[0] } 
-            : p
-        ));
-    } else if (fromProductInstance) {
-        // Product does not exist in destination, create a new instance
-        const newInstance: Product = {
-            ...fromProductInstance,
-            instanceId: self.crypto.randomUUID(),
-            location: toLocationId,
-            stock: quantity,
-            lastUpdated: new Date().toISOString().split('T')[0],
-        };
-        setProducts([...updatedProducts, newInstance]);
-    }
-
+    const fromProduct = products.find(p => p.id === productId && p.location === fromLocationId);
+    transferStock(productId, fromLocationId, toLocationId, quantity);
     toast({
         title: "Transferência de Stock Concluída",
-        description: `${quantity} unidades de "${fromProductInstance?.name}" movidas para ${locations.find(l => l.id === toLocationId)?.name}.`,
+        description: `${quantity} unidades de "${fromProduct?.name}" movidas para ${locations.find(l => l.id === toLocationId)?.name}.`,
     });
   };
 
@@ -549,5 +512,3 @@ export default function InventoryPage() {
     </>
   );
 }
-
-    

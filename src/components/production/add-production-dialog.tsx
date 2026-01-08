@@ -32,10 +32,8 @@ import { Plus, Hammer } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useToast } from '@/hooks/use-toast';
 import type { Product, Location, Production } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { currentUser } from '@/lib/data';
 
 const formSchema = z.object({
   productId: z.string().nonempty({ message: "Por favor, selecione um produto." }),
@@ -47,7 +45,7 @@ type AddProductionFormValues = z.infer<typeof formSchema>;
 
 interface AddProductionDialogProps {
     products: Product[];
-    onAddProduction: (data: Omit<Production, 'id' | 'date' | 'registeredBy'>) => void;
+    onAddProduction: (data: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => void;
     triggerType?: 'button' | 'fab';
 }
 
@@ -151,7 +149,7 @@ export function AddProductionDialog({ products, onAddProduction, triggerType = '
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {products.map(product => (
+                      {products.filter((p, i, a) => a.findIndex(v => v.id === p.id) === i).map(product => (
                         <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
                       ))}
                     </SelectContent>

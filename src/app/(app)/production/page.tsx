@@ -1,36 +1,44 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { productions as initialProductions, products } from "@/lib/data";
-import { columns } from "@/components/production/columns";
+import { useState, useEffect, useMemo, useContext } from "react";
+import { productions as initialProductions } from "@/lib/data";
 import { ProductionDataTable } from "@/components/production/data-table";
 import { AddProductionDialog } from "@/components/production/add-production-dialog";
 import type { Production, Location } from "@/lib/types";
 import { currentUser } from "@/lib/data";
 import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronDown } from "lucide-react";
+import { List, LayoutGrid, ChevronDown, Package } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ProductionCard } from "@/components/production/production-card";
 import { cn } from "@/lib/utils";
-
+import { useToast } from "@/hooks/use-toast";
+import { InventoryContext } from "@/context/inventory-context";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function ProductionPage() {
-  const [productions, setProductions] = useState<Production[]>(initialProductions);
-  const [locations, setLocations] = useState<Location[]>([]);
+  const inventoryContext = useContext(InventoryContext);
+  const { toast } = useToast();
+
+  const [productions, setProductions] = useState<Production[]>(initialProductions.map(p => ({ ...p, status: 'Concluído' })));
   const [nameFilter, setNameFilter] = useState("");
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('4');
-
+  const [productionToTransfer, setProductionToTransfer] = useState<Production | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedLocations = localStorage.getItem('majorstockx-locations');
-      if (storedLocations) {
-        setLocations(JSON.parse(storedLocations));
-      }
       const savedView = localStorage.getItem('majorstockx-production-view') as 'list' | 'grid';
       const savedGridCols = localStorage.getItem('majorstockx-production-grid-cols') as '3' | '4' | '5';
       if (savedView) setView(savedView);
@@ -38,7 +46,7 @@ export default function ProductionPage() {
     }
   }, []);
 
-    const handleSetView = (newView: 'list' | 'grid') => {
+  const handleSetView = (newView: 'list' | 'grid') => {
     setView(newView);
     localStorage.setItem('majorstockx-production-view', newView);
   }
@@ -48,7 +56,12 @@ export default function ProductionPage() {
     localStorage.setItem('majorstockx-production-grid-cols', cols);
   }
 
-  const handleAddProduction = (newProductionData: Omit<Production, 'id' | 'date' | 'registeredBy'>) => {
+  if (!inventoryContext) {
+    return <div>A carregar...</div>;
+  }
+  const { products, updateProductStock, locations, isMultiLocation } = inventoryContext;
+
+  const handleAddProduction = (newProductionData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
     const product = products.find(p => p.name === newProductionData.productName);
     if (!product) return;
 
@@ -59,29 +72,59 @@ export default function ProductionPage() {
       quantity: newProductionData.quantity,
       registeredBy: currentUser.name,
       location: newProductionData.location,
+      status: 'Concluído'
     };
     setProductions([newProduction, ...productions]);
     
-    // In a real app, you would also update the product stock here.
-    
     toast({
         title: "Produção Registrada",
-        description: `A produção de ${newProduction.quantity} unidades de ${product.name} foi registrada.`,
-    })
+        description: `O registo de ${newProduction.quantity} unidades de ${product.name} foi criado.`,
+    });
+  };
+
+  const handleConfirmTransfer = () => {
+    if (!productionToTransfer) return;
+
+    updateProductStock(productionToTransfer.productName, productionToTransfer.quantity, productionToTransfer.location);
+
+    setProductions(productions.map(p => 
+      p.id === productionToTransfer.id ? { ...p, status: 'Transferido' } : p
+    ));
+
+    toast({
+      title: "Transferência Concluída",
+      description: `${productionToTransfer.quantity} unidades de ${productionToTransfer.productName} foram adicionadas ao inventário.`,
+    });
+
+    setProductionToTransfer(null);
   };
 
   const filteredProductions = useMemo(() => {
     let result = productions;
-
     if (nameFilter) {
       result = result.filter(p => p.productName.toLowerCase().includes(nameFilter.toLowerCase()));
     }
-    
     return result;
   }, [productions, nameFilter]);
 
 
   return (
+    <>
+    <AlertDialog open={!!productionToTransfer} onOpenChange={(open) => !open && setProductionToTransfer(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Confirmar Transferência</AlertDialogTitle>
+          <AlertDialogDescription>
+            Tem a certeza que deseja transferir <span className="font-bold">{productionToTransfer?.quantity}</span> unidades de <span className="font-bold">{productionToTransfer?.productName}</span> para o inventário {isMultiLocation && `da localização "${locations.find(l => l.id === productionToTransfer?.location)?.name}"`}? Esta ação irá atualizar o stock.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmTransfer}>Confirmar e Transferir</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
@@ -149,7 +192,7 @@ export default function ProductionPage() {
         </div>
 
       {view === 'list' ? (
-        <ProductionDataTable columns={columns({ locations })} data={filteredProductions} />
+        <ProductionDataTable columns={[]} data={filteredProductions} />
       ) : (
         <div className={cn(
             "grid gap-2 sm:gap-4",
@@ -162,7 +205,8 @@ export default function ProductionPage() {
                     key={production.id}
                     production={production}
                     locations={locations}
-                    isMultiLocation={locations.length > 0}
+                    isMultiLocation={isMultiLocation}
+                    onTransfer={() => setProductionToTransfer(production)}
                     viewMode={gridCols === '5' ? 'condensed' : 'normal'}
                 />
             ))}
@@ -171,5 +215,6 @@ export default function ProductionPage() {
 
       <AddProductionDialog products={products} onAddProduction={handleAddProduction} triggerType="fab" />
     </div>
+    </>
   );
 }
