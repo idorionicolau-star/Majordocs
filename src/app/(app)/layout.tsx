@@ -5,18 +5,30 @@ import { Header } from "@/components/layout/header";
 import { SubHeader } from "@/components/layout/sub-header";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useContext } from "react";
 import { mainNavItems } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { InventoryProvider } from "@/context/inventory-context";
 import { useUser } from "@/firebase/auth/use-user";
+import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { doc } from 'firebase/firestore';
+import type { User as AppUser } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading } = useUser();
-  
+  const { user, loading: userLoading } = useUser();
+  const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile, isLoading: profileLoading } = useDoc<AppUser>(userDocRef);
+
   const [animationClass, setAnimationClass] = useState("animate-in");
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const touchEndRef = useRef<{ x: number; y: number } | null>(null);
@@ -26,11 +38,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const currentPageIndex = mainNavItems.findIndex(item => item.href === pathname);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!userLoading && !user) {
       router.push('/');
+    } else if (!userLoading && user && !profileLoading) {
+      // If user is logged in but has no companyName and is not already on the registration page, redirect them.
+      if (!userProfile?.name && pathname !== '/register-company') {
+        router.replace('/register-company');
+      }
     }
-  }, [user, loading, router]);
-
+  }, [user, userLoading, userProfile, profileLoading, router, pathname]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchEndRef.current = null; // Reset on new touch
@@ -55,7 +71,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const xDiff = touchStartRef.current.x - touchEndRef.current.x;
     const yDiff = touchStartRef.current.y - touchEndRef.current.y;
 
-    // Prioritize vertical scroll over horizontal swipe
     if (Math.abs(yDiff) > Math.abs(xDiff)) {
         touchStartRef.current = null;
         touchEndRef.current = null;
@@ -103,8 +118,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     onTouchEnd: handleTouchEnd,
   } : {};
 
-  if (loading || !user) {
-    return <div className="flex min-h-screen w-full items-center justify-center">A carregar...</div>;
+  if (userLoading || profileLoading) {
+    return (
+      <div className="flex min-h-screen w-full flex-col bg-background">
+        <Header />
+        <SubHeader />
+        <main className="flex-1 p-4 sm:p-6 md:p-8">
+          <div className="space-y-4">
+            <Skeleton className="h-12 w-1/3" />
+            <Skeleton className="h-8 w-full md:w-1/2" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+            <Skeleton className="h-96 w-full" />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!user || (!userProfile?.name && pathname !== '/register-company')) {
+     return <div className="flex min-h-screen w-full items-center justify-center">A redirecionar...</div>;
+  }
+  
+  // If user is on the company registration page, show only that page without the full layout
+  if (pathname === '/register-company') {
+      return (
+         <div className="flex min-h-screen w-full flex-col bg-background">
+            <main className="flex-1">
+              {children}
+            </main>
+         </div>
+      )
   }
 
   return (

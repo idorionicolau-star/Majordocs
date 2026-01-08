@@ -68,9 +68,9 @@ export default function LoginPage() {
         const userDoc = await getDoc(userDocRef);
 
         if (!userDoc.exists()) {
-          // New user, create profile
+          // New user, create profile stub. Name will be filled in on the next page.
           await setDoc(userDocRef, {
-              name: userCredential.displayName,
+              name: '', // Left blank to be filled on the next step
               email: userCredential.email,
               role: 'Admin', // First user via Google is an Admin
               status: 'Ativo',
