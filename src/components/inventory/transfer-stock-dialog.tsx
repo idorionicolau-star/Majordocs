@@ -206,11 +206,13 @@ export function TransferStockDialog({ products, locations, onTransfer }: Transfe
               name="quantity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Quantidade</FormLabel>
+                  <div className="flex justify-between items-center">
+                    <FormLabel>Quantidade</FormLabel>
+                    {availableStock > 0 && <p className="text-xs text-muted-foreground mt-1">Disponível: {availableStock}</p>}
+                  </div>
                   <FormControl>
                     <Input type="number" min="1" {...field} />
                   </FormControl>
-                  {availableStock > 0 && <p className="text-xs text-muted-foreground mt-1">Disponível na origem: {availableStock}</p>}
                   <FormMessage />
                 </FormItem>
               )}
