@@ -49,7 +49,7 @@ export default function InventoryPage() {
   const [nameFilter, setNameFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [view, setView] = useState<'list' | 'grid'>('grid');
-  const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('4');
+  const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -464,10 +464,10 @@ export default function InventoryPage() {
             />
         ) : (
             <div className={cn(
-                "grid gap-4 md:gap-6",
-                gridCols === '3' && "grid-cols-1 sm:grid-cols-2 md:grid-cols-3",
-                gridCols === '4' && "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
-                gridCols === '5' && "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5",
+                "grid gap-2 sm:gap-4",
+                gridCols === '3' && "grid-cols-3 md:grid-cols-3",
+                gridCols === '4' && "grid-cols-3 sm:grid-cols-4 md:grid-cols-4",
+                gridCols === '5' && "grid-cols-3 sm:grid-cols-4 md:grid-cols-5",
             )}>
                 {filteredProducts.map(product => (
                     <ProductCard 
@@ -477,7 +477,7 @@ export default function InventoryPage() {
                         isMultiLocation={isMultiLocation}
                         onProductUpdate={handleUpdateProduct}
                         onAttemptDelete={setProductToDelete}
-                        viewMode={gridCols === '5' ? 'condensed' : 'normal'}
+                        viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
                     />
                 ))}
             </div>
