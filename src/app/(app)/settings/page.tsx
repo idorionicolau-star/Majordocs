@@ -53,7 +53,7 @@ export default function SettingsPage() {
   const { user, loading } = useUser();
 
   // This is a placeholder as the real role would come from the user object from a database
-  const currentUser = { role: 'Admin' };
+  const currentUser = user;
 
   useEffect(() => {
     setIsClient(true);
@@ -184,10 +184,10 @@ export default function SettingsPage() {
           <AccordionItem value="item-1" className="border-0">
             <Card className="glass-card shadow-sm">
               <AccordionTrigger className="w-full hover:no-underline">
-                <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
-                  <div>
-                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Aparência</CardTitle>
-                    <CardDescription className="text-left">
+                <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
+                  <div className="flex-1">
+                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center">Aparência</CardTitle>
+                    <CardDescription className="text-center">
                       Personalize a aparência da aplicação.
                     </CardDescription>
                   </div>
@@ -277,15 +277,15 @@ export default function SettingsPage() {
             </Card>
           </AccordionItem>
 
-          {currentUser && currentUser.role === 'Admin' && (
+          {currentUser && (
             <>
               <AccordionItem value="item-2" className="border-0">
                 <Card className="glass-card shadow-sm">
                   <AccordionTrigger className="w-full hover:no-underline">
-                    <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
-                      <div>
-                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Gestão de Localizações</CardTitle>
-                        <CardDescription className="text-left">
+                    <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
+                      <div className="flex-1">
+                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center">Gestão de Localizações</CardTitle>
+                        <CardDescription className="text-center">
                           Ative e gerencie múltiplas localizações para o seu negócio.
                         </CardDescription>
                       </div>
@@ -303,10 +303,10 @@ export default function SettingsPage() {
               <AccordionItem value="item-3" className="border-0">
                 <Card className="glass-card shadow-sm">
                   <AccordionTrigger className="w-full hover:no-underline">
-                    <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
-                      <div>
-                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Gestão de Funcionários</CardTitle>
-                        <CardDescription className="text-left">
+                    <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
+                      <div className="flex-1">
+                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center">Gestão de Funcionários</CardTitle>
+                        <CardDescription className="text-center">
                           Convide e gerencie os funcionários da sua empresa.
                         </CardDescription>
                       </div>
@@ -323,10 +323,10 @@ export default function SettingsPage() {
               <AccordionItem value="item-4" className="border-0">
                 <Card className="glass-card shadow-sm">
                   <AccordionTrigger className="w-full hover:no-underline">
-                    <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
-                      <div>
-                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Gestor de Catálogo</CardTitle>
-                        <CardDescription className="text-left">
+                    <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
+                      <div className="flex-1">
+                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center">Gestor de Catálogo</CardTitle>
+                        <CardDescription className="text-center">
                           Gerencie os produtos, categorias e importe dados em massa.
                         </CardDescription>
                       </div>
@@ -343,10 +343,10 @@ export default function SettingsPage() {
               <AccordionItem value="item-5" className="border-0">
                 <Card className="glass-card shadow-sm">
                   <AccordionTrigger className="w-full hover:no-underline">
-                    <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
-                      <div>
-                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left flex items-center gap-2"><Code />Ferramentas de Programador</CardTitle>
-                        <CardDescription className="text-left">
+                    <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
+                      <div className="flex-1">
+                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center flex items-center justify-center gap-2"><Code />Ferramentas de Programador</CardTitle>
+                        <CardDescription className="text-center">
                           Ações avançadas para gerir o estado da aplicação.
                         </CardDescription>
                       </div>
@@ -376,3 +376,5 @@ export default function SettingsPage() {
     </>
   );
 }
+
+    
