@@ -1,6 +1,6 @@
+
 "use client"
 
-import { useState, useEffect } from 'react';
 import {
   Avatar,
   AvatarFallback,
@@ -16,12 +16,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { currentUser } from "@/lib/data"
-import Link from "next/link"
+import { signOutUser } from "@/firebase/auth/auth"
+import { useUser } from "@/firebase/auth/use-user"
+import { useRouter } from "next/navigation"
 
 function UserNavContent() {
+  const { user } = useUser();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOutUser();
+    router.push('/');
+  };
+
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('');
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
@@ -29,29 +42,29 @@ function UserNavContent() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
-            <AvatarFallback>{getInitials(currentUser.name)}</AvatarFallback>
+            <AvatarImage src={user.photoURL || ''} alt={user.displayName || ''} />
+            <AvatarFallback>{getInitials(user.displayName || 'U')}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{currentUser.name}</p>
+            <p className="text-sm font-medium leading-none">{user.displayName}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {currentUser.email}
+              {user.email}
             </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
-            <Link href="/settings">Configurações</Link>
+          <DropdownMenuItem onClick={() => router.push('/settings')}>
+            Configurações
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/">Sair</Link>
+        <DropdownMenuItem onClick={handleSignOut}>
+          Sair
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -59,11 +72,11 @@ function UserNavContent() {
 }
 
 export function UserNav() {
-  const [isClient, setIsClient] = useState(false)
+  const { user, loading } = useUser();
 
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
+  if (loading) {
+    return <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+  }
 
-  return isClient ? <UserNavContent /> : null;
+  return user ? <UserNavContent /> : null;
 }

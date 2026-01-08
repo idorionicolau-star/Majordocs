@@ -13,18 +13,24 @@ export {
   useAuth,
 } from './provider';
 export { FirebaseClientProvider } from './client-provider';
+export { useUser } from './auth/use-user';
+
 
 // Initialize Firebase
 let firebaseApp: FirebaseApp;
 let auth: Auth;
 let firestore: Firestore;
 
-if (typeof window !== 'undefined' && !getApps().length) {
-  firebaseApp = initializeApp(firebaseConfig);
-  auth = getAuth(firebaseApp);
-  firestore = getFirestore(firebaseApp);
-}
-
+// This function can be called on the client and server
+// On the server, we will need to pass in the config
 export function getFirebase() {
-  return { firebaseApp, auth, firestore };
+  if (typeof window !== 'undefined') {
+    if (!getApps().length) {
+        firebaseApp = initializeApp(firebaseConfig);
+        auth = getAuth(firebaseApp);
+        firestore = getFirestore(firebaseApp);
+    }
+    return { firebaseApp, auth, firestore };
+  }
+  return {};
 }

@@ -9,11 +9,13 @@ import { useEffect, useState, useRef } from "react";
 import { mainNavItems } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { InventoryProvider } from "@/context/inventory-context";
+import { useUser } from "@/firebase/auth/use-user";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const router = useRouter();
+  const { user, loading } = useUser();
   
   const [animationClass, setAnimationClass] = useState("animate-in");
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -22,6 +24,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const navigationDirection = useRef<'left' | 'right' | null>(null);
 
   const currentPageIndex = mainNavItems.findIndex(item => item.href === pathname);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/');
+    }
+  }, [user, loading, router]);
+
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchEndRef.current = null; // Reset on new touch
@@ -93,6 +102,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     onTouchMove: handleTouchMove,
     onTouchEnd: handleTouchEnd,
   } : {};
+
+  if (loading || !user) {
+    return <div className="flex min-h-screen w-full items-center justify-center">A carregar...</div>;
+  }
 
   return (
     <InventoryProvider>
