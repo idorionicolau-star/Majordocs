@@ -31,8 +31,9 @@ import { EditCatalogProductDialog } from './edit-catalog-product-dialog';
 import { InventoryContext } from '@/context/inventory-context';
 import { useUser } from '@/firebase/auth/use-user';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, deleteDoc, updateDoc, collection, writeBatch, query, getDocs, where } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, updateDoc, collection, writeBatch, query, getDocs, where, addDoc } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
+import { AddCatalogProductDialog } from './add-catalog-product-dialog';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 type CatalogCategory = { id: string; name: string };
@@ -74,13 +75,24 @@ export function CatalogManager() {
       toast({ title: 'A adicionar categoria...' });
       const newCategory = { name: newCategoryName };
       try {
-        await setDoc(doc(catalogCategoriesCollectionRef), newCategory);
+        await addDoc(catalogCategoriesCollectionRef, newCategory);
         toast({ title: 'Categoria Adicionada', description: `A categoria "${newCategoryName}" foi adicionada.` });
       } catch (e) {
         toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível adicionar a categoria.' });
       }
     } else if (newCategoryName) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Essa categoria já existe.' });
+    }
+  };
+  
+  const handleAddProduct = async (productData: Omit<CatalogProduct, 'id'>) => {
+    if (!catalogProductsCollectionRef) return;
+    toast({ title: 'A adicionar produto ao catálogo...' });
+    try {
+        await addDoc(catalogProductsCollectionRef, productData);
+        toast({ title: 'Produto Adicionado', description: `O produto "${productData.name}" foi adicionado ao catálogo.` });
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível adicionar o produto ao catálogo.' });
     }
   };
 
@@ -168,6 +180,7 @@ export function CatalogManager() {
   };
 
   const sortedCategories = categories ? [...categories].sort((a, b) => a.name.localeCompare(b.name)) : [];
+  const sortedProducts = products ? [...products].sort((a,b) => a.name.localeCompare(b.name)) : [];
 
   return (
     <>
@@ -235,6 +248,10 @@ export function CatalogManager() {
            <div className="space-y-4">
             <div className="flex justify-between items-center">
               <p className="text-sm text-muted-foreground">Gerencie os produtos base do seu catálogo.</p>
+               <AddCatalogProductDialog 
+                    categories={sortedCategories.map(c => c.name)}
+                    onAdd={handleAddProduct}
+                />
             </div>
              <div className="rounded-md border">
               <Table>
@@ -253,7 +270,7 @@ export function CatalogManager() {
                            <Skeleton className="h-6 w-full" />
                         </TableCell>
                     </TableRow>
-                  ) : products && products.length > 0 ? products.map(product => (
+                  ) : sortedProducts && sortedProducts.length > 0 ? sortedProducts.map(product => (
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell>{product.category}</TableCell>
