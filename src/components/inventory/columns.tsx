@@ -16,7 +16,7 @@ interface ColumnsOptions {
   locations: Location[];
 }
 
-const getStockStatus = (product: Product) => {
+export const getStockStatus = (product: Product) => {
   if (product.stock <= 0) {
       return "sem-estoque";
   }
@@ -122,6 +122,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
               onProductUpdate={options.onProductUpdate} 
               isMultiLocation={isMultiLocation}
               locations={locations}
+              trigger="icon"
             />
             <TooltipProvider>
               <Tooltip>
@@ -149,3 +150,5 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
 
   return baseColumns;
 }
+
+    

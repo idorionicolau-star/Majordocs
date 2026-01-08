@@ -52,9 +52,10 @@ interface EditProductDialogProps {
     onProductUpdate: (product: Product) => void;
     isMultiLocation: boolean;
     locations: Location[];
+    trigger: 'icon' | 'button';
 }
 
-function EditProductDialogContent({ product, onProductUpdate, isMultiLocation, locations }: EditProductDialogProps) {
+function EditProductDialogContent({ product, onProductUpdate, isMultiLocation, locations, trigger }: EditProductDialogProps) {
   const [open, setOpen] = useState(false);
   const form = useForm<EditProductFormValues>({
     resolver: zodResolver(formSchema),
@@ -95,9 +96,8 @@ function EditProductDialogContent({ product, onProductUpdate, isMultiLocation, l
     setOpen(false);
   }
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <TooltipProvider>
+  const TriggerComponent = trigger === 'icon' ? (
+     <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
@@ -112,6 +112,18 @@ function EditProductDialogContent({ product, onProductUpdate, isMultiLocation, l
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+  ) : (
+    <DialogTrigger asChild>
+        <Button variant="outline" className="w-full">
+            <Edit2 className="mr-2 h-4 w-4" />
+            Editar
+        </Button>
+    </DialogTrigger>
+  )
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+     {TriggerComponent}
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Editar Produto</DialogTitle>
@@ -255,3 +267,5 @@ export function EditProductDialog(props: EditProductDialogProps) {
         </Button>
     );
 }
+
+    
