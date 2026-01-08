@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Calendar, User, ClipboardList, Play, Check, CircleHelp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
 
 interface OrderCardProps {
     order: Order;
@@ -14,21 +15,24 @@ interface OrderCardProps {
 
 const statusConfig = {
     'Pendente': {
-        color: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
-        icon: CircleHelp
+        color: 'text-yellow-600',
+        icon: CircleHelp,
+        progress: 10,
     },
     'Em produção': {
-        color: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-        icon: Play
+        color: 'text-blue-600',
+        icon: Play,
+        progress: 50,
     },
     'Concluída': {
-        color: 'bg-green-500/10 text-green-600 border-green-500/20',
-        icon: Check
+        color: 'text-green-600',
+        icon: Check,
+        progress: 100,
     }
 };
 
 export function OrderCard({ order, onUpdateStatus }: OrderCardProps) {
-    const { icon: StatusIcon } = statusConfig[order.status];
+    const { icon: StatusIcon, color: statusColor, progress } = statusConfig[order.status];
 
     return (
         <Card className="glass-card flex flex-col h-full group p-4">
@@ -41,7 +45,7 @@ export function OrderCard({ order, onUpdateStatus }: OrderCardProps) {
                         </CardTitle>
                         <CardDescription className="text-xs pt-1">Encomenda #{order.id}</CardDescription>
                     </div>
-                     <div className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border", statusConfig[order.status].color)}>
+                     <div className={cn("inline-flex items-center gap-2 text-xs font-bold", statusColor)}>
                         <StatusIcon className="h-4 w-4"/>
                         <span>{order.status}</span>
                     </div>
@@ -64,6 +68,9 @@ export function OrderCard({ order, onUpdateStatus }: OrderCardProps) {
                         <Calendar size={14} />
                         <span>Entrega: {new Date(order.deliveryDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
                     </div>
+                 </div>
+                 <div className="pt-2">
+                    <Progress value={progress} className="h-2 [&>div]:bg-primary" />
                  </div>
             </CardContent>
             <CardFooter className="flex justify-center gap-2 p-2 pt-4">

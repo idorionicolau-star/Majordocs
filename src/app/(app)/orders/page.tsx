@@ -22,9 +22,9 @@ export default function OrdersPage() {
   const [view, setView] = useState<'list' | 'grid'>('grid'); // 'list' view to be implemented
   const { toast } = useToast();
 
-  const handleAddOrder = (newOrder: Omit<Order, 'id' | 'status'>) => {
+  const handleAddOrder = (newOrderData: Omit<Order, 'id' | 'status'>) => {
     const order: Order = {
-      ...newOrder,
+      ...newOrderData,
       id: `ORD${(orders.length + 1).toString().padStart(3, '0')}`,
       status: 'Pendente',
     };
@@ -138,4 +138,3 @@ export default function OrdersPage() {
     </>
   );
 }
-
