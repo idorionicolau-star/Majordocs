@@ -4,7 +4,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Sale, Location, Product } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import { Edit, Printer, FileSearch } from "lucide-react"
+import { Edit, Printer, FileSearch, CheckCircle, PackageCheck } from "lucide-react"
 import { useEffect, useState } from "react"
 import { SaleDetailsDialogContent } from "./sale-details-dialog"
 import { formatCurrency } from "@/lib/utils"
@@ -15,11 +15,13 @@ import {
   DialogTrigger,
   DialogContent,
 } from "@/components/ui/dialog"
+import { currentUser } from "@/lib/data"
 
 interface ColumnsOptions {
   locations: Location[];
   products: Product[];
   onUpdateSale: (sale: Sale) => void;
+  onConfirmPickup: (saleId: string) => void;
 }
 
 const handlePrintGuide = (sale: Sale, isMultiLocation: boolean, locations: Location[]) => {
@@ -103,6 +105,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const sale = row.original as Sale;
+    const canConfirmPickup = currentUser.role === 'Admin' || currentUser.permissions.canSell;
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -131,6 +134,22 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
                 </TooltipProvider>
                 <SaleDetailsDialogContent sale={sale} locations={options.locations} isMultiLocation={isMultiLocation} />
             </Dialog>
+
+            {sale.status === 'Pago' && canConfirmPickup && (
+              <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={() => options.onConfirmPickup(sale.id)}>
+                            <CheckCircle className="h-4 w-4" />
+                            <span className="sr-only">Confirmar Levantamento</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Confirmar Levantamento</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+            )}
 
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                  <TooltipProvider>
@@ -218,16 +237,29 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
       }
     },
     {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => {
+            const status = row.original.status;
+            return (
+                <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                    status === 'Levantado' 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' 
+                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                }`}>
+                    {status === 'Levantado' ? <CheckCircle className="h-3 w-3" /> : <PackageCheck className="h-3 w-3" />}
+                    {status}
+                </div>
+            )
+        }
+    },
+    {
       accessorKey: "date",
       header: "Data",
        cell: ({ row }) => {
         const date = new Date(row.original.date);
         return date.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
       }
-    },
-    {
-      accessorKey: "soldBy",
-      header: "Vendedor",
     },
     {
       id: "actions",
@@ -237,5 +269,3 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
 
   return baseColumns;
 }
-
-    

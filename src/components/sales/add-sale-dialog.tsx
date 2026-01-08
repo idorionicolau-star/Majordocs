@@ -49,7 +49,7 @@ type AddSaleFormValues = z.infer<typeof formSchema>;
 
 interface AddSaleDialogProps {
     products: Product[];
-    onAddSale: (data: Sale) => void;
+    onAddSale: (data: Sale, updatedProducts: Product[]) => void;
     triggerType?: 'button' | 'fab';
 }
 
@@ -74,9 +74,9 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
   const watchedUnitPrice = useWatch({ control: form.control, name: 'unitPrice' });
   const watchedLocation = useWatch({ control: form.control, name: 'location' });
 
-  const selectedProduct = products.find(p => p.id === watchedProductId);
-  const isStockSufficient = selectedProduct ? watchedQuantity <= selectedProduct.stock : false;
-
+  const selectedProduct = products.find(p => p.id === watchedProductId && (isMultiLocation ? p.location === watchedLocation : true));
+  const availableStock = selectedProduct ? selectedProduct.stock - selectedProduct.reservedStock : 0;
+  
   useEffect(() => {
     if (selectedProduct) {
       form.setValue('unitPrice', selectedProduct.price);
@@ -87,18 +87,16 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
 
   useEffect(() => {
     if(selectedProduct){
-      const stockIsSufficient = watchedQuantity <= selectedProduct.stock;
-      const locationIsCorrect = !isMultiLocation || selectedProduct.location === watchedLocation;
+      const stockIsSufficient = watchedQuantity <= availableStock;
       if (!stockIsSufficient) {
-        form.setError("quantity", { type: "manual", message: `Estoque insuficiente. Disponível: ${selectedProduct.stock}` });
-      } else if (!locationIsCorrect) {
-        form.setError("productId", { type: "manual", message: `Produto não existe nesta localização.` });
+        form.setError("quantity", { type: "manual", message: `Estoque insuficiente. Disponível: ${availableStock}` });
       } else {
         form.clearErrors("quantity");
-        form.clearErrors("productId");
       }
+    } else if (watchedProductId) {
+         form.setError("productId", { type: "manual", message: `Produto não existe nesta localização.` });
     }
-  }, [watchedQuantity, selectedProduct, watchedLocation, isMultiLocation, form]);
+  }, [watchedQuantity, availableStock, selectedProduct, watchedProductId, form]);
 
 
   const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
@@ -126,46 +124,54 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
       return;
     }
 
-    const product = products.find(p => p.id === values.productId);
-    if (!product) return;
+    if (!selectedProduct) {
+        toast({
+            variant: "destructive",
+            title: "Erro de Validação",
+            description: "Produto não encontrado para a localização selecionada.",
+        });
+        return;
+    }
 
-    if (values.quantity > product.stock) {
+    if (values.quantity > availableStock) {
       toast({
         variant: "destructive",
         title: "Estoque Insuficiente",
-        description: `Não há estoque suficiente para ${product.name}. Disponível: ${product.stock}, Solicitado: ${values.quantity}.`,
+        description: `Não há estoque suficiente para ${selectedProduct.name}. Disponível: ${availableStock}, Solicitado: ${values.quantity}.`,
       });
       return;
-    }
-    
-    if (isMultiLocation && product.location !== values.location) {
-        toast({
-            variant: "destructive",
-            title: "Localização Incorreta",
-            description: `O produto ${product.name} não está disponível na localização selecionada.`,
-        });
-        return;
     }
 
     const now = new Date();
     const newSale: Sale = {
       id: `SALE${Date.now().toString().slice(-4)}`,
       date: now.toISOString(),
-      productId: product.id,
-      productName: product.name,
+      productId: selectedProduct.id,
+      productName: selectedProduct.name,
       quantity: values.quantity,
       unitPrice: values.unitPrice,
       totalValue: values.quantity * values.unitPrice,
       soldBy: currentUser.name,
       guideNumber: `GT${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${Date.now().toString().slice(-3)}`,
       location: values.location,
+      status: 'Pago',
     };
 
-    onAddSale(newSale);
-    const productName = product.name;
+    const updatedProducts = products.map(p => {
+      if (p.instanceId === selectedProduct.instanceId) {
+        return {
+          ...p,
+          reservedStock: p.reservedStock + values.quantity,
+        };
+      }
+      return p;
+    });
+
+    onAddSale(newSale, updatedProducts);
+    
     toast({
-        title: "Venda Registrada",
-        description: `A venda de ${values.quantity} unidades de ${productName} foi registrada.`,
+        title: "Venda Registrada como 'Paga'",
+        description: `${values.quantity} unidades de ${selectedProduct.name} foram reservadas.`,
     })
     form.reset();
     if (locations.length > 0) {
@@ -206,7 +212,7 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
         <DialogHeader>
           <DialogTitle>Registrar Nova Venda</DialogTitle>
           <DialogDescription>
-            Selecione o produto e a quantidade para registrar uma nova venda.
+            A venda será marcada como 'Paga' e o stock ficará reservado.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -224,7 +230,7 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {products.map(product => (
+                      {products.filter((p, i, a) => a.findIndex(v => v.id === p.id) === i).map(product => (
                         <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -265,7 +271,10 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
                 name="quantity"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Quantidade Vendida</FormLabel>
+                    <div className="flex justify-between items-baseline">
+                        <FormLabel>Quantidade</FormLabel>
+                        {selectedProduct && <p className="text-xs text-muted-foreground">Disponível: {availableStock}</p>}
+                    </div>
                     <FormControl>
                         <Input type="number" min="1" {...field} />
                     </FormControl>

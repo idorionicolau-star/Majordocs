@@ -79,13 +79,14 @@ export default function InventoryPage() {
   }
 
 
-  const handleAddProduct = (newProduct: Omit<Product, 'id' | 'lastUpdated' | 'instanceId'>) => {
+  const handleAddProduct = (newProduct: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => {
     const product: Product = {
       ...newProduct,
       id: `PROD${(products.length + 1).toString().padStart(3, '0')}`,
       lastUpdated: new Date().toISOString().split('T')[0],
       location: newProduct.location || (locations.length > 0 ? locations[0].id : 'Principal'),
       instanceId: self.crypto.randomUUID(),
+      reservedStock: 0,
     };
     setProducts([product, ...products]);
   };

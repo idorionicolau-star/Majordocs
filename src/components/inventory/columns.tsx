@@ -92,6 +92,20 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
       },
     },
     {
+      accessorKey: "reservedStock",
+      header: "Reservado",
+      cell: ({ row }) => {
+        const reserved = row.original.reservedStock;
+        return (
+          <div className="text-center">
+            <span className="text-base font-black text-blue-500">
+              {reserved > 0 ? reserved : '-'}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: "lastUpdated",
       header: "Estado",
       cell: ({ row }) => {

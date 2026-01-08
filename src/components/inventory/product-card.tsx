@@ -5,7 +5,7 @@ import type { Product, Location } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertCircle, Edit2, Trash2 } from "lucide-react";
+import { AlertCircle, Edit2, Trash2, PackageCheck } from "lucide-react";
 import { getStockStatus } from "./columns";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,7 @@ export function ProductCard({ product, locations, isMultiLocation, onProductUpda
 
     const location = locations.find(l => l.id === product.location);
     const isCondensed = viewMode === 'condensed';
+    const availableStock = product.stock - product.reservedStock;
 
     return (
         <Card className="glass-card flex flex-col h-full group p-2 sm:p-4">
@@ -44,9 +45,15 @@ export function ProductCard({ product, locations, isMultiLocation, onProductUpda
                      "flex items-baseline justify-center text-center py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50",
                      isCondensed ? "flex-col" : ""
                     )}>
-                    <span className={cn("font-black", statusInfo[status], isCondensed ? "text-xl" : "text-3xl")}>{product.stock}</span>
+                    <span className={cn("font-black", statusInfo[status], isCondensed ? "text-xl" : "text-3xl")}>{availableStock}</span>
                     <span className="text-[10px] sm:text-xs font-bold text-muted-foreground">/un.</span>
                 </div>
+                {product.reservedStock > 0 && (
+                  <div className="flex items-center justify-center gap-1.5 text-xs text-blue-500 font-semibold">
+                    <PackageCheck className="h-3 w-3" />
+                    <span>{product.reservedStock} Reservado(s)</span>
+                  </div>
+                )}
                 <div className="text-center">
                     <p className={cn("font-bold", isCondensed ? "text-sm" : "text-base")}>{formatCurrency(product.price)}</p>
                 </div>

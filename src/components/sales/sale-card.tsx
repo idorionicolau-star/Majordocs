@@ -5,7 +5,7 @@ import type { Sale, Location, Product } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
-import { Calendar, User } from "lucide-react";
+import { Calendar, User, CheckCircle, PackageCheck } from "lucide-react";
 import { SaleActions } from "./columns";
 
 interface SaleCardProps {
@@ -13,17 +13,18 @@ interface SaleCardProps {
     locations: Location[];
     products: Product[];
     onUpdateSale: (sale: Sale) => void;
+    onConfirmPickup: (saleId: string) => void;
     isMultiLocation: boolean;
     viewMode?: 'normal' | 'condensed';
 }
 
-export function SaleCard({ sale, locations, products, onUpdateSale, isMultiLocation, viewMode = 'normal' }: SaleCardProps) {
+export function SaleCard({ sale, locations, products, onUpdateSale, onConfirmPickup, isMultiLocation, viewMode = 'normal' }: SaleCardProps) {
     const isCondensed = viewMode === 'condensed';
     const location = locations.find(l => l.id === sale.location);
 
     const actionsProps = {
         row: { original: sale },
-        options: { locations, products, onUpdateSale },
+        options: { locations, products, onUpdateSale, onConfirmPickup },
     };
 
     return (
@@ -38,7 +39,7 @@ export function SaleCard({ sale, locations, products, onUpdateSale, isMultiLocat
                     )}>
                     <span className={cn("font-black text-primary", isCondensed ? "text-lg" : "text-2xl")}>{formatCurrency(sale.totalValue)}</span>
                 </div>
-                
+                 
                  <div className={cn("text-xs text-muted-foreground space-y-1", isCondensed && "text-center")}>
                     <div className="flex items-center gap-1.5 justify-center">
                         <Calendar size={12} />
@@ -49,6 +50,15 @@ export function SaleCard({ sale, locations, products, onUpdateSale, isMultiLocat
                         <span>{sale.soldBy}</span>
                     </div>
                  </div>
+
+                <div className={`mt-2 flex justify-center items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                    sale.status === 'Levantado' 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' 
+                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                }`}>
+                    {sale.status === 'Levantado' ? <CheckCircle className="h-3 w-3" /> : <PackageCheck className="h-3 w-3" />}
+                    <span>{sale.status}</span>
+                </div>
 
                  {isMultiLocation && !isCondensed && (
                     <div className="flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400 pt-1">

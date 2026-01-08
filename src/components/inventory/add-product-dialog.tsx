@@ -49,7 +49,7 @@ const formSchema = z.object({
 type AddProductFormValues = z.infer<typeof formSchema>;
 
 interface AddProductDialogProps {
-    onAddProduct: (product: Omit<Product, 'id' | 'lastUpdated' | 'instanceId'>) => void;
+    onAddProduct: (product: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => void;
     isMultiLocation: boolean;
     locations: Location[];
     triggerType?: 'button' | 'fab';
@@ -82,7 +82,7 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
       form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
       return;
     }
-    const newProduct: Omit<Product, 'id' | 'lastUpdated' | 'instanceId'> = {
+    const newProduct: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'> = {
       ...values,
       location: values.location || (locations.length > 0 ? locations[0].id : 'Principal'),
     };
