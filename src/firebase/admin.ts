@@ -1,33 +1,35 @@
 
-import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { initializeApp, getApps, App, ServiceAccount } from 'firebase-admin/app';
 import { credential } from 'firebase-admin';
 
 // This function initializes the Firebase Admin SDK.
 // It ensures that initialization happens only once.
 export function initializeAdminApp(): App {
-  if (getApps().length) {
+  // If already initialized, return the existing app instance.
+  if (getApps().length > 0) {
     return getApps()[0];
   }
 
-  // Check if Firebase environment variables are set.
-  // These are automatically provided in a Firebase/Google Cloud environment.
+  // Primary method: Use the service account key from environment variables.
+  // This is the most reliable way for this environment.
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    try {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY) as ServiceAccount;
+      return initializeApp({
+        credential: credential.cert(serviceAccount),
+      });
+    } catch (e) {
+      console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:', e);
+      throw new Error('Could not initialize Firebase Admin SDK. The FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON.');
+    }
+  }
+
+  // Fallback for standard Google Cloud environments (e.g., Cloud Run, App Engine).
+  // This might not be used in the local dev environment but is good practice.
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    return initializeApp();
+     return initializeApp();
   }
 
-  // If running locally or in an environment without the default credentials,
-  // use the service account key from environment variables.
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
-  }
-
-  try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-    return initializeApp({
-      credential: credential.cert(serviceAccount),
-    });
-  } catch (e) {
-    console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:', e);
-    throw new Error('Could not initialize Firebase Admin SDK. Service account key is invalid.');
-  }
+  // If neither credential method is available, throw a clear error.
+  throw new Error('Firebase Admin SDK credentials are not set. Please set either FIREBASE_SERVICE_ACCOUNT_KEY or GOOGLE_APPLICATION_CREDENTIALS.');
 }
