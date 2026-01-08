@@ -107,7 +107,7 @@ export function EmployeeManager() {
   };
 
   const confirmDeleteUser = async () => {
-    if (userToDelete && firestore) {
+    if (userToDelete && userToDelete.id && firestore) {
       // In a real app, this should also delete the user in Firebase Auth. 
       // This requires admin privileges and is best done via a Cloud Function.
       // For now, we just delete the Firestore document.

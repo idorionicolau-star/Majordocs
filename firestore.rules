@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -50,8 +51,8 @@ service cloud.firestore {
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow list: if request.query.where.companyId == request.auth.uid;
+      allow create: if isOwner(userId) || request.resource.data.companyId == request.auth.uid;
       allow update: if isExistingOwner(userId) && request.resource.data.id == get(request.path).data.id;
       allow delete: if isExistingOwner(userId);
     }
