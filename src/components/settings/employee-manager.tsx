@@ -17,7 +17,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { createUserWithEmail, updateUserProfile } from '@/firebase/auth/auth';
 import { useUser } from '@/firebase/auth/use-user';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, collection, query, where, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -39,42 +38,39 @@ export function EmployeeManager() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   const handleAddUser = async (newUserData: any) => {
-     if (!adminUser || !firestore) {
-        toast({ variant: "destructive", title: "Erro", description: "Não autenticado ou base de dados indisponível." });
+     if (!adminUser) {
+        toast({ variant: "destructive", title: "Erro", description: "Não autenticado." });
         return;
     }
     toast({ title: "A criar funcionário...", description: "Por favor, aguarde." });
 
     try {
-        // This part would typically be handled by a server-side function for security,
-        // but for this client-side example, we proceed directly.
-        // NOTE: This approach requires Firestore rules that allow an admin to create users.
-        const userDocRef = doc(collection(firestore, 'users'));
-        const newUserProfile: User = {
-            id: userDocRef.id,
-            name: newUserData.name,
-            email: newUserData.email,
-            avatar: `https://picsum.photos/seed/${Math.random()}/40/40`,
-            role: newUserData.role,
-            status: 'Ativo', // Or 'Pendente' until they log in
-            permissions: newUserData.permissions,
-            companyId: adminUser.uid,
-        };
+      const token = await adminUser.getIdToken();
+      const response = await fetch('/api/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(newUserData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Ocorreu um erro desconhecido.');
+      }
         
-        // This is a placeholder. In a real app, you'd send an invite or create the user via Admin SDK.
-        // For now, we just add them to the database.
-        await setDoc(userDocRef, newUserProfile);
-        
-        toast({
-            title: "Funcionário Adicionado!",
-            description: `${newUserData.name} foi adicionado à sua empresa. A sua senha é: ${newUserData.password}`,
-        });
+      toast({
+          title: "Funcionário Convidado!",
+          description: `${newUserData.name} foi adicionado à sua empresa e pode agora fazer login.`,
+      });
 
     } catch (error: any) {
         toast({
             variant: "destructive",
             title: "Erro ao Adicionar Funcionário",
-            description: "Não foi possível adicionar o funcionário à base de dados.",
+            description: error.message || "Não foi possível adicionar o funcionário. Verifique se o e-mail já existe.",
         });
     }
   };
@@ -100,8 +96,8 @@ export function EmployeeManager() {
 
   const confirmDeleteUser = async () => {
     if (userToDelete && userToDelete.id && firestore) {
-      // In a real app, you would also need to delete the user from Firebase Auth
-      // using the Admin SDK, which can't be done from the client.
+      // TODO: In a real app, you would also need to delete the user from Firebase Auth
+      // using the Admin SDK, which can't be done from the client. This should be a cloud function.
       toast({ title: "A apagar...", description: `A remover ${userToDelete.name}.` });
       try {
         await deleteDoc(doc(firestore, 'users', userToDelete.id));
