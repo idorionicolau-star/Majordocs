@@ -31,7 +31,7 @@ import { EditCatalogProductDialog } from './edit-catalog-product-dialog';
 import { InventoryContext } from '@/context/inventory-context';
 import { useUser } from '@/firebase/auth/use-user';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, deleteDoc, updateDoc, collection, writeBatch, query, getDocs } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, updateDoc, collection, writeBatch, query, getDocs, where } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
@@ -235,10 +235,6 @@ export function CatalogManager() {
            <div className="space-y-4">
             <div className="flex justify-between items-center">
               <p className="text-sm text-muted-foreground">Gerencie os produtos base do seu catálogo.</p>
-              <Button size="sm" onClick={seedInitialCatalog}>
-                <Download className="mr-2 h-4 w-4" />
-                Importar Catálogo
-              </Button>
             </div>
              <div className="rounded-md border">
               <Table>
