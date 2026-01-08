@@ -6,16 +6,10 @@ import { usePathname } from "next/navigation";
 import { mainNavItems } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { useIsMobile } from "@/hooks/use-mobile";
 import React from "react";
 
-interface SubHeaderProps {
-  onNavigate?: (index: number) => void;
-}
-
-export function SubHeader({ onNavigate }: SubHeaderProps) {
+export function SubHeader() {
   const pathname = usePathname();
-  const isMobile = useIsMobile();
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -41,26 +35,8 @@ export function SubHeader({ onNavigate }: SubHeaderProps) {
           "flex w-max md:w-full md:justify-center mx-auto",
           "animate-peek md:animate-none"
         )}>
-          {mainNavItems.map((item, index) => {
+          {mainNavItems.map((item) => {
             const isActive = pathname === item.href;
-            
-            if (isMobile && onNavigate) {
-              return (
-                 <button
-                  key={item.href}
-                  id={`nav-link-${item.href.replace('/', '')}`}
-                  onClick={() => onNavigate(index)}
-                  className={cn(
-                    "flex items-center justify-center rounded-t-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-muted/50",
-                    isActive
-                      ? "text-primary border-b-2 border-primary"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {item.title}
-                </button>
-              )
-            }
 
             return (
               <Link
