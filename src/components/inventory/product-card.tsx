@@ -17,9 +17,10 @@ interface ProductCardProps {
     isMultiLocation: boolean;
     onProductUpdate: (product: Product) => void;
     onAttemptDelete: (product: Product) => void;
+    viewMode?: 'normal' | 'condensed';
 }
 
-export function ProductCard({ product, locations, isMultiLocation, onProductUpdate, onAttemptDelete }: ProductCardProps) {
+export function ProductCard({ product, locations, isMultiLocation, onProductUpdate, onAttemptDelete, viewMode = 'normal' }: ProductCardProps) {
     const status = getStockStatus(product);
     
     const statusInfo = {
@@ -30,6 +31,7 @@ export function ProductCard({ product, locations, isMultiLocation, onProductUpda
     }
 
     const location = locations.find(l => l.id === product.location);
+    const isCondensed = viewMode === 'condensed';
 
     return (
         <Card className="glass-card flex flex-col h-full group">
@@ -68,18 +70,22 @@ export function ProductCard({ product, locations, isMultiLocation, onProductUpda
                     onProductUpdate={onProductUpdate}
                     isMultiLocation={isMultiLocation}
                     locations={locations}
-                    trigger="button"
+                    trigger={isCondensed ? 'card-button' : 'button'}
                 />
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
                                 variant="outline"
-                                className="text-destructive hover:bg-destructive/10 hover:text-destructive w-full"
+                                className={cn(
+                                    "text-destructive hover:bg-destructive/10 hover:text-destructive",
+                                    !isCondensed && "w-full"
+                                )}
+                                size={isCondensed ? 'icon' : 'default'}
                                 onClick={() => onAttemptDelete(product)}
                             >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Apagar
+                                <Trash2 className={cn("h-4 w-4", !isCondensed && "mr-2")}/>
+                                {!isCondensed && 'Apagar'}
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -91,4 +97,6 @@ export function ProductCard({ product, locations, isMultiLocation, onProductUpda
         </Card>
     );
 }
+    
+
     

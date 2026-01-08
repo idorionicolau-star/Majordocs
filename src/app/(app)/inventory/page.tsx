@@ -477,6 +477,7 @@ export default function InventoryPage() {
                         isMultiLocation={isMultiLocation}
                         onProductUpdate={handleUpdateProduct}
                         onAttemptDelete={setProductToDelete}
+                        viewMode={gridCols === '5' ? 'condensed' : 'normal'}
                     />
                 ))}
             </div>
@@ -491,5 +492,7 @@ export default function InventoryPage() {
     </>
   );
 }
+
+    
 
     
