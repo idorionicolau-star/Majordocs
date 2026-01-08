@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -23,6 +24,8 @@ import {
   updateDoc,
   deleteDoc,
   writeBatch,
+  getDocs,
+  query,
 } from 'firebase/firestore';
 import { useUser } from '@/firebase/auth/use-user';
 import {
@@ -58,6 +61,7 @@ interface InventoryContextType {
     locationId?: string
   ) => void;
   seedInitialCatalog: () => Promise<void>;
+  clearProductsCollection: () => Promise<void>;
 }
 
 export const InventoryContext = createContext<InventoryContextType | undefined>(
@@ -367,6 +371,34 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     },
     [firestore, user, products, isMultiLocation, locations, toast]
   );
+  
+  const clearProductsCollection = useCallback(async () => {
+    if (!productsCollectionRef || !user) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível aceder à base de dados. Tente novamente.",
+      });
+      return;
+    }
+
+    try {
+      const q = query(productsCollectionRef);
+      const querySnapshot = await getDocs(q);
+      const batch = writeBatch(firestore);
+      querySnapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+    } catch (error) {
+      console.error("Error clearing products collection: ", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao Limpar Coleção",
+        description: "Ocorreu um problema ao tentar apagar os produtos.",
+      });
+    }
+  }, [productsCollectionRef, user, firestore, toast]);
 
   const value: InventoryContextType = {
     products,
@@ -379,6 +411,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     transferStock,
     updateProductStock,
     seedInitialCatalog,
+    clearProductsCollection,
   };
 
   return (

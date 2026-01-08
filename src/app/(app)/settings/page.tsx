@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -16,8 +16,22 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Trash2, Code } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
+import { Button } from "@/components/ui/button";
+import { InventoryContext } from "@/context/inventory-context";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+
 
 const colorOptions = [
   { name: 'Primary', value: 'hsl(var(--primary))', className: 'bg-primary' },
@@ -33,6 +47,9 @@ export default function SettingsPage() {
   const [borderWidth, setBorderWidth] = useState(1);
   const [borderColor, setBorderColor] = useState('hsl(var(--primary))');
   const [iconSize, setIconSize] = useState(16);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const inventoryContext = useContext(InventoryContext);
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsClient(true);
@@ -117,6 +134,15 @@ export default function SettingsPage() {
       localStorage.setItem('majorstockx-icon-size', newSize.toString());
     }
   };
+  
+  const handleClearProducts = async () => {
+    if (inventoryContext?.clearProductsCollection) {
+      toast({ title: "A limpar...", description: "A apagar todos os produtos do inventário no Firestore." });
+      await inventoryContext.clearProductsCollection();
+      toast({ title: "Sucesso!", description: "A coleção de produtos foi limpa." });
+    }
+    setShowClearConfirm(false);
+  };
 
 
   if (!isClient) {
@@ -124,179 +150,225 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-headline font-[900] text-slate-900 dark:text-white tracking-tighter">Configurações</h1>
-        <p className="text-sm font-medium text-slate-500 mt-1">
-          Ajuste as preferências da aplicação e da sua empresa.
-        </p>
-      </div>
+    <>
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é irreversível e irá apagar permanentemente **todos** os produtos do seu inventário no Firestore. Não será possível recuperar estes dados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearProducts} className="bg-destructive hover:bg-destructive/90">
+              Sim, apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      <Accordion type="single" collapsible className="w-full space-y-6">
-        <AccordionItem value="item-1" className="border-0">
-          <Card className="glass-card shadow-sm">
-            <AccordionTrigger className="w-full hover:no-underline">
-              <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
-                <div>
-                  <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Aparência</CardTitle>
-                  <CardDescription className="text-left">
-                    Personalize a aparência da aplicação.
-                  </CardDescription>
-                </div>
-                 <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-              </CardHeader>
-            </AccordionTrigger>
-            <AccordionContent>
-              <CardContent className="space-y-6 p-6 sm:p-8 pt-0">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="theme">Tema</Label>
-                  <ThemeSwitcher />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="border-radius">Arredondamento dos Cantos</Label>
-                  <p className="text-sm text-muted-foreground">Ajuste o raio das bordas dos elementos.</p>
-                  <div className="flex items-center gap-4">
-                    <Slider
-                      id="border-radius"
-                      min={0}
-                      max={2}
-                      step={0.1}
-                      value={[borderRadius]}
-                      onValueChange={handleBorderRadiusChange}
-                      className="w-[calc(100%-4rem)]"
-                    />
-                    <span className="w-12 text-right font-mono text-sm text-muted-foreground">
-                      {borderRadius.toFixed(1)}rem
-                    </span>
+      <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-headline font-[900] text-slate-900 dark:text-white tracking-tighter">Configurações</h1>
+          <p className="text-sm font-medium text-slate-500 mt-1">
+            Ajuste as preferências da aplicação e da sua empresa.
+          </p>
+        </div>
+
+        <Accordion type="single" collapsible className="w-full space-y-6">
+          <AccordionItem value="item-1" className="border-0">
+            <Card className="glass-card shadow-sm">
+              <AccordionTrigger className="w-full hover:no-underline">
+                <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
+                  <div>
+                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Aparência</CardTitle>
+                    <CardDescription className="text-left">
+                      Personalize a aparência da aplicação.
+                    </CardDescription>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="border-width">Largura da Borda do Card</Label>
-                  <p className="text-sm text-muted-foreground">Ajuste a espessura da borda dos cards.</p>
-                  <div className="flex items-center gap-4">
-                    <Slider
-                      id="border-width"
-                      min={0}
-                      max={4}
-                      step={0.1}
-                      value={[borderWidth]}
-                      onValueChange={handleBorderWidthChange}
-                      className="w-[calc(100%-4rem)]"
-                    />
-                    <span className="w-12 text-right font-mono text-sm text-muted-foreground">
-                      {borderWidth.toFixed(1)}px
-                    </span>
+                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                </CardHeader>
+              </AccordionTrigger>
+              <AccordionContent>
+                <CardContent className="space-y-6 p-6 sm:p-8 pt-0">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="theme">Tema</Label>
+                    <ThemeSwitcher />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="border-color">Cor da Borda do Card</Label>
-                  <p className="text-sm text-muted-foreground">Selecione a cor da borda para os cards.</p>
-                  <div className="flex items-center gap-2 pt-2">
-                    {colorOptions.map(color => (
-                      <button
-                        key={color.name}
-                        onClick={() => handleBorderColorChange(color.value)}
-                        className={cn(
-                          "h-8 w-8 rounded-full border-2 transition-all",
-                          borderColor === color.value ? 'border-ring' : 'border-transparent',
-                          color.className
-                        )}
-                        title={color.name}
+                  <div className="space-y-2">
+                    <Label htmlFor="border-radius">Arredondamento dos Cantos</Label>
+                    <p className="text-sm text-muted-foreground">Ajuste o raio das bordas dos elementos.</p>
+                    <div className="flex items-center gap-4">
+                      <Slider
+                        id="border-radius"
+                        min={0}
+                        max={2}
+                        step={0.1}
+                        value={[borderRadius]}
+                        onValueChange={handleBorderRadiusChange}
+                        className="w-[calc(100%-4rem)]"
                       />
-                    ))}
+                      <span className="w-12 text-right font-mono text-sm text-muted-foreground">
+                        {borderRadius.toFixed(1)}rem
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="icon-size">Tamanho do Ícone do Dashboard</Label>
-                  <p className="text-sm text-muted-foreground">Ajuste o tamanho dos ícones nos cards de estatísticas.</p>
-                  <div className="flex items-center gap-4">
-                    <Slider
-                      id="icon-size"
-                      min={12}
-                      max={24}
-                      step={1}
-                      value={[iconSize]}
-                      onValueChange={handleIconSizeChange}
-                      className="w-[calc(100%-4rem)]"
-                    />
-                    <span className="w-12 text-right font-mono text-sm text-muted-foreground">
-                      {iconSize.toFixed(0)}px
-                    </span>
+                  <div className="space-y-2">
+                    <Label htmlFor="border-width">Largura da Borda do Card</Label>
+                    <p className="text-sm text-muted-foreground">Ajuste a espessura da borda dos cards.</p>
+                    <div className="flex items-center gap-4">
+                      <Slider
+                        id="border-width"
+                        min={0}
+                        max={4}
+                        step={0.1}
+                        value={[borderWidth]}
+                        onValueChange={handleBorderWidthChange}
+                        className="w-[calc(100%-4rem)]"
+                      />
+                      <span className="w-12 text-right font-mono text-sm text-muted-foreground">
+                        {borderWidth.toFixed(1)}px
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </AccordionContent>
-          </Card>
-        </AccordionItem>
+                  <div className="space-y-2">
+                    <Label htmlFor="border-color">Cor da Borda do Card</Label>
+                    <p className="text-sm text-muted-foreground">Selecione a cor da borda para os cards.</p>
+                    <div className="flex items-center gap-2 pt-2">
+                      {colorOptions.map(color => (
+                        <button
+                          key={color.name}
+                          onClick={() => handleBorderColorChange(color.value)}
+                          className={cn(
+                            "h-8 w-8 rounded-full border-2 transition-all",
+                            borderColor === color.value ? 'border-ring' : 'border-transparent',
+                            color.className
+                          )}
+                          title={color.name}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="icon-size">Tamanho do Ícone do Dashboard</Label>
+                    <p className="text-sm text-muted-foreground">Ajuste o tamanho dos ícones nos cards de estatísticas.</p>
+                    <div className="flex items-center gap-4">
+                      <Slider
+                        id="icon-size"
+                        min={12}
+                        max={24}
+                        step={1}
+                        value={[iconSize]}
+                        onValueChange={handleIconSizeChange}
+                        className="w-[calc(100%-4rem)]"
+                      />
+                      <span className="w-12 text-right font-mono text-sm text-muted-foreground">
+                        {iconSize.toFixed(0)}px
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </AccordionContent>
+            </Card>
+          </AccordionItem>
 
-        {currentUser.role === 'Admin' && (
-          <>
-            <AccordionItem value="item-2" className="border-0">
-              <Card className="glass-card shadow-sm">
-                <AccordionTrigger className="w-full hover:no-underline">
-                  <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
-                     <div>
-                      <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Gestão de Localizações</CardTitle>
-                      <CardDescription className="text-left">
-                        Ative e gerencie múltiplas localizações para o seu negócio.
-                      </CardDescription>
-                     </div>
-                     <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                  </CardHeader>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <CardContent className="p-6 sm:p-8 pt-0">
-                    <LocationsManager />
-                  </CardContent>
-                </AccordionContent>
-              </Card>
-            </AccordionItem>
-            
-            <AccordionItem value="item-3" className="border-0">
-               <Card className="glass-card shadow-sm">
-                <AccordionTrigger className="w-full hover:no-underline">
-                  <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
-                    <div>
-                      <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Gestão de Funcionários</CardTitle>
-                      <CardDescription className="text-left">
-                        Convide e gerencie os funcionários da sua empresa.
-                      </CardDescription>
-                    </div>
-                     <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                  </CardHeader>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <CardContent className="p-6 sm:p-8 pt-0">
-                    <EmployeeManager />
-                  </CardContent>
-                </AccordionContent>
-              </Card>
-            </AccordionItem>
-            <AccordionItem value="item-4" className="border-0">
-              <Card className="glass-card shadow-sm">
-                <AccordionTrigger className="w-full hover:no-underline">
-                  <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
-                    <div>
-                      <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Gestor de Catálogo</CardTitle>
-                      <CardDescription className="text-left">
-                        Gerencie os produtos, categorias e importe dados em massa.
-                      </CardDescription>
-                    </div>
-                     <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                  </CardHeader>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <CardContent className="p-6 sm:p-8 pt-0">
-                    <CatalogManager />
-                  </CardContent>
-                </AccordionContent>
-              </Card>
-            </AccordionItem>
-          </>
-        )}
-      </Accordion>
-    </div>
+          {currentUser.role === 'Admin' && (
+            <>
+              <AccordionItem value="item-2" className="border-0">
+                <Card className="glass-card shadow-sm">
+                  <AccordionTrigger className="w-full hover:no-underline">
+                    <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
+                      <div>
+                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Gestão de Localizações</CardTitle>
+                        <CardDescription className="text-left">
+                          Ative e gerencie múltiplas localizações para o seu negócio.
+                        </CardDescription>
+                      </div>
+                      <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                    </CardHeader>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <CardContent className="p-6 sm:p-8 pt-0">
+                      <LocationsManager />
+                    </CardContent>
+                  </AccordionContent>
+                </Card>
+              </AccordionItem>
+              
+              <AccordionItem value="item-3" className="border-0">
+                <Card className="glass-card shadow-sm">
+                  <AccordionTrigger className="w-full hover:no-underline">
+                    <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
+                      <div>
+                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Gestão de Funcionários</CardTitle>
+                        <CardDescription className="text-left">
+                          Convide e gerencie os funcionários da sua empresa.
+                        </CardDescription>
+                      </div>
+                      <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                    </CardHeader>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <CardContent className="p-6 sm:p-8 pt-0">
+                      <EmployeeManager />
+                    </CardContent>
+                  </AccordionContent>
+                </Card>
+              </AccordionItem>
+              <AccordionItem value="item-4" className="border-0">
+                <Card className="glass-card shadow-sm">
+                  <AccordionTrigger className="w-full hover:no-underline">
+                    <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
+                      <div>
+                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Gestor de Catálogo</CardTitle>
+                        <CardDescription className="text-left">
+                          Gerencie os produtos, categorias e importe dados em massa.
+                        </CardDescription>
+                      </div>
+                      <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                    </CardHeader>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <CardContent className="p-6 sm:p-8 pt-0">
+                      <CatalogManager />
+                    </CardContent>
+                  </AccordionContent>
+                </Card>
+              </AccordionItem>
+              <AccordionItem value="item-5" className="border-0">
+                <Card className="glass-card shadow-sm">
+                  <AccordionTrigger className="w-full hover:no-underline">
+                    <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
+                      <div>
+                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left flex items-center gap-2"><Code />Ferramentas de Programador</CardTitle>
+                        <CardDescription className="text-left">
+                          Ações avançadas para gerir o estado da aplicação.
+                        </CardDescription>
+                      </div>
+                      <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                    </CardHeader>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <CardContent className="p-6 sm:p-8 pt-0 space-y-4">
+                       <div>
+                        <h3 className="font-semibold">Limpar Coleção de Produtos</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Esta ação irá apagar todos os documentos da coleção de produtos no Firestore. Utilize esta opção se quiser limpar o inventário e recomeçar.
+                        </p>
+                       </div>
+                       <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Limpar Produtos do Firestore
+                       </Button>
+                    </CardContent>
+                  </AccordionContent>
+                </Card>
+              </AccordionItem>
+            </>
+          )}
+        </Accordion>
+      </div>
+    </>
   );
 }
-
-    
