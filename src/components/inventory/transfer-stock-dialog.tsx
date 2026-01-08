@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRightLeft } from "lucide-react";
+import { Truck } from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -111,7 +111,7 @@ export function TransferStockDialog({ products, locations, onTransfer }: Transfe
                 <TooltipTrigger asChild>
                     <DialogTrigger asChild>
                         <Button variant="outline" size="icon" className="shadow-lg h-12 w-12 rounded-2xl">
-                            <ArrowRightLeft className="h-5 w-5" />
+                            <Truck className="h-5 w-5" />
                         </Button>
                     </DialogTrigger>
                 </TooltipTrigger>
@@ -208,7 +208,7 @@ export function TransferStockDialog({ products, locations, onTransfer }: Transfe
                 <FormItem>
                   <div className="flex justify-between items-center">
                     <FormLabel>Quantidade</FormLabel>
-                    {availableStock > 0 && <p className="text-xs text-muted-foreground mt-1">Disponível: {availableStock}</p>}
+                    {watchedProductId && watchedFromLocation && <p className="text-xs text-muted-foreground mt-1">Disponível: {availableStock}</p>}
                   </div>
                   <FormControl>
                     <Input type="number" min="1" {...field} />
@@ -227,3 +227,5 @@ export function TransferStockDialog({ products, locations, onTransfer }: Transfe
     </Dialog>
   );
 }
+
+    
