@@ -23,131 +23,44 @@ service cloud.firestore {
     }
 
     /**
-     * Returns true if the document being accessed already exists.
-     * Used to protect against updates or deletes of non-existent documents.
-     */
-    function isExistingDoc() {
-      return get(request.path).data != null;
-    }
-
-    /**
      * Returns true if the user is the owner of an existing document.
      * Combines ownership and existence checks for state-changing operations.
      */
     function isExistingOwner(userId) {
-      return isOwner(userId) && isExistingDoc();
+      return isOwner(userId) && exists(request.path);
     }
     
+    /**
+      * Returns true if the user is the owner of the company associated
+      * with the document being accessed.
+      */
     function isCompanyOwner(companyId) {
       return isSignedIn() && request.auth.uid == companyId;
     }
+    
+    /**
+      * Returns true if the incoming request is for a list operation
+      * that is correctly filtered by companyId.
+      */
+    function isReadingOwnCompanyDocs() {
+        return 'companyId' in request.query && request.query.companyId == request.auth.uid;
+    }
+
 
     // -------------------------------------------------------------------------
     // Collection Rules
     // -------------------------------------------------------------------------
 
-    /**
-     * @description Manages user profile documents.
-     * @path /users/{userId}
-     * @allow An authenticated user can manage their own profile.
-     * @allow The company owner can manage profiles of users associated with their company.
-     * @principle Enforces self-management and company-level management of user profiles.
-     */
     match /users/{userId} {
-      allow read, write: if isOwner(userId) || (exists(request.path) && isCompanyOwner(get(request.path).data.companyId)) || isCompanyOwner(request.resource.data.companyId);
+      allow read: if isOwner(userId) || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && resource.data.companyId == request.auth.uid);
+      allow list: if isReadingOwnCompanyDocs();
+      allow create: if isCompanyOwner(request.resource.data.companyId);
+      allow update: if isOwner(userId) || isCompanyOwner(resource.data.companyId);
+      allow delete: if isCompanyOwner(resource.data.companyId);
     }
     
-    /**
-     * @description Manages product documents owned by a specific user (as a company).
-     * @path /users/{userId}/products/{productId}
-     * @allow The owner user can perform any action on their own products.
-     * @deny Other users cannot access or modify products that aren't theirs.
-     * @principle Enforces strict data ownership for products using path-based security.
-     */
-    match /users/{userId}/products/{productId} {
+    match /users/{userId}/{document=**} {
       allow read, write: if isOwner(userId);
-    }
-
-    /**
-     * @description Manages catalog product documents owned by a specific user.
-     * @path /users/{userId}/catalogProducts/{productId}
-     * @allow The owner user can perform any action on their own catalog products.
-     * @deny Other users cannot access or modify catalog products that aren't theirs.
-     * @principle Enforces strict data ownership for catalog data.
-     */
-    match /users/{userId}/catalogProducts/{productId} {
-      allow read, write: if isOwner(userId);
-    }
-
-    /**
-     * @description Manages catalog category documents owned by a specific user.
-     * @path /users/{userId}/catalogCategories/{categoryId}
-     * @allow The owner user can perform any action on their own catalog categories.
-     * @deny Other users cannot access or modify catalog categories that aren't theirs.
-     * @principle Enforces strict data ownership for catalog data.
-     */
-    match /users/{userId}/catalogCategories/{categoryId} {
-      allow read, write: if isOwner(userId);
-    }
-
-    /**
-     * @description Stores sales records, owned by and accessible only to the creating user.
-     * @path /users/{userId}/sales/{saleId}
-     * @allow A user creates a sale record for themselves: (create) /users/user_abc/sales/sale_123 where auth.uid is user_abc.
-     * @deny Another authenticated user tries to read the sale record: (get) /users/user_abc/sales/sale_123 where auth.uid is user_xyz.
-     * @principle Enforces strict data ownership using a path-based security model and validates relational integrity.
-     */
-    match /users/{userId}/sales/{saleId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.userId == get(request.path).data.userId;
-      allow delete: if isExistingOwner(userId);
-
-      /**
-       * @description Stores items within a sale. Access is inherited from the parent sale record.
-       * @path /users/{userId}/sales/{saleId}/saleItems/{saleItemId}
-       * @allow The owner of the sale reads the items within it: (get) /users/user_abc/sales/sale_123/saleItems/item_1 where auth.uid is user_abc.
-       * @deny Another user tries to list the items in someone else's sale.
-       * @principle Enforces inherited ownership from the parent document via the path structure.
-       */
-      match /saleItems/{saleItemId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.saleId == saleId;
-        allow update: if isExistingOwner(userId) && request.resource.data.saleId == get(request.path).data.saleId;
-        allow delete: if isExistingOwner(userId);
-      }
-    }
-
-    /**
-     * @description Stores production records, owned by and accessible only to the creating user.
-     * @path /users/{userId}/productions/{productionId}
-     * @allow A user creates a production record for themselves: (create) /users/user_abc/productions/prod_456 where auth.uid is user_abc.
-     * @deny Another user attempts to delete a production record they do not own.
-     * @principle Enforces strict data ownership using a path-based security model and validates relational integrity.
-     */
-    match /users/{userId}/productions/{productionId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.userId == get(request.path).data.userId;
-      allow delete: if isExistingOwner(userId);
-    }
-
-    /**
-     * @description Stores user-specific notifications.
-     * @path /users/{userId}/notifications/{notificationId}
-     * @allow A user updates their own notification (e.g., marks it as read): (update) /users/user_abc/notifications/notif_789 where auth.uid is user_abc.
-     * @deny Another user attempts to read notifications belonging to someone else.
-     * @principle Enforces strict data ownership using a path-based security model and validates relational integrity.
-     */
-    match /users/{userId}/notifications/{notificationId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.userId == get(request.path).data.userId;
-      allow delete: if isExistingOwner(userId);
     }
   }
 }

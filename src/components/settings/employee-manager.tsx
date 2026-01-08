@@ -31,7 +31,6 @@ export function EmployeeManager() {
 
   const employeesQuery = useMemoFirebase(() => {
     if (!firestore || !adminUser) return null;
-    // Query for users that belong to the current admin's company
     return query(collection(firestore, 'users'), where('companyId', '==', adminUser.uid));
   }, [firestore, adminUser]);
 
@@ -47,8 +46,6 @@ export function EmployeeManager() {
     toast({ title: "A criar funcionário...", description: "Por favor, aguarde." });
 
     try {
-        // Note: This creates a new top-level Firebase Auth user.
-        // This is a temporary solution. In a real scenario, you'd use a backend function.
         const userCredential = await createUserWithEmail(newUserData.email, newUserData.password);
         const newUser = userCredential.user;
 
@@ -61,7 +58,7 @@ export function EmployeeManager() {
             role: newUserData.role,
             status: 'Ativo',
             permissions: newUserData.permissions,
-            companyId: adminUser.uid, // Link to the admin's "company"
+            companyId: adminUser.uid,
         };
         
         const userDocRef = doc(firestore, `users`, newUser.uid);
@@ -108,9 +105,6 @@ export function EmployeeManager() {
 
   const confirmDeleteUser = async () => {
     if (userToDelete && userToDelete.id && firestore) {
-      // In a real app, this should also delete the user in Firebase Auth. 
-      // This requires admin privileges and is best done via a Cloud Function.
-      // For now, we just delete the Firestore document.
       toast({ title: "A apagar...", description: `A remover ${userToDelete.name}.` });
       try {
         await deleteDoc(doc(firestore, 'users', userToDelete.id));
