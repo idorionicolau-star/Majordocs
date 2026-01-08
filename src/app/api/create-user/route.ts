@@ -4,7 +4,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeAdminApp } from '@/firebase/admin';
 
-// Initialize Firebase Admin SDK
+// Initialize Firebase Admin SDK once when the server starts
 initializeAdminApp();
 
 export async function POST(request: NextRequest) {
