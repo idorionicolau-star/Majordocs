@@ -70,7 +70,7 @@ export default function SalesPage() {
         })} 
         data={sales} 
       />
-       <AddSaleDialog products={allProducts} onAddSale={handleAddSale} />
+       <AddSaleDialog products={allProducts} onAddSale={handleAddSale} triggerType="fab" />
     </div>
   );
 }

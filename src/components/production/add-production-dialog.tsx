@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
+import { Plus, Hammer } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -47,9 +47,10 @@ type AddProductionFormValues = z.infer<typeof formSchema>;
 interface AddProductionDialogProps {
     products: Product[];
     onAddProduction: (data: AddProductionFormValues) => void;
+    triggerType?: 'button' | 'fab';
 }
 
-export function AddProductionDialog({ products, onAddProduction }: AddProductionDialogProps) {
+export function AddProductionDialog({ products, onAddProduction, triggerType = 'fab' }: AddProductionDialogProps) {
   const [open, setOpen] = useState(false);
   const [isMultiLocation, setIsMultiLocation] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -97,24 +98,34 @@ export function AddProductionDialog({ products, onAddProduction }: AddProduction
     }
     setOpen(false);
   }
+  
+   const TriggerComponent = triggerType === 'fab' ? (
+    <TooltipProvider>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <DialogTrigger asChild>
+                    <Button className="fixed bottom-20 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
+                        <Plus className="h-6 w-6" />
+                    </Button>
+                </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+                <p>Registrar Produção</p>
+            </TooltipContent>
+        </Tooltip>
+    </TooltipProvider>
+  ) : (
+     <DialogTrigger asChild>
+        <Button variant="outline">
+            <Hammer className="mr-2 h-4 w-4" />+ Produção
+        </Button>
+    </DialogTrigger>
+  );
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-        <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <DialogTrigger asChild>
-                        <Button className="fixed bottom-20 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
-                            <Plus className="h-6 w-6" />
-                        </Button>
-                    </DialogTrigger>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                    <p>Registrar Produção</p>
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
-
+      {TriggerComponent}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Registrar Nova Produção</DialogTitle>

@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
+import { Plus, PlusCircle, Box } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -52,9 +52,10 @@ interface AddProductDialogProps {
     onAddProduct: (product: AddProductFormValues) => void;
     isMultiLocation: boolean;
     locations: Location[];
+    triggerType?: 'button' | 'fab';
 }
 
-function AddProductDialogContent({ onAddProduct, isMultiLocation, locations }: AddProductDialogProps) {
+function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, triggerType = 'fab' }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const form = useForm<AddProductFormValues>({
@@ -89,24 +90,33 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations }: A
     form.reset();
     setOpen(false);
   }
+  
+  const TriggerComponent = triggerType === 'fab' ? (
+    <TooltipProvider>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <DialogTrigger asChild>
+                    <Button className="fixed bottom-20 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
+                        <Plus className="h-6 w-6" />
+                    </Button>
+                </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+                <p>Adicionar Produto</p>
+            </TooltipContent>
+        </Tooltip>
+    </TooltipProvider>
+  ) : (
+    <DialogTrigger asChild>
+        <Button variant="outline">
+            <Box className="mr-2 h-4 w-4" />+ Inventário
+        </Button>
+    </DialogTrigger>
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-        <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <DialogTrigger asChild>
-                        <Button className="fixed bottom-20 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
-                            <Plus className="h-6 w-6" />
-                        </Button>
-                    </DialogTrigger>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                    <p>Adicionar Produto</p>
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
-
+      {TriggerComponent}
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Adicionar Novo Produto</DialogTitle>
@@ -242,9 +252,17 @@ export function AddProductDialog(props: AddProductDialogProps) {
     setIsClient(true);
   }, []);
 
-  return isClient ? <AddProductDialogContent {...props} /> : (
-     <Button disabled className="fixed bottom-20 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
-        <Plus className="h-6 w-6" />
-    </Button>
-  );
+  if (!isClient) {
+     return props.triggerType === 'fab' ? (
+        <Button disabled className="fixed bottom-20 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
+            <Plus className="h-6 w-6" />
+        </Button>
+     ) : (
+        <Button variant="outline" disabled>
+            <Box className="mr-2 h-4 w-4" />+ Inventário
+        </Button>
+     );
+  }
+
+  return <AddProductDialogContent {...props} />;
 }

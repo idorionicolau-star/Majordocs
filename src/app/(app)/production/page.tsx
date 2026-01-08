@@ -48,7 +48,7 @@ export default function ProductionPage() {
             </div>
         </div>
       <ProductionDataTable columns={columns({ locations })} data={productions} />
-      <AddProductionDialog products={products} onAddProduction={handleAddProduction} />
+      <AddProductionDialog products={products} onAddProduction={handleAddProduction} triggerType="fab" />
     </div>
   );
 }

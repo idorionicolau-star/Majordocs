@@ -392,6 +392,7 @@ export default function InventoryPage() {
         onAddProduct={handleAddProduct}
         isMultiLocation={isMultiLocation}
         locations={locations}
+        triggerType="fab"
       />
     </>
   );
