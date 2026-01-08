@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProductionPage() {
   const inventoryContext = useContext(InventoryContext);
@@ -36,6 +37,9 @@ export default function ProductionPage() {
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('4');
   const [productionToTransfer, setProductionToTransfer] = useState<Production | null>(null);
+
+  const { products, updateProductStock, locations, isMultiLocation, loading: inventoryLoading } = inventoryContext || { products: [], updateProductStock: () => {}, locations: [], isMultiLocation: false, loading: true };
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -56,16 +60,12 @@ export default function ProductionPage() {
     localStorage.setItem('majorstockx-production-grid-cols', cols);
   }
 
-  const { products, updateProductStock, locations, isMultiLocation } = inventoryContext || { products: [], updateProductStock: () => {}, locations: [], isMultiLocation: false };
-
   const handleAddProduction = (newProductionData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
-    const product = products.find(p => p.name === newProductionData.productName);
-    if (!product) return;
-
+    
     const newProduction: Production = {
       id: `PRODREC${(productions.length + 1).toString().padStart(3, '0')}`,
       date: new Date().toISOString().split('T')[0],
-      productName: product.name,
+      productName: newProductionData.productName,
       quantity: newProductionData.quantity,
       registeredBy: currentUser.name,
       location: newProductionData.location,
@@ -75,7 +75,7 @@ export default function ProductionPage() {
     
     toast({
         title: "Produção Registrada",
-        description: `O registo de ${newProduction.quantity} unidades de ${product.name} foi criado.`,
+        description: `O registo de ${newProduction.quantity} unidades de ${newProduction.productName} foi criado.`,
     });
   };
 
@@ -104,8 +104,18 @@ export default function ProductionPage() {
     return result;
   }, [productions, nameFilter]);
 
-  if (!inventoryContext) {
-    return <div>A carregar...</div>;
+  if (inventoryLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-1/3" />
+        <Skeleton className="h-8 w-1/4" />
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -213,7 +223,7 @@ export default function ProductionPage() {
         </div>
       )}
 
-      <AddProductionDialog products={products} onAddProduction={handleAddProduction} triggerType="fab" />
+      <AddProductionDialog onAddProduction={handleAddProduction} triggerType="fab" />
     </div>
     </>
   );

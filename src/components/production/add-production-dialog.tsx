@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -34,9 +34,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Product, Location, Production } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { InventoryContext } from '@/context/inventory-context';
+import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 
 const formSchema = z.object({
-  productId: z.string().nonempty({ message: "Por favor, selecione um produto." }),
+  productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
   location: z.string().optional(),
 });
@@ -44,57 +46,49 @@ const formSchema = z.object({
 type AddProductionFormValues = z.infer<typeof formSchema>;
 
 interface AddProductionDialogProps {
-    products: Product[];
     onAddProduction: (data: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => void;
     triggerType?: 'button' | 'fab';
 }
 
-export function AddProductionDialog({ products, onAddProduction, triggerType = 'fab' }: AddProductionDialogProps) {
+export function AddProductionDialog({ onAddProduction, triggerType = 'fab' }: AddProductionDialogProps) {
   const [open, setOpen] = useState(false);
-  const [isMultiLocation, setIsMultiLocation] = useState(false);
-  const [locations, setLocations] = useState<Location[]>([]);
+  const inventoryContext = useContext(InventoryContext);
+  const {
+    catalogProducts,
+    catalogCategories,
+    locations,
+    isMultiLocation
+  } = inventoryContext || {};
   
   const form = useForm<AddProductionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      productId: "",
+      productName: "",
       quantity: 1,
       location: "",
     },
   });
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const multiLocationEnabled = localStorage.getItem('majorstockx-multi-location-enabled') === 'true';
-      setIsMultiLocation(multiLocationEnabled);
-      
-      const storedLocations = localStorage.getItem('majorstockx-locations');
-      if (storedLocations) {
-        const parsedLocations: Location[] = JSON.parse(storedLocations);
-        setLocations(parsedLocations);
-        if (parsedLocations.length > 0) {
-            form.setValue('location', parsedLocations[0].id)
-        }
-      }
+    if (locations && locations.length > 0) {
+        form.setValue('location', locations[0].id)
     }
-  }, [form]);
+  }, [locations, form]);
 
   function onSubmit(values: AddProductionFormValues) {
      if (isMultiLocation && !values.location) {
       form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
       return;
     }
-    const product = products.find(p => p.id === values.productId);
-    if (!product) return;
 
     onAddProduction({
-      productName: product.name,
+      productName: values.productName,
       quantity: values.quantity,
       location: values.location,
     });
 
     form.reset();
-     if (locations.length > 0) {
+     if (locations && locations.length > 0) {
       form.setValue('location', locations[0].id);
     }
     setOpen(false);
@@ -123,6 +117,9 @@ export function AddProductionDialog({ products, onAddProduction, triggerType = '
     </DialogTrigger>
   );
 
+  if (!inventoryContext) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -138,22 +135,18 @@ export function AddProductionDialog({ products, onAddProduction, triggerType = '
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
             <FormField
               control={form.control}
-              name="productId"
+              name="productName"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Produto</FormLabel>
-                   <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um produto fabricado" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {products.filter((p, i, a) => a.findIndex(v => v.id === p.id) === i).map(product => (
-                        <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                   <FormControl>
+                    <CatalogProductSelector
+                        products={catalogProducts || []}
+                        categories={catalogCategories || []}
+                        selectedValue={field.value}
+                        onValueChange={field.onChange}
+                    />
+                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -165,14 +158,14 @@ export function AddProductionDialog({ products, onAddProduction, triggerType = '
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Localização de Destino</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione a localização" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {locations.map(location => (
+                        {locations?.map(location => (
                           <SelectItem key={location.id} value={location.id}>
                             {location.name}
                           </SelectItem>

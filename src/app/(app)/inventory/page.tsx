@@ -48,6 +48,18 @@ export default function InventoryPage() {
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const { toast } = useToast();
 
+  const { 
+    products, 
+    locations, 
+    isMultiLocation, 
+    addProduct, 
+    updateProduct, 
+    deleteProduct, 
+    transferStock,
+    loading: inventoryLoading
+  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true };
+
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedView = localStorage.getItem('majorstockx-inventory-view') as 'list' | 'grid';
@@ -66,17 +78,6 @@ export default function InventoryPage() {
     setGridCols(cols);
     localStorage.setItem('majorstockx-inventory-grid-cols', cols);
   }
-
-  const { 
-    products, 
-    locations, 
-    isMultiLocation, 
-    addProduct, 
-    updateProduct, 
-    deleteProduct, 
-    transferStock,
-    loading: inventoryLoading
-  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true };
 
   const handleAddProduct = (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => {
     addProduct(newProductData);
@@ -113,11 +114,10 @@ export default function InventoryPage() {
     toLocationId: string,
     quantity: number
   ) => {
-    const fromProduct = products.find(p => p.id === productId && p.location === fromLocationId);
     transferStock(productId, fromLocationId, toLocationId, quantity);
     toast({
         title: "Transferência de Stock Concluída",
-        description: `${quantity} unidades de "${fromProduct?.name}" movidas para ${locations.find(l => l.id === toLocationId)?.name}.`,
+        description: `${quantity} unidades de "${productId}" movidas para ${locations.find(l => l.id === toLocationId)?.name}.`,
     });
   };
 

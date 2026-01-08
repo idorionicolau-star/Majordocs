@@ -26,6 +26,7 @@ import {
   writeBatch,
   getDocs,
   query,
+  where,
 } from 'firebase/firestore';
 import { useUser } from '@/firebase/auth/use-user';
 import {
@@ -36,8 +37,13 @@ import {
 } from '@/firebase/non-blocking-updates';
 import { initialCatalog } from '@/lib/data';
 
+type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
+type CatalogCategory = { id: string; name: string };
+
 interface InventoryContextType {
   products: Product[];
+  catalogProducts: CatalogProduct[];
+  catalogCategories: CatalogCategory[];
   locations: Location[];
   isMultiLocation: boolean;
   loading: boolean;
@@ -73,17 +79,34 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const { toast } = useToast();
 
+  // --- Firestore Collections ---
   const productsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return collection(firestore, `users/${user.uid}/products`);
   }, [firestore, user]);
 
+  const catalogProductsCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, `users/${user.uid}/catalogProducts`);
+  }, [firestore, user]);
+
+  const catalogCategoriesCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, `users/${user.uid}/catalogCategories`);
+  }, [firestore, user]);
+
+  // --- Data Hooks ---
   const { data: productsData, isLoading: productsLoading } =
     useCollection<Product>(productsCollectionRef);
-    
+  
+  const { data: catalogProductsData, isLoading: catalogProductsLoading } = 
+    useCollection<CatalogProduct>(catalogProductsCollectionRef);
+
+  const { data: catalogCategoriesData, isLoading: catalogCategoriesLoading } =
+    useCollection<CatalogCategory>(catalogCategoriesCollectionRef);
+
   const products = useMemo(() => {
     if (!productsData) return [];
-    // Adiciona um instanceId único a cada produto para renderização na UI
     return productsData.map(p => ({ ...p, instanceId: p.instanceId || self.crypto.randomUUID() }));
   }, [productsData]);
 
@@ -133,7 +156,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   );
   
   const seedInitialCatalog = useCallback(async () => {
-    if (!productsCollectionRef || !user || !firestore) {
+    if (!catalogProductsCollectionRef || !catalogCategoriesCollectionRef || !user || !firestore) {
       toast({
         variant: "destructive",
         title: "Erro",
@@ -141,46 +164,49 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       });
       return;
     }
-  
-    // Verificação para não popular o catálogo se já existirem produtos
-    if (products.length > 0) {
+
+    const existingProducts = await getDocs(query(catalogProductsCollectionRef));
+    if (!existingProducts.empty) {
       toast({
         title: "Catálogo já existente",
-        description: "O catálogo de produtos já foi carregado anteriormente.",
+        description: "O catálogo de produtos base já foi carregado.",
       });
       return;
     }
   
     toast({
       title: "A carregar catálogo...",
-      description: "Por favor, aguarde enquanto os produtos são adicionados.",
+      description: "Por favor, aguarde enquanto os produtos e categorias são criados.",
     });
   
     const batch = writeBatch(firestore);
+    const categoryNames = Object.keys(initialCatalog);
+    const categoryNameSet = new Set<string>();
   
     for (const category in initialCatalog) {
+      categoryNameSet.add(category);
       for (const subType in initialCatalog[category]) {
         const items = initialCatalog[category][subType];
         items.forEach((itemName: string) => {
-          const docRef = doc(productsCollectionRef);
+          const docRef = doc(catalogProductsCollectionRef);
           const productData = {
-            name: `${itemName} ${subType}`,
+            id: docRef.id,
+            name: `${itemName} ${subType}`.trim(),
             category: category,
-            subType: subType,
-            price: 0,
+            price: 0, // Default price
             lowStockThreshold: 10,
             criticalStockThreshold: 5,
             unit: "un",
-            stock: 0, 
-            reservedStock: 0,
-            lastUpdated: new Date().toISOString().split('T')[0],
-            location: 'Principal', // Localização padrão
-            instanceId: self.crypto.randomUUID(),
           };
           batch.set(docRef, productData);
         });
       }
     }
+
+    categoryNameSet.forEach(name => {
+        const docRef = doc(catalogCategoriesCollectionRef);
+        batch.set(docRef, { id: docRef.id, name });
+    });
   
     try {
       await batch.commit();
@@ -196,7 +222,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         description: "Ocorreu um problema ao tentar guardar os produtos.",
       });
     }
-  }, [productsCollectionRef, user, firestore, toast, products]);
+  }, [catalogProductsCollectionRef, catalogCategoriesCollectionRef, user, firestore, toast]);
 
   const updateProduct = useCallback(
     (instanceId: string, updatedData: Partial<Product>) => {
@@ -240,11 +266,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     ) => {
       if (!firestore || !user) return;
 
+      // Note: This logic assumes productId is the base ID, not instance ID
       const fromProduct = products.find(
-        (p) => p.id === productId && p.location === fromLocationId
+        (p) => p.name === productId && p.location === fromLocationId
       );
       const toProduct = products.find(
-        (p) => p.id === productId && p.location === toLocationId
+        (p) => p.name === productId && p.location === toLocationId
       );
 
       if (!fromProduct) {
@@ -267,7 +294,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const batch = writeBatch(firestore);
 
       if(fromProduct.id){
-        // Decrease stock from source
         const fromDocRef = doc(
           firestore,
           `users/${user.uid}/products`,
@@ -277,7 +303,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       }
 
       if (toProduct && toProduct.id) {
-        // Increase stock in destination
         const toDocRef = doc(
           firestore,
           `users/${user.uid}/products`,
@@ -285,16 +310,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         );
         batch.update(toDocRef, { stock: toProduct.stock + quantity });
       } else {
-        // Create new product instance in destination
         const newProductData = {
           ...fromProduct,
           location: toLocationId,
           stock: quantity,
-          reservedStock: 0, // New instances start with 0 reserved
+          reservedStock: 0,
           lastUpdated: new Date().toISOString().split('T')[0],
           instanceId: self.crypto.randomUUID(),
         };
-        delete newProductData.id; // Firestore will generate new ID
+        delete newProductData.id;
         const newDocRef = doc(
           collection(firestore, `users/${user.uid}/products`)
         );
@@ -329,7 +353,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         (isMultiLocation && locations.length > 0
           ? locations[0].id
           : 'Principal');
-      const productBase = products.find((p) => p.name === productName);
+      
+      const catalogProduct = catalogProductsData?.find(p => p.name === productName);
 
       const existingInstance = products.find(
         (p) => p.name === productName && p.location === targetLocation
@@ -345,7 +370,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           stock: existingInstance.stock + quantity,
         });
       } else {
-        if (!productBase) {
+        if (!catalogProduct) {
            toast({
             variant: 'destructive',
             title: 'Produto Base Não Encontrado',
@@ -354,14 +379,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           return;
         }
         const newProductData = {
-          ...productBase,
+          name: catalogProduct.name,
+          category: catalogProduct.category,
+          price: catalogProduct.price,
+          lowStockThreshold: catalogProduct.lowStockThreshold,
+          criticalStockThreshold: catalogProduct.criticalStockThreshold,
+          unit: catalogProduct.unit,
           stock: quantity,
           reservedStock: 0,
           location: targetLocation,
           lastUpdated: new Date().toISOString().split('T')[0],
           instanceId: self.crypto.randomUUID(),
         };
-        delete newProductData.id; // Let firestore generate the ID
         const productsRef = collection(
           firestore,
           `users/${user.uid}/products`
@@ -369,7 +398,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         addDocumentNonBlocking(productsRef, newProductData);
       }
     },
-    [firestore, user, products, isMultiLocation, locations, toast]
+    [firestore, user, products, catalogProductsData, isMultiLocation, locations, toast]
   );
   
   const clearProductsCollection = useCallback(async () => {
@@ -402,9 +431,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const value: InventoryContextType = {
     products,
+    catalogProducts: catalogProductsData || [],
+    catalogCategories: catalogCategoriesData || [],
     locations,
     isMultiLocation,
-    loading: productsLoading,
+    loading: productsLoading || catalogProductsLoading || catalogCategoriesLoading,
     addProduct,
     updateProduct,
     deleteProduct,

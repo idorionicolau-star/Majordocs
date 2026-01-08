@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,10 @@ import type { Product, Location, Sale } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { currentUser } from '@/lib/data';
+import { CatalogProductSelector } from '../catalog/catalog-product-selector';
+import { InventoryContext } from '@/context/inventory-context';
+
+type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
 const formSchema = z.object({
   productId: z.string().nonempty({ message: "Por favor, selecione um produto." }),
@@ -48,15 +52,20 @@ const formSchema = z.object({
 type AddSaleFormValues = z.infer<typeof formSchema>;
 
 interface AddSaleDialogProps {
-    products: Product[];
     onAddSale: (data: Sale, updatedProducts: Product[]) => void;
     triggerType?: 'button' | 'fab';
 }
 
-function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddSaleDialogProps) {
+function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogProps) {
   const [open, setOpen] = useState(false);
-  const [isMultiLocation, setIsMultiLocation] = useState(false);
-  const [locations, setLocations] = useState<Location[]>([]);
+  const inventoryContext = useContext(InventoryContext);
+  const {
+    products,
+    catalogProducts,
+    catalogCategories,
+    locations,
+    isMultiLocation
+  } = inventoryContext || {};
   const { toast } = useToast();
   
   const form = useForm<AddSaleFormValues>({
@@ -74,48 +83,41 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
   const watchedUnitPrice = useWatch({ control: form.control, name: 'unitPrice' });
   const watchedLocation = useWatch({ control: form.control, name: 'location' });
 
-  const selectedProduct = products.find(p => p.id === watchedProductId && (isMultiLocation ? p.location === watchedLocation : true));
-  const availableStock = selectedProduct ? selectedProduct.stock - selectedProduct.reservedStock : 0;
+  const selectedProductInstance = products?.find(p => p.name === watchedProductId && (isMultiLocation ? p.location === watchedLocation : true));
+  const availableStock = selectedProductInstance ? selectedProductInstance.stock - selectedProductInstance.reservedStock : 0;
   
   useEffect(() => {
-    if (selectedProduct) {
-      form.setValue('unitPrice', selectedProduct.price);
+    const catalogProduct = catalogProducts?.find(p => p.name === watchedProductId);
+    if (catalogProduct) {
+      form.setValue('unitPrice', catalogProduct.price);
     } else {
       form.setValue('unitPrice', 0);
     }
-  }, [selectedProduct, form]);
+  }, [watchedProductId, catalogProducts, form]);
 
   useEffect(() => {
-    if(selectedProduct){
+    if(selectedProductInstance){
       const stockIsSufficient = watchedQuantity <= availableStock;
       if (!stockIsSufficient) {
         form.setError("quantity", { type: "manual", message: `Estoque insuficiente. Disponível: ${availableStock}` });
       } else {
         form.clearErrors("quantity");
       }
+    } else if (watchedProductId && isMultiLocation) {
+         form.setError("location", { type: "manual", message: `Produto sem estoque nesta localização.` });
     } else if (watchedProductId) {
-         form.setError("productId", { type: "manual", message: `Produto não existe nesta localização.` });
+        form.clearErrors("location");
     }
-  }, [watchedQuantity, availableStock, selectedProduct, watchedProductId, form]);
+  }, [watchedQuantity, availableStock, selectedProductInstance, watchedProductId, isMultiLocation, form]);
 
 
   const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const multiLocationEnabled = localStorage.getItem('majorstockx-multi-location-enabled') === 'true';
-      setIsMultiLocation(multiLocationEnabled);
-      
-      const storedLocations = localStorage.getItem('majorstockx-locations');
-      if (storedLocations) {
-        const parsedLocations: Location[] = JSON.parse(storedLocations);
-        setLocations(parsedLocations);
-        if (parsedLocations.length > 0) {
-            form.setValue('location', parsedLocations[0].id)
-        }
-      }
+    if (locations && locations.length > 0) {
+        form.setValue('location', locations[0].id)
     }
-  }, [form]);
+  }, [locations, form]);
 
 
   function onSubmit(values: AddSaleFormValues) {
@@ -124,11 +126,11 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
       return;
     }
 
-    if (!selectedProduct) {
+    if (!selectedProductInstance) {
         toast({
             variant: "destructive",
             title: "Erro de Validação",
-            description: "Produto não encontrado para a localização selecionada.",
+            description: "Produto não encontrado ou sem estoque na localização selecionada.",
         });
         return;
     }
@@ -137,7 +139,7 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
       toast({
         variant: "destructive",
         title: "Estoque Insuficiente",
-        description: `Não há estoque suficiente para ${selectedProduct.name}. Disponível: ${availableStock}, Solicitado: ${values.quantity}.`,
+        description: `Não há estoque suficiente para ${selectedProductInstance.name}. Disponível: ${availableStock}, Solicitado: ${values.quantity}.`,
       });
       return;
     }
@@ -146,8 +148,8 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
     const newSale: Sale = {
       id: `SALE${Date.now().toString().slice(-4)}`,
       date: now.toISOString(),
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
+      productId: selectedProductInstance.id || '', // Should have an ID
+      productName: selectedProductInstance.name,
       quantity: values.quantity,
       unitPrice: values.unitPrice,
       totalValue: values.quantity * values.unitPrice,
@@ -157,24 +159,24 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
       status: 'Pago',
     };
 
-    const updatedProducts = products.map(p => {
-      if (p.instanceId === selectedProduct.instanceId) {
+    const updatedProducts = products?.map(p => {
+      if (p.instanceId === selectedProductInstance.instanceId) {
         return {
           ...p,
           reservedStock: p.reservedStock + values.quantity,
         };
       }
       return p;
-    });
+    }) || [];
 
     onAddSale(newSale, updatedProducts);
     
     toast({
         title: "Venda Registrada como 'Paga'",
-        description: `${values.quantity} unidades de ${selectedProduct.name} foram reservadas.`,
+        description: `${values.quantity} unidades de ${selectedProductInstance.name} foram reservadas.`,
     })
     form.reset();
-    if (locations.length > 0) {
+    if (locations && locations.length > 0) {
       form.setValue('location', locations[0].id);
     }
     setOpen(false);
@@ -223,18 +225,14 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Produto</FormLabel>
-                   <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um produto" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {products.filter((p, i, a) => a.findIndex(v => v.id === p.id) === i).map(product => (
-                        <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                   <FormControl>
+                    <CatalogProductSelector
+                        products={catalogProducts || []}
+                        categories={catalogCategories || []}
+                        selectedValue={field.value}
+                        onValueChange={field.onChange}
+                    />
+                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -246,14 +244,14 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Localização de Origem</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione a localização" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {locations.map(location => (
+                        {locations?.map(location => (
                           <SelectItem key={location.id} value={location.id}>
                             {location.name}
                           </SelectItem>
@@ -273,7 +271,7 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
                     <FormItem>
                     <div className="flex justify-between items-baseline">
                         <FormLabel>Quantidade</FormLabel>
-                        {selectedProduct && <p className="text-xs text-muted-foreground">Disponível: {availableStock}</p>}
+                        {selectedProductInstance && <p className="text-xs text-muted-foreground">Disponível: {availableStock}</p>}
                     </div>
                     <FormControl>
                         <Input type="number" min="1" {...field} />
@@ -313,14 +311,15 @@ function AddSaleDialogContent({ products, onAddSale, triggerType = 'fab' }: AddS
   );
 }
 
-export function AddSaleDialog(props: AddSaleDialogProps) {
-  const [isClient, setIsClient] = useState(false)
+export function AddSaleDialog(props: Omit<AddSaleDialogProps, 'products'>) {
+  const [isClient, setIsClient] = useState(false);
+  const inventoryContext = useContext(InventoryContext);
 
   useEffect(() => {
     setIsClient(true)
-  }, [])
+  }, []);
   
-  if (!isClient) {
+  if (!isClient || !inventoryContext) {
      return props.triggerType === 'fab' ? (
        <Button disabled className="fixed bottom-6 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
           <Plus className="h-6 w-6" />

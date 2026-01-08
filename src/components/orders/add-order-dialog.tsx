@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -32,12 +32,15 @@ import { Plus, ClipboardList } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useToast } from '@/hooks/use-toast';
 import type { Product, Order } from '@/lib/types';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { InventoryContext } from '@/context/inventory-context';
+import { CatalogProductSelector } from '../catalog/catalog-product-selector';
+
+type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
 const formSchema = z.object({
-  productId: z.string().nonempty({ message: "Por favor, selecione um produto." }),
+  productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']),
   clientName: z.string().optional(),
@@ -47,18 +50,19 @@ const formSchema = z.object({
 type AddOrderFormValues = z.infer<typeof formSchema>;
 
 interface AddOrderDialogProps {
-    products: Product[];
-    onAddOrder: (order: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate'>) => void;
+    onAddOrder: (order: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'>) => void;
     triggerType?: 'button' | 'fab';
 }
 
-export function AddOrderDialog({ products, onAddOrder, triggerType = 'fab' }: AddOrderDialogProps) {
+export function AddOrderDialog({ onAddOrder, triggerType = 'fab' }: AddOrderDialogProps) {
   const [open, setOpen] = useState(false);
+  const inventoryContext = useContext(InventoryContext);
+  const { catalogProducts, catalogCategories } = inventoryContext || {};
   
   const form = useForm<AddOrderFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      productId: "",
+      productName: "",
       quantity: 1,
       unit: 'un',
       clientName: "",
@@ -67,12 +71,8 @@ export function AddOrderDialog({ products, onAddOrder, triggerType = 'fab' }: Ad
   });
 
   function onSubmit(values: AddOrderFormValues) {
-    const product = products.find(p => p.id === values.productId);
-    if (!product) return;
-
-    const newOrder: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate'> = {
-      productId: values.productId,
-      productName: product.name,
+    const newOrder: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'> = {
+      productName: values.productName,
       quantity: values.quantity,
       unit: values.unit,
       clientName: values.clientName,
@@ -107,6 +107,8 @@ export function AddOrderDialog({ products, onAddOrder, triggerType = 'fab' }: Ad
     </DialogTrigger>
   );
 
+  if (!inventoryContext) return null;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {TriggerComponent}
@@ -121,22 +123,18 @@ export function AddOrderDialog({ products, onAddOrder, triggerType = 'fab' }: Ad
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
              <FormField
               control={form.control}
-              name="productId"
+              name="productName"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Produto</FormLabel>
-                   <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um produto" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {products.map(product => (
-                        <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                   <FormControl>
+                    <CatalogProductSelector
+                        products={catalogProducts || []}
+                        categories={catalogCategories || []}
+                        selectedValue={field.value}
+                        onValueChange={field.onChange}
+                    />
+                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

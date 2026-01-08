@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
-import { orders as initialOrders, products as initialProducts, currentUser } from "@/lib/data";
+import { useState, useMemo, useContext } from "react";
+import { orders as initialOrders, currentUser } from "@/lib/data";
 import type { Order, Product, ProductionLog } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Filter, List, LayoutGrid, ChevronDown } from "lucide-react";
@@ -13,18 +13,24 @@ import { Input } from "@/components/ui/input";
 import { OrderCard } from "@/components/orders/order-card";
 import { cn } from "@/lib/utils";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { InventoryContext } from "@/context/inventory-context";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
-  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [nameFilter, setNameFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [view, setView] = useState<'list' | 'grid'>('grid'); // 'list' view to be implemented
   const { toast } = useToast();
+  const inventoryContext = useContext(InventoryContext);
 
-  const handleAddOrder = (newOrderData: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate'>) => {
+  const { loading: inventoryLoading } = inventoryContext || { loading: true };
+
+
+  const handleAddOrder = (newOrderData: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'>) => {
     const order: Order = {
       ...newOrderData,
+      productId: newOrderData.productName, // Temporarily use name as ID-like ref
       id: `ORD${(orders.length + 1).toString().padStart(3, '0')}`,
       status: 'Pendente',
       quantityProduced: 0,
@@ -56,8 +62,6 @@ export default function OrdersPage() {
     setOrders(updatedOrders);
 
     if (newStatus === 'Concluída' && orderToUpdate) {
-        // Here you would update the product stock.
-        // For now, let's just show a toast.
         toast({
             title: "Encomenda Concluída",
             description: `A produção de ${orderToUpdate.quantity} ${orderToUpdate.unit} de "${orderToUpdate.productName}" foi concluída. O stock foi atualizado.`
@@ -117,6 +121,20 @@ export default function OrdersPage() {
     return result;
   }, [orders, nameFilter, statusFilter]);
 
+  if (inventoryLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-1/3" />
+        <Skeleton className="h-8 w-1/4" />
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="flex flex-col gap-6 pb-20">
@@ -174,7 +192,6 @@ export default function OrdersPage() {
 
       </div>
       <AddOrderDialog 
-        products={products}
         onAddOrder={handleAddOrder}
         triggerType="fab"
       />
