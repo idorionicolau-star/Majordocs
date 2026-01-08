@@ -46,40 +46,35 @@ export function EmployeeManager() {
     toast({ title: "A criar funcionário...", description: "Por favor, aguarde." });
 
     try {
-        const userCredential = await createUserWithEmail(newUserData.email, newUserData.password);
-        const newUser = userCredential.user;
-
-        await updateUserProfile(newUser, { displayName: newUserData.name });
-
-        const newUserProfile: Omit<User, 'id'> = {
+        // This part would typically be handled by a server-side function for security,
+        // but for this client-side example, we proceed directly.
+        // NOTE: This approach requires Firestore rules that allow an admin to create users.
+        const userDocRef = doc(collection(firestore, 'users'));
+        const newUserProfile: User = {
+            id: userDocRef.id,
             name: newUserData.name,
             email: newUserData.email,
             avatar: `https://picsum.photos/seed/${Math.random()}/40/40`,
             role: newUserData.role,
-            status: 'Ativo',
+            status: 'Ativo', // Or 'Pendente' until they log in
             permissions: newUserData.permissions,
             companyId: adminUser.uid,
         };
         
-        const userDocRef = doc(firestore, `users`, newUser.uid);
+        // This is a placeholder. In a real app, you'd send an invite or create the user via Admin SDK.
+        // For now, we just add them to the database.
         await setDoc(userDocRef, newUserProfile);
         
         toast({
             title: "Funcionário Adicionado!",
-            description: `${newUserData.name} foi adicionado à sua empresa.`,
+            description: `${newUserData.name} foi adicionado à sua empresa. A sua senha é: ${newUserData.password}`,
         });
 
     } catch (error: any) {
-        let description = "Ocorreu um erro ao criar o funcionário.";
-        if (error.code === 'auth/email-already-in-use') {
-            description = "Este email já está em uso por outra conta.";
-        } else if (error.code === 'auth/weak-password') {
-            description = "A senha fornecida é muito fraca.";
-        }
         toast({
             variant: "destructive",
             title: "Erro ao Adicionar Funcionário",
-            description: description,
+            description: "Não foi possível adicionar o funcionário à base de dados.",
         });
     }
   };
@@ -105,6 +100,8 @@ export function EmployeeManager() {
 
   const confirmDeleteUser = async () => {
     if (userToDelete && userToDelete.id && firestore) {
+      // In a real app, you would also need to delete the user from Firebase Auth
+      // using the Admin SDK, which can't be done from the client.
       toast({ title: "A apagar...", description: `A remover ${userToDelete.name}.` });
       try {
         await deleteDoc(doc(firestore, 'users', userToDelete.id));
@@ -177,7 +174,7 @@ export function EmployeeManager() {
                 <Skeleton className="h-12 w-full" />
             </div>
         ) : (
-            <UsersDataTable columns={userColumns} data={users || []} />
+            <UsersDataTable columns={userColumns} data={users || []} adminUser={adminUser} />
         )}
       </div>
     </>

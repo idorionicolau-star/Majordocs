@@ -9,6 +9,7 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table"
+import type { User as FirebaseUser } from 'firebase/auth';
 
 import {
   Table,
@@ -20,18 +21,27 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "../ui/card"
+import type { User } from "@/lib/types";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  adminUser: FirebaseUser | null;
 }
 
-export function UsersDataTable<TData, TValue>({
+export function UsersDataTable<TData extends User, TValue>({
   columns,
   data,
+  adminUser,
 }: DataTableProps<TData, TValue>) {
+  
+  const filteredData = React.useMemo(() => {
+    if (!adminUser) return [];
+    return data.filter(user => user.id !== adminUser.uid);
+  }, [data, adminUser]);
+
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -78,7 +88,7 @@ export function UsersDataTable<TData, TValue>({
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
-                    Nenhum resultado.
+                    Nenhum funcionário encontrado.
                   </TableCell>
                 </TableRow>
               )}
@@ -86,26 +96,31 @@ export function UsersDataTable<TData, TValue>({
           </Table>
         </div>
       </CardContent>
-      <CardFooter className="flex items-center justify-end space-x-2 py-4 p-4 border-t dark:border-slate-800/50">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Anterior
-        </Button>
-         <span className="text-sm">
-            Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
-        </span>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Próximo
-        </Button>
+      <CardFooter className="flex items-center justify-between space-x-2 py-4 p-4 border-t dark:border-slate-800/50">
+        <div className="text-sm text-muted-foreground">
+            {table.getFilteredRowModel().rows.length} funcionário(s).
+        </div>
+        <div className="flex items-center space-x-2">
+            <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+            >
+            Anterior
+            </Button>
+            <span className="text-sm">
+                Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
+            </span>
+            <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+            >
+            Próximo
+            </Button>
+        </div>
       </CardFooter>
     </Card>
   )

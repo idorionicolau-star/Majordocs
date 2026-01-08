@@ -69,7 +69,6 @@ const permissionLabels = {
 
 function AddUserDialogContent({ onAddUser }: AddUserDialogProps) {
   const [open, setOpen] = useState(false);
-  const { toast } = useToast();
   const form = useForm<AddUserFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -78,8 +77,8 @@ function AddUserDialogContent({ onAddUser }: AddUserDialogProps) {
       password: "",
       role: "Funcionário",
       permissions: {
-        canSell: false,
-        canRegisterProduction: false,
+        canSell: true,
+        canRegisterProduction: true,
         canEditInventory: false,
         canTransferStock: false,
         canViewReports: false,
@@ -89,10 +88,6 @@ function AddUserDialogContent({ onAddUser }: AddUserDialogProps) {
 
   function onSubmit(values: AddUserFormValues) {
     onAddUser(values);
-    toast({
-        title: "Convite Enviado",
-        description: `Um convite foi enviado para ${values.name} (${values.email}).`,
-    })
     form.reset();
     setOpen(false);
   }
@@ -145,7 +140,7 @@ function AddUserDialogContent({ onAddUser }: AddUserDialogProps) {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Senha</FormLabel>
+                  <FormLabel>Senha Temporária</FormLabel>
                   <FormControl>
                     <Input type="password" placeholder="Senha de acesso inicial" {...field} />
                   </FormControl>
@@ -221,5 +216,3 @@ export function AddUserDialog(props: AddUserDialogProps) {
 
     return isClient ? <AddUserDialogContent {...props} /> : null;
 }
-
-    
