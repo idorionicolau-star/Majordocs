@@ -16,7 +16,7 @@ export type User = {
 };
 
 export type Product = {
-  id: string; // Document ID from Firestore
+  id?: string; // Document ID from Firestore - now optional
   instanceId: string; // Temporary UI-only ID
   name: string;
   category: string;
@@ -27,6 +27,8 @@ export type Product = {
   criticalStockThreshold: number;
   lastUpdated: string;
   location?: string;
+  subType?: string;
+  unit?: string;
 };
 
 export type Sale = {
@@ -93,4 +95,10 @@ export type NavItem = {
 export type Location = {
   id: string;
   name: string;
+};
+
+export type InitialCatalog = {
+  [category: string]: {
+    [subType: string]: string[];
+  };
 };

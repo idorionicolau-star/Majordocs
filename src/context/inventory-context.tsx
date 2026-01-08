@@ -31,6 +31,7 @@ import {
   updateDocumentNonBlocking,
   deleteDocumentNonBlocking,
 } from '@/firebase/non-blocking-updates';
+import { initialCatalog } from '@/lib/data';
 
 interface InventoryContextType {
   products: Product[];
@@ -56,6 +57,7 @@ interface InventoryContextType {
     quantity: number,
     locationId?: string
   ) => void;
+  seedInitialCatalog: () => Promise<void>;
 }
 
 export const InventoryContext = createContext<InventoryContextType | undefined>(
@@ -74,8 +76,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const { data: productsData, isLoading: productsLoading } =
     useCollection<Product>(productsCollectionRef);
+    
+  const products = useMemo(() => {
+    if (!productsData) return [];
+    // Adiciona um instanceId único a cada produto para renderização na UI
+    return productsData.map(p => ({ ...p, instanceId: p.instanceId || self.crypto.randomUUID() }));
+  }, [productsData]);
 
-  const products = useMemo(() => productsData || [], [productsData]);
 
   const [locations, setLocations] = useState<Location[]>([]);
   const [isMultiLocation, setIsMultiLocation] = useState(false);
@@ -101,8 +108,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       >
     ) => {
       if (!productsCollectionRef) return;
-      const product: Omit<Product, 'id'> = {
-        ...newProductData,
+      
+      const newProduct: Omit<Product, 'id'> = {
+        name: newProductData.name,
+        category: newProductData.category,
+        price: newProductData.price,
+        stock: newProductData.stock,
+        lowStockThreshold: newProductData.lowStockThreshold,
+        criticalStockThreshold: newProductData.criticalStockThreshold,
         instanceId: self.crypto.randomUUID(), // For unique key in UI, not the doc ID
         lastUpdated: new Date().toISOString().split('T')[0],
         location:
@@ -110,15 +123,81 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           (locations.length > 0 ? locations[0].id : 'Principal'),
         reservedStock: 0,
       };
-      addDocumentNonBlocking(productsCollectionRef, product);
+      addDocumentNonBlocking(productsCollectionRef, newProduct);
     },
     [productsCollectionRef, locations]
   );
+  
+  const seedInitialCatalog = useCallback(async () => {
+    if (!productsCollectionRef || !user || !firestore) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "A base de dados não está pronta. Tente novamente.",
+      });
+      return;
+    }
+  
+    // Verificação para não popular o catálogo se já existirem produtos
+    if (products.length > 0) {
+      toast({
+        title: "Catálogo já existente",
+        description: "O catálogo de produtos já foi carregado anteriormente.",
+      });
+      return;
+    }
+  
+    toast({
+      title: "A carregar catálogo...",
+      description: "Por favor, aguarde enquanto os produtos são adicionados.",
+    });
+  
+    const batch = writeBatch(firestore);
+  
+    for (const category in initialCatalog) {
+      for (const subType in initialCatalog[category]) {
+        const items = initialCatalog[category][subType];
+        items.forEach((itemName: string) => {
+          const docRef = doc(productsCollectionRef);
+          const productData = {
+            name: `${itemName} ${subType}`,
+            category: category,
+            subType: subType,
+            price: 0,
+            lowStockThreshold: 10,
+            criticalStockThreshold: 5,
+            unit: "un",
+            stock: 0, 
+            reservedStock: 0,
+            lastUpdated: new Date().toISOString().split('T')[0],
+            location: 'Principal', // Localização padrão
+            instanceId: self.crypto.randomUUID(),
+          };
+          batch.set(docRef, productData);
+        });
+      }
+    }
+  
+    try {
+      await batch.commit();
+      toast({
+        title: "Sucesso!",
+        description: "Catálogo inicial de produtos carregado com sucesso.",
+      });
+    } catch (error) {
+      console.error("Error seeding catalog: ", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar o catálogo",
+        description: "Ocorreu um problema ao tentar guardar os produtos.",
+      });
+    }
+  }, [productsCollectionRef, user, firestore, toast, products]);
 
   const updateProduct = useCallback(
     (instanceId: string, updatedData: Partial<Product>) => {
       const productToUpdate = products.find((p) => p.instanceId === instanceId);
-      if (!productToUpdate || !firestore || !user) return;
+      if (!productToUpdate || !firestore || !user || !productToUpdate.id) return;
 
       const docRef = doc(
         firestore,
@@ -136,7 +215,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const deleteProduct = useCallback(
     (instanceId: string) => {
       const productToDelete = products.find((p) => p.instanceId === instanceId);
-      if (!productToDelete || !firestore || !user) return;
+      if (!productToDelete || !firestore || !user || !productToDelete.id) return;
 
       const docRef = doc(
         firestore,
@@ -183,15 +262,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       const batch = writeBatch(firestore);
 
-      // Decrease stock from source
-      const fromDocRef = doc(
-        firestore,
-        `users/${user.uid}/products`,
-        fromProduct.id
-      );
-      batch.update(fromDocRef, { stock: fromProduct.stock - quantity });
+      if(fromProduct.id){
+        // Decrease stock from source
+        const fromDocRef = doc(
+          firestore,
+          `users/${user.uid}/products`,
+          fromProduct.id
+        );
+        batch.update(fromDocRef, { stock: fromProduct.stock - quantity });
+      }
 
-      if (toProduct) {
+      if (toProduct && toProduct.id) {
         // Increase stock in destination
         const toDocRef = doc(
           firestore,
@@ -207,6 +288,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           stock: quantity,
           reservedStock: 0, // New instances start with 0 reserved
           lastUpdated: new Date().toISOString().split('T')[0],
+          instanceId: self.crypto.randomUUID(),
         };
         delete newProductData.id; // Firestore will generate new ID
         const newDocRef = doc(
@@ -245,20 +327,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           : 'Principal');
       const productBase = products.find((p) => p.name === productName);
 
-      if (!productBase) {
-        toast({
-          variant: 'destructive',
-          title: 'Erro',
-          description: `Produto base "${productName}" não encontrado.`,
-        });
-        return;
-      }
-
       const existingInstance = products.find(
         (p) => p.name === productName && p.location === targetLocation
       );
 
-      if (existingInstance) {
+      if (existingInstance && existingInstance.id) {
         const docRef = doc(
           firestore,
           `users/${user.uid}/products`,
@@ -268,12 +341,21 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           stock: existingInstance.stock + quantity,
         });
       } else {
+        if (!productBase) {
+           toast({
+            variant: 'destructive',
+            title: 'Produto Base Não Encontrado',
+            description: `O produto "${productName}" não existe no catálogo base. Adicione-o no catálogo antes de registar produção.`,
+          });
+          return;
+        }
         const newProductData = {
           ...productBase,
           stock: quantity,
           reservedStock: 0,
           location: targetLocation,
           lastUpdated: new Date().toISOString().split('T')[0],
+          instanceId: self.crypto.randomUUID(),
         };
         delete newProductData.id; // Let firestore generate the ID
         const productsRef = collection(
@@ -296,6 +378,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     deleteProduct,
     transferStock,
     updateProductStock,
+    seedInitialCatalog,
   };
 
   return (

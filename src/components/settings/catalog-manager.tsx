@@ -1,15 +1,14 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useContext } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UploadCloud, FileText, PlusCircle, Trash2, Edit } from 'lucide-react';
+import { UploadCloud, FileText, PlusCircle, Trash2, Edit, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
-import { products as initialProducts } from '@/lib/data';
 import type { Product } from '@/lib/types';
 import {
   Table,
@@ -30,11 +29,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { EditCatalogProductDialog } from './edit-catalog-product-dialog';
+import { InventoryContext } from '@/context/inventory-context';
 
 export function CatalogManager() {
   const [textData, setTextData] = useState('');
   const [fileName, setFileName] = useState('');
   const { toast } = useToast();
+  const inventoryContext = useContext(InventoryContext);
 
   const [products, setProducts] = useState<Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -44,8 +45,11 @@ export function CatalogManager() {
   const [categoryToEdit, setCategoryToEdit] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   
+  // This effect should be replaced with fetching from a firestore collection of catalog items
   useEffect(() => {
     // In a real app, this would be fetched from a database
+    // For now, we leave it empty as per the new requirement
+    const initialProducts: Product[] = []; 
     const uniqueProducts = initialProducts.filter((p, i, a) => a.findIndex(v => v.id === p.id) === i)
         .map(({ stock, instanceId, reservedStock, location, lastUpdated, ...rest }) => rest);
     
@@ -54,6 +58,12 @@ export function CatalogManager() {
     setProducts(uniqueProducts);
     setCategories(uniqueCategories.sort());
   }, []);
+
+  if (!inventoryContext) {
+    return <div>A carregar gestor de catálogo...</div>
+  }
+
+  const { seedInitialCatalog } = inventoryContext;
   
   const handleImportText = () => {
     // ... logic for importing from text
@@ -215,7 +225,7 @@ export function CatalogManager() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {products.map(product => (
+                  {products.length > 0 ? products.map(product => (
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell>{product.category}</TableCell>
@@ -231,7 +241,13 @@ export function CatalogManager() {
                          </Button>
                        </TableCell>
                     </TableRow>
-                  ))}
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
+                        Nenhum produto base no catálogo.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -268,43 +284,14 @@ export function CatalogManager() {
         </TabsContent>
 
         <TabsContent value="import" className="mt-4">
-            <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                    Carregue um catálogo de produtos colando uma lista (CSV, TSV) ou carregando um ficheiro (Excel, CSV).
+             <div className="space-y-4">
+                <Button onClick={seedInitialCatalog} className='w-full'>
+                    <Download className='mr-2 h-4 w-4' />
+                    Importar Catálogo Inicial
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                    Isto irá popular o seu inventário com o catálogo de produtos padrão da MajorStockX.
                 </p>
-                <Tabs defaultValue="paste">
-                    <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="paste">
-                        <FileText className="mr-2 h-4 w-4" />
-                        Colar Texto
-                    </TabsTrigger>
-                    <TabsTrigger value="upload">
-                        <UploadCloud className="mr-2 h-4 w-4" />
-                        Carregar Ficheiro
-                    </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="paste" className="mt-4">
-                    <div className="space-y-3">
-                        <Textarea
-                        placeholder="Cole aqui os dados do seu catálogo. Ex: Nome,Categoria,Preço..."
-                        className="min-h-[200px]"
-                        value={textData}
-                        onChange={(e) => setTextData(e.target.value)}
-                        />
-                        <Button onClick={handleImportText} className="w-full">Importar de Texto</Button>
-                    </div>
-                    </TabsContent>
-                    <TabsContent value="upload" className="mt-4">
-                    <div className="space-y-3">
-                        <div className="grid w-full max-w-sm items-center gap-1.5">
-                        <Label htmlFor="catalog-file">Ficheiro do Catálogo</Label>
-                        <Input id="catalog-file" type="file" accept=".csv, .xlsx, .xls" onChange={handleFileChange} />
-                        </div>
-                        {fileName && <p className="text-sm text-muted-foreground">Ficheiro selecionado: <strong>{fileName}</strong></p>}
-                        <Button onClick={handleImportFile} className="w-full">Importar de Ficheiro</Button>
-                    </div>
-                    </TabsContent>
-                </Tabs>
             </div>
         </TabsContent>
       </Tabs>
