@@ -37,6 +37,10 @@ service cloud.firestore {
     function isExistingOwner(userId) {
       return isOwner(userId) && isExistingDoc();
     }
+    
+    function isCompanyOwner(companyId) {
+      return isSignedIn() && request.auth.uid == companyId;
+    }
 
     // -------------------------------------------------------------------------
     // Collection Rules
@@ -45,20 +49,16 @@ service cloud.firestore {
     /**
      * @description Manages user profile documents.
      * @path /users/{userId}
-     * @allow A signed-in user creates their own profile document: (create) /users/user_abc where auth.uid is user_abc.
-     * @deny An anonymous user tries to read a profile, or another user tries to read it.
-     * @principle Enforces self-creation and strict ownership of a user's own profile. Prevents user enumeration.
+     * @allow An authenticated user can manage their own profile.
+     * @allow The company owner can manage profiles of users associated with their company.
+     * @principle Enforces self-management and company-level management of user profiles.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if request.query.where.companyId == request.auth.uid;
-      allow create: if isOwner(userId) || request.resource.data.companyId == request.auth.uid;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == get(request.path).data.id;
-      allow delete: if isExistingOwner(userId);
+      allow read, write: if isOwner(userId) || (exists(request.path) && isCompanyOwner(get(request.path).data.companyId)) || isCompanyOwner(request.resource.data.companyId);
     }
     
     /**
-     * @description Manages product documents owned by a specific user.
+     * @description Manages product documents owned by a specific user (as a company).
      * @path /users/{userId}/products/{productId}
      * @allow The owner user can perform any action on their own products.
      * @deny Other users cannot access or modify products that aren't theirs.
@@ -88,48 +88,6 @@ service cloud.firestore {
      */
     match /users/{userId}/catalogCategories/{categoryId} {
       allow read, write: if isOwner(userId);
-    }
-
-    /**
-     * @description Stores product categories, which are readable by all users.
-     * @path /productCategories/{productCategoryId}
-     * @allow Any user, including anonymous users, can read product categories: (get) /productCategories/grills.
-     * @deny Any user attempts to create, update, or delete a category.
-     * @principle Implements a public-read, restricted-write pattern. Writes are disabled for security until an admin role is defined.
-     */
-    match /productCategories/{productCategoryId} {
-      allow get: if true;
-      allow list: if true;
-      // CRITICAL: Cannot implement owner-only writes. The 'ProductCategory' entity is missing an 'ownerId' or 'creatorId' field.
-      allow create, update, delete: if false; // TODO: Add role-based (e.g., admin) validation once the schema is updated with an ownership field or a role system is in place.
-    }
-
-    /**
-     * @description Stores product information, which is readable by all users.
-     * @path /products/{productId}
-     * @allow Any user, including anonymous users, can read product information: (get) /products/concrete_block_xyz.
-     * @deny Any user attempts to create, update, or delete a product.
-     * @principle Implements a public-read, restricted-write pattern. Writes are disabled for security until an admin role is defined.
-     */
-    match /products/{productId} {
-      allow get: if true;
-      allow list: if true;
-      // CRITICAL: Cannot implement owner-only writes. The 'Product' entity is missing an 'ownerId' or 'creatorId' field.
-      allow create, update, delete: if false; // TODO: Add role-based (e.g., admin) validation once the schema is updated with an ownership field or a role system is in place.
-    }
-
-    /**
-     * @description Stores inventory levels, which are readable by all users.
-     * @path /inventories/{inventoryId}
-     * @allow Any user, including anonymous users, can read inventory levels: (get) /inventories/warehouse_a_item_123.
-     * @deny Any user attempts to create, update, or delete an inventory record.
-     * @principle Implements a public-read, restricted-write pattern. Writes are disabled for security until an admin/manager role is defined.
-     */
-    match /inventories/{inventoryId} {
-      allow get: if true;
-      allow list: if true;
-      // CRITICAL: Cannot implement owner-only writes. The 'Inventory' entity is missing an 'ownerId' or a reference to who can modify it.
-      allow create, update, delete: if false; // TODO: Add role-based (e.g., admin, manager) validation once an authorization mechanism is defined.
     }
 
     /**
