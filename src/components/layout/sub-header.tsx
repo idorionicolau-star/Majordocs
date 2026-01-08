@@ -13,7 +13,10 @@ export function SubHeader() {
   return (
     <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-16 sm:top-20 z-20">
       <ScrollArea className="w-full whitespace-nowrap">
-        <nav className="flex w-max md:w-full md:justify-center mx-auto">
+        <nav className={cn(
+          "flex w-max md:w-full md:justify-center mx-auto",
+          "animate-peek md:animate-none"
+          )}>
           {mainNavItems.map((item) => {
             const isActive = pathname === item.href;
             return (
