@@ -32,7 +32,6 @@ import { Plus, Box } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useToast } from '@/hooks/use-toast';
 import type { Location, Product } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
@@ -57,7 +56,6 @@ interface AddProductDialogProps {
 
 function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, triggerType = 'fab' }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
-  const { toast } = useToast();
   const form = useForm<AddProductFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -87,10 +85,6 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
       location: values.location || (locations.length > 0 ? locations[0].id : 'Principal'),
     };
     onAddProduct(newProduct);
-    toast({
-        title: "Produto adicionado",
-        description: `${values.name} foi adicionado ao inventário com sucesso.`,
-    })
     form.reset();
     setOpen(false);
   }

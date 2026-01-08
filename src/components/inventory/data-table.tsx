@@ -10,6 +10,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  getFilteredRowModel,
 } from "@tanstack/react-table"
 
 import {
@@ -47,6 +48,7 @@ export function InventoryDataTable<TData extends Product, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
     initialState: {
         pagination: {
             pageSize: 8,

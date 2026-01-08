@@ -3,11 +3,21 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import { Product, Location } from "@/lib/types"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Trash2, Edit2, AlertCircle } from "lucide-react"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
+import { AlertCircle } from "lucide-react"
 import { EditProductDialog } from "./edit-product-dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "../ui/button";
+import { Trash2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 interface ColumnsOptions {
   onAttemptDelete: (product: Product) => void;
@@ -17,13 +27,14 @@ interface ColumnsOptions {
 }
 
 export const getStockStatus = (product: Product) => {
-  if (product.stock <= 0) {
+  const availableStock = product.stock - product.reservedStock;
+  if (availableStock <= 0) {
       return "sem-estoque";
   }
-  if (product.stock <= product.criticalStockThreshold) {
+  if (availableStock <= product.criticalStockThreshold) {
     return "crítico";
   }
-  if (product.stock <= product.lowStockThreshold) {
+  if (availableStock <= product.lowStockThreshold) {
     return "baixo";
   }
   return "ok";
@@ -40,7 +51,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
               <span className="text-sm font-[800] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">{row.original.name}</span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">SKU: {row.original.id.toUpperCase()}</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">ID: {row.original.id.toUpperCase().substring(0, 6)}</span>
           </div>
         </div>
       ),
@@ -81,11 +92,11 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
       header: "Disponível",
       cell: ({ row }) => {
         const status = getStockStatus(row.original);
-        const stock = row.original.stock;
+        const availableStock = row.original.stock - row.original.reservedStock;
         return (
           <div className="text-center">
             <span className={`text-base font-black ${status === 'crítico' || status === 'sem-estoque' ? 'text-rose-500' : status === 'baixo' ? 'text-amber-500' : 'text-slate-900 dark:text-white'}`}>
-              {stock}
+              {availableStock}
             </span>
           </div>
         );

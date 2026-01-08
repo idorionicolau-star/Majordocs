@@ -16,8 +16,8 @@ export type User = {
 };
 
 export type Product = {
-  instanceId: string;
-  id: string;
+  id: string; // Document ID from Firestore
+  instanceId: string; // Temporary UI-only ID
   name: string;
   category: string;
   stock: number;

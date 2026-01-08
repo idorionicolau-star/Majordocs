@@ -36,22 +36,10 @@ import { cn } from "@/lib/utils";
 import { ProductCard } from "@/components/inventory/product-card";
 import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
 import { InventoryContext } from "@/context/inventory-context";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function InventoryPage() {
   const inventoryContext = useContext(InventoryContext);
-  if (!inventoryContext) {
-    // Ideally, show a loading state or proper error boundary
-    return <div>A carregar...</div>;
-  }
-  const { 
-    products, 
-    locations, 
-    isMultiLocation, 
-    addProduct, 
-    updateProduct, 
-    deleteProduct, 
-    transferStock 
-  } = inventoryContext;
   
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [nameFilter, setNameFilter] = useState("");
@@ -80,7 +68,32 @@ export default function InventoryPage() {
     localStorage.setItem('majorstockx-inventory-grid-cols', cols);
   }
 
+  // Early return while context is loading
+  if (!inventoryContext || inventoryContext.loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-1/3" />
+        <Skeleton className="h-8 w-1/4" />
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    );
+  }
 
+  const { 
+    products, 
+    locations, 
+    isMultiLocation, 
+    addProduct, 
+    updateProduct, 
+    deleteProduct, 
+    transferStock 
+  } = inventoryContext;
+  
   const handleAddProduct = (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => {
     addProduct(newProductData);
       toast({
@@ -483,6 +496,7 @@ export default function InventoryPage() {
               data={filteredProducts} 
             />
         ) : (
+          filteredProducts.length > 0 ? (
             <div className={cn(
                 "grid gap-2 sm:gap-4",
                 gridCols === '3' && "grid-cols-3 md:grid-cols-3",
@@ -491,7 +505,7 @@ export default function InventoryPage() {
             )}>
                 {filteredProducts.map(product => (
                     <ProductCard 
-                        key={product.instanceId}
+                        key={product.id}
                         product={product}
                         locations={locations}
                         isMultiLocation={isMultiLocation}
@@ -501,6 +515,12 @@ export default function InventoryPage() {
                     />
                 ))}
             </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <p>Nenhum produto no inventário.</p>
+              <p className="text-sm">Comece por adicionar um novo produto.</p>
+            </div>
+          )
         )}
       </div>
       <AddProductDialog 

@@ -2,7 +2,6 @@
 'use client';
 
 import {
-  getAuth,
   signInWithPopup,
   GoogleAuthProvider,
   signOut,
@@ -10,15 +9,7 @@ import {
   createUserWithEmailAndPassword,
   type Auth,
 } from 'firebase/auth';
-import { getFirebase } from '..';
-
-function getFirebaseAuth(): Auth {
-    const { auth } = getFirebase();
-    if (!auth) {
-        throw new Error("Firebase Auth has not been initialized.");
-    }
-    return auth;
-}
+import { getFirebaseAuth } from '..';
 
 
 export async function signInWithGoogle() {
