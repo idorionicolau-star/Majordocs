@@ -19,7 +19,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/firebase/auth/use-user';
 import { signInWithEmail, signInWithGoogle, createUserWithEmail, updateUserProfile } from '@/firebase/auth/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 
 export default function LoginPage() {
@@ -33,6 +33,7 @@ export default function LoginPage() {
   const [companyName, setCompanyName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
 
   useEffect(() => {
@@ -56,15 +57,33 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
+    if (!firestore) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta.' });
+      return;
+    }
     try {
       const userCredential = await signInWithGoogle();
-      if (userCredential && firestore) {
+      if (userCredential) {
         const userDocRef = doc(firestore, 'users', userCredential.uid);
-        await setDoc(userDocRef, {
-            name: userCredential.displayName,
-            email: userCredential.email,
-            role: 'Admin', // Assume o primeiro registo é admin
-        }, { merge: true });
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+          // New user, create profile
+          await setDoc(userDocRef, {
+              name: userCredential.displayName,
+              email: userCredential.email,
+              role: 'Admin', // First user via Google is an Admin
+              status: 'Ativo',
+              companyId: userCredential.uid, // User is the owner of their "company"
+              permissions: {
+                  canSell: true,
+                  canRegisterProduction: true,
+                  canEditInventory: true,
+                  canTransferStock: true,
+                  canViewReports: true,
+              }
+          }, { merge: true });
+        }
       }
       router.push('/dashboard');
     } catch (error: any) {
@@ -78,21 +97,32 @@ export default function LoginPage() {
   
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (registerPassword !== confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Erro no Registo",
+        description: "As senhas não coincidem. Por favor, tente novamente.",
+      });
+      return;
+    }
+
     if (!firestore) {
       toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta.' });
       return;
     }
+
     try {
       const userCredential = await createUserWithEmail(registerEmail, registerPassword);
       await updateUserProfile(userCredential.user, { displayName: companyName });
       
-      // Create a user profile document in Firestore
       const userDocRef = doc(firestore, 'users', userCredential.user.uid);
       await setDoc(userDocRef, {
         name: companyName,
         email: registerEmail,
         role: 'Admin',
         status: 'Ativo',
+        companyId: userCredential.user.uid, // User is the owner of their "company"
         permissions: {
             canSell: true,
             canRegisterProduction: true,
@@ -102,7 +132,6 @@ export default function LoginPage() {
         }
       });
       
-      // The onAuthStateChanged in useUser will handle the redirect, but we push just in case
       router.push('/dashboard');
       toast({
         title: "Registo Concluído!",
@@ -252,6 +281,10 @@ export default function LoginPage() {
                     <Label htmlFor="password-register">Senha</Label>
                     <Input id="password-register" type="password" required value={registerPassword} onChange={e => setRegisterPassword(e.target.value)} />
                   </div>
+                   <div className="grid gap-2">
+                    <Label htmlFor="confirm-password-register">Confirmar Senha</Label>
+                    <Input id="confirm-password-register" type="password" required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+                  </div>
                   <Button type="submit" className="w-full">
                     Registrar Minha Empresa
                   </Button>
@@ -264,5 +297,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    
