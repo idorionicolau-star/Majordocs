@@ -38,7 +38,7 @@ export async function signInWithEmail(email: string, password: string) {
         const result = await signInWithEmailAndPassword(auth, email, password);
         return result.user;
     } catch (error) {
-        console.error('Error signing in with email and password', error);
+        // O erro será apanhado e tratado na UI (página de login)
         throw error;
     }
 }
