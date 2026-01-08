@@ -1,0 +1,161 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------------
+    // Helper Functions
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns true if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Returns true if the authenticated user's UID matches the provided userId.
+     * This is the primary function for enforcing data ownership.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Returns true if the document being accessed already exists.
+     * Used to protect against updates or deletes of non-existent documents.
+     */
+    function isExistingDoc() {
+      return get(request.path).data != null;
+    }
+
+    /**
+     * Returns true if the user is the owner of an existing document.
+     * Combines ownership and existence checks for state-changing operations.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && isExistingDoc();
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection Rules
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Manages user profile documents.
+     * @path /users/{userId}
+     * @allow A signed-in user creates their own profile document: (create) /users/user_abc where auth.uid is user_abc.
+     * @deny An anonymous user tries to read a profile, or another user tries to read it.
+     * @principle Enforces self-creation and strict ownership of a user's own profile. Prevents user enumeration.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == get(request.path).data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Stores product categories, which are readable by all users.
+     * @path /productCategories/{productCategoryId}
+     * @allow Any user, including anonymous users, can read product categories: (get) /productCategories/grills.
+     * @deny Any user attempts to create, update, or delete a category.
+     * @principle Implements a public-read, restricted-write pattern. Writes are disabled for security until an admin role is defined.
+     */
+    match /productCategories/{productCategoryId} {
+      allow get: if true;
+      allow list: if true;
+      // CRITICAL: Cannot implement owner-only writes. The 'ProductCategory' entity is missing an 'ownerId' or 'creatorId' field.
+      allow create, update, delete: if false; // TODO: Add role-based (e.g., admin) validation once the schema is updated with an ownership field or a role system is in place.
+    }
+
+    /**
+     * @description Stores product information, which is readable by all users.
+     * @path /products/{productId}
+     * @allow Any user, including anonymous users, can read product information: (get) /products/concrete_block_xyz.
+     * @deny Any user attempts to create, update, or delete a product.
+     * @principle Implements a public-read, restricted-write pattern. Writes are disabled for security until an admin role is defined.
+     */
+    match /products/{productId} {
+      allow get: if true;
+      allow list: if true;
+      // CRITICAL: Cannot implement owner-only writes. The 'Product' entity is missing an 'ownerId' or 'creatorId' field.
+      allow create, update, delete: if false; // TODO: Add role-based (e.g., admin) validation once the schema is updated with an ownership field or a role system is in place.
+    }
+
+    /**
+     * @description Stores inventory levels, which are readable by all users.
+     * @path /inventories/{inventoryId}
+     * @allow Any user, including anonymous users, can read inventory levels: (get) /inventories/warehouse_a_item_123.
+     * @deny Any user attempts to create, update, or delete an inventory record.
+     * @principle Implements a public-read, restricted-write pattern. Writes are disabled for security until an admin/manager role is defined.
+     */
+    match /inventories/{inventoryId} {
+      allow get: if true;
+      allow list: if true;
+      // CRITICAL: Cannot implement owner-only writes. The 'Inventory' entity is missing an 'ownerId' or a reference to who can modify it.
+      allow create, update, delete: if false; // TODO: Add role-based (e.g., admin, manager) validation once an authorization mechanism is defined.
+    }
+
+    /**
+     * @description Stores sales records, owned by and accessible only to the creating user.
+     * @path /users/{userId}/sales/{saleId}
+     * @allow A user creates a sale record for themselves: (create) /users/user_abc/sales/sale_123 where auth.uid is user_abc.
+     * @deny Another authenticated user tries to read the sale record: (get) /users/user_abc/sales/sale_123 where auth.uid is user_xyz.
+     * @principle Enforces strict data ownership using a path-based security model and validates relational integrity.
+     */
+    match /users/{userId}/sales/{saleId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == get(request.path).data.userId;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Stores items within a sale. Access is inherited from the parent sale record.
+       * @path /users/{userId}/sales/{saleId}/saleItems/{saleItemId}
+       * @allow The owner of the sale reads the items within it: (get) /users/user_abc/sales/sale_123/saleItems/item_1 where auth.uid is user_abc.
+       * @deny Another user tries to list the items in someone else's sale.
+       * @principle Enforces inherited ownership from the parent document via the path structure.
+       */
+      match /saleItems/{saleItemId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.saleId == saleId;
+        allow update: if isExistingOwner(userId) && request.resource.data.saleId == get(request.path).data.saleId;
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+
+    /**
+     * @description Stores production records, owned by and accessible only to the creating user.
+     * @path /users/{userId}/productions/{productionId}
+     * @allow A user creates a production record for themselves: (create) /users/user_abc/productions/prod_456 where auth.uid is user_abc.
+     * @deny Another user attempts to delete a production record they do not own.
+     * @principle Enforces strict data ownership using a path-based security model and validates relational integrity.
+     */
+    match /users/{userId}/productions/{productionId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == get(request.path).data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Stores user-specific notifications.
+     * @path /users/{userId}/notifications/{notificationId}
+     * @allow A user updates their own notification (e.g., marks it as read): (update) /users/user_abc/notifications/notif_789 where auth.uid is user_abc.
+     * @deny Another user attempts to read notifications belonging to someone else.
+     * @principle Enforces strict data ownership using a path-based security model and validates relational integrity.
+     */
+    match /users/{userId}/notifications/{notificationId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == get(request.path).data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+  }
+}
