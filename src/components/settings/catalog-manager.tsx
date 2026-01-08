@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UploadCloud, FileText, PlusCircle, Trash2 } from 'lucide-react';
+import { UploadCloud, FileText, PlusCircle, Trash2, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
@@ -29,6 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { EditCatalogProductDialog } from './edit-catalog-product-dialog';
 
 export function CatalogManager() {
   const [textData, setTextData] = useState('');
@@ -40,6 +41,8 @@ export function CatalogManager() {
 
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [productToDelete, setProductToDelete] = useState<any | null>(null);
+  const [categoryToEdit, setCategoryToEdit] = useState<string | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
   
   useEffect(() => {
     // In a real app, this would be fetched from a database
@@ -49,7 +52,7 @@ export function CatalogManager() {
     const uniqueCategories = Array.from(new Set(initialProducts.map(p => p.category)));
     
     setProducts(uniqueProducts);
-    setCategories(uniqueCategories);
+    setCategories(uniqueCategories.sort());
   }, []);
   
   const handleImportText = () => {
@@ -67,16 +70,39 @@ export function CatalogManager() {
   const handleAddCategory = () => {
     const newCategory = prompt('Nome da nova categoria:');
     if (newCategory && !categories.includes(newCategory)) {
-      setCategories([...categories, newCategory]);
+      setCategories([...categories, newCategory].sort());
       toast({ title: 'Categoria Adicionada', description: `A categoria "${newCategory}" foi adicionada.` });
     } else if (newCategory) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Essa categoria já existe.' });
     }
   };
 
+  const handleEditCategory = () => {
+    if (!categoryToEdit || !newCategoryName.trim()) return;
+
+    if (categories.includes(newCategoryName.trim()) && newCategoryName.trim() !== categoryToEdit) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Essa categoria já existe.' });
+      return;
+    }
+
+    // Update category in the list
+    setCategories(categories.map(c => c === categoryToEdit ? newCategoryName.trim() : c).sort());
+
+    // Update products using the old category
+    setProducts(products.map(p => p.category === categoryToEdit ? { ...p, category: newCategoryName.trim() } : p));
+    
+    toast({ title: 'Categoria Atualizada' });
+    setCategoryToEdit(null);
+    setNewCategoryName('');
+  };
+
+  const startEditingCategory = (category: string) => {
+    setCategoryToEdit(category);
+    setNewCategoryName(category);
+  }
+
   const confirmDeleteCategory = () => {
     if (categoryToDelete) {
-      // Check if category is in use
       const isUsed = products.some(p => p.category === categoryToDelete);
       if (isUsed) {
         toast({
@@ -100,6 +126,11 @@ export function CatalogManager() {
     }
   }
 
+  const handleUpdateProduct = (updatedProduct: Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>) => {
+    setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    toast({ title: "Produto do Catálogo Atualizado" });
+  };
+
 
   return (
     <>
@@ -108,8 +139,7 @@ export function CatalogManager() {
           <AlertDialogHeader>
             <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isto irá apagar permanentemente a categoria
-              "{categoryToDelete}".
+              Esta ação irá remover permanentemente a categoria "{categoryToDelete}". Apenas pode remover categorias que não estejam a ser usadas por nenhum produto.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -130,6 +160,30 @@ export function CatalogManager() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeleteProduct}>Apagar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+       <AlertDialog open={!!categoryToEdit} onOpenChange={(open) => !open && setCategoryToEdit(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Editar Categoria</AlertDialogTitle>
+            <AlertDialogDescription>
+              Renomeie a categoria. Todos os produtos associados serão atualizados.
+            </AlertDialogDescription>
+            <div className="pt-4">
+                <Label htmlFor="category-name">Nome da Categoria</Label>
+                <Input 
+                    id="category-name"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    className="mt-2"
+                />
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleEditCategory}>Salvar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -166,7 +220,12 @@ export function CatalogManager() {
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell>{product.category}</TableCell>
                       <TableCell className="text-right">{product.price.toFixed(2)} MT</TableCell>
-                       <TableCell className="text-right">
+                       <TableCell className="text-right flex items-center justify-end gap-2">
+                         <EditCatalogProductDialog 
+                            product={product} 
+                            categories={categories}
+                            onUpdate={handleUpdateProduct}
+                         />
                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setProductToDelete(product)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                          </Button>
@@ -193,9 +252,14 @@ export function CatalogManager() {
                 {categories.map(category => (
                   <li key={category} className="flex items-center justify-between p-3">
                     <span className="text-sm font-medium">{category}</span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCategoryToDelete(category)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <div className="flex items-center">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditingCategory(category)}>
+                            <Edit className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCategoryToDelete(category)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -247,5 +311,3 @@ export function CatalogManager() {
     </>
   );
 }
-
-    
