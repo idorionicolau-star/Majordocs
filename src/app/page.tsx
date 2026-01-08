@@ -18,12 +18,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/firebase/auth/use-user';
-import { signInWithEmail, signInWithGoogle, createUserWithEmail } from '@/firebase/auth/auth';
+import { signInWithEmail, signInWithGoogle, createUserWithEmail, updateUserProfile } from '@/firebase/auth/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 
 export default function LoginPage() {
   const { user, loading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,7 +57,15 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     try {
-      await signInWithGoogle();
+      const userCredential = await signInWithGoogle();
+      if (userCredential && firestore) {
+        const userDocRef = doc(firestore, 'users', userCredential.uid);
+        await setDoc(userDocRef, {
+            name: userCredential.displayName,
+            email: userCredential.email,
+            role: 'Admin', // Assume o primeiro registo é admin
+        }, { merge: true });
+      }
       router.push('/dashboard');
     } catch (error: any) {
        toast({
@@ -67,10 +78,37 @@ export default function LoginPage() {
   
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!firestore) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta.' });
+      return;
+    }
     try {
-      await createUserWithEmail(registerEmail, registerPassword);
-      // The onAuthStateChanged in useUser will handle the redirect
+      const userCredential = await createUserWithEmail(registerEmail, registerPassword);
+      await updateUserProfile(userCredential.user, { displayName: companyName });
+      
+      // Create a user profile document in Firestore
+      const userDocRef = doc(firestore, 'users', userCredential.user.uid);
+      await setDoc(userDocRef, {
+        name: companyName,
+        email: registerEmail,
+        role: 'Admin',
+        status: 'Ativo',
+        permissions: {
+            canSell: true,
+            canRegisterProduction: true,
+            canEditInventory: true,
+            canTransferStock: true,
+            canViewReports: true,
+        }
+      });
+      
+      // The onAuthStateChanged in useUser will handle the redirect, but we push just in case
       router.push('/dashboard');
+      toast({
+        title: "Registo Concluído!",
+        description: `Bem-vindo, ${companyName}! A sua empresa foi registrada com sucesso.`,
+      })
+
     } catch (error: any) {
       let description = "Ocorreu um erro ao registrar. Tente novamente.";
       if (error.code === 'auth/email-already-in-use') {
@@ -226,3 +264,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

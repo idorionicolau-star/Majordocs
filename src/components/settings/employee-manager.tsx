@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { users as initialUsers } from '@/lib/data';
 import { columns } from '@/components/users/columns';
 import { UsersDataTable } from '@/components/users/data-table';
@@ -18,27 +18,71 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { createUserWithEmail, updateUserProfile } from '@/firebase/auth/auth';
+import { useUser } from '@/firebase/auth/use-user';
+import { useFirestore } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+
 
 export function EmployeeManager() {
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const { toast } = useToast();
+  const { user: adminUser } = useUser();
+  const firestore = useFirestore();
 
-  const handleAddUser = (newUser: Omit<User, 'id' | 'avatar' | 'status' | 'permissions'>) => {
-    const user: User = {
-      ...newUser,
-      id: `USR${(users.length + 1).toString().padStart(3, '0')}`,
-      avatar: `https://picsum.photos/seed/${users.length + 1}/40/40`,
-      status: 'Pendente',
-      permissions: {
-        canSell: newUser.role === 'Admin',
-        canRegisterProduction: newUser.role === 'Admin',
-        canEditInventory: newUser.role === 'Admin',
-        canTransferStock: newUser.role === 'Admin',
-        canViewReports: newUser.role === 'Admin',
-      },
-    };
-    setUsers([user, ...users]);
+
+  const handleAddUser = async (newUserData: any) => {
+     if (!adminUser || !firestore) {
+        toast({ variant: "destructive", title: "Erro", description: "Não autenticado ou base de dados indisponível." });
+        return;
+    }
+    try {
+        // Note: This creates a new top-level Firebase Auth user. 
+        // In a real multi-tenant app, you'd need a more complex system,
+        // likely involving custom claims or a server-side function to manage users.
+        // For this MVP, we create a standard user and link them via Firestore.
+        const userCredential = await createUserWithEmail(newUserData.email, newUserData.password);
+        const newUser = userCredential.user;
+
+        await updateUserProfile(newUser, { displayName: newUserData.name });
+
+        const newUserProfile: User = {
+            id: newUser.uid,
+            name: newUserData.name,
+            email: newUserData.email,
+            avatar: `https://picsum.photos/seed/${Math.random()}/40/40`,
+            role: newUserData.role,
+            status: 'Ativo', // New users are active by default
+            permissions: newUserData.permissions,
+            companyId: adminUser.uid, // Link to the admin's "company"
+        };
+        
+        // Save the user profile in the admin's subcollection of users
+        const userDocRef = doc(firestore, `users/${adminUser.uid}/employees`, newUser.uid);
+        await setDoc(userDocRef, newUserProfile);
+        
+        // Add to local state for UI update
+        setUsers(prev => [newUserProfile, ...prev]);
+
+        toast({
+            title: "Funcionário Adicionado",
+            description: `${newUserData.name} foi adicionado à sua empresa.`,
+        });
+
+    } catch (error: any) {
+        let description = "Ocorreu um erro ao criar o funcionário.";
+        if (error.code === 'auth/email-already-in-use') {
+            description = "Este email já está em uso por outra conta.";
+        } else if (error.code === 'auth/weak-password') {
+            description = "A senha fornecida é muito fraca.";
+        }
+        toast({
+            variant: "destructive",
+            title: "Erro ao Adicionar Funcionário",
+            description: description,
+        });
+    }
   };
 
   const handleUpdateUser = (userId: string, data: Partial<User>) => {
@@ -51,6 +95,7 @@ export function EmployeeManager() {
 
   const confirmDeleteUser = () => {
     if (userToDelete) {
+      // In a real app, this should also delete/disable the user in Firebase Auth
       setUsers(users.filter(u => u.id !== userToDelete.id));
       toast({
         title: "Funcionário Removido",
@@ -103,3 +148,4 @@ export function EmployeeManager() {
   );
 }
 
+    

@@ -13,6 +13,7 @@ export type User = {
     canTransferStock: boolean;
     canViewReports: boolean;
   };
+  companyId?: string; // Links employee to an admin's company
 };
 
 export type Product = {
@@ -102,3 +103,5 @@ export type InitialCatalog = {
     [subType: string]: string[];
   };
 };
+
+    

@@ -7,7 +7,9 @@ import {
   signOut,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  updateProfile,
   type Auth,
+  type User,
 } from 'firebase/auth';
 import { getFirebaseAuth } from '..';
 
@@ -39,12 +41,17 @@ export async function createUserWithEmail(email: string, password: string) {
   const auth = getFirebaseAuth();
   try {
     const result = await createUserWithEmailAndPassword(auth, email, password);
-    return result.user;
+    return result; // Return the whole credential
   } catch (error) {
     // O erro será apanhado e tratado na UI
     throw error;
   }
 }
+
+export async function updateUserProfile(user: User, profile: { displayName?: string, photoURL?: string }) {
+    await updateProfile(user, profile);
+}
+
 
 export async function signOutUser() {
   const auth = getFirebaseAuth();
@@ -55,3 +62,5 @@ export async function signOutUser() {
     throw error;
   }
 }
+
+    

@@ -33,11 +33,24 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '../ui/checkbox';
+import type { User } from '@/lib/types';
+
+
+const permissionSchema = z.object({
+    canSell: z.boolean().default(false),
+    canRegisterProduction: z.boolean().default(false),
+    canEditInventory: z.boolean().default(false),
+    canTransferStock: z.boolean().default(false),
+    canViewReports: z.boolean().default(false),
+});
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   email: z.string().email({ message: "Por favor, insira um email válido." }),
+  password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
   role: z.enum(["Admin", "Funcionário"]),
+  permissions: permissionSchema,
 });
 
 type AddUserFormValues = z.infer<typeof formSchema>;
@@ -45,6 +58,14 @@ type AddUserFormValues = z.infer<typeof formSchema>;
 interface AddUserDialogProps {
     onAddUser: (user: AddUserFormValues) => void;
 }
+
+const permissionLabels = {
+  canSell: 'Vendas',
+  canRegisterProduction: 'Produção',
+  canEditInventory: 'Inventário',
+  canTransferStock: 'Transferências',
+  canViewReports: 'Relatórios',
+};
 
 function AddUserDialogContent({ onAddUser }: AddUserDialogProps) {
   const [open, setOpen] = useState(false);
@@ -54,7 +75,15 @@ function AddUserDialogContent({ onAddUser }: AddUserDialogProps) {
     defaultValues: {
       name: "",
       email: "",
+      password: "",
       role: "Funcionário",
+      permissions: {
+        canSell: false,
+        canRegisterProduction: false,
+        canEditInventory: false,
+        canTransferStock: false,
+        canViewReports: false,
+      },
     },
   });
 
@@ -76,11 +105,11 @@ function AddUserDialogContent({ onAddUser }: AddUserDialogProps) {
           Convidar Funcionário
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Convidar Novo Funcionário</DialogTitle>
           <DialogDescription>
-            Preencha os detalhes abaixo para enviar um convite para um novo funcionário se juntar à sua empresa.
+            Crie uma conta e defina as permissões para um novo membro da equipe.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -111,6 +140,19 @@ function AddUserDialogContent({ onAddUser }: AddUserDialogProps) {
                 </FormItem>
               )}
             />
+             <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Senha</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="Senha de acesso inicial" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="role"
@@ -132,9 +174,36 @@ function AddUserDialogContent({ onAddUser }: AddUserDialogProps) {
                 </FormItem>
               )}
             />
+
+            <div>
+                <FormLabel>Permissões</FormLabel>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2 p-4 border rounded-md">
+                    {Object.keys(permissionLabels).map((key) => (
+                        <FormField
+                        key={key}
+                        control={form.control}
+                        name={`permissions.${key as keyof typeof permissionLabels}`}
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                <FormControl>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                                <FormLabel className="text-sm font-normal">
+                                    {permissionLabels[key as keyof typeof permissionLabels]}
+                                </FormLabel>
+                            </FormItem>
+                        )}
+                        />
+                    ))}
+                </div>
+            </div>
+
             <DialogFooter>
                 <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button type="submit">Enviar Convite</Button>
+                <Button type="submit">Criar Funcionário</Button>
             </DialogFooter>
           </form>
         </Form>
@@ -152,3 +221,5 @@ export function AddUserDialog(props: AddUserDialogProps) {
 
     return isClient ? <AddUserDialogContent {...props} /> : null;
 }
+
+    
