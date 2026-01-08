@@ -15,8 +15,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   
   const [animationClass, setAnimationClass] = useState("animate-in");
-  const touchStartRef = useRef<number | null>(null);
-  const touchEndRef = useRef<number | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const touchEndRef = useRef<{ x: number; y: number } | null>(null);
   const minSwipeDistance = 50; 
   const navigationDirection = useRef<'left' | 'right' | null>(null);
 
@@ -24,20 +24,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchEndRef.current = null; // Reset on new touch
-    touchStartRef.current = e.targetTouches[0].clientX;
+    touchStartRef.current = {
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY,
+    };
     navigationDirection.current = null;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    touchEndRef.current = e.targetTouches[0].clientX;
+    touchEndRef.current = {
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY,
+    };
   };
 
   const handleTouchEnd = () => {
     if (!touchStartRef.current || !touchEndRef.current) return;
     
-    const distance = touchStartRef.current - touchEndRef.current;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
+    const xDiff = touchStartRef.current.x - touchEndRef.current.x;
+    const yDiff = touchStartRef.current.y - touchEndRef.current.y;
+
+    // Prioritize vertical scroll over horizontal swipe
+    if (Math.abs(yDiff) > Math.abs(xDiff)) {
+        touchStartRef.current = null;
+        touchEndRef.current = null;
+        return;
+    }
+
+    const isLeftSwipe = xDiff > minSwipeDistance;
+    const isRightSwipe = xDiff < -minSwipeDistance;
 
     if (isLeftSwipe) {
       const nextPageIndex = currentPageIndex + 1;
