@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -34,11 +34,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from '@/hooks/use-toast';
 import type { Product, Order } from '@/lib/types';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { CalendarIcon } from 'lucide-react';
-import { Calendar } from '../ui/calendar';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 const formSchema = z.object({
@@ -46,7 +41,7 @@ const formSchema = z.object({
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']),
   clientName: z.string().optional(),
-  deliveryDate: z.date({ required_error: "A data de entrega é obrigatória." }),
+  deliveryDate: z.string().nonempty({ message: "A data de entrega é obrigatória." }),
 });
 
 type AddOrderFormValues = z.infer<typeof formSchema>;
@@ -68,6 +63,7 @@ export function AddOrderDialog({ products, onAddOrder, triggerType = 'fab' }: Ad
       quantity: 1,
       unit: 'un',
       clientName: "",
+      deliveryDate: "",
     },
   });
 
@@ -81,7 +77,7 @@ export function AddOrderDialog({ products, onAddOrder, triggerType = 'fab' }: Ad
       quantity: values.quantity,
       unit: values.unit,
       clientName: values.clientName,
-      deliveryDate: values.deliveryDate.toISOString(),
+      deliveryDate: new Date(values.deliveryDate).toISOString(),
     };
     onAddOrder(newOrder);
 
@@ -200,39 +196,11 @@ export function AddOrderDialog({ products, onAddOrder, triggerType = 'fab' }: Ad
               control={form.control}
               name="deliveryDate"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem>
                   <FormLabel>Data de Entrega</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Selecione uma data</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date < new Date(new Date().setHours(0,0,0,0)) 
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
