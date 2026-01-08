@@ -44,7 +44,7 @@ interface EditSaleDialogProps {
     products: Product[];
     onUpdateSale: (sale: Sale) => void;
     onOpenChange: (open: boolean) => void;
-    open: boolean;
+    open?: boolean;
 }
 
 export function EditSaleDialog({ sale, products, onUpdateSale, onOpenChange, open }: EditSaleDialogProps) {
