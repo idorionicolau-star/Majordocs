@@ -18,9 +18,6 @@ export default function DashboardPage() {
       <div className="flex flex-col md:flex-row justify-between items-start gap-4">
         <div>
            <h1 className="text-2xl md:text-3xl font-headline font-[900] text-slate-900 dark:text-white tracking-tighter">Dashboard</h1>
-            <p className="text-sm font-medium text-slate-500 mt-1">
-              Bem-vindo de volta, {currentUser.name}! Aqui está um resumo da sua operação.
-            </p>
         </div>
       </div>
       <StatsCards />
