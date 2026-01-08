@@ -13,7 +13,7 @@ export function SubHeader() {
   return (
     <div className="border-b bg-background/95 backdrop-blur-sm sticky top-16 sm:top-20 z-20">
       <ScrollArea className="w-full whitespace-nowrap">
-          <nav className="flex items-center md:justify-center gap-4 max-w-7xl mx-auto px-4 sm:px-6">
+          <nav className="flex items-center justify-start md:justify-center gap-4 max-w-7xl mx-auto px-4 sm:px-6">
             {mainNavItems.map((item) => {
               const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
               return (
