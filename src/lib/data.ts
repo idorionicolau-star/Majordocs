@@ -7,6 +7,7 @@ import {
   Hammer,
   Settings,
   ClipboardList,
+  BarChart3,
 } from 'lucide-react';
 
 export const mainNavItems: NavItem[] = [
@@ -15,6 +16,7 @@ export const mainNavItems: NavItem[] = [
   { title: 'Vendas', href: '/sales', icon: ShoppingCart },
   { title: 'Produção', href: '/production', icon: Hammer },
   { title: 'Encomendas', href: '/orders', icon: ClipboardList },
+  { title: 'Relatórios', href: '/reports', icon: BarChart3 },
   { title: 'Ajustes', href: '/settings', icon: Settings },
 ];
 
@@ -140,3 +142,5 @@ export const notifications: Notification[] = [
 ];
 
 export const currentUser: User = users[0]; // Mock current user as Admin
+
+    
