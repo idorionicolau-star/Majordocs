@@ -11,7 +11,6 @@ export function initializeAdminApp(): App {
 
   // Check if Firebase environment variables are set.
   // These are automatically provided in a Firebase/Google Cloud environment.
-  // For local development, you'd set these yourself (e.g., in a .env.local file).
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
     return initializeApp();
   }
