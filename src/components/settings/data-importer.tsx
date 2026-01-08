@@ -10,6 +10,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 
+// This component is now part of CatalogManager and can be removed in the future.
+// For now, it remains to avoid breaking imports if it were used elsewhere.
+
 export function DataImporter() {
   const [textData, setTextData] = useState('');
   const [fileName, setFileName] = useState('');
@@ -104,3 +107,5 @@ export function DataImporter() {
     </div>
   );
 }
+
+    

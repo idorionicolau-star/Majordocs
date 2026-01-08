@@ -17,7 +17,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { ChevronDown } from "lucide-react";
-import { DataImporter } from "@/components/settings/data-importer";
+import { CatalogManager } from "@/components/settings/catalog-manager";
 
 const colorOptions = [
   { name: 'Primary', value: 'hsl(var(--primary))', className: 'bg-primary' },
@@ -277,9 +277,9 @@ export default function SettingsPage() {
                 <AccordionTrigger className="w-full hover:no-underline">
                   <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
                     <div>
-                      <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Base de Dados da Empresa</CardTitle>
+                      <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-left">Gestor de Catálogo</CardTitle>
                       <CardDescription className="text-left">
-                        Carregue e gerencie o catálogo de produtos e categorias.
+                        Gerencie os produtos, categorias e importe dados em massa.
                       </CardDescription>
                     </div>
                      <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
@@ -287,7 +287,7 @@ export default function SettingsPage() {
                 </AccordionTrigger>
                 <AccordionContent>
                   <CardContent className="p-6 sm:p-8 pt-0">
-                    <DataImporter />
+                    <CatalogManager />
                   </CardContent>
                 </AccordionContent>
               </Card>
@@ -298,3 +298,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
