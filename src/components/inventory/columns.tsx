@@ -150,5 +150,3 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
 
   return baseColumns;
 }
-
-    

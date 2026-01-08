@@ -7,7 +7,7 @@ import type { Product, Location } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, ArrowRightLeft } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -29,19 +29,16 @@ import {
   DropdownMenuTrigger,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ProductCard } from "@/components/inventory/product-card";
+import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
 
 export default function InventoryPage() {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<Product[]>(initialProducts.map(p => ({...p, instanceId: self.crypto.randomUUID() })));
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isMultiLocation, setIsMultiLocation] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -82,18 +79,19 @@ export default function InventoryPage() {
   }
 
 
-  const handleAddProduct = (newProduct: Omit<Product, 'id' | 'lastUpdated'>) => {
+  const handleAddProduct = (newProduct: Omit<Product, 'id' | 'lastUpdated' | 'instanceId'>) => {
     const product: Product = {
       ...newProduct,
       id: `PROD${(products.length + 1).toString().padStart(3, '0')}`,
       lastUpdated: new Date().toISOString().split('T')[0],
       location: newProduct.location || (locations.length > 0 ? locations[0].id : 'Principal'),
+      instanceId: self.crypto.randomUUID(),
     };
     setProducts([product, ...products]);
   };
   
   const handleUpdateProduct = (updatedProduct: Product) => {
-    setProducts(products.map(p => p.id === updatedProduct.id ? { ...updatedProduct, lastUpdated: new Date().toISOString().split('T')[0] } : p));
+    setProducts(products.map(p => p.instanceId === updatedProduct.instanceId ? { ...updatedProduct, lastUpdated: new Date().toISOString().split('T')[0] } : p));
     toast({
         title: "Produto Atualizado",
         description: `O produto "${updatedProduct.name}" foi atualizado com sucesso.`,
@@ -102,13 +100,58 @@ export default function InventoryPage() {
 
   const confirmDeleteProduct = () => {
     if (productToDelete) {
-      setProducts(products.filter(p => p.id !== productToDelete.id));
+      setProducts(products.filter(p => p.instanceId !== productToDelete.instanceId));
       toast({
         title: "Produto Apagado",
         description: `O produto "${productToDelete.name}" foi removido do inventário.`,
       });
       setProductToDelete(null);
     }
+  };
+
+  const handleTransferStock = (
+    productId: string,
+    fromLocationId: string,
+    toLocationId: string,
+    quantity: number
+  ) => {
+    let fromProductInstance: Product | undefined;
+    let toProductInstance: Product | undefined;
+
+    const updatedProducts = products.map(p => {
+        if (p.id === productId && p.location === fromLocationId) {
+            fromProductInstance = p;
+            return { ...p, stock: p.stock - quantity, lastUpdated: new Date().toISOString().split('T')[0] };
+        }
+        if (p.id === productId && p.location === toLocationId) {
+            toProductInstance = p;
+        }
+        return p;
+    });
+
+    if (toProductInstance) {
+        // Product already exists in destination, just update stock
+        setProducts(updatedProducts.map(p => 
+            p.instanceId === toProductInstance!.instanceId 
+            ? { ...p, stock: p.stock + quantity, lastUpdated: new Date().toISOString().split('T')[0] } 
+            : p
+        ));
+    } else if (fromProductInstance) {
+        // Product does not exist in destination, create a new instance
+        const newInstance: Product = {
+            ...fromProductInstance,
+            instanceId: self.crypto.randomUUID(),
+            location: toLocationId,
+            stock: quantity,
+            lastUpdated: new Date().toISOString().split('T')[0],
+        };
+        setProducts([...updatedProducts, newInstance]);
+    }
+
+    toast({
+        title: "Transferência de Stock Concluída",
+        description: `${quantity} unidades de "${fromProductInstance?.name}" movidas para ${locations.find(l => l.id === toLocationId)?.name}.`,
+    });
   };
 
   const handlePrintCountForm = () => {
@@ -317,6 +360,12 @@ export default function InventoryPage() {
                 <div className="flex items-center gap-2">
                     <TooltipProvider>
                         {isMultiLocation && (
+                           <>
+                            <TransferStockDialog 
+                                products={products}
+                                locations={locations}
+                                onTransfer={handleTransferStock}
+                            />
                             <DropdownMenu>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -352,6 +401,7 @@ export default function InventoryPage() {
                                     </ScrollArea>
                                 </DropdownMenuContent>
                             </DropdownMenu>
+                           </>
                         )}
                         <DropdownMenu>
                             <Tooltip>
@@ -473,7 +523,7 @@ export default function InventoryPage() {
             )}>
                 {filteredProducts.map(product => (
                     <ProductCard 
-                        key={product.id}
+                        key={product.instanceId}
                         product={product}
                         locations={locations}
                         isMultiLocation={isMultiLocation}
@@ -494,7 +544,3 @@ export default function InventoryPage() {
     </>
   );
 }
-
-    
-
-    

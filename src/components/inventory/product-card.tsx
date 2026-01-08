@@ -99,6 +99,3 @@ export function ProductCard({ product, locations, isMultiLocation, onProductUpda
         </Card>
     );
 }
-    
-
-    

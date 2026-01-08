@@ -16,6 +16,7 @@ export type User = {
 };
 
 export type Product = {
+  instanceId: string;
   id: string;
   name: string;
   category: string;
