@@ -32,22 +32,22 @@ export default function DashboardPage() {
   const router = useRouter();
 
    const handleAddProduct = (newProduct: Product) => {
-    setAllProducts([newProduct, ...allProducts]);
+    // This is just a mock function. In a real app, this would be an API call.
     router.push('/inventory');
   };
   
-  const handleAddSale = (newSale: Sale) => {
-    setAllSales([newSale, ...allSales]);
+  const handleAddSale = (newSale: Sale, updatedProducts: Product[]) => {
+    // This is just a mock function. In a real app, this would be an API call.
     router.push('/sales');
   };
   
   const handleAddProduction = (newProduction: Production) => {
-    setAllProductions([newProduction, ...allProductions]);
+    // This is just a mock function. In a real app, this would be an API call.
     router.push('/production');
   };
   
   const handleAddOrder = (newOrder: Order) => {
-    setAllOrders([newOrder, ...allOrders]);
+    // This is just a mock function. In a real app, this would be an API call.
     router.push('/orders');
   };
 
@@ -89,4 +89,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

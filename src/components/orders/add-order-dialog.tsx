@@ -53,7 +53,7 @@ type AddOrderFormValues = z.infer<typeof formSchema>;
 
 interface AddOrderDialogProps {
     products: Product[];
-    onAddOrder: (order: Order) => void;
+    onAddOrder: (order: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate'>) => void;
     triggerType?: 'button' | 'fab';
 }
 
@@ -75,15 +75,13 @@ export function AddOrderDialog({ products, onAddOrder, triggerType = 'fab' }: Ad
     const product = products.find(p => p.id === values.productId);
     if (!product) return;
 
-    const newOrder: Order = {
-      id: `ORD${Date.now().toString().slice(-4)}`,
+    const newOrder: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate'> = {
       productId: values.productId,
       productName: product.name,
       quantity: values.quantity,
       unit: values.unit,
       clientName: values.clientName,
       deliveryDate: values.deliveryDate.toISOString(),
-      status: 'Pendente',
     };
     onAddOrder(newOrder);
 

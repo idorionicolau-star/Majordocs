@@ -52,6 +52,14 @@ export type Production = {
   location?: string;
 };
 
+export type ProductionLog = {
+  id: string;
+  date: string;
+  quantity: number;
+  notes?: string;
+  registeredBy: string;
+};
+
 export type Order = {
   id: string;
   productId: string;
@@ -61,7 +69,11 @@ export type Order = {
   clientName?: string;
   deliveryDate: string;
   status: 'Pendente' | 'Em produção' | 'Concluída';
+  productionStartDate?: string | null;
+  quantityProduced: number;
+  productionLogs: ProductionLog[];
 };
+
 
 export type Notification = {
   id: string;

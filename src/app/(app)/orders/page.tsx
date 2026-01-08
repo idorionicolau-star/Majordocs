@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { orders as initialOrders, products as initialProducts } from "@/lib/data";
-import type { Order, Product } from "@/lib/types";
+import { orders as initialOrders, products as initialProducts, currentUser } from "@/lib/data";
+import type { Order, Product, ProductionLog } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Filter, List, LayoutGrid, ChevronDown } from "lucide-react";
 import { AddOrderDialog } from "@/components/orders/add-order-dialog";
@@ -22,11 +22,14 @@ export default function OrdersPage() {
   const [view, setView] = useState<'list' | 'grid'>('grid'); // 'list' view to be implemented
   const { toast } = useToast();
 
-  const handleAddOrder = (newOrderData: Omit<Order, 'id' | 'status'>) => {
+  const handleAddOrder = (newOrderData: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate'>) => {
     const order: Order = {
       ...newOrderData,
       id: `ORD${(orders.length + 1).toString().padStart(3, '0')}`,
       status: 'Pendente',
+      quantityProduced: 0,
+      productionLogs: [],
+      productionStartDate: null,
     };
     setOrders([order, ...orders]);
   };
@@ -37,7 +40,11 @@ export default function OrdersPage() {
     const updatedOrders = orders.map(order => {
         if (order.id === orderId) {
             orderToUpdate = order;
-            return { ...order, status: newStatus };
+            let update: Partial<Order> = { status: newStatus };
+            if (newStatus === 'Em produção' && !order.productionStartDate) {
+                update.productionStartDate = new Date().toISOString();
+            }
+            return { ...order, ...update };
         }
         return order;
     });
@@ -47,7 +54,6 @@ export default function OrdersPage() {
     if (newStatus === 'Concluída' && orderToUpdate) {
         // Here you would update the product stock.
         // For now, let's just show a toast.
-        const product = products.find(p => p.id === orderToUpdate!.productId);
         toast({
             title: "Encomenda Concluída",
             description: `A produção de ${orderToUpdate.quantity} ${orderToUpdate.unit} de "${orderToUpdate.productName}" foi concluída. O stock foi atualizado.`
@@ -58,6 +64,38 @@ export default function OrdersPage() {
             description: `A encomenda #${orderToUpdate?.id.slice(-3)} está agora "${newStatus}".`
         });
     }
+  };
+
+  const handleAddProductionLog = (orderId: string, logData: { quantity: number; notes?: string }) => {
+    let orderToUpdate: Order | undefined;
+
+    const updatedOrders = orders.map(order => {
+      if (order.id === orderId) {
+        orderToUpdate = order;
+        const newLog: ProductionLog = {
+          id: `log-${Date.now()}`,
+          date: new Date().toISOString(),
+          quantity: logData.quantity,
+          notes: logData.notes,
+          registeredBy: currentUser.name,
+        };
+        const newQuantityProduced = order.quantityProduced + logData.quantity;
+
+        return {
+          ...order,
+          quantityProduced: newQuantityProduced,
+          productionLogs: [...order.productionLogs, newLog],
+        };
+      }
+      return order;
+    });
+
+    setOrders(updatedOrders);
+
+    toast({
+      title: "Registo de Produção Adicionado",
+      description: `${logData.quantity} unidades de "${orderToUpdate?.productName}" foram registadas.`,
+    });
   };
 
 
@@ -120,6 +158,7 @@ export default function OrdersPage() {
                     key={order.id}
                     order={order}
                     onUpdateStatus={handleUpdateOrderStatus}
+                    onAddProductionLog={handleAddProductionLog}
                 />
             ))}
             {filteredOrders.length === 0 && (

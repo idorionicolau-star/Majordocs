@@ -47,7 +47,7 @@ type AddProductionFormValues = z.infer<typeof formSchema>;
 
 interface AddProductionDialogProps {
     products: Product[];
-    onAddProduction: (data: Production) => void;
+    onAddProduction: (data: any) => void;
     triggerType?: 'button' | 'fab';
 }
 
@@ -90,8 +90,7 @@ export function AddProductionDialog({ products, onAddProduction, triggerType = '
     const product = products.find(p => p.id === values.productId);
     if (!product) return;
 
-    const newProduction: Production = {
-      id: `PRODREC${Date.now().toString().slice(-4)}`,
+    const newProduction: Omit<Production, 'id'> = {
       date: new Date().toISOString().split('T')[0],
       productName: product.name,
       quantity: values.quantity,
