@@ -467,7 +467,7 @@ export default function InventoryPage() {
                 "grid gap-4 md:gap-6",
                 gridCols === '3' && "grid-cols-1 sm:grid-cols-2 md:grid-cols-3",
                 gridCols === '4' && "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
-                gridCols === '5' && "grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5",
+                gridCols === '5' && "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5",
             )}>
                 {filteredProducts.map(product => (
                     <ProductCard 
