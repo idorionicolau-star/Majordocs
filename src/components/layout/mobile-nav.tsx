@@ -1,4 +1,4 @@
-// This component is no longer used and has been replaced by sub-header.tsx
+// This component is not used and can be removed.
 export function MobileNav() {
   return null;
 }
