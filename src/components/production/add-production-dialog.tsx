@@ -47,7 +47,7 @@ type AddProductionFormValues = z.infer<typeof formSchema>;
 
 interface AddProductionDialogProps {
     products: Product[];
-    onAddProduction: (data: any) => void;
+    onAddProduction: (data: Omit<Production, 'id' | 'date' | 'registeredBy'>) => void;
     triggerType?: 'button' | 'fab';
 }
 
@@ -55,7 +55,6 @@ export function AddProductionDialog({ products, onAddProduction, triggerType = '
   const [open, setOpen] = useState(false);
   const [isMultiLocation, setIsMultiLocation] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
-  const { toast } = useToast();
   
   const form = useForm<AddProductionFormValues>({
     resolver: zodResolver(formSchema),
@@ -90,19 +89,12 @@ export function AddProductionDialog({ products, onAddProduction, triggerType = '
     const product = products.find(p => p.id === values.productId);
     if (!product) return;
 
-    const newProduction: Omit<Production, 'id'> = {
-      date: new Date().toISOString().split('T')[0],
+    onAddProduction({
       productName: product.name,
       quantity: values.quantity,
-      registeredBy: currentUser.name,
       location: values.location,
-    };
-    onAddProduction(newProduction);
+    });
 
-    toast({
-        title: "Produção Registrada",
-        description: `A produção de ${values.quantity} unidades de ${product.name} foi registrada.`,
-    })
     form.reset();
      if (locations.length > 0) {
       form.setValue('location', locations[0].id);

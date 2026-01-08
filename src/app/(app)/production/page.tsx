@@ -48,8 +48,8 @@ export default function ProductionPage() {
     localStorage.setItem('majorstockx-production-grid-cols', cols);
   }
 
-  const handleAddProduction = (newProductionData: { productId: string; quantity: number; location?: string; }) => {
-    const product = products.find(p => p.id === newProductionData.productId);
+  const handleAddProduction = (newProductionData: Omit<Production, 'id' | 'date' | 'registeredBy'>) => {
+    const product = products.find(p => p.name === newProductionData.productName);
     if (!product) return;
 
     const newProduction: Production = {
@@ -61,6 +61,13 @@ export default function ProductionPage() {
       location: newProductionData.location,
     };
     setProductions([newProduction, ...productions]);
+    
+    // In a real app, you would also update the product stock here.
+    
+    toast({
+        title: "Produção Registrada",
+        description: `A produção de ${newProduction.quantity} unidades de ${product.name} foi registrada.`,
+    })
   };
 
   const filteredProductions = useMemo(() => {

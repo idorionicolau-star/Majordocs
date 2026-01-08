@@ -32,6 +32,10 @@ export default function OrdersPage() {
       productionStartDate: null,
     };
     setOrders([order, ...orders]);
+      toast({
+        title: "Encomenda Registrada",
+        description: `A encomenda de ${order.quantity} ${order.unit} de ${order.productName} foi registrada.`,
+    })
   };
   
   const handleUpdateOrderStatus = (orderId: string, newStatus: 'Pendente' | 'Em produção' | 'Concluída') => {

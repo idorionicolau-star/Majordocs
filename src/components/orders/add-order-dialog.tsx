@@ -54,7 +54,6 @@ interface AddOrderDialogProps {
 
 export function AddOrderDialog({ products, onAddOrder, triggerType = 'fab' }: AddOrderDialogProps) {
   const [open, setOpen] = useState(false);
-  const { toast } = useToast();
   
   const form = useForm<AddOrderFormValues>({
     resolver: zodResolver(formSchema),
@@ -81,10 +80,6 @@ export function AddOrderDialog({ products, onAddOrder, triggerType = 'fab' }: Ad
     };
     onAddOrder(newOrder);
 
-    toast({
-        title: "Encomenda Registrada",
-        description: `A encomenda de ${values.quantity} ${values.unit} de ${product.name} foi registrada.`,
-    })
     form.reset();
     setOpen(false);
   }

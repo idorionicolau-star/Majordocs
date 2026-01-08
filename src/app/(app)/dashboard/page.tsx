@@ -11,11 +11,13 @@ import { products, sales, productions, orders as initialOrders } from "@/lib/dat
 import { useState } from "react";
 import type { Product, Sale, Production, Location, Order } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { currentUser } from "@/lib/data";
 import { useRouter } from "next/navigation";
 import { AddOrderDialog } from "@/components/orders/add-order-dialog";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Box, ShoppingCart, Hammer, ClipboardList } from "lucide-react";
 
 // Dynamically import the StockChart component with SSR turned off
 const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
@@ -24,35 +26,7 @@ const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").th
 });
 
 export default function DashboardPage() {
-  const [allProducts, setAllProducts] = useState<Product[]>(products);
-  const [allSales, setAllSales] = useState<Sale[]>(sales);
-  const [allProductions, setAllProductions] = useState<Production[]>(productions);
-  const [allOrders, setAllOrders] = useState<Order[]>(initialOrders);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [isMultiLocation, setIsMultiLocation] = useState(false);
-  const { toast } = useToast();
   const router = useRouter();
-
-   const handleAddProduct = (newProduct: Product) => {
-    // This is just a mock function. In a real app, this would be an API call.
-    router.push('/inventory');
-  };
-  
-  const handleAddSale = (newSale: Sale, updatedProducts: Product[]) => {
-    // This is just a mock function. In a real app, this would be an API call.
-    router.push('/sales');
-  };
-  
-  const handleAddProduction = (newProduction: Production) => {
-    // This is just a mock function. In a real app, this would be an API call.
-    router.push('/production');
-  };
-  
-  const handleAddOrder = (newOrder: Order) => {
-    // This is just a mock function. In a real app, this would be an API call.
-    router.push('/orders');
-  };
-
 
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
@@ -67,27 +41,18 @@ export default function DashboardPage() {
           onTouchEnd={e => e.stopPropagation()}
         >
           <div className={cn("flex items-center gap-2 flex-nowrap", "animate-peek md:animate-none")}>
-              <AddProductDialog 
-                  onAddProduct={handleAddProduct}
-                  isMultiLocation={isMultiLocation}
-                  locations={locations}
-                  triggerType="button"
-              />
-              <AddSaleDialog 
-                  products={allProducts} 
-                  onAddSale={handleAddSale}
-                  triggerType="button"
-              />
-              <AddProductionDialog 
-                  products={allProducts} 
-                  onAddProduction={handleAddProduction}
-                  triggerType="button"
-              />
-              <AddOrderDialog
-                products={allProducts}
-                onAddOrder={handleAddOrder}
-                triggerType="button"
-              />
+              <Button asChild variant="outline">
+                <Link href="/inventory"><Box className="mr-2 h-4 w-4" />+ Inventário</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/sales"><ShoppingCart className="mr-2 h-4 w-4" />+ Vendas</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/production"><Hammer className="mr-2 h-4 w-4" />+ Produção</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/orders"><ClipboardList className="mr-2 h-4 w-4" />+ Encomenda</Link>
+              </Button>
           </div>
           <ScrollBar orientation="horizontal" className="md:hidden" />
         </ScrollArea>
