@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useContext } from 'react';
+import { useState, useMemo } from 'react';
 import { columns } from '@/components/users/columns';
 import { UsersDataTable } from '@/components/users/data-table';
 import { AddUserDialog } from '@/components/users/add-user-dialog';
@@ -20,7 +20,7 @@ import {
 import { createUserWithEmail, updateUserProfile } from '@/firebase/auth/auth';
 import { useUser } from '@/firebase/auth/use-user';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, collection, query, where, getDocs, writeBatch, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
 
 
