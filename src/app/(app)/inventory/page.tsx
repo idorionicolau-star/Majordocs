@@ -427,26 +427,28 @@ export default function InventoryPage() {
                         <TooltipContent><p>Vista de Grelha</p></TooltipContent>
                     </Tooltip>
                     {view === 'grid' && (
-                        <DropdownMenu>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" className="h-12 w-28 gap-2">
-                                            <span>{gridCols} Colunas</span>
-                                            <ChevronDown className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent><p>Número de colunas</p></TooltipContent>
-                            </Tooltip>
-                            <DropdownMenuContent>
-                                <DropdownMenuRadioGroup value={gridCols} onValueChange={(value) => handleSetGridCols(value as '3' | '4' | '5')}>
-                                    <DropdownMenuRadioItem value="3">3 Colunas</DropdownMenuRadioItem>
-                                    <DropdownMenuRadioItem value="4">4 Colunas</DropdownMenuRadioItem>
-                                    <DropdownMenuRadioItem value="5">5 Colunas</DropdownMenuRadioItem>
-                                </DropdownMenuRadioGroup>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="hidden md:flex">
+                            <DropdownMenu>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="outline" className="h-12 w-28 gap-2">
+                                                <span>{gridCols} Colunas</span>
+                                                <ChevronDown className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Número de colunas</p></TooltipContent>
+                                </Tooltip>
+                                <DropdownMenuContent>
+                                    <DropdownMenuRadioGroup value={gridCols} onValueChange={(value) => handleSetGridCols(value as '3' | '4' | '5')}>
+                                        <DropdownMenuRadioItem value="3">3 Colunas</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="4">4 Colunas</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="5">5 Colunas</DropdownMenuRadioItem>
+                                    </DropdownMenuRadioGroup>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     )}
                 </TooltipProvider>
             </div>
