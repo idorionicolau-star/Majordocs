@@ -39,7 +39,7 @@ import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { Tooltip, TooltipProvider, TooltipContent } from '../ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 const formSchema = z.object({
   productId: z.string().nonempty({ message: "Por favor, selecione um produto." }),
