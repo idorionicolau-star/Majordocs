@@ -7,9 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
 import { AddProductionDialog } from "@/components/production/add-production-dialog";
-import { products, sales, productions } from "@/lib/data";
+import { products, sales, productions, orders as initialOrders } from "@/lib/data";
 import { useState } from "react";
-import type { Product, Sale, Production, Location } from "@/lib/types";
+import type { Product, Sale, Production, Location, Order } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { currentUser } from "@/lib/data";
 import { useRouter } from "next/navigation";
@@ -25,6 +25,7 @@ export default function DashboardPage() {
   const [allProducts, setAllProducts] = useState<Product[]>(products);
   const [allSales, setAllSales] = useState<Sale[]>(sales);
   const [allProductions, setAllProductions] = useState<Production[]>(productions);
+  const [allOrders, setAllOrders] = useState<Order[]>(initialOrders);
   const [locations, setLocations] = useState<Location[]>([]);
   const [isMultiLocation, setIsMultiLocation] = useState(false);
   const { toast } = useToast();
@@ -45,8 +46,8 @@ export default function DashboardPage() {
     router.push('/production');
   };
   
-  const handleAddOrder = () => {
-    // For now, just redirects. In a real app, you might add the order to a state.
+  const handleAddOrder = (newOrder: Order) => {
+    setAllOrders([newOrder, ...allOrders]);
     router.push('/orders');
   };
 
