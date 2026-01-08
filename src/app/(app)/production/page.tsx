@@ -56,10 +56,7 @@ export default function ProductionPage() {
     localStorage.setItem('majorstockx-production-grid-cols', cols);
   }
 
-  if (!inventoryContext) {
-    return <div>A carregar...</div>;
-  }
-  const { products, updateProductStock, locations, isMultiLocation } = inventoryContext;
+  const { products, updateProductStock, locations, isMultiLocation } = inventoryContext || { products: [], updateProductStock: () => {}, locations: [], isMultiLocation: false };
 
   const handleAddProduction = (newProductionData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
     const product = products.find(p => p.name === newProductionData.productName);
@@ -107,6 +104,9 @@ export default function ProductionPage() {
     return result;
   }, [productions, nameFilter]);
 
+  if (!inventoryContext) {
+    return <div>A carregar...</div>;
+  }
 
   return (
     <>

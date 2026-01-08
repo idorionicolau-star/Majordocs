@@ -40,7 +40,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function InventoryPage() {
   const inventoryContext = useContext(InventoryContext);
-  
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [nameFilter, setNameFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
@@ -68,22 +67,6 @@ export default function InventoryPage() {
     localStorage.setItem('majorstockx-inventory-grid-cols', cols);
   }
 
-  // Early return while context is loading
-  if (!inventoryContext || inventoryContext.loading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-12 w-1/3" />
-        <Skeleton className="h-8 w-1/4" />
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      </div>
-    );
-  }
-
   const { 
     products, 
     locations, 
@@ -91,9 +74,10 @@ export default function InventoryPage() {
     addProduct, 
     updateProduct, 
     deleteProduct, 
-    transferStock 
-  } = inventoryContext;
-  
+    transferStock,
+    loading: inventoryLoading
+  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true };
+
   const handleAddProduct = (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => {
     addProduct(newProductData);
       toast({
@@ -103,15 +87,17 @@ export default function InventoryPage() {
   };
   
   const handleUpdateProduct = (updatedProduct: Product) => {
-    updateProduct(updatedProduct.instanceId, updatedProduct);
-    toast({
-        title: "Produto Atualizado",
-        description: `O produto "${updatedProduct.name}" foi atualizado com sucesso.`,
-    });
+    if (updatedProduct.instanceId) {
+        updateProduct(updatedProduct.instanceId, updatedProduct);
+        toast({
+            title: "Produto Atualizado",
+            description: `O produto "${updatedProduct.name}" foi atualizado com sucesso.`,
+        });
+    }
   };
 
   const confirmDeleteProduct = () => {
-    if (productToDelete) {
+    if (productToDelete && productToDelete.instanceId) {
       deleteProduct(productToDelete.instanceId);
       toast({
         title: "Produto Apagado",
@@ -301,7 +287,21 @@ export default function InventoryPage() {
     
     return result;
   }, [products, selectedLocation, nameFilter, categoryFilter]);
-
+  
+    if (inventoryLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-1/3" />
+        <Skeleton className="h-8 w-1/4" />
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -505,7 +505,7 @@ export default function InventoryPage() {
             )}>
                 {filteredProducts.map(product => (
                     <ProductCard 
-                        key={product.id}
+                        key={product.instanceId}
                         product={product}
                         locations={locations}
                         isMultiLocation={isMultiLocation}
