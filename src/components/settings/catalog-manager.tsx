@@ -199,19 +199,18 @@ export function CatalogManager() {
       </AlertDialog>
 
       <Tabs defaultValue="products">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="products">Produtos</TabsTrigger>
           <TabsTrigger value="categories">Categorias</TabsTrigger>
-          <TabsTrigger value="import">Importar</TabsTrigger>
         </TabsList>
         
         <TabsContent value="products" className="mt-4">
            <div className="space-y-4">
             <div className="flex justify-between items-center">
               <p className="text-sm text-muted-foreground">Gerencie os produtos base do seu catálogo.</p>
-              <Button size="sm">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Adicionar Produto
+              <Button size="sm" onClick={seedInitialCatalog}>
+                <Download className="mr-2 h-4 w-4" />
+                Importar Catálogo
               </Button>
             </div>
              <div className="rounded-md border">
@@ -283,17 +282,6 @@ export function CatalogManager() {
           </div>
         </TabsContent>
 
-        <TabsContent value="import" className="mt-4">
-             <div className="space-y-4">
-                <Button onClick={seedInitialCatalog} className='w-full'>
-                    <Download className='mr-2 h-4 w-4' />
-                    Importar Catálogo Inicial
-                </Button>
-                <p className="text-xs text-muted-foreground text-center">
-                    Isto irá popular o seu inventário com o catálogo de produtos padrão da MajorStockX.
-                </p>
-            </div>
-        </TabsContent>
       </Tabs>
     </>
   );
