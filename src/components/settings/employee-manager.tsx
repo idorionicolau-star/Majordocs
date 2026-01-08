@@ -38,10 +38,7 @@ export function EmployeeManager() {
         return;
     }
     try {
-        // Note: This creates a new top-level Firebase Auth user. 
-        // In a real multi-tenant app, you'd need a more complex system,
-        // likely involving custom claims or a server-side function to manage users.
-        // For this MVP, we create a standard user and link them via Firestore.
+        // Note: This creates a new top-level Firebase Auth user.
         const userCredential = await createUserWithEmail(newUserData.email, newUserData.password);
         const newUser = userCredential.user;
 
@@ -58,8 +55,8 @@ export function EmployeeManager() {
             companyId: adminUser.uid, // Link to the admin's "company"
         };
         
-        // Save the user profile in the admin's subcollection of users
-        const userDocRef = doc(firestore, `users/${adminUser.uid}/employees`, newUser.uid);
+        // Save the user profile in the top-level 'users' collection
+        const userDocRef = doc(firestore, `users`, newUser.uid);
         await setDoc(userDocRef, newUserProfile);
         
         // Add to local state for UI update
@@ -147,5 +144,3 @@ export function EmployeeManager() {
     </>
   );
 }
-
-    
