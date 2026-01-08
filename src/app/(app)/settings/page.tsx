@@ -272,7 +272,7 @@ export default function SettingsPage() {
                 </AccordionTrigger>
                 <AccordionContent>
                     <CardContent className="p-6 sm:p-8 pt-0">
-                      <form onSubmit={handleCompanyUpdate} className="space-y-4">
+                      <form onSubmit={handleCompanyUpdate} className="space-y-6">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="name">Nome da Empresa</Label>
@@ -295,9 +295,11 @@ export default function SettingsPage() {
                                 <Input id="address" value={companyDetails.address} onChange={handleDetailChange} />
                             </div>
                           </div>
-                          <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? 'A guardar...' : 'Salvar Alterações'}
-                          </Button>
+                          <div className="flex justify-center">
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? 'A guardar...' : 'Salvar Alterações'}
+                            </Button>
+                          </div>
                       </form>
                     </CardContent>
                 </AccordionContent>
