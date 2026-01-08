@@ -7,21 +7,25 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { mainNavItems } from "@/lib/data";
+import { cn } from "@/lib/utils";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const router = useRouter();
   
+  const [animationClass, setAnimationClass] = useState("animate-in");
   const touchStartRef = useRef<number | null>(null);
   const touchEndRef = useRef<number | null>(null);
   const minSwipeDistance = 50; 
+  const navigationDirection = useRef<'left' | 'right' | null>(null);
 
   const currentPageIndex = mainNavItems.findIndex(item => item.href === pathname);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchEndRef.current = null; // Reset on new touch
     touchStartRef.current = e.targetTouches[0].clientX;
+    navigationDirection.current = null;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -38,14 +42,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (isLeftSwipe) {
       const nextPageIndex = currentPageIndex + 1;
       if (nextPageIndex < mainNavItems.length) {
+        navigationDirection.current = 'left';
+        setAnimationClass("animate-slide-out-to-left");
         const nextPath = mainNavItems[nextPageIndex].href;
-        router.push(nextPath);
+        setTimeout(() => router.push(nextPath), 150);
       }
     } else if (isRightSwipe) {
       const prevPageIndex = currentPageIndex - 1;
       if (prevPageIndex >= 0) {
+        navigationDirection.current = 'right';
+        setAnimationClass("animate-slide-out-to-right");
         const prevPath = mainNavItems[prevPageIndex].href;
-        router.push(prevPath);
+        setTimeout(() => router.push(prevPath), 150);
       }
     }
     
@@ -53,6 +61,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     touchEndRef.current = null;
   };
   
+  useEffect(() => {
+      if (navigationDirection.current === 'left') {
+        setAnimationClass('animate-slide-in-from-right');
+      } else if (navigationDirection.current === 'right') {
+        setAnimationClass('animate-slide-in-from-left');
+      } else {
+        setAnimationClass('animate-in');
+      }
+  }, [pathname]);
+
   const touchHandlers = isMobile ? {
     onTouchStart: handleTouchStart,
     onTouchMove: handleTouchMove,
@@ -60,11 +78,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   } : {};
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background">
+    <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
       <Header />
       <SubHeader />
       <main 
-        className="flex-1 p-4 sm:p-6 md:p-8"
+        key={pathname}
+        className={cn("flex-1 p-4 sm:p-6 md:p-8", isMobile && animationClass)}
         {...touchHandlers}
       >
         {children}
