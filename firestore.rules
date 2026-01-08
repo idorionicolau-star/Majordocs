@@ -68,6 +68,28 @@ service cloud.firestore {
     }
 
     /**
+     * @description Manages catalog product documents owned by a specific user.
+     * @path /users/{userId}/catalogProducts/{productId}
+     * @allow The owner user can perform any action on their own catalog products.
+     * @deny Other users cannot access or modify catalog products that aren't theirs.
+     * @principle Enforces strict data ownership for catalog data.
+     */
+    match /users/{userId}/catalogProducts/{productId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    /**
+     * @description Manages catalog category documents owned by a specific user.
+     * @path /users/{userId}/catalogCategories/{categoryId}
+     * @allow The owner user can perform any action on their own catalog categories.
+     * @deny Other users cannot access or modify catalog categories that aren't theirs.
+     * @principle Enforces strict data ownership for catalog data.
+     */
+    match /users/{userId}/catalogCategories/{categoryId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    /**
      * @description Stores product categories, which are readable by all users.
      * @path /productCategories/{productCategoryId}
      * @allow Any user, including anonymous users, can read product categories: (get) /productCategories/grills.
