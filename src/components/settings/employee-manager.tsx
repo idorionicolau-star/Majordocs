@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useContext }s from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { columns } from '@/components/users/columns';
 import { UsersDataTable } from '@/components/users/data-table';
 import { AddUserDialog } from '@/components/users/add-user-dialog';
