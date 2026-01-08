@@ -7,6 +7,7 @@ import {
   GoogleAuthProvider,
   signOut,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   type Auth,
 } from 'firebase/auth';
 import { getFirebase } from '..';
@@ -41,6 +42,17 @@ export async function signInWithEmail(email: string, password: string) {
         // O erro será apanhado e tratado na UI (página de login)
         throw error;
     }
+}
+
+export async function createUserWithEmail(email: string, password: string) {
+  const auth = getFirebaseAuth();
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    return result.user;
+  } catch (error) {
+    // O erro será apanhado e tratado na UI
+    throw error;
+  }
 }
 
 export async function signOutUser() {

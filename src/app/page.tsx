@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/firebase/auth/use-user';
-import { signInWithEmail, signInWithGoogle } from '@/firebase/auth/auth';
+import { signInWithEmail, signInWithGoogle, createUserWithEmail } from '@/firebase/auth/auth';
 
 export default function LoginPage() {
   const { user, loading } = useUser();
@@ -65,13 +65,25 @@ export default function LoginPage() {
     }
   };
   
-  // Placeholder for registration
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-        title: "Funcionalidade em desenvolvimento",
-        description: "O registo de novas empresas será adicionado em breve.",
-    });
+    try {
+      await createUserWithEmail(registerEmail, registerPassword);
+      // The onAuthStateChanged in useUser will handle the redirect
+      router.push('/dashboard');
+    } catch (error: any) {
+      let description = "Ocorreu um erro ao registrar. Tente novamente.";
+      if (error.code === 'auth/email-already-in-use') {
+        description = "Este endereço de email já está em uso por outra conta.";
+      } else if (error.code === 'auth/weak-password') {
+        description = "A senha é muito fraca. Tente uma senha mais forte.";
+      }
+      toast({
+        variant: "destructive",
+        title: "Erro no Registo",
+        description: description,
+      });
+    }
   }
 
   if (loading || user) {
