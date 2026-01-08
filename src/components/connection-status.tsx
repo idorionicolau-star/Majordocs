@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -57,7 +58,7 @@ export function ConnectionStatus() {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm">
             {statusInfo[status].icon}
             <span className="hidden lg:inline">{statusInfo[status].label}</span>
           </div>
