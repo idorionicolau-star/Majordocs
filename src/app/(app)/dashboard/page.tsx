@@ -60,7 +60,12 @@ export default function DashboardPage() {
         <div>
            <h1 className="text-2xl md:text-3xl font-headline font-[900] text-slate-900 dark:text-white tracking-tighter">Dashboard</h1>
         </div>
-        <ScrollArea className="w-full md:w-auto pb-4">
+        <ScrollArea 
+          className="w-full md:w-auto pb-4"
+          onTouchStart={e => e.stopPropagation()}
+          onTouchMove={e => e.stopPropagation()}
+          onTouchEnd={e => e.stopPropagation()}
+        >
           <div className={cn("flex items-center gap-2 flex-nowrap", "animate-peek md:animate-none")}>
               <AddProductDialog 
                   onAddProduct={handleAddProduct}
