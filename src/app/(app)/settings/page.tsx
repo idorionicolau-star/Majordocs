@@ -16,7 +16,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { ChevronDown, Trash2, Code } from "lucide-react";
+import { ChevronDown, Trash2, Code, Building } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
@@ -31,6 +31,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { updateUserProfile } from "@/firebase/auth/auth";
+import { doc, updateDoc } from "firebase/firestore";
+import { useFirestore } from "@/firebase";
 
 
 const colorOptions = [
@@ -51,12 +55,19 @@ export default function SettingsPage() {
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
   const { user, loading } = useUser();
+  const firestore = useFirestore();
+  
+  const [companyName, setCompanyName] = useState(user?.displayName || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // This is a placeholder as the real role would come from the user object from a database
   const currentUser = user;
 
   useEffect(() => {
     setIsClient(true);
+    if (user) {
+      setCompanyName(user.displayName || '');
+    }
     if (typeof window !== 'undefined') {
       const root = document.documentElement;
 
@@ -79,7 +90,7 @@ export default function SettingsPage() {
         setIconSize(parseFloat(storedIconSize));
       }
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && isClient) {
@@ -147,6 +158,38 @@ export default function SettingsPage() {
     }
     setShowClearConfirm(false);
   };
+  
+  const handleCompanyUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !firestore || !companyName.trim()) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'O nome da empresa não pode estar em branco.' });
+      return;
+    }
+
+    if (companyName.trim() === user.displayName) {
+       toast({ title: 'Nenhuma alteração', description: 'O nome da empresa é o mesmo.' });
+       return;
+    }
+    
+    setIsSubmitting(true);
+    toast({ title: 'A atualizar...', description: 'A guardar o novo nome da empresa.' });
+
+    try {
+      // Update Firebase Auth profile
+      await updateUserProfile(user, { displayName: companyName.trim() });
+      
+      // Update Firestore document
+      const userDocRef = doc(firestore, 'users', user.uid);
+      await updateDoc(userDocRef, { name: companyName.trim() });
+
+      toast({ title: 'Sucesso!', description: 'O nome da empresa foi atualizado.' });
+    } catch (error) {
+      console.error("Error updating company name:", error);
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar o nome da empresa.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
 
   if (!isClient || loading) {
@@ -180,7 +223,40 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <Accordion type="single" collapsible className="w-full space-y-6">
+        <Accordion type="single" collapsible className="w-full space-y-6" defaultValue="item-company">
+          <AccordionItem value="item-company" className="border-0">
+             <Card className="glass-card shadow-sm">
+                <AccordionTrigger className="w-full hover:no-underline">
+                    <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
+                    <div className="flex-1">
+                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center flex items-center justify-center gap-2"><Building /> Detalhes da Empresa</CardTitle>
+                        <CardDescription className="text-center">
+                            Visualize e edite os dados da sua empresa.
+                        </CardDescription>
+                    </div>
+                    <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                    </CardHeader>
+                </AccordionTrigger>
+                <AccordionContent>
+                    <CardContent className="p-6 sm:p-8 pt-0">
+                      <form onSubmit={handleCompanyUpdate} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="company-name">Nome da Empresa</Label>
+                            <Input
+                              id="company-name"
+                              value={companyName}
+                              onChange={(e) => setCompanyName(e.target.value)}
+                              className="max-w-md"
+                            />
+                          </div>
+                          <Button type="submit" disabled={isSubmitting || companyName === user?.displayName}>
+                            {isSubmitting ? 'A guardar...' : 'Salvar Alterações'}
+                          </Button>
+                      </form>
+                    </CardContent>
+                </AccordionContent>
+            </Card>
+          </AccordionItem>
           <AccordionItem value="item-1" className="border-0">
             <Card className="glass-card shadow-sm">
               <AccordionTrigger className="w-full hover:no-underline">
@@ -376,5 +452,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
-    
