@@ -13,6 +13,7 @@ import type { Product, Sale, Production, Location } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { currentUser } from "@/lib/data";
 import { useRouter } from "next/navigation";
+import { AddOrderDialog } from "@/components/orders/add-order-dialog";
 
 // Dynamically import the StockChart component with SSR turned off
 const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
@@ -43,6 +44,11 @@ export default function DashboardPage() {
     setAllProductions([newProduction, ...allProductions]);
     router.push('/production');
   };
+  
+  const handleAddOrder = () => {
+    // For now, just redirects. In a real app, you might add the order to a state.
+    router.push('/orders');
+  };
 
 
   return (
@@ -67,6 +73,11 @@ export default function DashboardPage() {
                 products={allProducts} 
                 onAddProduction={handleAddProduction}
                 triggerType="button"
+            />
+            <AddOrderDialog
+              products={allProducts}
+              onAddOrder={handleAddOrder}
+              triggerType="button"
             />
         </div>
       </div>
