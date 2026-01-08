@@ -7,6 +7,7 @@ import {
   ReactNode,
   useCallback,
   useContext,
+  useMemo,
 } from 'react';
 import type { Product, Location } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
