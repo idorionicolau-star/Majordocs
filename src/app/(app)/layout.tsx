@@ -80,7 +80,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <CarouselContent className="h-full">
               {pages.map(({ path, component: PageComponent }) => (
-                <CarouselItem key={path} className="h-full overflow-y-auto p-4 sm:p-6 md:p-8">
+                <CarouselItem key={path} className="h-full overflow-y-auto p-4 sm:p-6">
                   <PageComponent />
                 </CarouselItem>
               ))}

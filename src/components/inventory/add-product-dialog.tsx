@@ -100,7 +100,7 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
         <Tooltip>
             <TooltipTrigger asChild>
                 <DialogTrigger asChild>
-                    <Button className="fixed bottom-20 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
+                    <Button className="fixed bottom-6 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
                         <Plus className="h-6 w-6" />
                     </Button>
                 </DialogTrigger>
@@ -258,7 +258,7 @@ export function AddProductDialog(props: AddProductDialogProps) {
 
   if (!isClient) {
      return props.triggerType === 'fab' ? (
-        <Button disabled className="fixed bottom-20 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
+        <Button disabled className="fixed bottom-6 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
             <Plus className="h-6 w-6" />
         </Button>
      ) : (
