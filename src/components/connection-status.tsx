@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Wifi, WifiOff } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -56,20 +56,29 @@ export function ConnectionStatus() {
 
   return (
     <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center gap-2 text-sm">
-            {statusInfo[status].icon}
-            <span className="hidden lg:inline">{statusInfo[status].label}</span>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{statusInfo[status].tooltip}</p>
-        </TooltipContent>
-      </Tooltip>
-      <Button variant="outline" size="sm" onClick={handleForceSync} disabled={!isOnline || isSyncing} className="hidden sm:inline-flex ml-2">
-        Forçar Sincronização
-      </Button>
+      <div className="flex items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-2 text-sm p-2 rounded-md hover:bg-white/10">
+              {statusInfo[status].icon}
+              <span className="hidden lg:inline">{statusInfo[status].label}</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{statusInfo[status].tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={handleForceSync} disabled={!isOnline || isSyncing} className="h-8 w-8">
+                <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Forçar Sincronização</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
     </TooltipProvider>
   );
 }
