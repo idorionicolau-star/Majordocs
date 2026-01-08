@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { LocationsManager } from "@/components/settings/locations-manager";
-import { currentUser } from "@/lib/data";
+import { useUser } from "@/firebase/auth/use-user";
 import { EmployeeManager } from "@/components/settings/employee-manager";
 import { cn } from "@/lib/utils";
 import {
@@ -50,6 +50,10 @@ export default function SettingsPage() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
+  const { user, loading } = useUser();
+
+  // This is a placeholder as the real role would come from the user object from a database
+  const currentUser = { role: 'Admin' };
 
   useEffect(() => {
     setIsClient(true);
@@ -145,7 +149,7 @@ export default function SettingsPage() {
   };
 
 
-  if (!isClient) {
+  if (!isClient || loading) {
     return null; // Or a loading skeleton
   }
 
@@ -273,7 +277,7 @@ export default function SettingsPage() {
             </Card>
           </AccordionItem>
 
-          {currentUser.role === 'Admin' && (
+          {currentUser && currentUser.role === 'Admin' && (
             <>
               <AccordionItem value="item-2" className="border-0">
                 <Card className="glass-card shadow-sm">
