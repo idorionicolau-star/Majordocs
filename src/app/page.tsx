@@ -11,7 +11,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-background p-4 animate-in">
       <div className="w-full max-w-md">
-        <div className="flex justify-center items-center gap-3 mb-6">
+        <div className="flex flex-col justify-center items-center gap-3 mb-6">
           <Image src="/logo.svg" alt="MajorStockX Logo" width={40} height={40} className="text-primary" />
           <h1 className="text-3xl font-headline font-bold text-primary">MajorStockX</h1>
         </div>
