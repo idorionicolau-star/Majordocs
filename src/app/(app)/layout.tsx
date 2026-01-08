@@ -42,7 +42,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.push('/');
     } else if (!userLoading && user && !profileLoading) {
       // If user is logged in but has no companyName and is not already on the registration page, redirect them.
-      if (!userProfile?.name && pathname !== '/register-company') {
+      if (!user.displayName && pathname !== '/register-company') {
         router.replace('/register-company');
       }
     }
@@ -140,7 +140,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user || (!userProfile?.name && pathname !== '/register-company')) {
+  if (!user || (!user.displayName && pathname !== '/register-company')) {
      return <div className="flex min-h-screen w-full items-center justify-center">A redirecionar...</div>;
   }
   
