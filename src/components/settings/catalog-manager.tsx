@@ -1,11 +1,10 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UploadCloud, FileText, PlusCircle, Trash2, Edit, Download } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
@@ -30,34 +29,37 @@ import {
 } from "@/components/ui/alert-dialog";
 import { EditCatalogProductDialog } from './edit-catalog-product-dialog';
 import { InventoryContext } from '@/context/inventory-context';
+import { useUser } from '@/firebase/auth/use-user';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, setDoc, deleteDoc, updateDoc, collection, writeBatch, query, getDocs } from 'firebase/firestore';
+import { Skeleton } from '../ui/skeleton';
+
+type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
+type CatalogCategory = { id: string; name: string };
 
 export function CatalogManager() {
-  const [textData, setTextData] = useState('');
-  const [fileName, setFileName] = useState('');
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
+  const { user } = useUser();
+  const firestore = useFirestore();
 
-  const [products, setProducts] = useState<Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const catalogProductsCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, `users/${user.uid}/catalogProducts`);
+  }, [firestore, user]);
 
-  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
-  const [productToDelete, setProductToDelete] = useState<any | null>(null);
-  const [categoryToEdit, setCategoryToEdit] = useState<string | null>(null);
+  const catalogCategoriesCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, `users/${user.uid}/catalogCategories`);
+  }, [firestore, user]);
+
+  const { data: products, isLoading: productsLoading } = useCollection<CatalogProduct>(catalogProductsCollectionRef);
+  const { data: categories, isLoading: categoriesLoading } = useCollection<CatalogCategory>(catalogCategoriesCollectionRef);
+
+  const [categoryToDelete, setCategoryToDelete] = useState<CatalogCategory | null>(null);
+  const [productToDelete, setProductToDelete] = useState<CatalogProduct | null>(null);
+  const [categoryToEdit, setCategoryToEdit] = useState<CatalogCategory | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
-  
-  // This effect should be replaced with fetching from a firestore collection of catalog items
-  useEffect(() => {
-    // In a real app, this would be fetched from a database
-    // For now, we leave it empty as per the new requirement
-    const initialProducts: Product[] = []; 
-    const uniqueProducts = initialProducts.filter((p, i, a) => a.findIndex(v => v.id === p.id) === i)
-        .map(({ stock, instanceId, reservedStock, location, lastUpdated, ...rest }) => rest);
-    
-    const uniqueCategories = Array.from(new Set(initialProducts.map(p => p.category)));
-    
-    setProducts(uniqueProducts);
-    setCategories(uniqueCategories.sort());
-  }, []);
 
   if (!inventoryContext) {
     return <div>A carregar gestor de catálogo...</div>
@@ -65,82 +67,107 @@ export function CatalogManager() {
 
   const { seedInitialCatalog } = inventoryContext;
   
-  const handleImportText = () => {
-    // ... logic for importing from text
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // ... logic for handling file changes
-  };
-  
-  const handleImportFile = () => {
-    // ... logic for importing from file
-  };
-  
-  const handleAddCategory = () => {
-    const newCategory = prompt('Nome da nova categoria:');
-    if (newCategory && !categories.includes(newCategory)) {
-      setCategories([...categories, newCategory].sort());
-      toast({ title: 'Categoria Adicionada', description: `A categoria "${newCategory}" foi adicionada.` });
-    } else if (newCategory) {
+  const handleAddCategory = async () => {
+    if (!catalogCategoriesCollectionRef) return;
+    const newCategoryName = prompt('Nome da nova categoria:');
+    if (newCategoryName && !categories?.some(c => c.name === newCategoryName)) {
+      toast({ title: 'A adicionar categoria...' });
+      const newCategory = { name: newCategoryName };
+      try {
+        await setDoc(doc(catalogCategoriesCollectionRef), newCategory);
+        toast({ title: 'Categoria Adicionada', description: `A categoria "${newCategoryName}" foi adicionada.` });
+      } catch (e) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível adicionar a categoria.' });
+      }
+    } else if (newCategoryName) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Essa categoria já existe.' });
     }
   };
 
-  const handleEditCategory = () => {
-    if (!categoryToEdit || !newCategoryName.trim()) return;
+  const handleEditCategory = async () => {
+    if (!categoryToEdit || !newCategoryName.trim() || !firestore || !user) return;
 
-    if (categories.includes(newCategoryName.trim()) && newCategoryName.trim() !== categoryToEdit) {
+    if (categories?.some(c => c.name === newCategoryName.trim() && c.id !== categoryToEdit.id)) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Essa categoria já existe.' });
       return;
     }
-
-    // Update category in the list
-    setCategories(categories.map(c => c === categoryToEdit ? newCategoryName.trim() : c).sort());
-
-    // Update products using the old category
-    setProducts(products.map(p => p.category === categoryToEdit ? { ...p, category: newCategoryName.trim() } : p));
     
-    toast({ title: 'Categoria Atualizada' });
+    toast({ title: 'A atualizar categoria...' });
+    try {
+      const categoryDocRef = doc(firestore, `users/${user.uid}/catalogCategories`, categoryToEdit.id);
+      await updateDoc(categoryDocRef, { name: newCategoryName.trim() });
+      
+      // Update all products in that category
+      const q = query(collection(firestore, `users/${user.uid}/catalogProducts`), where("category", "==", categoryToEdit.name));
+      const querySnapshot = await getDocs(q);
+      const batch = writeBatch(firestore);
+      querySnapshot.forEach((doc) => {
+        batch.update(doc.ref, { category: newCategoryName.trim() });
+      });
+      await batch.commit();
+
+      toast({ title: 'Categoria Atualizada' });
+    } catch(e) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar a categoria.' });
+    }
+
     setCategoryToEdit(null);
     setNewCategoryName('');
   };
 
-  const startEditingCategory = (category: string) => {
+  const startEditingCategory = (category: CatalogCategory) => {
     setCategoryToEdit(category);
-    setNewCategoryName(category);
+    setNewCategoryName(category.name);
   }
 
-  const confirmDeleteCategory = () => {
-    if (categoryToDelete) {
-      const isUsed = products.some(p => p.category === categoryToDelete);
+  const confirmDeleteCategory = async () => {
+    if (categoryToDelete && firestore && user) {
+      const isUsed = products?.some(p => p.category === categoryToDelete.name);
       if (isUsed) {
         toast({
           variant: 'destructive',
           title: 'Não é possível remover',
-          description: `A categoria "${categoryToDelete}" está a ser usada por produtos.`,
+          description: `A categoria "${categoryToDelete.name}" está a ser usada por produtos.`,
         });
       } else {
-        setCategories(categories.filter(c => c !== categoryToDelete));
-        toast({ title: 'Categoria Removida' });
+        toast({ title: 'A remover categoria...' });
+        try {
+          await deleteDoc(doc(firestore, `users/${user.uid}/catalogCategories`, categoryToDelete.id));
+          toast({ title: 'Categoria Removida' });
+        } catch(e) {
+           toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover a categoria.' });
+        }
       }
       setCategoryToDelete(null);
     }
   };
 
-  const confirmDeleteProduct = () => {
-     if (productToDelete) {
-        setProducts(products.filter(p => p.id !== productToDelete.id));
-        toast({ title: 'Produto Removido do Catálogo' });
+  const confirmDeleteProduct = async () => {
+     if (productToDelete && firestore && user) {
+        toast({ title: 'A remover produto...' });
+        try {
+            await deleteDoc(doc(firestore, `users/${user.uid}/catalogProducts`, productToDelete.id));
+            toast({ title: 'Produto Removido do Catálogo' });
+        } catch(e) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover o produto.' });
+        }
         setProductToDelete(null);
     }
   }
 
-  const handleUpdateProduct = (updatedProduct: Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>) => {
-    setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
-    toast({ title: "Produto do Catálogo Atualizado" });
+  const handleUpdateProduct = async (updatedProduct: CatalogProduct) => {
+    if(!firestore || !user || !updatedProduct.id) return;
+    toast({ title: 'A atualizar produto...' });
+    try {
+        const productDocRef = doc(firestore, `users/${user.uid}/catalogProducts`, updatedProduct.id);
+        await updateDoc(productDocRef, updatedProduct as any);
+        toast({ title: "Produto do Catálogo Atualizado" });
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar o produto.' });
+    }
   };
 
+  const sortedCategories = categories ? [...categories].sort((a, b) => a.name.localeCompare(b.name)) : [];
 
   return (
     <>
@@ -149,7 +176,7 @@ export function CatalogManager() {
           <AlertDialogHeader>
             <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação irá remover permanentemente a categoria "{categoryToDelete}". Apenas pode remover categorias que não estejam a ser usadas por nenhum produto.
+              Esta ação irá remover permanentemente a categoria "{categoryToDelete?.name}". Apenas pode remover categorias que não estejam a ser usadas por nenhum produto.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -224,7 +251,13 @@ export function CatalogManager() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {products.length > 0 ? products.map(product => (
+                  {productsLoading ? (
+                     <TableRow>
+                        <TableCell colSpan={4} className="h-24 text-center">
+                           <Skeleton className="h-6 w-full" />
+                        </TableCell>
+                    </TableRow>
+                  ) : products && products.length > 0 ? products.map(product => (
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell>{product.category}</TableCell>
@@ -232,7 +265,7 @@ export function CatalogManager() {
                        <TableCell className="text-right flex items-center justify-end gap-2">
                          <EditCatalogProductDialog 
                             product={product} 
-                            categories={categories}
+                            categories={sortedCategories.map(c => c.name)}
                             onUpdate={handleUpdateProduct}
                          />
                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setProductToDelete(product)}>
@@ -264,9 +297,11 @@ export function CatalogManager() {
             </div>
             <div className="rounded-md border">
               <ul className="divide-y">
-                {categories.map(category => (
-                  <li key={category} className="flex items-center justify-between p-3">
-                    <span className="text-sm font-medium">{category}</span>
+                 {categoriesLoading ? (
+                    <li className="p-4"><Skeleton className="h-6 w-1/2" /></li>
+                 ) : sortedCategories.length > 0 ? sortedCategories.map(category => (
+                  <li key={category.id} className="flex items-center justify-between p-3">
+                    <span className="text-sm font-medium">{category.name}</span>
                     <div className="flex items-center">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditingCategory(category)}>
                             <Edit className="h-4 w-4 text-muted-foreground" />
@@ -276,7 +311,9 @@ export function CatalogManager() {
                         </Button>
                     </div>
                   </li>
-                ))}
+                )) : (
+                    <li className="p-4 text-center text-muted-foreground">Nenhuma categoria encontrada.</li>
+                )}
               </ul>
             </div>
           </div>
