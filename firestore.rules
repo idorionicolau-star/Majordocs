@@ -54,17 +54,17 @@ service cloud.firestore {
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == get(request.path).data.id;
       allow delete: if isExistingOwner(userId);
-      
-      /**
-       * @description Manages product documents owned by a specific user.
-       * @path /users/{userId}/products/{productId}
-       * @allow The owner user can perform any action on their own products.
-       * @deny Other users cannot access or modify products that aren't theirs.
-       * @principle Enforces strict data ownership for products using path-based security.
-       */
-      match /products/{productId} {
-        allow read, write: if isOwner(userId);
-      }
+    }
+    
+    /**
+     * @description Manages product documents owned by a specific user.
+     * @path /users/{userId}/products/{productId}
+     * @allow The owner user can perform any action on their own products.
+     * @deny Other users cannot access or modify products that aren't theirs.
+     * @principle Enforces strict data ownership for products using path-based security.
+     */
+    match /users/{userId}/products/{productId} {
+      allow read, write: if isOwner(userId);
     }
 
     /**
