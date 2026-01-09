@@ -3,6 +3,7 @@
 
 import { useContext } from "react"
 import { LogOut, User as UserIcon } from "lucide-react"
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -54,9 +55,11 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <UserIcon className="mr-2 h-4 w-4" />
-            <span>Perfil</span>
+          <DropdownMenuItem asChild>
+            <Link href="/settings">
+              <UserIcon className="mr-2 h-4 w-4" />
+              <span>Perfil</span>
+            </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
