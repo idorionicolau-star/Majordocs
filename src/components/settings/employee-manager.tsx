@@ -29,6 +29,7 @@ export function EmployeeManager() {
   const { user: adminUser } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const firebaseServices = useFirebase();
 
   const employeesQuery = useMemoFirebase(() => {
     if (!firestore || !adminUser) return null;
@@ -40,14 +41,14 @@ export function EmployeeManager() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   const handleAddUser = async (newUserData: any) => {
-    if (!adminUser || !firestore) {
+    if (!adminUser || !firestore || !firebaseServices.firebaseApp) {
       toast({ variant: "destructive", title: "Erro", description: "Não autenticado ou a base de dados não está pronta." });
       return;
     }
     
     // This is a workaround for a secondary Firebase app instance issue.
     // We get a temporary auth instance to create the user, but the primary instance will still manage the session.
-    const tempAuth = getAuth(useFirebase().firebaseApp);
+    const tempAuth = getAuth(firebaseServices.firebaseApp);
 
     toast({ title: "A criar funcionário...", description: "Por favor, aguarde." });
 
@@ -199,4 +200,3 @@ export function EmployeeManager() {
     </>
   );
 }
-
