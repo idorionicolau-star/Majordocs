@@ -36,6 +36,7 @@ export type Company = {
     phone?: string;
     address?: string;
     taxId?: string;
+    email?: string;
 };
 
 export type Product = {

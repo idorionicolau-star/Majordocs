@@ -84,32 +84,17 @@ const defaultUser: User = {
     companyId: COMPANY_ID,
 };
 
+const defaultCompany: Company = {
+    id: COMPANY_ID,
+    name: 'A Minha Empresa',
+    ownerId: 'admin-user',
+};
+
 
 export function InventoryProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const { toast } = useToast();
-
   const companyId = COMPANY_ID;
-
-  const companyDocRef = useMemoFirebase(() => {
-    if (!firestore || !companyId) return null;
-    return doc(firestore, 'companies', companyId);
-  }, [firestore, companyId]);
-  const { data: companyData, isLoading: companyLoading, error: companyError } = useDoc<Company>(companyDocRef);
-
-  useEffect(() => {
-    // This effect ensures the company document exists.
-    if (!companyLoading && !companyData && !companyError && firestore && companyId) {
-      const companyRef = doc(firestore, 'companies', companyId);
-      const defaultCompanyData: Company = {
-        id: companyId,
-        name: 'A Minha Empresa',
-        ownerId: 'admin-user',
-      };
-      // Non-blocking write to create the company doc if it doesn't exist.
-      setDoc(companyRef, defaultCompanyData, { merge: true });
-    }
-  }, [companyData, companyLoading, companyError, firestore, companyId]);
 
   const productsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
@@ -140,6 +125,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!firestore || !companyId) return null;
     return collection(firestore, `companies/${companyId}/catalogCategories`);
   }, [firestore, companyId]);
+  
+  const companyDocRef = useMemoFirebase(() => {
+    if (!firestore || !companyId) return null;
+    return doc(firestore, 'companies', companyId);
+  }, [firestore, companyId]);
+
+  const { data: companyData, isLoading: companyLoading } = useDoc<Company>(companyDocRef);
 
   const { data: productsData, isLoading: productsLoading } =
     useCollection<Product>(productsCollectionRef);
@@ -455,7 +447,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const value: InventoryContextType = {
     companyId,
     userData: defaultUser,
-    companyData: companyData || null,
+    companyData: companyData || defaultCompany,
     products,
     sales: salesData || [],
     productions: productionsData || [],
@@ -464,7 +456,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     catalogCategories: catalogCategoriesData || [],
     locations,
     isMultiLocation,
-    loading: companyLoading || productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading,
+    loading: productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading || companyLoading,
     addProduct,
     updateProduct,
     deleteProduct,

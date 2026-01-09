@@ -51,8 +51,8 @@ export default function SettingsPage() {
   const { toast } = useToast();
 
   const [companyDetails, setCompanyDetails] = useState({
-    name: 'A Minha Empresa',
-    email: 'contacto@empresa.com',
+    name: '',
+    email: '',
     phone: '',
     address: '',
     taxId: ''
@@ -67,15 +67,13 @@ export default function SettingsPage() {
     if (companyData) {
       setCompanyDetails({
         name: companyData.name || '',
-        email: userData?.email || '',
+        email: companyData.email || '', // Assuming company can have an email
         phone: companyData.phone || '',
         address: companyData.address || '',
         taxId: companyData.taxId || ''
       });
-    } else if (userData) {
-        setCompanyDetails(prev => ({...prev, email: userData.email || ''}));
     }
-  }, [companyData, userData]);
+  }, [companyData]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
