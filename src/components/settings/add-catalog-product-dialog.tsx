@@ -100,19 +100,6 @@ export function AddCatalogProductDialog({ categories, onAdd }: AddCatalogProduct
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
             <FormField
                 control={form.control}
-                name="name"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Nome do Produto</FormLabel>
-                    <FormControl>
-                        <Input placeholder="Ex: Grelha 30x30 Xadrez" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
                 name="category"
                 render={({ field }) => (
                     <FormItem>
@@ -129,6 +116,19 @@ export function AddCatalogProductDialog({ categories, onAdd }: AddCatalogProduct
                         ))}
                         </SelectContent>
                     </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Nome do Produto</FormLabel>
+                    <FormControl>
+                        <Input placeholder="Ex: Grelha 30x30 Xadrez" {...field} />
+                    </FormControl>
                     <FormMessage />
                     </FormItem>
                 )}
