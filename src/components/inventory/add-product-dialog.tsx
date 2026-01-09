@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -34,9 +34,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Location, Product } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { InventoryContext } from '@/context/inventory-context';
 
 const formSchema = z.object({
-  category: z.string().min(2, { message: "A categoria deve ter pelo menos 2 caracteres." }),
+  category: z.string().min(1, { message: "A categoria é obrigatória." }),
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   price: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
   stock: z.coerce.number().min(0, { message: "O estoque não pode ser negativo." }),
@@ -56,6 +57,9 @@ interface AddProductDialogProps {
 
 function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, triggerType = 'fab' }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
+  const inventoryContext = useContext(InventoryContext);
+  const { catalogCategories } = inventoryContext || { catalogCategories: [] };
+
   const form = useForm<AddProductFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -74,6 +78,15 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
       form.setValue('location', locations[0].id);
     }
   }, [locations, form]);
+
+  useEffect(() => {
+    if (open) {
+      form.reset();
+       if (locations.length > 0) {
+        form.setValue('location', locations[0].id);
+      }
+    }
+  }, [open, form, locations]);
 
   function onSubmit(values: AddProductFormValues) {
     if (isMultiLocation && !values.location) {
@@ -125,18 +138,27 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Categoria</FormLabel>
+               <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Categoria</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                            <Input placeholder="Ex: Grelhas" {...field} />
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma categoria" />
+                          </SelectTrigger>
                         </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
+                        <SelectContent>
+                          {catalogCategories.sort((a,b) => a.name.localeCompare(b.name)).map(cat => (
+                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
                 <FormField
                     control={form.control}
