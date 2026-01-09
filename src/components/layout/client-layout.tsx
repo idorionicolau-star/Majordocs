@@ -31,10 +31,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // This is the primary guard. It runs on every navigation.
-    if (authContext && !authContext.loading && !authContext.user && !isAuthPage) {
+    if (!authContext.loading && !authContext.user && !isAuthPage) {
       router.replace('/login');
     }
-  }, [authContext, router, isAuthPage, pathname]);
+  }, [authContext.loading, authContext.user, router, isAuthPage, pathname]);
 
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -81,7 +81,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       const prevPageIndex = currentPageIndex - 1;
       if (prevPageIndex >= 0) {
         navigationDirection.current = 'right';
-        setAnimationClass('animate-slide-out-to-right');
         const prevPath = mainNavItems[prevPageIndex].href;
         setTimeout(() => router.push(prevPath), 150);
       }
@@ -115,7 +114,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   // This is the definitive guard. We wait for loading to be false AND
   // for user and companyId to be truthy before rendering the app.
-  if (!authContext || authContext.loading || !authContext.user || !authContext.companyId) {
+  if (authContext.loading || !authContext.user || !authContext.companyId) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         A carregar aplicação...
