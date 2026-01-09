@@ -177,5 +177,3 @@ export function AddEmployeeDialog({ companyId }: AddEmployeeDialogProps) {
     </Dialog>
   );
 }
-
-    
