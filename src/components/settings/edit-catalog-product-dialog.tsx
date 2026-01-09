@@ -89,19 +89,6 @@ export function EditCatalogProductDialog({ product, categories, onUpdate }: Edit
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
             <FormField
                 control={form.control}
-                name="name"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Nome do Produto</FormLabel>
-                    <FormControl>
-                        <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
                 name="category"
                 render={({ field }) => (
                     <FormItem>
@@ -118,6 +105,19 @@ export function EditCatalogProductDialog({ product, categories, onUpdate }: Edit
                         ))}
                         </SelectContent>
                     </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Nome do Produto</FormLabel>
+                    <FormControl>
+                        <Input {...field} />
+                    </FormControl>
                     <FormMessage />
                     </FormItem>
                 )}
