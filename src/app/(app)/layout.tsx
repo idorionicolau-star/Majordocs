@@ -37,7 +37,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     // LÓGICA DE PERMISSÕES POR FUNÇÃO
-    const isRestrictedPage = ADMIN_ONLY_PAGES.includes(pathname);
+    const isRestrictedPage = ADMIN_ONLY_PAGES.some(page => pathname.startsWith(page));
     const isEmployee = userData.role === 'Employee';
 
     if (isEmployee && isRestrictedPage) {
