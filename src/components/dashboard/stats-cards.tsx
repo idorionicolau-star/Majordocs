@@ -3,7 +3,7 @@
 
 import { useContext } from "react";
 import { Card } from "@/components/ui/card";
-import { Box, DollarSign, AlertTriangle, Users, Package, ShoppingCart } from "lucide-react";
+import { Box, DollarSign, AlertTriangle, Package, ShoppingCart } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
@@ -11,12 +11,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function StatsCards() {
     const inventoryContext = useContext(InventoryContext);
-    const { products, sales, users, loading } = inventoryContext || { products: [], sales: [], users: [], loading: true };
+    const { products, sales, loading } = inventoryContext || { products: [], sales: [], loading: true };
 
     if (loading) {
         return (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Skeleton className="h-[100px] w-full rounded-2xl" />
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <Skeleton className="h-[100px] w-full rounded-2xl" />
                 <Skeleton className="h-[100px] w-full rounded-2xl" />
                 <Skeleton className="h-[100px] w-full rounded-2xl" />
@@ -69,33 +68,22 @@ export function StatsCards() {
       contextValue: `${lowStockPercentage.toFixed(0)}%`,
       contextIcon: AlertTriangle,
     },
-    {
-      title: "Funcionários",
-      value: users.length,
-      icon: Users,
-      color: "slate",
-      contextLabel: "Total",
-      contextValue: users.length,
-      contextIcon: Users,
-    },
   ];
 
   const colorClasses = {
       blue: 'text-blue-500',
       emerald: 'text-emerald-500',
       amber: 'text-amber-500',
-      slate: 'text-slate-500',
   }
   
   const contextColors = {
       blue: 'text-blue-600 bg-blue-50 dark:bg-blue-500/10',
       emerald: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10',
       amber: 'text-amber-600 bg-amber-50 dark:bg-amber-500/10',
-      slate: 'text-slate-600 bg-slate-100 dark:bg-slate-500/10'
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {stats.map((stat) => (
         <Card key={stat.title} className="glass-card relative flex items-center gap-4 p-4 rounded-2xl shadow-sm hover:shadow-lg hover:shadow-primary/5 transition-shadow duration-300 group">
              <stat.icon 

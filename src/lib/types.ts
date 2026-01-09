@@ -6,7 +6,6 @@ export type User = {
   email: string;
   role: 'Admin' | 'Employee';
   companyId: string; // Links user to a company
-  status?: 'Ativo' | 'Pendente'; // For employee management
 };
 
 export type Company = {
@@ -105,4 +104,3 @@ export type InitialCatalog = {
     [subType: string]: string[];
   };
 };
-

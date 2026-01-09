@@ -20,17 +20,25 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/firebase/auth/use-user';
-import { doc, deleteDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { doc, deleteDoc, query, collection, where } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 
 export function EmployeeManager() {
-  const inventoryContext = useContext(InventoryContext);
-  const { users, loading } = inventoryContext || { users: [], loading: true };
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   
   const [employeeToDelete, setEmployeeToDelete] = useState<User | null>(null);
+
+  const inventoryContext = useContext(InventoryContext);
+  const companyId = inventoryContext?.companyId;
+
+  const usersCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !companyId) return null;
+    return query(collection(firestore, 'users'), where('companyId', '==', companyId));
+  }, [firestore, companyId]);
+
+  const { data: users, isLoading: loading } = useCollection<User>(usersCollectionRef);
 
   const confirmDelete = async () => {
     if (!employeeToDelete || !firestore) return;
@@ -78,7 +86,7 @@ export function EmployeeManager() {
         </div>
         <div className="rounded-md border">
             <ul className="divide-y">
-              {users.length > 0 ? users.map(user => (
+              {users && users.length > 0 ? users.map(user => (
                 <li key={user.id} className="flex items-center justify-between p-3">
                     <div>
                         <p className="text-sm font-medium">{user.name} <span className="text-xs text-muted-foreground">{user.role === 'Admin' ? '(Admin)' : ''}</span></p>

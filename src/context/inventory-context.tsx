@@ -40,7 +40,6 @@ interface InventoryContextType {
   sales: Sale[];
   productions: Production[];
   orders: Order[];
-  users: User[];
   catalogProducts: CatalogProduct[];
   catalogCategories: CatalogCategory[];
   locations: Location[];
@@ -112,11 +111,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     return collection(firestore, `companies/${companyId}/orders`);
   }, [firestore, companyId]);
   
-  const usersCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId) return null;
-    return query(collection(firestore, 'users'), where('companyId', '==', companyId));
-  }, [firestore, companyId]);
-
   const catalogProductsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
     return collection(firestore, `companies/${companyId}/catalogProducts`);
@@ -135,8 +129,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     useCollection<Production>(productionsCollectionRef);
    const { data: ordersData, isLoading: ordersLoading } =
     useCollection<Order>(ordersCollectionRef);
-   const { data: usersData, isLoading: usersLoading } =
-    useCollection<User>(usersCollectionRef);
   const { data: catalogProductsData, isLoading: catalogProductsLoading } =
     useCollection<CatalogProduct>(catalogProductsCollectionRef);
   const {
@@ -438,12 +430,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     sales: salesData || [],
     productions: productionsData || [],
     orders: ordersData || [],
-    users: usersData || [],
     catalogProducts: catalogProductsData || [],
     catalogCategories: catalogCategoriesData || [],
     locations,
     isMultiLocation,
-    loading: userLoading || companyLoading || productsLoading || salesLoading || productionsLoading || ordersLoading || usersLoading || catalogProductsLoading || catalogCategoriesLoading,
+    loading: userLoading || companyLoading || productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading,
     addProduct,
     updateProduct,
     deleteProduct,
