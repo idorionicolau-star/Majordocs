@@ -26,6 +26,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { EditCatalogProductDialog } from './edit-catalog-product-dialog';
 import { InventoryContext } from '@/context/inventory-context';
@@ -61,6 +62,8 @@ export function CatalogManager() {
   const [productToDelete, setProductToDelete] = useState<CatalogProduct | null>(null);
   const [categoryToEdit, setCategoryToEdit] = useState<CatalogCategory | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
+
 
   if (!inventoryContext) {
     return <div>A carregar gestor de catálogo...</div>
@@ -70,18 +73,25 @@ export function CatalogManager() {
   
   const handleAddCategory = async () => {
     if (!catalogCategoriesCollectionRef) return;
-    const newCategoryName = prompt('Nome da nova categoria:');
-    if (newCategoryName && !categories?.some(c => c.name === newCategoryName)) {
-      toast({ title: 'A adicionar categoria...' });
-      const newCategory = { name: newCategoryName };
-      try {
-        await addDoc(catalogCategoriesCollectionRef, newCategory);
-        toast({ title: 'Categoria Adicionada', description: `A categoria "${newCategoryName}" foi adicionada.` });
-      } catch (e) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível adicionar a categoria.' });
-      }
-    } else if (newCategoryName) {
+    if (!newCategoryName.trim()) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'O nome da categoria não pode estar em branco.' });
+      return;
+    }
+    
+    if (categories?.some(c => c.name.toLowerCase() === newCategoryName.trim().toLowerCase())) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Essa categoria já existe.' });
+      return;
+    }
+      
+    toast({ title: 'A adicionar categoria...' });
+    const newCategory = { name: newCategoryName.trim() };
+    try {
+      await addDoc(catalogCategoriesCollectionRef, newCategory);
+      toast({ title: 'Categoria Adicionada', description: `A categoria "${newCategoryName.trim()}" foi adicionada.` });
+      setNewCategoryName('');
+      setShowAddCategoryDialog(false);
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível adicionar a categoria.' });
     }
   };
   
@@ -99,7 +109,7 @@ export function CatalogManager() {
   const handleEditCategory = async () => {
     if (!categoryToEdit || !newCategoryName.trim() || !firestore || !user) return;
 
-    if (categories?.some(c => c.name === newCategoryName.trim() && c.id !== categoryToEdit.id)) {
+    if (categories?.some(c => c.name.toLowerCase() === newCategoryName.trim().toLowerCase() && c.id !== categoryToEdit.id)) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Essa categoria já existe.' });
       return;
     }
@@ -109,7 +119,6 @@ export function CatalogManager() {
       const categoryDocRef = doc(firestore, `users/${user.uid}/catalogCategories`, categoryToEdit.id);
       await updateDoc(categoryDocRef, { name: newCategoryName.trim() });
       
-      // Update all products in that category
       const q = query(collection(firestore, `users/${user.uid}/catalogProducts`), where("category", "==", categoryToEdit.name));
       const querySnapshot = await getDocs(q);
       const batch = writeBatch(firestore);
@@ -222,9 +231,9 @@ export function CatalogManager() {
               Renomeie a categoria. Todos os produtos associados serão atualizados.
             </AlertDialogDescription>
             <div className="pt-4">
-                <Label htmlFor="category-name">Nome da Categoria</Label>
+                <Label htmlFor="category-name-edit">Nome da Categoria</Label>
                 <Input 
-                    id="category-name"
+                    id="category-name-edit"
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
                     className="mt-2"
@@ -237,6 +246,32 @@ export function CatalogManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={showAddCategoryDialog} onOpenChange={setShowAddCategoryDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Adicionar Nova Categoria</AlertDialogTitle>
+            <AlertDialogDescription>
+              Digite o nome para a nova categoria de produtos.
+            </AlertDialogDescription>
+            <div className="pt-4">
+                <Label htmlFor="category-name-add">Nome da Categoria</Label>
+                <Input 
+                    id="category-name-add"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    className="mt-2"
+                    placeholder="Ex: Pavimento"
+                />
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setNewCategoryName('')}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAddCategory}>Adicionar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <Tabs defaultValue="products">
         <TabsList className="grid w-full grid-cols-2">
@@ -303,7 +338,7 @@ export function CatalogManager() {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <p className="text-sm text-muted-foreground">Gerencie as categorias de produtos.</p>
-              <Button size="sm" onClick={handleAddCategory}>
+              <Button size="sm" onClick={() => setShowAddCategoryDialog(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Adicionar Categoria
               </Button>
