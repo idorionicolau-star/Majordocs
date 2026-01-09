@@ -75,6 +75,11 @@ export function AddEmployeeDialog({ companyId }: AddEmployeeDialogProps) {
 
         await updateUserProfile(user, { displayName: values.name });
         
+        // **LÓGICA DA `companyId` - PASSO 3: LIGAÇÃO DO FUNCIONÁRIO À EMPRESA**
+        // Ao criar o perfil do novo funcionário:
+        // 1. A sua `role` é definida como 'Employee'.
+        // 2. A sua `companyId` é preenchida com a `companyId` do administrador que o está a criar.
+        // Isto garante que o funcionário pertence à empresa correta.
         const userDocRef = doc(firestore, 'users', user.uid);
         await setDoc(userDocRef, {
             name: values.name,

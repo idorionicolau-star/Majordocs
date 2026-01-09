@@ -83,8 +83,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, user]);
   const { data: userData, isLoading: userLoading } = useDoc<User>(userDocRef);
   
+  // **LÓGICA DA `companyId` - PASSO 4: UTILIZAÇÃO CENTRALIZADA**
+  // A `companyId` é obtida a partir do perfil do utilizador autenticado.
   const companyId = userData?.companyId;
 
+  // Todas as consultas subsequentes utilizam esta `companyId` para garantir
+  // que apenas os dados da empresa correta são acedidos.
   const companyDocRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
     return doc(firestore, 'companies', companyId);

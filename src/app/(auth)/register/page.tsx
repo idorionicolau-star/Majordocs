@@ -51,16 +51,22 @@ export default function RegisterPage() {
 
       await updateUserProfile(user, { displayName: fullName });
 
-      // Create user profile in Firestore
+      // **LÓGICA DA `companyId` - PASSO 1: CRIAÇÃO DA CONTA-MÃE**
+      // Ao criar o perfil do primeiro utilizador (o Admin):
+      // 1. A sua `role` é definida como 'Admin'.
+      // 2. A `companyId` é definida como o próprio `uid` do utilizador.
+      // Isto estabelece este utilizador como o "dono" da empresa.
       const userDocRef = doc(firestore, 'users', user.uid);
       await setDoc(userDocRef, {
         name: fullName,
         email: user.email,
-        role: 'Admin', // The first user to register is an Admin
-        companyId: user.uid, // The admin's companyId is their own UID
+        role: 'Admin',
+        companyId: user.uid, 
       });
       
-      // Automatically create the company document
+      // **LÓGICA DA `companyId` - PASSO 2: CRIAÇÃO DO DOCUMENTO DA EMPRESA**
+      // É criado um documento na coleção `companies` cujo ID é o `uid` do Admin.
+      // Todos os dados da empresa (produtos, vendas, etc.) viverão dentro deste documento.
       const companyDocRef = doc(firestore, 'companies', user.uid);
       await setDoc(companyDocRef, {
         name: `Empresa de ${fullName}`,
