@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { LocationsManager } from "@/components/settings/locations-manager";
-import { EmployeeManager } from "@/components/settings/employee-manager";
 import { cn } from "@/lib/utils";
 import {
   Accordion,
@@ -15,7 +14,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { ChevronDown, Trash2, Code, Building, Users } from "lucide-react";
+import { ChevronDown, Trash2, Code, Building } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
@@ -51,7 +50,6 @@ export default function SettingsPage() {
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
 
-  // Obtemos a companyId do contexto principal.
   const companyId = inventoryContext?.companyId;
 
   const [companyDetails, setCompanyDetails] = useState({
@@ -68,7 +66,6 @@ export default function SettingsPage() {
     if (inventoryContext?.companyData) {
       setCompanyDetails({
         name: inventoryContext.companyData.name || '',
-        email: inventoryContext.companyData.email || '',
         phone: inventoryContext.companyData.phone || '',
         address: inventoryContext.companyData.address || '',
         taxId: inventoryContext.companyData.taxId || ''
@@ -242,7 +239,7 @@ export default function SettingsPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email de Contacto</Label>
-                                <Input id="email" type="email" value={companyDetails.email} onChange={handleDetailChange} />
+                                <Input id="email" type="email" value={companyDetails.email} onChange={handleDetailChange} disabled />
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="phone">Telefone</Label>
@@ -362,27 +359,7 @@ export default function SettingsPage() {
               </AccordionContent>
             </Card>
           </AccordionItem>
-          <AccordionItem value="item-employees" className="border-0">
-            <Card className="glass-card shadow-sm">
-              <AccordionTrigger className="w-full hover:no-underline">
-                <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
-                  <div className="flex-1">
-                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center flex items-center justify-center gap-2"><Users /> Gestão de Funcionários</CardTitle>
-                    <CardDescription className="text-center">
-                      Adicione, visualize e gerencie os membros da sua equipa.
-                    </CardDescription>
-                  </div>
-                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                </CardHeader>
-              </AccordionTrigger>
-              <AccordionContent>
-                <CardContent className="p-6 sm:p-8 pt-0">
-                  {/* Passamos a companyId diretamente como uma propriedade. */}
-                  <EmployeeManager companyId={companyId || null} />
-                </CardContent>
-              </AccordionContent>
-            </Card>
-          </AccordionItem>
+          
           <AccordionItem value="item-2" className="border-0">
             <Card className="glass-card shadow-sm">
               <AccordionTrigger className="w-full hover:no-underline">
@@ -403,6 +380,7 @@ export default function SettingsPage() {
               </AccordionContent>
             </Card>
           </AccordionItem>
+          
           <AccordionItem value="item-5" className="border-0">
             <Card className="glass-card shadow-sm">
               <AccordionTrigger className="w-full hover:no-underline">
@@ -437,3 +415,5 @@ export default function SettingsPage() {
     </>
   );
 }
+
+    
