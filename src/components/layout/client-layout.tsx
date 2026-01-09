@@ -3,16 +3,18 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useContext } from 'react';
 import { cn } from '@/lib/utils';
 import { mainNavItems } from '@/lib/data';
 import { Header } from './header';
 import { SubHeader } from './sub-header';
+import { AuthContext } from '@/firebase/auth/auth-context';
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const router = useRouter();
+  const authContext = useContext(AuthContext);
 
   const [animationClass, setAnimationClass] = useState('animate-in');
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -24,8 +26,17 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     (item) => item.href === pathname
   );
 
+  const isAuthPage = pathname === '/login' || pathname === '/register';
+
+  useEffect(() => {
+    if (authContext && !authContext.loading && !authContext.user && !isAuthPage) {
+      router.push('/login');
+    }
+  }, [authContext, router, isAuthPage]);
+
+
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchEndRef.current = null; // Reset on new touch
+    touchEndRef.current = null;
     touchStartRef.current = {
       x: e.targetTouches[0].clientX,
       y: e.targetTouches[0].clientY,
@@ -95,6 +106,18 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         onTouchEnd: handleTouchEnd,
       }
     : {};
+
+  if (isAuthPage) {
+    return <>{children}</>;
+  }
+
+  if (!authContext || authContext.loading || !authContext.user || !authContext.companyId) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        A carregar aplicação...
+      </div>
+    );
+  }
     
   return (
     <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">

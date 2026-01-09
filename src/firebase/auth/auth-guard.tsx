@@ -1,6 +1,11 @@
 
 'use client';
 
+// This component is no longer needed as its logic has been
+// centralized into `src/components/layout/client-layout.tsx`
+// to prevent race conditions and simplify the component tree.
+// It can be safely deleted in a future step.
+
 import { useContext, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthContext } from './auth-context';
@@ -15,10 +20,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [authContext, router]);
 
-  // Se o contexto ainda não estiver disponível, ou se estiver a carregar,
-  // ou se não houver utilizador ou companyId, mostra o loader.
-  // Isto impede que os componentes filhos (como o InventoryProvider) tentem
-  // carregar dados antes de a autenticação estar completa.
   if (!authContext || authContext.loading || !authContext.user || !authContext.companyId) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -27,6 +28,5 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Apenas renderiza os filhos quando a autenticação estiver 100% confirmada.
   return <>{children}</>;
 }

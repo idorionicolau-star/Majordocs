@@ -2,18 +2,17 @@
 'use client';
 
 import { InventoryProvider } from '@/context/inventory-context';
-import { AuthGuard } from '@/firebase/auth/auth-guard';
 
 export default function AppLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // The AuthGuard logic has been moved to ClientLayout.
+  // This layout now just provides the data context for the authenticated app.
   return (
-      <AuthGuard>
-        <InventoryProvider>
-          {children}
-        </InventoryProvider>
-      </AuthGuard>
+      <InventoryProvider>
+        {children}
+      </InventoryProvider>
   );
 }
