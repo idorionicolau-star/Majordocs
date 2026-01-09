@@ -5,7 +5,7 @@ import { useState, useMemo, useContext } from 'react';
 import type { Employee, User } from '@/lib/types';
 import { InventoryContext } from '@/context/inventory-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, doc, deleteDoc, query, where, updateDoc } from 'firebase/firestore';
 import {
   Table,
   TableBody,
@@ -27,8 +27,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, PlusCircle } from 'lucide-react';
+import { Trash2, Edit } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EditEmployeeDialog } from '@/components/users/edit-employee-dialog';
 
 export default function UsersPage() {
   const { toast } = useToast();
@@ -48,6 +49,7 @@ export default function UsersPage() {
   const { data: adminUsers, isLoading: adminsLoading } = useCollection<User>(usersCollectionQuery);
   const { data: employees, isLoading: employeesLoading } = useCollection<Employee>(employeesCollectionRef);
   const [userToDelete, setUserToDelete] = useState<{ id: string, name: string, type: 'admin' | 'employee' } | null>(null);
+  const [userToEdit, setUserToEdit] = useState<Employee | null>(null);
 
   const isLoading = contextLoading || adminsLoading || employeesLoading;
 
@@ -59,9 +61,37 @@ export default function UsersPage() {
     if (employees) {
       combined.push(...employees.map(e => ({ ...e, key: e.id, name: e.username, type: 'Funcionário' as const })));
     }
-    // Filter out the current admin user from deletion capabilities if they are in the list
     return combined;
   }, [adminUsers, employees]);
+
+  const handleUpdateUser = async (updatedData: Employee) => {
+    if (!firestore || !companyId || !updatedData.id) return;
+    
+    const docRef = doc(firestore, `companies/${companyId}/employees`, updatedData.id);
+    
+    const { id, ...dataToUpdate } = updatedData;
+     if(dataToUpdate.password) {
+        dataToUpdate.password = btoa(dataToUpdate.password);
+    } else {
+        // don't update password if it's not provided
+        delete dataToUpdate.password;
+    }
+
+    try {
+        await updateDoc(docRef, dataToUpdate);
+        toast({
+            title: 'Utilizador Atualizado',
+            description: `Os dados de "${updatedData.username}" foram atualizados.`,
+        });
+    } catch(error) {
+        toast({
+            variant: 'destructive',
+            title: 'Erro ao Atualizar',
+            description: 'Não foi possível guardar as alterações.',
+        });
+    }
+  };
+
 
   const handleDeleteUser = async () => {
     if (!userToDelete || !firestore || !companyId) return;
@@ -129,6 +159,15 @@ export default function UsersPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {userToEdit && (
+        <EditEmployeeDialog 
+            employee={userToEdit}
+            onUpdate={handleUpdateUser}
+            open={!!userToEdit}
+            onOpenChange={(open) => !open && setUserToEdit(null)}
+        />
+      )}
+
       <div className="flex flex-col gap-6">
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
           <div>
@@ -161,13 +200,22 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell className="text-right">
                        {user.type !== 'Admin' && userData?.id !== user.id && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setUserToDelete({ id: user.id, name: user.name, type: 'employee' })}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <div className="flex items-center justify-end">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setUserToEdit(user as Employee)}
+                                >
+                                <Edit className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                            <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setUserToDelete({ id: user.id, name: user.name, type: 'employee' })}
+                            >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
