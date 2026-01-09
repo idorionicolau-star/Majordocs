@@ -12,6 +12,7 @@ export type Employee = {
   username: string;
   password?: string; // Should be handled securely, never stored in plain text
   role: 'Admin' | 'Employee';
+  companyId: string;
   permissions?: {
     canViewDashboard: boolean;
     canViewInventory: boolean;

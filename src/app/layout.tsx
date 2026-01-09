@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 import { FirebaseProvider } from '@/firebase';
 import { ClientLayout } from '@/components/layout/client-layout';
+import { AuthProvider } from '@/firebase/auth/auth-context';
 
 // Using Inter font for a modern, clean look
 import { Inter, Space_Grotesk } from 'next/font/google'
@@ -44,10 +45,12 @@ export default function RootLayout({
           storageKey="majorstockx-theme"
         >
           <FirebaseProvider>
-            <ClientLayout>
-                {children}
-            </ClientLayout>
-            <Toaster />
+            <AuthProvider>
+              <ClientLayout>
+                  {children}
+              </ClientLayout>
+              <Toaster />
+            </AuthProvider>
           </FirebaseProvider>
         </ThemeProvider>
       </body>

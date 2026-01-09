@@ -8,8 +8,9 @@ import {
   ReactNode,
   useCallback,
   useMemo,
+  useContext,
 } from 'react';
-import type { Product, Location, Sale, Production, Order, User, Company } from '@/lib/types';
+import type { Product, Location, Sale, Production, Order, Company } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import {
@@ -25,6 +26,7 @@ import {
   setDoc,
 } from 'firebase/firestore';
 import { initialCatalog } from '@/lib/data';
+import { AuthContext } from '@/firebase/auth/auth-context';
 
 type CatalogProduct = Omit<
   Product,
@@ -65,63 +67,53 @@ interface InventoryContextType {
   clearProductsCollection: () => Promise<void>;
   updateCompany: (details: Partial<Company>) => Promise<void>;
   companyData: Company | null;
-  userData: User | null;
-  companyId: string | null;
 }
 
 export const InventoryContext = createContext<InventoryContextType | undefined>(
   undefined
 );
 
-// Hardcoded values for single-user mode
-const COMPANY_ID = 'single-company';
-const defaultUser: User = {
-    id: 'admin-user',
-    name: 'Admin',
-    email: 'admin@majorstockx.dev',
-    role: 'Admin',
-    companyId: COMPANY_ID,
-};
-const defaultCompany: Company = {
-    id: COMPANY_ID,
-    name: 'A Minha Empresa',
-    ownerId: 'admin-user',
-};
-
-
 export function InventoryProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const authContext = useContext(AuthContext);
+  const companyId = authContext?.companyId;
 
   const productsCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'products');
-  }, [firestore]);
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `companies/${companyId}/products`);
+  }, [firestore, companyId]);
 
   const salesCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'sales');
-  }, [firestore]);
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `companies/${companyId}/sales`);
+  }, [firestore, companyId]);
 
   const productionsCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'productions');
-  }, [firestore]);
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `companies/${companyId}/productions`);
+  }, [firestore, companyId]);
   
   const ordersCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'orders');
-  }, [firestore]);
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `companies/${companyId}/orders`);
+  }, [firestore, companyId]);
   
   const catalogProductsCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'catalogProducts');
-  }, [firestore]);
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `companies/${companyId}/catalogProducts`);
+  }, [firestore, companyId]);
 
   const catalogCategoriesCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'catalogCategories');
-  }, [firestore]);
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `companies/${companyId}/catalogCategories`);
+  }, [firestore, companyId]);
+  
+  const companyDocRef = useMemoFirebase(() => {
+    if (!firestore || !companyId) return null;
+    return doc(firestore, `companies`, companyId);
+  }, [firestore, companyId]);
+
 
   const { data: productsData, isLoading: productsLoading } =
     useCollection<Product>(productsCollectionRef);
@@ -148,19 +140,32 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const [locations, setLocations] = useState<Location[]>([]);
   const [isMultiLocation, setIsMultiLocation] = useState(false);
+  const [companyData, setCompanyData] = useState<Company | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const multiLocationEnabled =
-        localStorage.getItem('majorstockx-multi-location-enabled') === 'true';
+        localStorage.getItem(`majorstockx-multi-location-enabled-${companyId}`) === 'true';
       setIsMultiLocation(multiLocationEnabled);
 
-      const storedLocations = localStorage.getItem('majorstockx-locations');
+      const storedLocations = localStorage.getItem(`majorstockx-locations-${companyId}`);
       if (storedLocations) {
         setLocations(JSON.parse(storedLocations));
       }
     }
-  }, []);
+  }, [companyId]);
+
+  useEffect(() => {
+    if(companyDocRef) {
+      const unsub = onSnapshot(companyDocRef, (doc) => {
+        if(doc.exists()) {
+          setCompanyData({ id: doc.id, ...doc.data() } as Company);
+        }
+      });
+      return () => unsub();
+    }
+  }, [companyDocRef]);
+
 
  const addProduct = useCallback(
     (
@@ -285,7 +290,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       toLocationId: string,
       quantity: number
     ) => {
-      if (!firestore) return;
+      if (!firestore || !companyId) return;
 
       const fromProduct = products.find(
         (p) => p.name === productName && p.location === fromLocationId
@@ -312,7 +317,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       }
 
       const batch = writeBatch(firestore);
-      const productsRef = collection(firestore, `products`);
+      const productsRef = collection(firestore, `companies/${companyId}/products`);
 
       const fromDocRef = doc(productsRef, fromProduct.id);
       batch.update(fromDocRef, { stock: fromProduct.stock - quantity });
@@ -348,12 +353,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [firestore, products, toast]
+    [firestore, companyId, products, toast]
   );
 
   const updateProductStock = useCallback(
     async (productName: string, quantity: number, locationId?: string) => {
-      if (!firestore) return;
+      if (!firestore || !companyId) return;
 
       const targetLocation =
         locationId ||
@@ -368,7 +373,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       );
 
       if (existingInstance && existingInstance.id) {
-        const docRef = doc(firestore, `products`, existingInstance.id);
+        const docRef = doc(firestore, `companies/${companyId}/products`, existingInstance.id);
         updateDoc(docRef, {
           stock: existingInstance.stock + quantity,
         });
@@ -389,11 +394,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           location: targetLocation,
           lastUpdated: new Date().toISOString().split('T')[0],
         };
-        const productsRef = collection(firestore, `products`);
+        const productsRef = collection(firestore, `companies/${companyId}/products`);
         addDoc(productsRef, newProductData);
       }
     },
-    [firestore, products, catalogProductsData, isMultiLocation, locations, toast]
+    [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast]
   );
 
   const clearProductsCollection = useCallback(async () => {
@@ -425,16 +430,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [productsCollectionRef, firestore, toast]);
 
     const updateCompany = useCallback(async (details: Partial<Company>) => {
-    // This function is a no-op in single user mode but kept for API consistency.
-    console.log("updateCompany called with:", details);
-    toast({ title: 'Operação não suportada', description: 'A edição dos dados da empresa não está disponível no modo de utilizador único.'})
-    return Promise.resolve();
-  }, [toast]);
+      if(companyDocRef) {
+         await setDoc(companyDocRef, details, { merge: true });
+      }
+  }, [companyDocRef]);
 
   const value: InventoryContextType = {
-    companyId: COMPANY_ID,
-    userData: defaultUser,
-    companyData: defaultCompany,
+    companyData,
     products,
     sales: salesData || [],
     productions: productionsData || [],
@@ -443,7 +445,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     catalogCategories: catalogCategoriesData || [],
     locations,
     isMultiLocation,
-    loading: productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading,
+    loading: productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading || authContext.loading,
     addProduct,
     updateProduct,
     deleteProduct,

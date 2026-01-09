@@ -2,6 +2,7 @@
 'use client';
 
 import { InventoryProvider } from '@/context/inventory-context';
+import { AuthGuard } from '@/firebase/auth/auth-guard';
 
 export default function AppLayout({
   children,
@@ -9,8 +10,10 @@ export default function AppLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <InventoryProvider>
-        {children}
-    </InventoryProvider>
+      <InventoryProvider>
+        <AuthGuard>
+          {children}
+        </AuthGuard>
+      </InventoryProvider>
   );
 }

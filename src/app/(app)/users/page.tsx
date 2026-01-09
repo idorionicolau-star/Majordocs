@@ -1,8 +1,7 @@
 
 "use client";
 
-import { useState, useContext }
-from "react";
+import { useState, useContext } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { UsersDataTable } from "@/components/users/data-table";
 import { columns } from "@/components/users/columns";
@@ -12,25 +11,26 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Employee } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, addDoc, doc, deleteDoc } from "firebase/firestore";
+import { AuthContext } from "@/firebase/auth/auth-context";
 
 export default function UsersPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { companyId, user } = useContext(AuthContext) || {};
 
   const employeesCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, `employees`);
-  }, [firestore]);
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `companies/${companyId}/employees`);
+  }, [firestore, companyId]);
   
   const { data: employees, isLoading: employeesLoading } = useCollection<Employee>(employeesCollectionRef);
-  const { userData } = useContext(InventoryContext) || {};
   
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
-  const handleAddEmployee = async (employeeData: Omit<Employee, 'id'>) => {
+  const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId'>) => {
     if (!employeesCollectionRef) return;
     // In a real app, password should be hashed before saving
-    await addDoc(employeesCollectionRef, employeeData);
+    await addDoc(employeesCollectionRef, { ...employeeData, companyId });
     toast({
       title: "Funcionário Adicionado",
       description: `O funcionário "${employeeData.username}" foi adicionado.`,
@@ -38,8 +38,8 @@ export default function UsersPage() {
   };
 
   const handleDeleteEmployee = async () => {
-    if (employeeToDelete && employeeToDelete.id && firestore) {
-      const employeeDocRef = doc(firestore, `employees`, employeeToDelete.id);
+    if (employeeToDelete && employeeToDelete.id && firestore && companyId) {
+      const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employeeToDelete.id);
       await deleteDoc(employeeDocRef);
       toast({
         title: "Funcionário Removido",
@@ -74,7 +74,7 @@ export default function UsersPage() {
         <UsersDataTable 
             columns={columns({
                 onDelete: (employee) => setEmployeeToDelete(employee),
-                currentUserId: userData?.id
+                currentUserId: user?.id
             })} 
             data={employees || []} 
         />
