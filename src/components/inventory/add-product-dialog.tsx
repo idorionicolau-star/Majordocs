@@ -28,17 +28,22 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Box } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { Plus, Box, ChevronsUpDown, Check } from "lucide-react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Location, Product } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { InventoryContext } from '@/context/inventory-context';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
+import { cn } from '@/lib/utils';
+
+type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
 const formSchema = z.object({
-  category: z.string().min(1, { message: "A categoria é obrigatória." }),
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
+  category: z.string().min(1, { message: "A categoria é obrigatória." }),
   price: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
   stock: z.coerce.number().min(0, { message: "O estoque não pode ser negativo." }),
   lowStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
@@ -57,8 +62,9 @@ interface AddProductDialogProps {
 
 function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, triggerType = 'fab' }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
+  const [productSelectorOpen, setProductSelectorOpen] = useState(false);
   const inventoryContext = useContext(InventoryContext);
-  const { catalogCategories } = inventoryContext || { catalogCategories: [] };
+  const { catalogCategories, catalogProducts } = inventoryContext || { catalogCategories: [], catalogProducts: [] };
 
   const form = useForm<AddProductFormValues>({
     resolver: zodResolver(formSchema),
@@ -73,6 +79,11 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
     },
   });
 
+  const watchedCategory = useWatch({ control: form.control, name: 'category' });
+  const watchedName = useWatch({ control: form.control, name: 'name' });
+
+  const filteredCatalogProducts = catalogProducts.filter(p => p.category === watchedCategory);
+
    useEffect(() => {
     if (locations.length > 0 && !form.getValues('location')) {
       form.setValue('location', locations[0].id);
@@ -81,12 +92,29 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
 
   useEffect(() => {
     if (open) {
-      form.reset();
-       if (locations.length > 0) {
-        form.setValue('location', locations[0].id);
-      }
+      form.reset({
+        category: "",
+        name: "",
+        price: 0,
+        stock: 0,
+        lowStockThreshold: 10,
+        criticalStockThreshold: 5,
+        location: locations.length > 0 ? locations[0].id : '',
+      });
     }
   }, [open, form, locations]);
+
+  const handleProductSelect = (productName: string) => {
+    const selectedCatalogProduct = catalogProducts.find(p => p.name === productName);
+    if (selectedCatalogProduct) {
+      form.setValue('name', selectedCatalogProduct.name);
+      form.setValue('price', selectedCatalogProduct.price);
+      form.setValue('lowStockThreshold', selectedCatalogProduct.lowStockThreshold);
+      form.setValue('criticalStockThreshold', selectedCatalogProduct.criticalStockThreshold);
+    }
+    setProductSelectorOpen(false);
+  };
+
 
   function onSubmit(values: AddProductFormValues) {
     if (isMultiLocation && !values.location) {
@@ -94,7 +122,12 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
       return;
     }
     const newProduct: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'> = {
-      ...values,
+      name: values.name,
+      category: values.category,
+      price: values.price,
+      stock: values.stock,
+      lowStockThreshold: values.lowStockThreshold,
+      criticalStockThreshold: values.criticalStockThreshold,
       location: values.location || (locations.length > 0 ? locations[0].id : 'Principal'),
     };
     onAddProduct(newProduct);
@@ -138,41 +171,76 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <FormField
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Categoria</FormLabel>
+                    <Select onValueChange={(value) => {
+                      field.onChange(value);
+                      form.setValue('name', ''); // Reset product name when category changes
+                    }} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma categoria" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {catalogCategories.sort((a,b) => a.name.localeCompare(b.name)).map(cat => (
+                          <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
                   control={form.control}
-                  name="category"
+                  name="name"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Categoria</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma categoria" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {catalogCategories.sort((a,b) => a.name.localeCompare(b.name)).map(cat => (
-                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
+                      <FormItem>
                         <FormLabel>Nome do Produto</FormLabel>
-                        <FormControl>
-                            <Input placeholder="Ex: Grelha 30x30" {...field} />
-                        </FormControl>
+                        <Popover open={productSelectorOpen} onOpenChange={setProductSelectorOpen}>
+                          <PopoverTrigger asChild>
+                             <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  disabled={!watchedCategory}
+                                  className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                                >
+                                  {field.value || "Selecione um produto..."}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                          </PopoverTrigger>
+                           <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                              <Command>
+                                <CommandInput placeholder="Pesquisar produto..." />
+                                <CommandList>
+                                  <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+                                  <CommandGroup>
+                                    {filteredCatalogProducts.map((product) => (
+                                      <CommandItem
+                                        value={product.name}
+                                        key={product.id}
+                                        onSelect={() => handleProductSelect(product.name)}
+                                      >
+                                        <Check className={cn("mr-2 h-4 w-4", product.name === field.value ? "opacity-100" : "opacity-0")} />
+                                        {product.name}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                           </PopoverContent>
+                        </Popover>
                         <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                      </FormItem>
+                  )}
+              />
             </div>
              {isMultiLocation && (
               <FormField
