@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useContext } from 'react';
@@ -118,7 +117,6 @@ export default function UsersPage() {
             <h1 className="text-2xl md:text-3xl font-headline font-bold">Utilizadores</h1>
             <p className="text-muted-foreground">Crie e gira os utilizadores internos da sua empresa.</p>
           </div>
-          <AddEmployeeDialog companyId={companyId} />
         </div>
 
         <div className="rounded-md border">
