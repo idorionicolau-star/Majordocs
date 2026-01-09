@@ -164,25 +164,29 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const registerCompany = async (companyName: string, adminUsername: string, adminPass: string): Promise<boolean> => {
     if (!firestore) return false;
 
-     const companiesSnapshot = await getDocs(collection(firestore, 'companies'));
-     for (const companyDoc of companiesSnapshot.docs) {
-        const employeesCollection = collection(firestore, `companies/${companyDoc.id}/employees`);
-        const q = query(employeesCollection, where("username", "==", adminUsername));
-        const userSnapshot = await getDocs(q);
-        if (!userSnapshot.empty) {
-            console.error("Username already exists");
-            return false;
-        }
-     }
-
     try {
+        // Step 1: Create the company first.
         const companyCollectionRef = collection(firestore, 'companies');
         const companyDocRef = await addDoc(companyCollectionRef, { name: companyName });
 
+        // Step 2: Check for existing username *within the new company* (will always be false, but good practice).
         const employeesCollectionRef = collection(firestore, `companies/${companyDocRef.id}/employees`);
+        const q = query(employeesCollectionRef, where("username", "==", adminUsername));
+        const existingUserSnapshot = await getDocs(q);
+
+        if (!existingUserSnapshot.empty) {
+            // This case should ideally not happen on initial registration.
+            // If it does, it might indicate a race condition or repeated attempt.
+            // For robustness, we can delete the created company or handle it.
+            await deleteDoc(companyDocRef); // Clean up orphaned company
+            console.error("Username already exists for this new company ID, which is unexpected.");
+            return false;
+        }
+
+        // Step 3: Create the admin employee.
         await addDoc(employeesCollectionRef, {
             username: adminUsername,
-            password: adminPass,
+            password: adminPass, // Insecure, but for demo purposes
             role: 'Admin',
             companyId: companyDocRef.id,
             permissions: {
@@ -465,3 +469,4 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
+
