@@ -21,6 +21,8 @@ import { useUser } from '@/firebase/auth/use-user';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, collection, query, where, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 
 
 export function EmployeeManager() {
@@ -38,39 +40,60 @@ export function EmployeeManager() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   const handleAddUser = async (newUserData: any) => {
-     if (!adminUser) {
-        toast({ variant: "destructive", title: "Erro", description: "Não autenticado." });
-        return;
+    if (!adminUser || !firestore) {
+      toast({ variant: "destructive", title: "Erro", description: "Não autenticado ou a base de dados não está pronta." });
+      return;
     }
+    
+    // This is a workaround for a secondary Firebase app instance issue.
+    // We get a temporary auth instance to create the user, but the primary instance will still manage the session.
+    const tempAuth = getAuth(useFirebase().firebaseApp);
+
     toast({ title: "A criar funcionário...", description: "Por favor, aguarde." });
 
     try {
-      const token = await adminUser.getIdToken();
-      const response = await fetch('/api/create-user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(newUserData),
+      // 1. Create user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(tempAuth, newUserData.email, newUserData.password);
+      const newUser = userCredential.user;
+
+      // 2. Update their profile
+      await updateProfile(newUser, { displayName: newUserData.name });
+
+      // 3. Create user profile in Firestore
+      const userDocRef = doc(firestore, 'users', newUser.uid);
+      await setDoc(userDocRef, {
+        id: newUser.uid,
+        name: newUserData.name,
+        email: newUserData.email,
+        role: newUserData.role,
+        permissions: newUserData.permissions,
+        status: 'Ativo',
+        companyId: adminUser.uid, // Link to the admin's company
+        avatar: `https://picsum.photos/seed/${newUser.uid}/40/40`,
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Ocorreu um erro desconhecido.');
-      }
-        
       toast({
-          title: "Funcionário Convidado!",
+          title: "Funcionário Criado!",
           description: `${newUserData.name} foi adicionado à sua empresa e pode agora fazer login.`,
       });
+      
+      // It's good practice to sign the new user out of the temporary auth instance
+      // so the admin's session remains primary.
+      await tempAuth.signOut();
+
 
     } catch (error: any) {
+        let description = "Não foi possível criar o funcionário. Tente novamente.";
+        if (error.code === 'auth/email-already-in-use') {
+            description = "Este endereço de email já está em uso por outra conta.";
+        } else if (error.code === 'auth/weak-password') {
+            description = "A senha é muito fraca. Tente uma senha mais forte.";
+        }
+        console.error("Error creating user:", error);
         toast({
             variant: "destructive",
             title: "Erro ao Adicionar Funcionário",
-            description: error.message || "Não foi possível adicionar o funcionário. Verifique se o e-mail já existe.",
+            description: description,
         });
     }
   };
@@ -176,3 +199,5 @@ export function EmployeeManager() {
     </>
   );
 }
+
+    
