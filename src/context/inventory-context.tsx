@@ -9,7 +9,7 @@ import {
   useCallback,
   useMemo,
 } from 'react';
-import type { Product, Location, Sale, User, Company } from '@/lib/types';
+import type { Product, Location, Sale, Production, Order, User, Company } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
@@ -20,12 +20,10 @@ import {
   getDocs,
   query,
   where,
+  addDoc,
+  updateDoc,
+  deleteDoc,
 } from 'firebase/firestore';
-import {
-  addDocumentNonBlocking,
-  updateDocumentNonBlocking,
-  deleteDocumentNonBlocking,
-} from '@/firebase/non-blocking-updates';
 import { initialCatalog } from '@/lib/data';
 
 type CatalogProduct = Omit<
@@ -35,10 +33,13 @@ type CatalogProduct = Omit<
 type CatalogCategory = { id: string; name: string };
 
 interface InventoryContextType {
+  companyId: string | null;
   userData: User | null;
   companyData: Company | null;
   products: Product[];
   sales: Sale[];
+  productions: Production[];
+  orders: Order[];
   users: User[];
   catalogProducts: CatalogProduct[];
   catalogCategories: CatalogCategory[];
@@ -54,7 +55,7 @@ interface InventoryContextType {
   updateProduct: (instanceId: string, updatedData: Partial<Product>) => void;
   deleteProduct: (instanceId: string) => void;
   transferStock: (
-    productId: string,
+    productName: string,
     fromLocationId: string,
     toLocationId: string,
     quantity: number
@@ -100,6 +101,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!firestore || !companyId) return null;
     return collection(firestore, `companies/${companyId}/sales`);
   }, [firestore, companyId]);
+
+  const productionsCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `companies/${companyId}/productions`);
+  }, [firestore, companyId]);
+  
+  const ordersCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `companies/${companyId}/orders`);
+  }, [firestore, companyId]);
   
   const usersCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
@@ -120,6 +131,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     useCollection<Product>(productsCollectionRef);
   const { data: salesData, isLoading: salesLoading } =
     useCollection<Sale>(salesCollectionRef);
+   const { data: productionsData, isLoading: productionsLoading } =
+    useCollection<Production>(productionsCollectionRef);
+   const { data: ordersData, isLoading: ordersLoading } =
+    useCollection<Order>(ordersCollectionRef);
    const { data: usersData, isLoading: usersLoading } =
     useCollection<User>(usersCollectionRef);
   const { data: catalogProductsData, isLoading: catalogProductsLoading } =
@@ -175,7 +190,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           (locations.length > 0 ? locations[0].id : 'Principal'),
         reservedStock: 0,
       };
-      addDocumentNonBlocking(productsCollectionRef, newProduct);
+      addDoc(productsCollectionRef, newProduct);
     },
     [productsCollectionRef, locations]
   );
@@ -252,7 +267,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
        if (!productsCollectionRef || !instanceId) return;
 
       const docRef = doc(productsCollectionRef, instanceId);
-      updateDocumentNonBlocking(docRef, {
+      updateDoc(docRef, {
         ...updatedData,
         lastUpdated: new Date().toISOString().split('T')[0],
       });
@@ -264,7 +279,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     (instanceId: string) => {
        if (!productsCollectionRef || !instanceId) return;
        const docRef = doc(productsCollectionRef, instanceId);
-      deleteDocumentNonBlocking(docRef);
+      deleteDoc(docRef);
     },
     [productsCollectionRef]
   );
@@ -360,7 +375,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       if (existingInstance && existingInstance.id) {
         const docRef = doc(firestore, `companies/${companyId}/products`, existingInstance.id);
-        updateDocumentNonBlocking(docRef, {
+        updateDoc(docRef, {
           stock: existingInstance.stock + quantity,
         });
       } else {
@@ -381,7 +396,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           lastUpdated: new Date().toISOString().split('T')[0],
         };
         const productsRef = collection(firestore, `companies/${companyId}/products`);
-        addDocumentNonBlocking(productsRef, newProductData);
+        addDoc(productsRef, newProductData);
       }
     },
     [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast]
@@ -416,16 +431,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [productsCollectionRef, firestore, toast]);
 
   const value: InventoryContextType = {
+    companyId,
     userData: userData || null,
     companyData: companyData || null,
     products,
     sales: salesData || [],
+    productions: productionsData || [],
+    orders: ordersData || [],
     users: usersData || [],
     catalogProducts: catalogProductsData || [],
     catalogCategories: catalogCategoriesData || [],
     locations,
     isMultiLocation,
-    loading: userLoading || companyLoading || productsLoading || salesLoading || usersLoading || catalogProductsLoading || catalogCategoriesLoading,
+    loading: userLoading || companyLoading || productsLoading || salesLoading || productionsLoading || ordersLoading || usersLoading || catalogProductsLoading || catalogCategoriesLoading,
     addProduct,
     updateProduct,
     deleteProduct,

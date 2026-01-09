@@ -18,27 +18,27 @@ service cloud.firestore {
 
     // Rules for the users collection
     match /users/{userId} {
-      // A user can be created by anyone (for registration)
+      // Allow user creation for registration
       allow create: if true;
-      // A user can read/update their own profile
+      // Allow a user to read/update their own profile
       allow read, update: if isSignedIn() && request.auth.uid == userId;
-      // Only an Admin of the same company can delete an employee's account
+      // Allow an Admin to list users of their own company
+      allow list: if isSignedIn() && isAdmin(request.query.companyId);
+      // Allow an Admin to delete an employee's account from the same company
       allow delete: if isSignedIn() && isAdmin(get(/databases/$(database)/documents/users/$(userId)).data.companyId);
     }
     
     // Rules for the companies collection
     match /companies/{companyId} {
-        // Anyone can create a company (initial setup)
+        // Anyone signed in can create a company (initial setup)
         allow create: if isSignedIn();
         // Only employees of the company can read company details
-        allow read: if isEmployee(companyId);
-        // Only the admin of the company can update its details
-        allow update: if isAdmin(companyId);
+        allow read, update: if isEmployee(companyId);
     }
 
     // Rules for all subcollections within a company document
     match /companies/{companyId}/{collection}/{docId} {
-      // Any employee of the company can read, create, update, or delete data within their company's collections
+      // Any employee of the company can read and write data within their company's collections
       allow read, write: if isEmployee(companyId);
     }
   }
