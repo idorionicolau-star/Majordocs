@@ -30,10 +30,11 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
   useEffect(() => {
+    // This is the primary guard. It runs on every navigation.
     if (authContext && !authContext.loading && !authContext.user && !isAuthPage) {
-      router.push('/login');
+      router.replace('/login');
     }
-  }, [authContext, router, isAuthPage]);
+  }, [authContext, router, isAuthPage, pathname]);
 
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -112,8 +113,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // Se a autenticação estiver a carregar ou se não houver utilizador, mostramos um ecrã de carregamento.
-  // Isto impede que qualquer componente filho tente aceder a dados protegidos prematuramente.
+  // This is the definitive guard. We wait for loading to be false AND
+  // for user and companyId to be truthy before rendering the app.
   if (!authContext || authContext.loading || !authContext.user || !authContext.companyId) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -122,8 +123,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     );
   }
     
-  // Apenas quando a autenticação estiver confirmada e o companyId estiver presente,
-  // renderizamos o layout completo da aplicação, agora envolvido pelo InventoryProvider.
+  // Only when the authentication is confirmed and companyId is present,
+  // do we render the full application layout, now wrapped by the InventoryProvider.
   return (
     <InventoryProvider>
       <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">

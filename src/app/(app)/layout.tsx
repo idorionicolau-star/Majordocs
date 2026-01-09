@@ -1,9 +1,9 @@
 
 'use client';
 
-// O AuthGuard e o InventoryProvider foram movidos para o ClientLayout
-// para garantir a ordem correta de inicialização e evitar condições de corrida.
-// Este layout agora serve apenas como um marcador para o grupo de rotas da aplicação.
+// The AuthGuard and InventoryProvider logic has been moved to ClientLayout
+// to ensure the correct initialization order and avoid race conditions.
+// This layout now serves only as a route group marker for the application.
 
 export default function AppLayout({
   children,
