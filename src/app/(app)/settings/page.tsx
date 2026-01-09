@@ -14,7 +14,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { ChevronDown, Trash2, Code, Building } from "lucide-react";
+import { ChevronDown, Trash2, Code, Building, Users } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
@@ -50,28 +50,32 @@ export default function SettingsPage() {
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
 
-  const companyId = inventoryContext?.companyId;
-
   const [companyDetails, setCompanyDetails] = useState({
     name: 'A Minha Empresa',
-    email: 'contacto@empresa.com',
+    email: '',
     phone: '',
     address: '',
     taxId: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { companyId, userData, companyData, updateCompany } = inventoryContext || {};
+
 
   useEffect(() => {
     setIsClient(true);
-    if (inventoryContext?.companyData) {
+    if (companyData) {
       setCompanyDetails({
-        name: inventoryContext.companyData.name || '',
-        phone: inventoryContext.companyData.phone || '',
-        address: inventoryContext.companyData.address || '',
-        taxId: inventoryContext.companyData.taxId || ''
+        name: companyData.name || '',
+        email: userData?.email || '',
+        phone: companyData.phone || '',
+        address: companyData.address || '',
+        taxId: companyData.taxId || ''
       });
+    } else if (userData) {
+        setCompanyDetails(prev => ({...prev, email: userData.email || ''}));
     }
-  }, [inventoryContext?.companyData]);
+  }, [companyData, userData]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -167,13 +171,13 @@ export default function SettingsPage() {
 
   const handleCompanyUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inventoryContext?.updateCompany) {
+    if (!updateCompany) {
         toast({ variant: 'destructive', title: 'Erro', description: 'Função de atualização não encontrada.' });
         return;
     }
     setIsSubmitting(true);
     toast({ title: 'A atualizar...', description: 'A guardar os dados da empresa.' });
-    await inventoryContext.updateCompany(companyDetails);
+    await updateCompany(companyDetails);
     toast({ title: 'Sucesso!', description: 'Os dados da empresa foram atualizados.' });
     setIsSubmitting(false);
   };
@@ -215,7 +219,7 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <Accordion type="single" collapsible className="w-full space-y-6" defaultValue="item-company">
+        <Accordion type="single" collapsible className="w-full space-y-6">
           <AccordionItem value="item-company" className="border-0">
              <Card className="glass-card shadow-sm">
                 <AccordionTrigger className="w-full hover:no-underline">
@@ -239,7 +243,7 @@ export default function SettingsPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email de Contacto</Label>
-                                <Input id="email" type="email" value={companyDetails.email} onChange={handleDetailChange} disabled />
+                                <Input id="email" type="email" value={companyDetails.email} onChange={handleDetailChange} />
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="phone">Telefone</Label>
@@ -415,5 +419,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
-    
