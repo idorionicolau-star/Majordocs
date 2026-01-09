@@ -27,7 +27,7 @@ service cloud.firestore {
       // Allow a user to read/update their own profile
       allow read, update: if isSignedIn() && request.auth.uid == userId;
       // Allow an Admin to list users of their own company
-      allow list: if isAdmin(request.query.where[0][2]);
+      allow list: if isSignedIn() && getUserData().role == 'Admin';
       // Allow an Admin to delete an employee's account from the same company
       allow delete: if isSignedIn() && isAdmin(get(/databases/$(database)/documents/users/$(userId)).data.companyId);
     }
