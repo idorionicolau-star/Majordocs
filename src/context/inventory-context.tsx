@@ -24,6 +24,7 @@ import {
   updateDoc,
   deleteDoc,
   setDoc,
+  onSnapshot,
 } from 'firebase/firestore';
 import { initialCatalog } from '@/lib/data';
 import { AuthContext } from '@/firebase/auth/auth-context';
