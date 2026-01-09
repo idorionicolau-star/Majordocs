@@ -10,10 +10,10 @@ export default function AppLayout({
   children: React.ReactNode;
 }>) {
   return (
-      <InventoryProvider>
-        <AuthGuard>
+      <AuthGuard>
+        <InventoryProvider>
           {children}
-        </AuthGuard>
-      </InventoryProvider>
+        </InventoryProvider>
+      </AuthGuard>
   );
 }
