@@ -35,6 +35,9 @@ import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
 
 const employeeSchema = z.object({
   username: z.string().min(3, { message: 'O nome de utilizador deve ter pelo menos 3 caracteres.' }),
@@ -76,17 +79,27 @@ export function AddEmployeeDialog({ companyId }: AddEmployeeDialogProps) {
       const employeesCollectionRef = collection(firestore, `companies/${companyId}/employees`);
       
       const insecurePassword = btoa(values.password);
-      
-      await addDoc(employeesCollectionRef, {
+
+      addDoc(employeesCollectionRef, {
         username: values.username,
         password: insecurePassword,
         role: values.role,
+      }).catch(error => {
+         errorEmitter.emit(
+          'permission-error',
+          new FirestorePermissionError({
+            path: employeesCollectionRef.path,
+            operation: 'create',
+            requestResourceData: { username: values.username, role: values.role },
+          })
+        )
       });
-
+      
       toast({
         title: 'Funcionário Adicionado',
         description: `O utilizador "${values.username}" foi criado com sucesso.`,
       });
+
       form.reset();
       setOpen(false);
 
