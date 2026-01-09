@@ -22,12 +22,12 @@ service cloud.firestore {
 
     // Rules for the users collection
     match /users/{userId} {
-      // Allow user creation for registration
+      // Allow user creation for registration and for the temporary employee accounts
       allow create: if true;
       // Allow a user to read/update their own profile
       allow read, update: if isSignedIn() && request.auth.uid == userId;
       // Allow an Admin to list users of their own company
-      allow list: if isSignedIn() && isAdmin(request.query.where.value);
+      allow list: if isSignedIn() && isAdmin(request.query.where[0][2]);
       // Allow an Admin to delete an employee's account from the same company
       allow delete: if isSignedIn() && isAdmin(get(/databases/$(database)/documents/users/$(userId)).data.companyId);
     }
@@ -53,9 +53,7 @@ service cloud.firestore {
       // Admins have full write access (create, update, delete)
       allow write: if isAdmin(companyId);
       // Employees can create certain documents (e.g. sales, productions)
-      allow create: if isEmployee(companyId);
+      allow create: if isEmployee(companyId) && collection != 'employees';
     }
   }
 }
-
-    

@@ -27,7 +27,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // For now, we keep Google Sign-In for the main admin/company owner
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
@@ -45,7 +44,6 @@ export default function LoginPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      // This function will now handle both admin email login and employee username login
       await signInWithEmail(email, password);
       router.push('/');
     } catch (error) {
@@ -53,7 +51,8 @@ export default function LoginPage() {
        if (error instanceof FirebaseError) {
          switch (error.code) {
             case 'auth/user-not-found':
-              description = 'Nenhum utilizador encontrado com este email.';
+            case 'auth/invalid-credential':
+              description = 'Utilizador ou senha inválidos.';
               break;
             case 'auth/wrong-password':
               description = 'A senha está incorreta. Tente novamente.';
@@ -61,10 +60,6 @@ export default function LoginPage() {
             case 'auth/invalid-email':
                 description = 'O formato do email é inválido.';
                 break;
-            // Custom error code from our new login logic
-            case 'auth/custom-user-not-found':
-              description = 'Utilizador ou senha inválidos.';
-              break;
             default:
               description = 'Não foi possível fazer login. Verifique as suas credenciais.';
           }

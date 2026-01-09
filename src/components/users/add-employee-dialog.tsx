@@ -75,9 +75,6 @@ export function AddEmployeeDialog({ companyId }: AddEmployeeDialogProps) {
     try {
       const employeesCollectionRef = collection(firestore, `companies/${companyId}/employees`);
       
-      // In a real app, hash the password using a proper library (e.g., bcrypt) in a Cloud Function.
-      // For this prototype, we'll use base64 encoding as a placeholder for "not plain text".
-      // THIS IS NOT SECURE FOR PRODUCTION.
       const insecurePassword = btoa(values.password);
       
       await addDoc(employeesCollectionRef, {

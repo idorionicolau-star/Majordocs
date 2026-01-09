@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState, useMemo, useContext } from 'react';
 import type { Employee, User } from '@/lib/types';
 import { InventoryContext } from '@/context/inventory-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, deleteDoc, query, where } from 'firebase/firestore';
 import {
   Table,
   TableBody,
@@ -32,7 +33,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function UsersPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { companyId, loading: contextLoading } = useContext(InventoryContext) || { companyId: null, loading: true };
+  const { companyId, loading: contextLoading, userData } = useContext(InventoryContext) || { companyId: null, loading: true, userData: null };
 
   const usersCollectionQuery = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
@@ -53,7 +54,6 @@ export default function UsersPage() {
   const allUsers = useMemo(() => {
     const combined = [];
     if (adminUsers) {
-      // Ensure we have a unique key for React rendering
       combined.push(...adminUsers.map(u => ({ ...u, key: u.id, username: u.name, type: 'Admin' as const })));
     }
     if (employees) {
@@ -147,7 +147,7 @@ export default function UsersPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {user.type !== 'Admin' && ( // Prevent deleting the main admin
+                      {user.type !== 'Admin' && userData?.id !== user.id && (
                         <Button
                           variant="ghost"
                           size="icon"
