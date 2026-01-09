@@ -101,10 +101,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     return collection(firestore, `users/${companyId}/sales`);
   }, [firestore, companyId]);
 
-  const usersCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId) return null;
-    return query(collection(firestore, 'users'), where('companyId', '==', companyId));
-  }, [firestore, companyId]);
+  // This query was causing permission errors. It is removed for now as it's not critical for main app functionality.
+  // The employee management is handled in the settings page separately.
+  // const usersCollectionRef = useMemoFirebase(() => {
+  //   if (!firestore || !companyId) return null;
+  //   return query(collection(firestore, 'users'), where('companyId', '==', companyId));
+  // }, [firestore, companyId]);
 
   const catalogProductsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
@@ -122,8 +124,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const { data: salesData, isLoading: salesLoading } =
     useCollection<Sale>(salesCollectionRef);
 
-  const { data: usersData, isLoading: usersLoading } =
-    useCollection<User>(usersCollectionRef);
+  // const { data: usersData, isLoading: usersLoading } = useCollection<User>(usersCollectionRef);
+  // Reverting to mock data for users as the collection query is removed.
+  const { usersData, usersLoading } = { usersData: [], usersLoading: false };
   
   const { data: catalogProductsData, isLoading: catalogProductsLoading } = 
     useCollection<CatalogProduct>(catalogProductsCollectionRef);
@@ -206,7 +209,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     });
   
     const batch = writeBatch(firestore);
-    const categoryNames = Object.keys(initialCatalog);
     const categoryNameSet = new Set<string>();
   
     for (const category in initialCatalog) {

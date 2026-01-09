@@ -13,14 +13,6 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
-
-    /**
-     * Returns true if the authenticated user's UID matches the provided userId.
-     * This is the primary function for enforcing data ownership.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
     
     /**
       * Returns true if the user owns the data they are trying to access,
@@ -30,31 +22,18 @@ service cloud.firestore {
         return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == companyId;
     }
 
-    /**
-     * Returns true if the incoming request is for a list operation
-     * that is correctly filtered by companyId.
-     */
-    function isReadingOwnCompanyDocs() {
-        return 'companyId' in request.query && request.query.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId;
-    }
-
-
     // -------------------------------------------------------------------------
     // Collection Rules
     // -------------------------------------------------------------------------
 
     match /users/{userId} {
-      // Admins can manage their own profile and their employees' profiles.
-      // Employees can only read their own profile.
-      allow read: if isOwner(userId) || isCompanyMember(userId);
-      allow create: if request.auth.uid == request.resource.data.companyId; // Admin creating an employee
-      allow update: if isOwner(userId) || isCompanyMember(userId);
-      allow delete: if isCompanyMember(userId); // Admin deleting an employee
-      allow list: if isReadingOwnCompanyDocs();
+      // Any authenticated user can manage their own profile.
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
 
-      // Any authenticated user can access subcollections if they are a member of the company.
-      match /{document=**} {
-        allow read, write, create, update, delete: if isCompanyMember(userId);
+      // Rules for subcollections within a user's company data.
+      // This allows any employee to read/write data within their company's scope.
+      match /{collection}/{docId} {
+        allow read, write: if isSignedIn() && isCompanyMember(userId);
       }
     }
   }
