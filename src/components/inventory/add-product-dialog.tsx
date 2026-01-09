@@ -35,7 +35,7 @@ import * as z from "zod";
 import type { Location, Product } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { InventoryContext } from '@/context/inventory-context';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { cn } from '@/lib/utils';
 
@@ -80,7 +80,6 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
   });
 
   const watchedCategory = useWatch({ control: form.control, name: 'category' });
-  const watchedName = useWatch({ control: form.control, name: 'name' });
 
   const filteredCatalogProducts = catalogProducts.filter(p => p.category === watchedCategory);
 
@@ -101,17 +100,15 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
         criticalStockThreshold: 5,
         location: locations.length > 0 ? locations[0].id : '',
       });
+      setProductSelectorOpen(false);
     }
   }, [open, form, locations]);
 
-  const handleProductSelect = (productName: string) => {
-    const selectedCatalogProduct = catalogProducts.find(p => p.name === productName);
-    if (selectedCatalogProduct) {
-      form.setValue('name', selectedCatalogProduct.name);
-      form.setValue('price', selectedCatalogProduct.price);
-      form.setValue('lowStockThreshold', selectedCatalogProduct.lowStockThreshold);
-      form.setValue('criticalStockThreshold', selectedCatalogProduct.criticalStockThreshold);
-    }
+  const handleProductSelect = (product: CatalogProduct) => {
+    form.setValue('name', product.name);
+    form.setValue('price', product.price);
+    form.setValue('lowStockThreshold', product.lowStockThreshold);
+    form.setValue('criticalStockThreshold', product.criticalStockThreshold);
     setProductSelectorOpen(false);
   };
 
@@ -170,7 +167,7 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="category"
@@ -179,7 +176,8 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
                     <FormLabel>Categoria</FormLabel>
                     <Select onValueChange={(value) => {
                       field.onChange(value);
-                      form.setValue('name', ''); // Reset product name when category changes
+                      form.setValue('name', '');
+                      setProductSelectorOpen(true);
                     }} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -202,46 +200,47 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
                   render={({ field }) => (
                       <FormItem>
                         <FormLabel>Nome do Produto</FormLabel>
-                        <Popover open={productSelectorOpen} onOpenChange={setProductSelectorOpen}>
-                          <PopoverTrigger asChild>
-                             <FormControl>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  disabled={!watchedCategory}
-                                  className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
-                                >
-                                  {field.value || "Selecione um produto..."}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </FormControl>
-                          </PopoverTrigger>
-                           <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                              <Command>
-                                <CommandInput placeholder="Pesquisar produto..." />
-                                <CommandList>
-                                  <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
-                                  <CommandGroup>
-                                    {filteredCatalogProducts.map((product) => (
-                                      <CommandItem
-                                        value={product.name}
-                                        key={product.id}
-                                        onSelect={() => handleProductSelect(product.name)}
-                                      >
-                                        <Check className={cn("mr-2 h-4 w-4", product.name === field.value ? "opacity-100" : "opacity-0")} />
-                                        {product.name}
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                           </PopoverContent>
-                        </Popover>
+                        <Collapsible open={productSelectorOpen} onOpenChange={setProductSelectorOpen}>
+                            <CollapsibleTrigger asChild>
+                                <FormControl>
+                                    <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    disabled={!watchedCategory}
+                                    className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                                    >
+                                    {field.value || "Selecione um produto..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </FormControl>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                                <Command className="mt-2 border rounded-md">
+                                    <CommandInput placeholder="Pesquisar produto..." />
+                                    <CommandList>
+                                        <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+                                        <CommandGroup>
+                                            {filteredCatalogProducts.map((product) => (
+                                            <CommandItem
+                                                value={product.name}
+                                                key={product.id}
+                                                onSelect={() => handleProductSelect(product)}
+                                            >
+                                                <Check className={cn("mr-2 h-4 w-4", product.name === field.value ? "opacity-100" : "opacity-0")} />
+                                                {product.name}
+                                            </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </CollapsibleContent>
+                        </Collapsible>
                         <FormMessage />
                       </FormItem>
                   )}
               />
             </div>
+            
              {isMultiLocation && (
               <FormField
                 control={form.control}
