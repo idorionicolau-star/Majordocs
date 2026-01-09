@@ -112,6 +112,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             password: adminPass, // WARNING: Storing plain text password
             role: 'Admin',
             companyId: companyDocRef.id,
+            permissions: {
+                canViewDashboard: true,
+                canViewInventory: true,
+                canManageInventory: true,
+                canViewSales: true,
+                canManageSales: true,
+                canViewProduction: true,
+                canManageProduction: true,
+                canViewOrders: true,
+                canManageOrders: true,
+                canViewReports: true,
+                canViewSettings: true,
+                canManageUsers: true,
+            }
         });
 
         return true;
