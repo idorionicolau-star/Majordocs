@@ -59,6 +59,7 @@ export default function UsersPage() {
     if (employees) {
       combined.push(...employees.map(e => ({ ...e, key: e.id, name: e.username, type: 'Funcionário' as const })));
     }
+    // Filter out the current admin user from deletion capabilities if they are in the list
     return combined;
   }, [adminUsers, employees]);
 
@@ -88,6 +89,26 @@ export default function UsersPage() {
       setUserToDelete(null);
     }
   };
+
+  if (isLoading) {
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+            <div>
+              <Skeleton className="h-9 w-48" />
+              <Skeleton className="h-5 w-80 mt-2" />
+            </div>
+            <Skeleton className="h-11 w-44" />
+          </div>
+          <div className="rounded-md border p-4 space-y-3">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
+      );
+  }
 
   return (
     <>
@@ -128,15 +149,7 @@ export default function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={4} className="py-4">
-                      <Skeleton className="h-6 w-full" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : allUsers.length > 0 ? (
+              {allUsers.length > 0 ? (
                 allUsers.map((user) => (
                   <TableRow key={user.key}>
                     <TableCell className="font-medium">{user.name}</TableCell>
@@ -147,7 +160,7 @@ export default function UsersPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {user.type !== 'Admin' && userData?.id !== user.id && (
+                       {user.type !== 'Admin' && userData?.id !== user.id && (
                         <Button
                           variant="ghost"
                           size="icon"
