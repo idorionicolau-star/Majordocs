@@ -29,24 +29,23 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
   useEffect(() => {
-    if (!authContext?.loading && !authContext?.user && !isAuthPage) {
+    if (authContext && !authContext.loading && !authContext.user && !isAuthPage) {
       router.replace('/login');
     }
-  }, [authContext?.loading, authContext?.user, isAuthPage, router]);
+  }, [authContext, isAuthPage, router]);
 
-  if (authContext?.loading && !isAuthPage) {
-    return <div className="flex h-screen w-full items-center justify-center">A carregar aplicação...</div>;
-  }
-  
-  if (!authContext?.user && !isAuthPage) {
-    return <div className="flex h-screen w-full items-center justify-center">A redirecionar...</div>;
-  }
-  
+  // Determine what content to show based on auth state
+  let pageContent: React.ReactNode;
   if (isAuthPage) {
-      return <>{children}</>;
+    pageContent = children;
+  } else if (authContext?.loading) {
+    pageContent = <div className="flex h-full w-full items-center justify-center">A carregar aplicação...</div>;
+  } else if (!authContext?.user) {
+    pageContent = <div className="flex h-full w-full items-center justify-center">A redirecionar...</div>;
+  } else {
+     pageContent = children;
   }
-
-
+  
   const handleTouchStart = (e: React.TouchEvent) => {
     touchEndRef.current = null;
     touchStartRef.current = {
@@ -117,6 +116,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         onTouchEnd: handleTouchEnd,
       }
     : {};
+
+  if (isAuthPage) {
+      return <>{pageContent}</>;
+  }
     
   return (
       <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
@@ -127,7 +130,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           className={cn('flex-1 p-4 sm:p-6 md:p-8', isMobile && animationClass)}
           {...touchHandlers}
         >
-          {children}
+          {pageContent}
         </main>
       </div>
   );
