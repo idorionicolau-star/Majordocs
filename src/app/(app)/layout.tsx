@@ -95,7 +95,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   } : {};
 
   return (
-    <InventoryProvider>
       <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
         <Header />
         <SubHeader />
@@ -107,6 +106,5 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
-    </InventoryProvider>
   );
 }

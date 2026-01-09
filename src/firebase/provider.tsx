@@ -7,6 +7,7 @@ import { Firestore } from 'firebase/firestore';
 import { Auth, User } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 import { initializeFirebase } from '.';
+import { InventoryProvider } from '@/context/inventory-context';
 
 // Since auth is removed, we only need to provide firestore and the app instance.
 export interface FirebaseContextState {
@@ -38,8 +39,10 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({
 
   return (
     <FirebaseContext.Provider value={contextValue}>
-      <FirebaseErrorListener />
-      {children}
+      <InventoryProvider>
+        <FirebaseErrorListener />
+        {children}
+      </InventoryProvider>
     </FirebaseContext.Provider>
   );
 };
