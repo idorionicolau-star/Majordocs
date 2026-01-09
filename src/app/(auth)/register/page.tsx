@@ -60,7 +60,14 @@ export default function RegisterPage() {
         companyId: user.uid, // The admin's companyId is their own UID
       });
       
-      router.push('/register-company');
+      // Automatically create the company document
+      const companyDocRef = doc(firestore, 'companies', user.uid);
+      await setDoc(companyDocRef, {
+        name: `Empresa de ${fullName}`,
+        ownerId: user.uid,
+      });
+
+      router.push('/dashboard');
 
     } catch (error) {
       let description = 'Ocorreu um erro desconhecido.';

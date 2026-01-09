@@ -10,7 +10,7 @@ import { useContext } from 'react';
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading: userLoading } = useUser();
   const inventoryContext = useContext(InventoryContext);
-  const { userData, companyData, loading: dataLoading } = inventoryContext || {};
+  const { companyData, loading: dataLoading } = inventoryContext || { companyData: null, loading: true };
   const router = useRouter();
   
   const isLoading = userLoading || dataLoading;
@@ -26,8 +26,15 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     if (!companyData?.name) {
-      router.push('/register-company');
-      return;
+      // If company data is missing, we assume it's being created
+      // and wait for the context to update. A timeout can prevent infinite loops.
+      const timer = setTimeout(() => {
+         if (!companyData?.name) {
+            console.warn("Company data not found, user might be stuck.");
+            // Potentially redirect to a safe page or show an error.
+         }
+      }, 5000);
+      return () => clearTimeout(timer);
     }
   }, [user, companyData, isLoading, router]);
 
