@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useUser } from '@/firebase/auth/use-user';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { doc, setDoc, collection, query, where, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
@@ -200,4 +200,3 @@ export function EmployeeManager() {
   );
 }
 
-    
