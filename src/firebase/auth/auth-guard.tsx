@@ -2,24 +2,24 @@
 'use client';
 
 import { useContext, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { AuthContext } from './auth-context';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const { user, loading } = useContext(AuthContext);
+  const authContext = useContext(AuthContext);
 
   useEffect(() => {
-    if (!loading && !user) {
-      // Se não está a carregar e não há utilizador, redireciona para o login
+    if (authContext && !authContext.loading && !authContext.user) {
       router.push('/login');
     }
-  }, [user, loading, router]);
+  }, [authContext, router]);
 
-  if (loading || !user) {
-    // Enquanto carrega ou se o utilizador não estiver autenticado (antes do redirecionamento),
-    // mostra um loader para evitar piscar do conteúdo antigo.
+  // Se o contexto ainda não estiver disponível, ou se estiver a carregar,
+  // ou se não houver utilizador ou companyId, mostra o loader.
+  // Isto impede que os componentes filhos (como o InventoryProvider) tentem
+  // carregar dados antes de a autenticação estar completa.
+  if (!authContext || authContext.loading || !authContext.user || !authContext.companyId) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         A carregar aplicação...
@@ -27,6 +27,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Se o utilizador estiver autenticado, mostra o conteúdo da página
+  // Apenas renderiza os filhos quando a autenticação estiver 100% confirmada.
   return <>{children}</>;
 }
