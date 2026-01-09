@@ -126,7 +126,6 @@ export default function UsersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome / Utilizador</TableHead>
-                <TableHead>Email</TableHead>
                 <TableHead>Função</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead><span className="sr-only">Ações</span></TableHead>
@@ -135,7 +134,7 @@ export default function UsersPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={4} className="h-24 text-center">
                     <Skeleton className="h-8 w-full" />
                   </TableCell>
                 </TableRow>
@@ -143,7 +142,6 @@ export default function UsersPage() {
                 allUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email || 'N/A'}</TableCell>
                     <TableCell>{user.role}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.type === 'Admin' ? 'bg-primary/10 text-primary' : 'bg-secondary text-secondary-foreground'}`}>
@@ -165,7 +163,7 @@ export default function UsersPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={4} className="h-24 text-center">
                     Nenhum utilizador encontrado.
                   </TableCell>
                 </TableRow>
