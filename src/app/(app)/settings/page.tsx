@@ -51,7 +51,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
 
   const [companyDetails, setCompanyDetails] = useState({
-    name: 'A Minha Empresa',
+    name: '',
     email: '',
     phone: '',
     address: '',
@@ -420,3 +420,5 @@ export default function SettingsPage() {
     </>
   );
 }
+
+    
