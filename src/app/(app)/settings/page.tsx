@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { LocationsManager } from "@/components/settings/locations-manager";
+import { EmployeeManager } from "@/components/settings/employee-manager";
 import { cn } from "@/lib/utils";
 import {
   Accordion,
@@ -14,7 +15,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { ChevronDown, Trash2, Code, Building } from "lucide-react";
+import { ChevronDown, Trash2, Code, Building, Users } from "lucide-react";
+import { CatalogManager } from "@/components/settings/catalog-manager";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
 import {
@@ -60,8 +62,16 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setIsClient(true);
-    // You can load company details from localStorage here if needed
-  }, []);
+    if (inventoryContext?.companyData) {
+      setCompanyDetails({
+        name: inventoryContext.companyData.name || '',
+        email: inventoryContext.companyData.email || '',
+        phone: inventoryContext.companyData.phone || '',
+        address: inventoryContext.companyData.address || '',
+        taxId: inventoryContext.companyData.taxId || ''
+      });
+    }
+  }, [inventoryContext?.companyData]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -157,14 +167,15 @@ export default function SettingsPage() {
 
   const handleCompanyUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!inventoryContext?.updateCompany) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Função de atualização não encontrada.' });
+        return;
+    }
     setIsSubmitting(true);
     toast({ title: 'A atualizar...', description: 'A guardar os dados da empresa.' });
-    // Here you would save to localStorage or a central config file
-    console.log("Saving company details:", companyDetails);
-    setTimeout(() => {
-      toast({ title: 'Sucesso!', description: 'Os dados da empresa foram atualizados.' });
-      setIsSubmitting(false);
-    }, 1000);
+    await inventoryContext.updateCompany(companyDetails);
+    toast({ title: 'Sucesso!', description: 'Os dados da empresa foram atualizados.' });
+    setIsSubmitting(false);
   };
 
   const handleDetailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -348,6 +359,26 @@ export default function SettingsPage() {
               </AccordionContent>
             </Card>
           </AccordionItem>
+          <AccordionItem value="item-employees" className="border-0">
+            <Card className="glass-card shadow-sm">
+              <AccordionTrigger className="w-full hover:no-underline">
+                <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
+                  <div className="flex-1">
+                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center flex items-center justify-center gap-2"><Users /> Gestão de Funcionários</CardTitle>
+                    <CardDescription className="text-center">
+                      Adicione, visualize e gerencie os membros da sua equipa.
+                    </CardDescription>
+                  </div>
+                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                </CardHeader>
+              </AccordionTrigger>
+              <AccordionContent>
+                <CardContent className="p-6 sm:p-8 pt-0">
+                  <EmployeeManager />
+                </CardContent>
+              </AccordionContent>
+            </Card>
+          </AccordionItem>
           <AccordionItem value="item-2" className="border-0">
             <Card className="glass-card shadow-sm">
               <AccordionTrigger className="w-full hover:no-underline">
@@ -368,7 +399,6 @@ export default function SettingsPage() {
               </AccordionContent>
             </Card>
           </AccordionItem>
-
           <AccordionItem value="item-5" className="border-0">
             <Card className="glass-card shadow-sm">
               <AccordionTrigger className="w-full hover:no-underline">
@@ -403,5 +433,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
-    
