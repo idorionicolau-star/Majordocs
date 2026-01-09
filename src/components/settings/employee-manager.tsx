@@ -2,9 +2,9 @@
 "use client";
 
 import { useMemo, useState } from 'react';
-import type { User } from '@/lib/types';
+import type { Employee } from '@/lib/types';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, deleteDoc, doc } from 'firebase/firestore';
 import { AddEmployeeDialog } from './add-employee-dialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,37 +36,29 @@ interface EmployeeManagerProps {
 export function EmployeeManager({ companyId }: EmployeeManagerProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [employeeToDelete, setEmployeeToDelete] = useState<User | null>(null);
+  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
   const employeesCollectionQuery = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
-    return query(collection(firestore, "users"), where("companyId", "==", companyId));
+    return query(collection(firestore, `companies/${companyId}/employees`));
   }, [firestore, companyId]);
 
-  const { data: employees, isLoading } = useCollection<User>(employeesCollectionQuery);
+  const { data: employees, isLoading } = useCollection<Employee>(employeesCollectionQuery);
 
   const sortedEmployees = useMemo(() => {
     if (!employees) return [];
-    // Sort by role (Admin first) and then by name
-    return [...employees].sort((a, b) => {
-      if (a.role === 'Admin' && b.role !== 'Admin') return -1;
-      if (a.role !== 'Admin' && b.role === 'Admin') return 1;
-      return a.name.localeCompare(b.name);
-    });
+    return [...employees].sort((a, b) => a.username.localeCompare(b.username));
   }, [employees]);
 
   const handleDeleteEmployee = async () => {
-    if (!employeeToDelete || !firestore) {
+    if (!employeeToDelete || !firestore || !companyId) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível identificar o funcionário a ser removido.' });
       return;
     }
     
-    // Note: Deleting the Firebase Auth user is a separate, more complex operation
-    // involving backend functions for security reasons. Here, we only delete the
-    // user's profile document from Firestore.
     try {
-      await deleteDoc(doc(firestore, 'users', employeeToDelete.id));
-      toast({ title: 'Funcionário Removido', description: `O perfil de ${employeeToDelete.name} foi removido.` });
+      await deleteDoc(doc(firestore, `companies/${companyId}/employees`, employeeToDelete.id));
+      toast({ title: 'Funcionário Removido', description: `O utilizador ${employeeToDelete.username} foi removido.` });
     } catch (error) {
       console.error("Error deleting employee document: ", error);
       toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover o perfil do funcionário.' });
@@ -75,11 +67,10 @@ export function EmployeeManager({ companyId }: EmployeeManagerProps) {
     setEmployeeToDelete(null);
   };
 
-
   if (!companyId) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-muted-foreground text-center">Aguardando identificação da empresa...</p>
+        <p className="text-sm text-muted-foreground text-center">A carregar dados da empresa...</p>
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-24 w-full" />
       </div>
@@ -93,7 +84,7 @@ export function EmployeeManager({ companyId }: EmployeeManagerProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação irá remover o perfil do funcionário <span className="font-bold">{employeeToDelete?.name}</span>. O acesso dele/a à aplicação será efetivamente revogado. Esta ação não pode ser desfeita.
+              Esta ação irá remover permanentemente o utilizador <span className="font-bold">{employeeToDelete?.username}</span>. Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -111,8 +102,7 @@ export function EmployeeManager({ companyId }: EmployeeManagerProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead>Username</TableHead>
               <TableHead>Função</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -120,32 +110,29 @@ export function EmployeeManager({ companyId }: EmployeeManagerProps) {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={3} className="h-24 text-center">
                   <Skeleton className="h-6 w-full" />
                 </TableCell>
               </TableRow>
             ) : sortedEmployees.length > 0 ? (
               sortedEmployees.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
+                  <TableCell className="font-medium">{user.username}</TableCell>
                   <TableCell>
                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'Admin' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
                         {user.role}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    {user.role !== 'Admin' && (
-                       <Button variant="ghost" size="icon" onClick={() => setEmployeeToDelete(user)}>
-                         <Trash2 className="h-4 w-4 text-destructive" />
-                       </Button>
-                    )}
+                    <Button variant="ghost" size="icon" onClick={() => setEmployeeToDelete(user)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={3} className="h-24 text-center">
                   Nenhum funcionário cadastrado.
                 </TableCell>
               </TableRow>
@@ -157,5 +144,3 @@ export function EmployeeManager({ companyId }: EmployeeManagerProps) {
     </>
   );
 }
-
-    

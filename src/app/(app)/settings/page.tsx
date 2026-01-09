@@ -276,7 +276,7 @@ export default function SettingsPage() {
                   <div className="flex-1">
                     <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center flex items-center justify-center gap-2"><Users /> Gestão de Funcionários</CardTitle>
                     <CardDescription className="text-center">
-                      Adicione, visualize e gerencie os membros da sua equipa.
+                      Crie e gira os utilizadores internos da sua empresa.
                     </CardDescription>
                   </div>
                   <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
@@ -440,5 +440,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
-    

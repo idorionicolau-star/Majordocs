@@ -27,6 +27,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // For now, we keep Google Sign-In for the main admin/company owner
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
@@ -44,6 +45,7 @@ export default function LoginPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      // This function will now handle both admin email login and employee username login
       await signInWithEmail(email, password);
       router.push('/');
     } catch (error) {
@@ -59,9 +61,15 @@ export default function LoginPage() {
             case 'auth/invalid-email':
                 description = 'O formato do email é inválido.';
                 break;
+            // Custom error code from our new login logic
+            case 'auth/custom-user-not-found':
+              description = 'Utilizador ou senha inválidos.';
+              break;
             default:
               description = 'Não foi possível fazer login. Verifique as suas credenciais.';
           }
+       } else if (error instanceof Error) {
+           description = error.message;
        }
         toast({
             variant: 'destructive',
@@ -90,7 +98,7 @@ export default function LoginPage() {
         </div>
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-headline">Bem-vindo de Volta!</CardTitle>
+            <CardTitle className="text-2xl font-headline">Bem-vindo!</CardTitle>
             <CardDescription>
               Insira as suas credenciais para aceder à sua conta.
             </CardDescription>
@@ -98,11 +106,11 @@ export default function LoginPage() {
           <CardContent>
             <form onSubmit={handleEmailSignIn} className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email ou Utilizador</Label>
                 <Input
                   id="email"
-                  type="email"
-                  placeholder="seu@email.com"
+                  type="text"
+                  placeholder="seu@email.com ou utilizador"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -128,7 +136,7 @@ export default function LoginPage() {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-background px-2 text-muted-foreground">
-                  Ou continue com
+                  Ou para administradores
                 </span>
               </div>
             </div>
@@ -138,9 +146,9 @@ export default function LoginPage() {
           </CardContent>
           <CardFooter className="flex justify-center text-sm">
             <p>
-              Não tem uma conta?{' '}
+              Não tem uma conta de administrador?{' '}
               <Link href="/register" className="font-bold text-primary hover:underline">
-                Registe-se
+                Registe a sua empresa
               </Link>
             </p>
           </CardFooter>

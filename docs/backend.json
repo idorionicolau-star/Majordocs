@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -25,6 +26,27 @@
         }
       },
       "required": ["name", "email", "role", "companyId"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "type": "object",
+      "description": "Represents an internal employee user with username/password login.",
+      "properties": {
+        "username": {
+          "type": "string",
+          "description": "The unique username for the employee."
+        },
+        "password": {
+          "type": "string",
+          "description": "The hashed password for the employee."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role assigned to the employee.",
+           "enum": ["Admin", "Employee"]
+        }
+      },
+      "required": ["username", "password", "role"]
     },
     "Company": {
       "title": "Company",
@@ -173,6 +195,13 @@
         "definition": {
           "schema": { "$ref": "#/entities/Company" },
           "description": "Stores company information. Owned by an admin user."
+        }
+      },
+      {
+        "path": "/companies/{companyId}/employees/{employeeId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/Employee" },
+          "description": "Stores internal employee credentials for the company."
         }
       },
       {

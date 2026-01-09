@@ -1,9 +1,10 @@
+
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore, type Firestore } from 'firebase/firestore'
 
 let firebaseApp: FirebaseApp;
 
@@ -34,6 +35,10 @@ function getFirebaseServices() {
 
 export function getFirebaseAuth(): Auth {
   return getFirebaseServices().auth;
+}
+
+export function getFirestoreInstance(): Firestore {
+  return getFirebaseServices().firestore;
 }
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION

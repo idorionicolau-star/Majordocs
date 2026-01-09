@@ -8,6 +8,20 @@ export type User = {
   companyId: string; // Links user to a company
 };
 
+export type Employee = {
+  id: string;
+  username: string;
+  password?: string; // Should be handled securely, never stored in plain text
+  role: 'Admin' | 'Employee';
+  permissions?: {
+    canSell?: boolean;
+    canRegisterProduction?: boolean;
+    canEditInventory?: boolean;
+    canTransferStock?: boolean;
+    canViewReports?: boolean;
+  }
+}
+
 export type Company = {
     id: string;
     name: string;

@@ -33,27 +33,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle } from 'lucide-react';
-import { FirebaseError } from 'firebase/app';
-import { doc, setDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
-// This is a simplified function. In a real-world scenario, you would use Firebase Admin SDK
-// via a Cloud Function to create users to avoid exposing auth-creation logic on the client.
-// For this prototype, we'll simulate the creation flow.
-async function temp_createUser(email: string, name: string) {
-    // This is a placeholder. A real implementation would call a backend function.
-    console.log(`Simulating user creation for ${email} with name ${name}`);
-    // In a real app, this would return a user object with a uid.
-    return {
-        uid: `simulated_${Date.now()}`,
-        email,
-        displayName: name,
-    };
-}
-
+import { collection, addDoc } from 'firebase/firestore';
 
 const formSchema = z.object({
-  name: z.string().min(2, 'O nome é obrigatório.'),
-  email: z.string().email('Email inválido.'),
+  username: z.string().min(3, 'O username deve ter pelo menos 3 caracteres.'),
+  password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.'),
   role: z.enum(['Employee', 'Admin']),
 });
 
@@ -66,11 +51,11 @@ export function AddEmployeeDialog({ companyId }: AddEmployeeDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
 
-  const form = useForm({
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      email: '',
+      username: '',
+      password: '',
       role: 'Employee' as 'Employee' | 'Admin',
     },
   });
@@ -88,36 +73,33 @@ export function AddEmployeeDialog({ companyId }: AddEmployeeDialogProps) {
     }
 
     try {
-      // Step 1: Simulate creating the auth user.
-      // In a real app, you'd call a Cloud Function here that uses the Admin SDK.
-      const pseudoUser = await temp_createUser(values.email, values.name);
+      const employeesCollectionRef = collection(firestore, `companies/${companyId}/employees`);
+      
+      // NOTA DE SEGURANÇA: Num ambiente de produção, a senha nunca deve ser armazenada
+      // em texto simples. Utilizaríamos uma Cloud Function para gerar um hash seguro (ex: bcrypt)
+      // antes de guardar. Para este protótipo, guardamos a senha em base64 como um placeholder.
+      const encodedPassword = btoa(values.password);
 
-      // Step 2: Create the user profile in Firestore, linking them to the company.
-      const userDocRef = doc(firestore, 'users', pseudoUser.uid);
-      await setDoc(userDocRef, {
-        name: values.name,
-        email: values.email,
+      await addDoc(employeesCollectionRef, {
+        username: values.username,
+        password: encodedPassword,
         role: values.role,
-        companyId: companyId, // The crucial link!
       });
 
       toast({
         title: 'Funcionário Adicionado!',
-        description: `${values.name} foi adicionado à sua empresa.`,
+        description: `O utilizador ${values.username} foi criado com sucesso.`,
       });
 
       form.reset();
       setOpen(false);
 
     } catch (error) {
-      let description = 'Ocorreu um erro desconhecido.';
-      if (error instanceof FirebaseError) {
-        // Handle potential errors from a real backend call
-      }
+      console.error("Error adding employee: ", error);
       toast({
         variant: 'destructive',
         title: 'Erro ao Adicionar Funcionário',
-        description,
+        description: 'Não foi possível criar o novo utilizador.',
       });
     }
   };
@@ -134,32 +116,32 @@ export function AddEmployeeDialog({ companyId }: AddEmployeeDialogProps) {
         <DialogHeader>
           <DialogTitle>Adicionar Novo Funcionário</DialogTitle>
           <DialogDescription>
-            Crie um perfil para um novo membro da equipa. A palavra-passe inicial deverá ser partilhada separadamente.
+            Crie um utilizador e senha para um novo membro da equipa.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="name"
+              name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome Completo</FormLabel>
+                  <FormLabel>Nome de Utilizador</FormLabel>
                   <FormControl>
-                    <Input placeholder="Nome do funcionário" {...field} />
+                    <Input placeholder="Ex: joao.silva" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
+             <FormField
               control={form.control}
-              name="email"
+              name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Senha</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="email@empresa.com" {...field} />
+                    <Input type="password" placeholder="••••••••" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -198,5 +180,3 @@ export function AddEmployeeDialog({ companyId }: AddEmployeeDialogProps) {
     </Dialog>
   );
 }
-
-    
