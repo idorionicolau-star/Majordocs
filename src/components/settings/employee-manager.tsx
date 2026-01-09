@@ -67,15 +67,8 @@ export function EmployeeManager({ companyId }: EmployeeManagerProps) {
     setEmployeeToDelete(null);
   };
 
-  if (!companyId) {
-    return (
-      <div className="space-y-2">
-        <p className="text-sm text-muted-foreground text-center">A carregar dados da empresa...</p>
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-24 w-full" />
-      </div>
-    );
-  }
+  const showLoadingState = isLoading || !companyId;
+
 
   return (
     <>
@@ -108,10 +101,10 @@ export function EmployeeManager({ companyId }: EmployeeManagerProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {showLoadingState ? (
               <TableRow>
                 <TableCell colSpan={3} className="h-24 text-center">
-                  <Skeleton className="h-6 w-full" />
+                  <p>A carregar dados da empresa...</p>
                 </TableCell>
               </TableRow>
             ) : sortedEmployees.length > 0 ? (
@@ -144,5 +137,3 @@ export function EmployeeManager({ companyId }: EmployeeManagerProps) {
     </>
   );
 }
-
-    
