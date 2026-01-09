@@ -9,6 +9,7 @@ import { mainNavItems } from '@/lib/data';
 import { Header } from './header';
 import { SubHeader } from './sub-header';
 import { AuthContext } from '@/firebase/auth/auth-context';
+import { InventoryProvider } from '@/context/inventory-context';
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
@@ -111,6 +112,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  // Se a autenticação estiver a carregar ou se não houver utilizador, mostramos um ecrã de carregamento.
+  // Isto impede que qualquer componente filho tente aceder a dados protegidos prematuramente.
   if (!authContext || authContext.loading || !authContext.user || !authContext.companyId) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -119,17 +122,21 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     );
   }
     
+  // Apenas quando a autenticação estiver confirmada e o companyId estiver presente,
+  // renderizamos o layout completo da aplicação, agora envolvido pelo InventoryProvider.
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
-      <Header />
-      <SubHeader />
-      <main
-        key={pathname}
-        className={cn('flex-1 p-4 sm:p-6 md:p-8', isMobile && animationClass)}
-        {...touchHandlers}
-      >
-        {children}
-      </main>
-    </div>
+    <InventoryProvider>
+      <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
+        <Header />
+        <SubHeader />
+        <main
+          key={pathname}
+          className={cn('flex-1 p-4 sm:p-6 md:p-8', isMobile && animationClass)}
+          {...touchHandlers}
+        >
+          {children}
+        </main>
+      </div>
+    </InventoryProvider>
   );
 }
