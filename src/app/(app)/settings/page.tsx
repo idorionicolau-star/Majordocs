@@ -7,9 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { LocationsManager } from "@/components/settings/locations-manager";
-import { useUser as useAuthUser } from "@/firebase/auth/use-user";
-import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { EmployeeManager } from "@/components/settings/employee-manager";
 import { cn } from "@/lib/utils";
 import {
   Accordion,
@@ -18,7 +15,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { ChevronDown, Trash2, Code, Building } from "lucide-react";
-import { CatalogManager } from "@/components/settings/catalog-manager";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
 import {
@@ -33,9 +29,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { updateUserProfile } from "@/firebase/auth/auth";
-import { doc, updateDoc } from "firebase/firestore";
-import type { User as AppUser } from '@/lib/types';
 
 
 const colorOptions = [
@@ -55,46 +48,22 @@ export default function SettingsPage() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
-  const { user, loading } = useAuthUser();
-  const firestore = useFirestore();
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-
-  const { data: userProfile, isLoading: profileLoading } = useDoc<AppUser>(userDocRef);
-
-  
   const [companyDetails, setCompanyDetails] = useState({
-    name: '',
-    email: '',
+    name: 'A Minha Empresa',
+    email: 'contacto@empresa.com',
     phone: '',
     address: '',
     taxId: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // This is a placeholder as the real role would come from the user object from a database
-  const currentUser = user;
-  
-  useEffect(() => {
-    if (userProfile) {
-      setCompanyDetails({
-        name: userProfile.name || '',
-        email: userProfile.email || '',
-        phone: userProfile.phone || '',
-        address: userProfile.address || '',
-        taxId: userProfile.taxId || ''
-      });
-    }
-  }, [userProfile]);
-
   useEffect(() => {
     setIsClient(true);
-    if (user) {
-      setCompanyDetails(prev => ({ ...prev, name: user.displayName || '', email: user.email || '' }));
-    }
+    // You can load company details from localStorage here if needed
+  }, []);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const root = document.documentElement;
 
@@ -117,7 +86,7 @@ export default function SettingsPage() {
         setIconSize(parseFloat(storedIconSize));
       }
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && isClient) {
@@ -188,35 +157,14 @@ export default function SettingsPage() {
 
   const handleCompanyUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !userDocRef) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Utilizador não autenticado.' });
-      return;
-    }
-
-    const { name, ...detailsToUpdate } = companyDetails;
-
     setIsSubmitting(true);
     toast({ title: 'A atualizar...', description: 'A guardar os dados da empresa.' });
-
-    try {
-      // Update Firebase Auth profile displayName if it changed
-      if (name.trim() !== user.displayName) {
-        await updateUserProfile(user, { displayName: name.trim() });
-      }
-      
-      // Update Firestore document with all details
-      await updateDoc(userDocRef, {
-        name: name.trim(),
-        ...detailsToUpdate
-      });
-
+    // Here you would save to localStorage or a central config file
+    console.log("Saving company details:", companyDetails);
+    setTimeout(() => {
       toast({ title: 'Sucesso!', description: 'Os dados da empresa foram atualizados.' });
-    } catch (error) {
-      console.error("Error updating company details:", error);
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar os dados da empresa.' });
-    } finally {
       setIsSubmitting(false);
-    }
+    }, 1000);
   };
 
   const handleDetailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -225,7 +173,7 @@ export default function SettingsPage() {
   }
 
 
-  if (!isClient || loading || profileLoading) {
+  if (!isClient) {
     return null; // Or a loading skeleton
   }
 
@@ -400,84 +348,60 @@ export default function SettingsPage() {
               </AccordionContent>
             </Card>
           </AccordionItem>
+          <AccordionItem value="item-2" className="border-0">
+            <Card className="glass-card shadow-sm">
+              <AccordionTrigger className="w-full hover:no-underline">
+                <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
+                  <div className="flex-1">
+                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center">Gestão de Localizações</CardTitle>
+                    <CardDescription className="text-center">
+                      Ative e gerencie múltiplas localizações para o seu negócio.
+                    </CardDescription>
+                  </div>
+                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                </CardHeader>
+              </AccordionTrigger>
+              <AccordionContent>
+                <CardContent className="p-6 sm:p-8 pt-0">
+                  <LocationsManager />
+                </CardContent>
+              </AccordionContent>
+            </Card>
+          </AccordionItem>
 
-          {currentUser && (
-            <>
-              <AccordionItem value="item-2" className="border-0">
-                <Card className="glass-card shadow-sm">
-                  <AccordionTrigger className="w-full hover:no-underline">
-                    <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
-                      <div className="flex-1">
-                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center">Gestão de Localizações</CardTitle>
-                        <CardDescription className="text-center">
-                          Ative e gerencie múltiplas localizações para o seu negócio.
-                        </CardDescription>
-                      </div>
-                      <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                    </CardHeader>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <CardContent className="p-6 sm:p-8 pt-0">
-                      <LocationsManager />
-                    </CardContent>
-                  </AccordionContent>
-                </Card>
-              </AccordionItem>
-              
-              <AccordionItem value="item-3" className="border-0">
-                <Card className="glass-card shadow-sm">
-                  <AccordionTrigger className="w-full hover:no-underline">
-                    <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
-                      <div className="flex-1">
-                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center">Gestão de Funcionários</CardTitle>
-                        <CardDescription className="text-center">
-                          Convide e gerencie os funcionários da sua empresa.
-                        </CardDescription>
-                      </div>
-                      <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                    </CardHeader>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <CardContent className="p-6 sm:p-8 pt-0">
-                      <EmployeeManager />
-                    </CardContent>
-                  </AccordionContent>
-                </Card>
-              </AccordionItem>
-              
-              <AccordionItem value="item-5" className="border-0">
-                <Card className="glass-card shadow-sm">
-                  <AccordionTrigger className="w-full hover:no-underline">
-                    <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
-                      <div className="flex-1">
-                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center flex items-center justify-center gap-2"><Code />Ferramentas de Programador</CardTitle>
-                        <CardDescription className="text-center">
-                          Ações avançadas para gerir o estado da aplicação.
-                        </CardDescription>
-                      </div>
-                      <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                    </CardHeader>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <CardContent className="p-6 sm:p-8 pt-0 space-y-4">
-                       <div>
-                        <h3 className="font-semibold">Limpar Coleção de Produtos</h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Esta ação irá apagar todos os documentos da coleção de produtos no Firestore. Utilize esta opção se quiser limpar o inventário e recomeçar.
-                        </p>
-                       </div>
-                       <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Limpar Produtos do Firestore
-                       </Button>
-                    </CardContent>
-                  </AccordionContent>
-                </Card>
-              </AccordionItem>
-            </>
-          )}
+          <AccordionItem value="item-5" className="border-0">
+            <Card className="glass-card shadow-sm">
+              <AccordionTrigger className="w-full hover:no-underline">
+                <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
+                  <div className="flex-1">
+                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center flex items-center justify-center gap-2"><Code />Ferramentas de Programador</CardTitle>
+                    <CardDescription className="text-center">
+                      Ações avançadas para gerir o estado da aplicação.
+                    </CardDescription>
+                  </div>
+                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                </CardHeader>
+              </AccordionTrigger>
+              <AccordionContent>
+                <CardContent className="p-6 sm:p-8 pt-0 space-y-4">
+                   <div>
+                    <h3 className="font-semibold">Limpar Coleção de Produtos</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Esta ação irá apagar todos os documentos da coleção de produtos no Firestore. Utilize esta opção se quiser limpar o inventário e recomeçar.
+                    </p>
+                   </div>
+                   <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Limpar Produtos do Firestore
+                   </Button>
+                </CardContent>
+              </AccordionContent>
+            </Card>
+          </AccordionItem>
         </Accordion>
       </div>
     </>
   );
 }
+
+    
