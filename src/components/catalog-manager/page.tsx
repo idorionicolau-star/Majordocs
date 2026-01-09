@@ -43,16 +43,14 @@ export function CatalogManager() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const dataPath = 'appData/v1';
-
   const catalogProductsCollectionRef = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, `${dataPath}/catalogProducts`);
+    return collection(firestore, `catalogProducts`);
   }, [firestore]);
 
   const catalogCategoriesCollectionRef = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, `${dataPath}/catalogCategories`);
+    return collection(firestore, `catalogCategories`);
   }, [firestore]);
 
   const { data: products, isLoading: productsLoading } = useCollection<CatalogProduct>(catalogProductsCollectionRef);
@@ -116,10 +114,10 @@ export function CatalogManager() {
     
     toast({ title: 'A atualizar categoria...' });
     try {
-      const categoryDocRef = doc(firestore, `${dataPath}/catalogCategories`, categoryToEdit.id);
+      const categoryDocRef = doc(firestore, `catalogCategories`, categoryToEdit.id);
       await updateDoc(categoryDocRef, { name: newCategoryName.trim() });
       
-      const q = query(collection(firestore, `${dataPath}/catalogProducts`), where("category", "==", categoryToEdit.name));
+      const q = query(collection(firestore, `catalogProducts`), where("category", "==", categoryToEdit.name));
       const querySnapshot = await getDocs(q);
       const batch = writeBatch(firestore);
       querySnapshot.forEach((doc) => {
@@ -153,7 +151,7 @@ export function CatalogManager() {
       } else {
         toast({ title: 'A remover categoria...' });
         try {
-          await deleteDoc(doc(firestore, `${dataPath}/catalogCategories`, categoryToDelete.id));
+          await deleteDoc(doc(firestore, `catalogCategories`, categoryToDelete.id));
           toast({ title: 'Categoria Removida' });
         } catch(e) {
            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover a categoria.' });
@@ -167,7 +165,7 @@ export function CatalogManager() {
      if (productToDelete && firestore) {
         toast({ title: 'A remover produto...' });
         try {
-            await deleteDoc(doc(firestore, `${dataPath}/catalogProducts`, productToDelete.id));
+            await deleteDoc(doc(firestore, `catalogProducts`, productToDelete.id));
             toast({ title: 'Produto Removido do Catálogo' });
         } catch(e) {
             toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover o produto.' });
@@ -180,7 +178,7 @@ export function CatalogManager() {
     if(!firestore || !updatedProduct.id) return;
     toast({ title: 'A atualizar produto...' });
     try {
-        const productDocRef = doc(firestore, `${dataPath}/catalogProducts`, updatedProduct.id);
+        const productDocRef = doc(firestore, `catalogProducts`, updatedProduct.id);
         await updateDoc(productDocRef, updatedProduct as any);
         toast({ title: "Produto do Catálogo Atualizado" });
     } catch(e) {
