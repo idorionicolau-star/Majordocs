@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { EditCatalogProductDialog } from './edit-catalog-product-dialog';
 import { InventoryContext } from '@/context/inventory-context';
-import { useUser } from '@/firebase/auth/use-user';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, deleteDoc, updateDoc, collection, writeBatch, query, getDocs, where, addDoc } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
@@ -42,7 +41,6 @@ type CatalogCategory = { id: string; name: string };
 export function CatalogManager() {
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
-  const { user } = useUser();
   const firestore = useFirestore();
 
   const { companyId } = inventoryContext || {};
