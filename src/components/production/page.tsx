@@ -38,7 +38,7 @@ export default function ProductionPage() {
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('4');
   const [productionToTransfer, setProductionToTransfer] = useState<Production | null>(null);
 
-  const { companyId, productions, updateProductStock, locations, isMultiLocation, loading: inventoryLoading, userData } = inventoryContext || { companyId: null, productions: [], updateProductStock: () => {}, locations: [], isMultiLocation: false, loading: true, userData: null };
+  const { productions, updateProductStock, locations, isMultiLocation, loading: inventoryLoading, userData } = inventoryContext || { productions: [], updateProductStock: () => {}, locations: [], isMultiLocation: false, loading: true, userData: null };
 
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export default function ProductionPage() {
   }
 
   const handleAddProduction = (newProductionData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
-    if (!firestore || !companyId || !userData) return;
+    if (!firestore || !userData) return;
     
     const newProduction: Omit<Production, 'id'> = {
       date: new Date().toISOString().split('T')[0],
@@ -72,7 +72,7 @@ export default function ProductionPage() {
       status: 'Concluído'
     };
 
-    const productionsRef = collection(firestore, `companies/${companyId}/productions`);
+    const productionsRef = collection(firestore, `productions`);
     addDoc(productionsRef, newProduction);
     
     toast({
@@ -82,11 +82,11 @@ export default function ProductionPage() {
   };
 
   const handleConfirmTransfer = () => {
-    if (!productionToTransfer || !firestore || !companyId) return;
+    if (!productionToTransfer || !firestore) return;
 
     updateProductStock(productionToTransfer.productName, productionToTransfer.quantity, productionToTransfer.location);
 
-    const prodDocRef = doc(firestore, `companies/${companyId}/productions`, productionToTransfer.id);
+    const prodDocRef = doc(firestore, `productions`, productionToTransfer.id);
     updateDoc(prodDocRef, { status: 'Transferido' });
 
     toast({

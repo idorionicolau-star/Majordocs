@@ -28,7 +28,7 @@ export default function SalesPage() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { companyId, sales, products: allProducts, locations, loading: inventoryLoading, updateProduct } = inventoryContext || { companyId: null, sales: [], products: [], locations: [], loading: true, updateProduct: () => {} };
+  const { sales, products: allProducts, locations, loading: inventoryLoading, updateProduct } = inventoryContext || { sales: [], products: [], locations: [], loading: true, updateProduct: () => {} };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -50,12 +50,12 @@ export default function SalesPage() {
   }
 
   const handleAddSale = (newSaleData:  Omit<Sale, 'id' | 'guideNumber'>, updatedProducts: Product[]) => {
-    if (!firestore || !companyId) return;
+    if (!firestore) return;
 
     const now = new Date();
     const guideNumber = `GT${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${Date.now().toString().slice(-3)}`;
 
-    const salesCollectionRef = collection(firestore, `companies/${companyId}/sales`);
+    const salesCollectionRef = collection(firestore, `sales`);
     addDoc(salesCollectionRef, { ...newSaleData, guideNumber });
 
     const productSold = updatedProducts.find(p => p.id === newSaleData.productId);
@@ -65,8 +65,8 @@ export default function SalesPage() {
   };
 
   const handleUpdateSale = (updatedSale: Sale) => {
-     if(updatedSale.id && firestore && companyId) {
-         const saleDocRef = doc(firestore, `companies/${companyId}/sales`, updatedSale.id);
+     if(updatedSale.id && firestore) {
+         const saleDocRef = doc(firestore, `sales`, updatedSale.id);
          updateDoc(saleDocRef, updatedSale as any);
          toast({
             title: "Venda Atualizada",
@@ -77,10 +77,10 @@ export default function SalesPage() {
 
   const handleConfirmPickup = (saleId: string) => {
     const saleToUpdate = sales.find(s => s.id === saleId);
-    if (!saleToUpdate || !firestore || !companyId) return;
+    if (!saleToUpdate || !firestore) return;
     
     if (saleToUpdate.id) {
-        const saleDocRef = doc(firestore, `companies/${companyId}/sales`, saleToUpdate.id);
+        const saleDocRef = doc(firestore, `sales`, saleToUpdate.id);
         updateDoc(saleDocRef, { status: 'Levantado' });
     }
 

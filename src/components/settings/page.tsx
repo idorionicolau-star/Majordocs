@@ -59,7 +59,7 @@ export default function SettingsPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { companyId, userData, companyData, updateCompany } = inventoryContext || {};
+  const { companyData, updateCompany } = inventoryContext || {};
 
 
   useEffect(() => {
@@ -67,7 +67,7 @@ export default function SettingsPage() {
     if (companyData) {
       setCompanyDetails({
         name: companyData.name || '',
-        email: companyData.email || '', // Assuming company can have an email
+        email: companyData.email || '',
         phone: companyData.phone || '',
         address: companyData.address || '',
         taxId: companyData.taxId || ''
