@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { LocationsManager } from "@/components/settings/locations-manager";
-import { EmployeeManager } from "@/components/settings/employee-manager";
 import { cn } from "@/lib/utils";
 import {
   Accordion,
@@ -59,19 +58,24 @@ export default function SettingsPage() {
     taxId: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { companyId, userData, companyData, updateCompany } = inventoryContext || {};
+
 
   useEffect(() => {
     setIsClient(true);
-    if (inventoryContext?.companyData) {
+    if (companyData) {
       setCompanyDetails({
-        name: inventoryContext.companyData.name || '',
-        email: inventoryContext.companyData.email || '',
-        phone: inventoryContext.companyData.phone || '',
-        address: inventoryContext.companyData.address || '',
-        taxId: inventoryContext.companyData.taxId || ''
+        name: companyData.name || '',
+        email: userData?.email || '',
+        phone: companyData.phone || '',
+        address: companyData.address || '',
+        taxId: companyData.taxId || ''
       });
+    } else if (userData) {
+        setCompanyDetails(prev => ({...prev, email: userData.email || ''}));
     }
-  }, [inventoryContext?.companyData]);
+  }, [companyData, userData]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -167,13 +171,13 @@ export default function SettingsPage() {
 
   const handleCompanyUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inventoryContext?.updateCompany) {
+    if (!updateCompany) {
         toast({ variant: 'destructive', title: 'Erro', description: 'Função de atualização não encontrada.' });
         return;
     }
     setIsSubmitting(true);
     toast({ title: 'A atualizar...', description: 'A guardar os dados da empresa.' });
-    await inventoryContext.updateCompany(companyDetails);
+    await updateCompany(companyDetails);
     toast({ title: 'Sucesso!', description: 'Os dados da empresa foram atualizados.' });
     setIsSubmitting(false);
   };
@@ -215,7 +219,7 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <Accordion type="single" collapsible className="w-full space-y-6" defaultValue="item-company">
+        <Accordion type="single" collapsible className="w-full space-y-6">
           <AccordionItem value="item-company" className="border-0">
              <Card className="glass-card shadow-sm">
                 <AccordionTrigger className="w-full hover:no-underline">
@@ -264,6 +268,7 @@ export default function SettingsPage() {
                 </AccordionContent>
             </Card>
           </AccordionItem>
+          
           <AccordionItem value="item-1" className="border-0">
             <Card className="glass-card shadow-sm">
               <AccordionTrigger className="w-full hover:no-underline">
@@ -359,6 +364,7 @@ export default function SettingsPage() {
               </AccordionContent>
             </Card>
           </AccordionItem>
+          
           <AccordionItem value="item-2" className="border-0">
             <Card className="glass-card shadow-sm">
               <AccordionTrigger className="w-full hover:no-underline">

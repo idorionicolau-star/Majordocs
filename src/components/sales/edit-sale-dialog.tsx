@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import {
   DialogContent,
   DialogHeader,
@@ -30,9 +30,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Product, Sale } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
+import { InventoryContext } from '@/context/inventory-context';
+import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 
 const formSchema = z.object({
-  productId: z.string().nonempty({ message: "Por favor, selecione um produto." }),
+  productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
   unitPrice: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
 });
@@ -48,25 +50,26 @@ interface EditSaleDialogProps {
 }
 
 export function EditSaleDialog({ sale, products, onUpdateSale, onOpenChange, open }: EditSaleDialogProps) {
+  const inventoryContext = useContext(InventoryContext);
+  const { catalogProducts, catalogCategories } = inventoryContext || {};
+
   const form = useForm<EditSaleFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      productId: sale.productId,
+      productName: sale.productName,
       quantity: sale.quantity,
       unitPrice: sale.unitPrice,
     },
   });
   
-  const watchedProductId = useWatch({ control: form.control, name: 'productId' });
+  const watchedProductName = useWatch({ control: form.control, name: 'productName' });
   const watchedQuantity = useWatch({ control: form.control, name: 'quantity' });
   const watchedUnitPrice = useWatch({ control: form.control, name: 'unitPrice' });
-
-  const selectedProduct = products.find(p => p.id === watchedProductId);
 
   useEffect(() => {
     if (open) {
       form.reset({
-        productId: sale.productId,
+        productName: sale.productName,
         quantity: sale.quantity,
         unitPrice: sale.unitPrice,
       });
@@ -74,27 +77,21 @@ export function EditSaleDialog({ sale, products, onUpdateSale, onOpenChange, ope
   }, [open, sale, form]);
 
   useEffect(() => {
-    if (selectedProduct) {
-        if (watchedProductId !== sale.productId) {
-            form.setValue('unitPrice', selectedProduct.price);
-        } else {
-             // If we go back to the original product, restore its original price in the sale
-            form.setValue('unitPrice', sale.unitPrice);
-        }
+    const catalogProduct = catalogProducts?.find(p => p.name === watchedProductName);
+    if (catalogProduct && watchedProductName !== sale.productName) {
+        form.setValue('unitPrice', catalogProduct.price);
     }
-  }, [watchedProductId, selectedProduct, sale, form]);
+  }, [watchedProductName, sale.productName, catalogProducts, form]);
 
 
   const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
 
   function onSubmit(values: EditSaleFormValues) {
-    const product = products.find(p => p.id === values.productId);
-    if (!product) return;
-
     onUpdateSale({
       ...sale,
-      ...values,
-      productName: product.name,
+      productName: values.productName,
+      quantity: values.quantity,
+      unitPrice: values.unitPrice,
       totalValue: values.quantity * values.unitPrice,
     });
     onOpenChange(false);
@@ -109,22 +106,16 @@ export function EditSaleDialog({ sale, products, onUpdateSale, onOpenChange, ope
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
             <FormField
               control={form.control}
-              name="productId"
+              name="productName"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Produto</FormLabel>
-                   <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um produto" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {products.map(product => (
-                        <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                   <CatalogProductSelector 
+                     products={catalogProducts || []}
+                     categories={catalogCategories || []}
+                     selectedValue={field.value}
+                     onValueChange={field.onChange}
+                   />
                   <FormMessage />
                 </FormItem>
               )}
@@ -172,5 +163,3 @@ export function EditSaleDialog({ sale, products, onUpdateSale, onOpenChange, ope
       </DialogContent>
   );
 }
-
-    

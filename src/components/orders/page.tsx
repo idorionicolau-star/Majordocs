@@ -14,9 +14,8 @@ import { cn } from "@/lib/utils";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useUser } from "@/firebase/auth/use-user";
 import { useFirestore } from "@/firebase";
-import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc, arrayUnion } from "firebase/firestore";
 
 export default function OrdersPage() {
   const [nameFilter, setNameFilter] = useState("");
@@ -24,10 +23,9 @@ export default function OrdersPage() {
   const [view, setView] = useState<'list' | 'grid'>('grid'); // 'list' view to be implemented
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
-  const { user } = useUser();
   const firestore = useFirestore();
 
-  const { companyId, orders, loading: inventoryLoading, updateProductStock } = inventoryContext || { companyId: null, orders: [], loading: true, updateProductStock: () => {} };
+  const { companyId, orders, loading: inventoryLoading, updateProductStock, userData } = inventoryContext || { companyId: null, orders: [], loading: true, updateProductStock: () => {}, userData: null };
 
 
   const handleAddOrder = (newOrderData: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'>) => {
@@ -81,7 +79,7 @@ export default function OrdersPage() {
   };
 
   const handleAddProductionLog = (orderId: string, logData: { quantity: number; notes?: string }) => {
-    if (!firestore || !companyId || !user) return;
+    if (!firestore || !companyId || !userData) return;
     
     let orderToUpdate = orders.find(o => o.id === orderId);
 
@@ -91,14 +89,14 @@ export default function OrdersPage() {
           date: new Date().toISOString(),
           quantity: logData.quantity,
           notes: logData.notes,
-          registeredBy: user.displayName || 'Desconhecido',
+          registeredBy: userData.name || 'Desconhecido',
         };
         const newQuantityProduced = orderToUpdate.quantityProduced + logData.quantity;
         
         const orderDocRef = doc(firestore, `companies/${companyId}/orders`, orderId);
         updateDoc(orderDocRef, {
             quantityProduced: newQuantityProduced,
-            productionLogs: [...orderToUpdate.productionLogs, newLog]
+            productionLogs: arrayUnion(newLog)
         });
 
         toast({

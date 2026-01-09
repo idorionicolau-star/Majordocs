@@ -16,8 +16,7 @@ import { SaleCard } from "@/components/sales/sale-card";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "../ui/skeleton";
-import { addDocumentNonBlocking } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { addDoc, collection, doc, updateDoc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 
 export default function SalesPage() {
@@ -57,7 +56,7 @@ export default function SalesPage() {
     const guideNumber = `GT${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${Date.now().toString().slice(-3)}`;
 
     const salesCollectionRef = collection(firestore, `companies/${companyId}/sales`);
-    addDocumentNonBlocking(salesCollectionRef, { ...newSaleData, guideNumber });
+    addDoc(salesCollectionRef, { ...newSaleData, guideNumber });
 
     const productSold = updatedProducts.find(p => p.id === newSaleData.productId);
     if(productSold && productSold.instanceId){
@@ -66,8 +65,9 @@ export default function SalesPage() {
   };
 
   const handleUpdateSale = (updatedSale: Sale) => {
-     if(updatedSale.id) {
-         updateProduct(updatedSale.id, updatedSale);
+     if(updatedSale.id && firestore && companyId) {
+         const saleDocRef = doc(firestore, `companies/${companyId}/sales`, updatedSale.id);
+         updateDoc(saleDocRef, updatedSale as any);
          toast({
             title: "Venda Atualizada",
             description: `A venda #${updatedSale.guideNumber} foi atualizada com sucesso.`,
@@ -77,13 +77,14 @@ export default function SalesPage() {
 
   const handleConfirmPickup = (saleId: string) => {
     const saleToUpdate = sales.find(s => s.id === saleId);
-    if (!saleToUpdate) return;
+    if (!saleToUpdate || !firestore || !companyId) return;
     
     if (saleToUpdate.id) {
-        updateProduct(saleToUpdate.id, { status: 'Levantado' });
+        const saleDocRef = doc(firestore, `companies/${companyId}/sales`, saleToUpdate.id);
+        updateDoc(saleDocRef, { status: 'Levantado' });
     }
 
-    const productToUpdate = allProducts.find(p => p.id === saleToUpdate.productId && (p.location === saleToUpdate.location || !(inventoryContext?.isMultiLocation)));
+    const productToUpdate = allProducts.find(p => p.name === saleToUpdate.productName && (p.location === saleToUpdate.location || !(inventoryContext?.isMultiLocation)));
 
     if(productToUpdate && productToUpdate.instanceId){
         updateProduct(productToUpdate.instanceId, { 

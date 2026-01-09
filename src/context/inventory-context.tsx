@@ -12,7 +12,6 @@ import {
 import type { Product, Location, Sale, Production, Order, User, Company } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { useUser } from '@/firebase/auth/use-user';
 import {
   collection,
   doc,
@@ -23,6 +22,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  setDoc,
 } from 'firebase/firestore';
 import { initialCatalog } from '@/lib/data';
 
@@ -66,34 +66,50 @@ interface InventoryContextType {
   ) => void;
   seedInitialCatalog: () => Promise<void>;
   clearProductsCollection: () => Promise<void>;
+  updateCompany: (details: Partial<Company>) => Promise<void>;
 }
 
 export const InventoryContext = createContext<InventoryContextType | undefined>(
   undefined
 );
 
+// Hardcoded company ID for single-user mode
+const COMPANY_ID = 'single-company';
+
+const defaultUser: User = {
+    id: 'admin-user',
+    name: 'Admin',
+    email: 'admin@majorstockx.dev',
+    role: 'Admin',
+    companyId: COMPANY_ID,
+};
+
+
 export function InventoryProvider({ children }: { children: ReactNode }) {
-  const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-  const { data: userData, isLoading: userLoading } = useDoc<User>(userDocRef);
-  
-  // **LÓGICA DA `companyId` - PASSO 4: UTILIZAÇÃO CENTRALIZADA**
-  // A `companyId` é obtida a partir do perfil do utilizador autenticado.
-  const companyId = userData?.companyId;
+  const companyId = COMPANY_ID;
 
-  // Todas as consultas subsequentes utilizam esta `companyId` para garantir
-  // que apenas os dados da empresa correta são acedidos.
   const companyDocRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
     return doc(firestore, 'companies', companyId);
   }, [firestore, companyId]);
-  const { data: companyData, isLoading: companyLoading } = useDoc<Company>(companyDocRef);
+  const { data: companyData, isLoading: companyLoading, error: companyError } = useDoc<Company>(companyDocRef);
+
+  useEffect(() => {
+    // This effect ensures the company document exists.
+    if (!companyLoading && !companyData && !companyError && firestore && companyId) {
+      const companyRef = doc(firestore, 'companies', companyId);
+      const defaultCompanyData: Company = {
+        id: companyId,
+        name: 'A Minha Empresa',
+        ownerId: 'admin-user',
+      };
+      // Non-blocking write to create the company doc if it doesn't exist.
+      setDoc(companyRef, defaultCompanyData, { merge: true });
+    }
+  }, [companyData, companyLoading, companyError, firestore, companyId]);
 
   const productsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
@@ -426,9 +442,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [productsCollectionRef, firestore, toast]);
 
+    const updateCompany = useCallback(async (details: Partial<Company>) => {
+    if (!companyDocRef) return;
+    try {
+      await updateDoc(companyDocRef, details);
+    } catch (error) {
+      console.error('Failed to update company details', error);
+      throw new Error('Failed to update company details');
+    }
+  }, [companyDocRef]);
+
   const value: InventoryContextType = {
     companyId,
-    userData: userData || null,
+    userData: defaultUser,
     companyData: companyData || null,
     products,
     sales: salesData || [],
@@ -438,7 +464,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     catalogCategories: catalogCategoriesData || [],
     locations,
     isMultiLocation,
-    loading: userLoading || companyLoading || productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading,
+    loading: companyLoading || productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading,
     addProduct,
     updateProduct,
     deleteProduct,
@@ -446,6 +472,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     updateProductStock,
     seedInitialCatalog,
     clearProductsCollection,
+    updateCompany,
   };
 
   return (

@@ -101,9 +101,10 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const sale = row.original as Sale;
     const inventoryContext = useContext(InventoryContext);
-    const { userData, companyData, isMultiLocation, locations } = inventoryContext || {};
+    const { companyData, isMultiLocation, locations } = inventoryContext || {};
     
-    const canConfirmPickup = userData?.role === 'Admin';
+    // In single-user mode, all actions are available.
+    const canConfirmPickup = true;
     
     return (
         <div className="flex items-center justify-end gap-2">

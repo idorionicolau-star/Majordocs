@@ -1,4 +1,5 @@
 
+
 import type { NavItem, Order, Sale, Production, Notification, Product, InitialCatalog } from './types';
 import {
   LayoutDashboard,
@@ -8,7 +9,6 @@ import {
   Settings,
   ClipboardList,
   BarChart3,
-  Users,
 } from 'lucide-react';
 
 export const mainNavItems: NavItem[] = [
@@ -18,7 +18,6 @@ export const mainNavItems: NavItem[] = [
   { title: 'Produção', href: '/production', icon: Hammer },
   { title: 'Encomendas', href: '/orders', icon: ClipboardList },
   { title: 'Relatórios', href: '/reports', icon: BarChart3 },
-  { title: 'Utilizadores', href: '/users', icon: Users },
   { title: 'Ajustes', href: '/settings', icon: Settings },
 ];
 

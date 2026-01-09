@@ -25,14 +25,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useUser } from "@/firebase/auth/use-user";
 import { useFirestore } from "@/firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
 
 export default function ProductionPage() {
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
-  const { user } = useUser();
   const firestore = useFirestore();
 
   const [nameFilter, setNameFilter] = useState("");
@@ -40,9 +38,7 @@ export default function ProductionPage() {
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('4');
   const [productionToTransfer, setProductionToTransfer] = useState<Production | null>(null);
 
-  const { companyId, updateProductStock, locations, isMultiLocation, loading: inventoryLoading } = inventoryContext || { companyId: null, updateProductStock: () => {}, locations: [], isMultiLocation: false, loading: true };
-
-  const [productions, setProductions] = useState<Production[]>([]);
+  const { companyId, productions, updateProductStock, locations, isMultiLocation, loading: inventoryLoading, userData } = inventoryContext || { companyId: null, productions: [], updateProductStock: () => {}, locations: [], isMultiLocation: false, loading: true, userData: null };
 
 
   useEffect(() => {
@@ -65,13 +61,13 @@ export default function ProductionPage() {
   }
 
   const handleAddProduction = (newProductionData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
-    if (!firestore || !companyId || !user) return;
+    if (!firestore || !companyId || !userData) return;
     
     const newProduction: Omit<Production, 'id'> = {
       date: new Date().toISOString().split('T')[0],
       productName: newProductionData.productName,
       quantity: newProductionData.quantity,
-      registeredBy: user.displayName || 'Desconhecido',
+      registeredBy: userData.name || 'Desconhecido',
       location: newProductionData.location,
       status: 'Concluído'
     };
@@ -86,15 +82,12 @@ export default function ProductionPage() {
   };
 
   const handleConfirmTransfer = () => {
-    if (!productionToTransfer) return;
+    if (!productionToTransfer || !firestore || !companyId) return;
 
     updateProductStock(productionToTransfer.productName, productionToTransfer.quantity, productionToTransfer.location);
 
-    // This part is tricky without direct mutation. The change will be reflected via Firestore listener.
-    // For immediate UI feedback, we can temporarily update the state.
-    setProductions(productions.map(p => 
-      p.id === productionToTransfer.id ? { ...p, status: 'Transferido' } : p
-    ));
+    const prodDocRef = doc(firestore, `companies/${companyId}/productions`, productionToTransfer.id);
+    updateDoc(prodDocRef, { status: 'Transferido' });
 
     toast({
       title: "Transferência Concluída",

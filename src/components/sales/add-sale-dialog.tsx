@@ -38,8 +38,6 @@ import { formatCurrency } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { InventoryContext } from '@/context/inventory-context';
-import { useUser } from '@/firebase/auth/use-user';
-
 
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
@@ -58,14 +56,14 @@ interface AddSaleDialogProps {
 function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogProps) {
   const [open, setOpen] = useState(false);
   const inventoryContext = useContext(InventoryContext);
-  const { user } = useUser();
   const {
     products,
     catalogProducts,
     catalogCategories,
     locations,
-    isMultiLocation
-  } = inventoryContext || { products: [], catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false};
+    isMultiLocation,
+    userData,
+  } = inventoryContext || { products: [], catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false, userData: null};
   const { toast } = useToast();
   
   const form = useForm<AddSaleFormValues>({
@@ -152,7 +150,7 @@ function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogP
       quantity: values.quantity,
       unitPrice: values.unitPrice,
       totalValue: values.quantity * values.unitPrice,
-      soldBy: user?.displayName || 'Desconhecido',
+      soldBy: userData?.name || 'Desconhecido',
       location: values.location,
       status: 'Pago',
     };

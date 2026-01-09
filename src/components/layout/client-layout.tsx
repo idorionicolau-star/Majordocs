@@ -8,13 +8,11 @@ import { cn } from '@/lib/utils';
 import { mainNavItems } from '@/lib/data';
 import { Header } from './header';
 import { SubHeader } from './sub-header';
-import { useUser } from '@/firebase/auth/use-user';
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading } = useUser();
 
   const [animationClass, setAnimationClass] = useState('animate-in');
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -98,16 +96,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       }
     : {};
     
-  const isAuthPage = ['/login', '/register', '/register-company'].includes(pathname);
-
-  if (isAuthPage) {
-    return <>{children}</>;
-  }
-  
-  if (loading) {
-    return <div className="flex h-screen w-full items-center justify-center">A carregar...</div>;
-  }
-
   return (
     <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
       <Header />

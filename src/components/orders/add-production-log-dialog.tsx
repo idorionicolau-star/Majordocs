@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Order } from '@/lib/types';
+import { InventoryContext } from '@/context/inventory-context';
 
 const formSchema = z.object({
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
@@ -41,6 +42,7 @@ interface AddProductionLogDialogProps {
 
 export function AddProductionLogDialog({ order, onAddLog }: AddProductionLogDialogProps) {
   const [open, setOpen] = useState(false);
+  const inventoryContext = useContext(InventoryContext);
 
   const form = useForm<AddLogFormValues>({
     resolver: zodResolver(formSchema),
