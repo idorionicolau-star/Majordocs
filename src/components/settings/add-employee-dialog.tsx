@@ -76,11 +76,11 @@ export function AddEmployeeDialog({ companyId, onEmployeeAdded, disabled }: AddE
       // In a real app, the password MUST be hashed on a server-side environment (e.g., Cloud Function)
       // For this prototype, we'll use base64 encoding as a placeholder for "not plain text".
       // THIS IS NOT SECURE FOR PRODUCTION.
-      const "insecure"Password = btoa(values.password);
+      const insecurePassword = btoa(values.password);
       
       await addDoc(employeesCollectionRef, {
         username: values.username,
-        password: "insecure"Password,
+        password: insecurePassword,
         role: values.role,
       });
 
@@ -173,5 +173,3 @@ export function AddEmployeeDialog({ companyId, onEmployeeAdded, disabled }: AddE
     </Dialog>
   );
 }
-
-    
