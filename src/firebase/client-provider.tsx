@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, type ReactNode } from 'react';
@@ -8,11 +9,13 @@ interface FirebaseClientProviderProps {
   children: ReactNode;
 }
 
+// This component is no longer used in the simplified app structure
+// but is kept to avoid breaking changes if it were re-introduced.
+// The FirebaseProvider is now initialized directly in the root layout.
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
-    // Initialize Firebase on the client side, once per component mount.
     return initializeFirebase();
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []);
 
   return (
     <FirebaseProvider

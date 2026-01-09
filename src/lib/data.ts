@@ -1,5 +1,5 @@
 
-import type { User, NavItem, Order, Sale, Production, Notification, Product, InitialCatalog } from './types';
+import type { NavItem, Order, Sale, Production, Notification, Product, InitialCatalog } from './types';
 import {
   LayoutDashboard,
   Box,
@@ -75,10 +75,20 @@ export const initialCatalog: InitialCatalog = {
 
 
 // Empty arrays for initial state
-export const users: User[] = [];
 export const products: Product[] = [];
 export const sales: Sale[] = [];
 export const productions: Production[] = [];
 export const orders: Order[] = [];
 export const notifications: Notification[] = [];
-export const currentUser: User | null = null;
+export const currentUser = {
+    name: 'Utilizador Padrão',
+    email: 'user@example.com',
+    role: 'Admin',
+    permissions: {
+        canSell: true,
+        canRegisterProduction: true,
+        canEditInventory: true,
+        canTransferStock: true,
+        canViewReports: true,
+    }
+};

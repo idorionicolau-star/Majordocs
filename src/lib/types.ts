@@ -106,5 +106,3 @@ export type InitialCatalog = {
     [subType: string]: string[];
   };
 };
-
-    

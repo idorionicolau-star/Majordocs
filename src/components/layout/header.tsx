@@ -4,12 +4,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ConnectionStatus } from "@/components/connection-status"
-import { UserNav } from "@/components/user-nav"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
+import { ThemeSwitcher } from "../theme-switcher";
 
 export function Header() {
-  const companyName = "Construções & Filhos, Lda";
-
   return (
     <header className="sticky top-0 z-30 flex h-16 sm:h-20 items-center gap-4 border-b px-4 sm:px-6 bg-slate-900/90 backdrop-blur-lg text-slate-50 border-slate-700">
         <div className="flex items-center gap-3">
@@ -24,7 +22,7 @@ export function Header() {
             <ConnectionStatus />
           </div>
           <NotificationsDropdown />
-          <UserNav />
+          <ThemeSwitcher />
         </div>
     </header>
   );

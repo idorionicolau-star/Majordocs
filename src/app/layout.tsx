@@ -5,7 +5,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 import { useEffect, useState } from 'react';
-import { FirebaseClientProvider } from '@/firebase';
+import AppLayout from '@/app/(app)/layout';
 
 // Using Inter font for a modern, clean look
 import { Inter, Space_Grotesk } from 'next/font/google'
@@ -50,10 +50,8 @@ export default function RootLayout({
         <ThemeProvider
           storageKey="majorstockx-theme"
         >
-          <FirebaseClientProvider>
-            {isClient ? children : null}
+            {isClient ? <AppLayout>{children}</AppLayout> : null}
             {isClient && <Toaster />}
-          </FirebaseClientProvider>
         </ThemeProvider>
       </body>
     </html>
