@@ -21,29 +21,21 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
+    
+    /**
+      * Returns true if the user owns the data they are trying to access,
+      * identified by their companyId.
+      */
+    function isCompanyMember(companyId) {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == companyId;
+    }
 
     /**
-     * Returns true if the user is the owner of an existing document.
-     * Combines ownership and existence checks for state-changing operations.
+     * Returns true if the incoming request is for a list operation
+     * that is correctly filtered by companyId.
      */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && exists(request.path);
-    }
-    
-    /**
-      * Returns true if the user is the owner of the company associated
-      * with the document being accessed.
-      */
-    function isCompanyOwner(companyId) {
-      return isSignedIn() && request.auth.uid == companyId;
-    }
-    
-    /**
-      * Returns true if the incoming request is for a list operation
-      * that is correctly filtered by companyId.
-      */
     function isReadingOwnCompanyDocs() {
-        return 'companyId' in request.query && request.query.companyId == request.auth.uid;
+        return 'companyId' in request.query && request.query.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId;
     }
 
 
@@ -52,15 +44,18 @@ service cloud.firestore {
     // -------------------------------------------------------------------------
 
     match /users/{userId} {
-      allow read: if isOwner(userId) || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && resource.data.companyId == request.auth.uid);
+      // Admins can manage their own profile and their employees' profiles.
+      // Employees can only read their own profile.
+      allow read: if isOwner(userId) || isCompanyMember(userId);
+      allow create: if request.auth.uid == request.resource.data.companyId; // Admin creating an employee
+      allow update: if isOwner(userId) || isCompanyMember(userId);
+      allow delete: if isCompanyMember(userId); // Admin deleting an employee
       allow list: if isReadingOwnCompanyDocs();
-      allow create: if isCompanyOwner(request.resource.data.companyId);
-      allow update: if isOwner(userId) || isCompanyOwner(resource.data.companyId);
-      allow delete: if isCompanyOwner(resource.data.companyId);
-    }
-    
-    match /users/{userId}/{document=**} {
-      allow read, write: if isOwner(userId);
+
+      // Any authenticated user can access subcollections if they are a member of the company.
+      match /{document=**} {
+        allow read, write, create, update, delete: if isCompanyMember(userId);
+      }
     }
   }
 }

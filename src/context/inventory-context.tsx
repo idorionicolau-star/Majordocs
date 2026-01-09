@@ -82,7 +82,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const { user: authUser, loading: authLoading } = useAuthUser();
   const { toast } = useToast();
 
-  // Step 1: Get the current user's profile to find their companyId
   const userProfileRef = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
     return doc(firestore, `users/${authUser.uid}`);
@@ -90,14 +89,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const { data: userProfile, isLoading: profileLoading } = useDoc<User>(userProfileRef);
 
-  // Step 2: Determine the companyId to use for data fetching
-  const companyId = useMemo(() => {
-    if (!userProfile) return null;
-    return userProfile.companyId;
-  }, [userProfile]);
+  const companyId = userProfile?.companyId;
 
-
-  // --- Firestore Collections (now depend on companyId) ---
   const productsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
     return collection(firestore, `users/${companyId}/products`);
@@ -110,7 +103,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const usersCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
-    // Employees are in the 'users' collection, linked by their companyId.
     return query(collection(firestore, 'users'), where('companyId', '==', companyId));
   }, [firestore, companyId]);
 
@@ -124,7 +116,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     return collection(firestore, `users/${companyId}/catalogCategories`);
   }, [firestore, companyId]);
 
-  // --- Data Hooks ---
   const { data: productsData, isLoading: productsLoading } =
     useCollection<Product>(productsCollectionRef);
   
@@ -488,5 +479,3 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
-
-    

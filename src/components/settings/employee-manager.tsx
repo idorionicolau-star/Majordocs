@@ -41,7 +41,7 @@ export function EmployeeManager() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   const handleAddUser = async (newUserData: any) => {
-    if (!adminUser || !firestore || !firebaseServices.firebaseApp) {
+    if (!adminUser || !firestore || !firebaseServices?.firebaseApp) {
       toast({ variant: "destructive", title: "Erro", description: "Não autenticado ou a base de dados não está pronta." });
       return;
     }
@@ -80,7 +80,9 @@ export function EmployeeManager() {
       
       // It's good practice to sign the new user out of the temporary auth instance
       // so the admin's session remains primary.
-      await tempAuth.signOut();
+      if(tempAuth.currentUser?.uid === newUser.uid) {
+        await tempAuth.signOut();
+      }
 
 
     } catch (error: any) {
