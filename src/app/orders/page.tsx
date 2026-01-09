@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useMemo, useContext } from "react";
-import { orders as initialOrders, currentUser } from "@/lib/data";
 import type { Order, Product, ProductionLog } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Filter, List, LayoutGrid, ChevronDown } from "lucide-react";
@@ -15,95 +14,96 @@ import { cn } from "@/lib/utils";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useFirestore } from "@/firebase";
+import { collection, addDoc, doc, updateDoc, arrayUnion } from "firebase/firestore";
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [nameFilter, setNameFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [view, setView] = useState<'list' | 'grid'>('grid'); // 'list' view to be implemented
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
+  const firestore = useFirestore();
 
-  const { loading: inventoryLoading } = inventoryContext || { loading: true };
+  const { orders, companyId, loading: inventoryLoading, updateProductStock, user: userData } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null };
 
 
   const handleAddOrder = (newOrderData: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'>) => {
-    const order: Order = {
+    if (!firestore || !companyId) return;
+
+    const order: Omit<Order, 'id'> = {
       ...newOrderData,
       productId: newOrderData.productName, // Temporarily use name as ID-like ref
-      id: `ORD${(orders.length + 1).toString().padStart(3, '0')}`,
       status: 'Pendente',
       quantityProduced: 0,
       productionLogs: [],
       productionStartDate: null,
     };
-    setOrders([order, ...orders]);
-      toast({
+    
+    const ordersCollectionRef = collection(firestore, `companies/${companyId}/orders`);
+    addDoc(ordersCollectionRef, order);
+
+    toast({
         title: "Encomenda Registrada",
         description: `A encomenda de ${order.quantity} ${order.unit} de ${order.productName} foi registrada.`,
     })
   };
   
   const handleUpdateOrderStatus = (orderId: string, newStatus: 'Pendente' | 'Em produção' | 'Concluída') => {
-    let orderToUpdate: Order | undefined;
+    if (!firestore || !companyId) return;
     
-    const updatedOrders = orders.map(order => {
-        if (order.id === orderId) {
-            orderToUpdate = order;
-            let update: Partial<Order> = { status: newStatus };
-            if (newStatus === 'Em produção' && !order.productionStartDate) {
-                update.productionStartDate = new Date().toISOString();
-            }
-            return { ...order, ...update };
+    let orderToUpdate = orders.find(o => o.id === orderId);
+    
+    if (orderToUpdate) {
+        let update: Partial<Order> = { status: newStatus };
+        if (newStatus === 'Em produção' && !orderToUpdate.productionStartDate) {
+            update.productionStartDate = new Date().toISOString();
         }
-        return order;
-    });
-    
-    setOrders(updatedOrders);
+        
+        const orderDocRef = doc(firestore, `companies/${companyId}/orders`, orderId);
+        updateDoc(orderDocRef, update);
 
-    if (newStatus === 'Concluída' && orderToUpdate) {
-        toast({
-            title: "Encomenda Concluída",
-            description: `A produção de ${orderToUpdate.quantity} ${orderToUpdate.unit} de "${orderToUpdate.productName}" foi concluída. O stock foi atualizado.`
-        });
-    } else {
-         toast({
-            title: "Status da Encomenda Atualizado",
-            description: `A encomenda #${orderToUpdate?.id.slice(-3)} está agora "${newStatus}".`
-        });
+        if (newStatus === 'Concluída' && orderToUpdate) {
+            updateProductStock(orderToUpdate.productName, orderToUpdate.quantityProduced);
+            toast({
+                title: "Encomenda Concluída",
+                description: `A produção de ${orderToUpdate.quantity} ${orderToUpdate.unit} de "${orderToUpdate.productName}" foi concluída. O stock foi atualizado.`
+            });
+        } else {
+            toast({
+                title: "Status da Encomenda Atualizado",
+                description: `A encomenda está agora "${newStatus}".`
+            });
+        }
     }
   };
 
   const handleAddProductionLog = (orderId: string, logData: { quantity: number; notes?: string }) => {
-    let orderToUpdate: Order | undefined;
+    if (!firestore || !companyId || !userData) return;
+    
+    let orderToUpdate = orders.find(o => o.id === orderId);
 
-    const updatedOrders = orders.map(order => {
-      if (order.id === orderId) {
-        orderToUpdate = order;
+    if (orderToUpdate) {
         const newLog: ProductionLog = {
           id: `log-${Date.now()}`,
           date: new Date().toISOString(),
           quantity: logData.quantity,
           notes: logData.notes,
-          registeredBy: currentUser.name,
+          registeredBy: userData.username || 'Desconhecido',
         };
-        const newQuantityProduced = order.quantityProduced + logData.quantity;
+        const newQuantityProduced = orderToUpdate.quantityProduced + logData.quantity;
+        
+        const orderDocRef = doc(firestore, `companies/${companyId}/orders`, orderId);
+        updateDoc(orderDocRef, {
+            quantityProduced: newQuantityProduced,
+            productionLogs: arrayUnion(newLog)
+        });
 
-        return {
-          ...order,
-          quantityProduced: newQuantityProduced,
-          productionLogs: [...order.productionLogs, newLog],
-        };
-      }
-      return order;
-    });
-
-    setOrders(updatedOrders);
-
-    toast({
-      title: "Registo de Produção Adicionado",
-      description: `${logData.quantity} unidades de "${orderToUpdate?.productName}" foram registadas.`,
-    });
+        toast({
+          title: "Registo de Produção Adicionado",
+          description: `${logData.quantity} unidades de "${orderToUpdate?.productName}" foram registadas.`,
+        });
+    }
   };
 
 

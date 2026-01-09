@@ -2,11 +2,9 @@
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from "react";
-import { productions as initialProductions } from "@/lib/data";
 import { ProductionDataTable } from "@/components/production/data-table";
 import { AddProductionDialog } from "@/components/production/add-production-dialog";
 import type { Production, Location } from "@/lib/types";
-import { currentUser } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { List, LayoutGrid, ChevronDown, Package } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -27,18 +25,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useFirestore } from "@/firebase";
+import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
 
 export default function ProductionPage() {
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
-  const [productions, setProductions] = useState<Production[]>(initialProductions.map(p => ({ ...p, status: 'Concluído' })));
   const [nameFilter, setNameFilter] = useState("");
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('4');
   const [productionToTransfer, setProductionToTransfer] = useState<Production | null>(null);
 
-  const { products, updateProductStock, locations, isMultiLocation, loading: inventoryLoading } = inventoryContext || { products: [], updateProductStock: () => {}, locations: [], isMultiLocation: false, loading: true };
+  const { productions, companyId, updateProductStock, locations, isMultiLocation, loading: inventoryLoading, user: userData } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, locations: [], isMultiLocation: false, loading: true, user: null };
 
 
   useEffect(() => {
@@ -61,17 +61,19 @@ export default function ProductionPage() {
   }
 
   const handleAddProduction = (newProductionData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
+    if (!firestore || !companyId || !userData) return;
     
-    const newProduction: Production = {
-      id: `PRODREC${(productions.length + 1).toString().padStart(3, '0')}`,
+    const newProduction: Omit<Production, 'id'> = {
       date: new Date().toISOString().split('T')[0],
       productName: newProductionData.productName,
       quantity: newProductionData.quantity,
-      registeredBy: currentUser.name,
+      registeredBy: userData.username || 'Desconhecido',
       location: newProductionData.location,
       status: 'Concluído'
     };
-    setProductions([newProduction, ...productions]);
+
+    const productionsRef = collection(firestore, `companies/${companyId}/productions`);
+    addDoc(productionsRef, newProduction);
     
     toast({
         title: "Produção Registrada",
@@ -80,13 +82,12 @@ export default function ProductionPage() {
   };
 
   const handleConfirmTransfer = () => {
-    if (!productionToTransfer) return;
+    if (!productionToTransfer || !firestore || !companyId) return;
 
     updateProductStock(productionToTransfer.productName, productionToTransfer.quantity, productionToTransfer.location);
 
-    setProductions(productions.map(p => 
-      p.id === productionToTransfer.id ? { ...p, status: 'Transferido' } : p
-    ));
+    const prodDocRef = doc(firestore, `companies/${companyId}/productions`, productionToTransfer.id);
+    updateDoc(prodDocRef, { status: 'Transferido' });
 
     toast({
       title: "Transferência Concluída",

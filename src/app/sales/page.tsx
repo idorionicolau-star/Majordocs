@@ -1,8 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { sales as initialSales, products as initialProducts, currentUser } from "@/lib/data";
+import { useState, useEffect, useMemo, useContext } from "react";
 import type { Sale, Location, Product } from "@/lib/types";
 import { columns } from "@/components/sales/columns";
 import { SalesDataTable } from "@/components/sales/data-table";
@@ -15,24 +14,24 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenu
 import { Input } from "@/components/ui/input";
 import { SaleCard } from "@/components/sales/sale-card";
 import { cn } from "@/lib/utils";
+import { InventoryContext } from "@/context/inventory-context";
+import { Skeleton } from "@/components/ui/skeleton";
+import { addDoc, collection, doc, updateDoc } from "firebase/firestore";
+import { useFirestore } from "@/firebase";
 
 export default function SalesPage() {
-  const [sales, setSales] = useState<Sale[]>(initialSales);
-  const [allProducts, setAllProducts] = useState<Product[]>(initialProducts);
-  const [locations, setLocations] = useState<Location[]>([]);
   const [nameFilter, setNameFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const { toast } = useToast();
+  const inventoryContext = useContext(InventoryContext);
+  const firestore = useFirestore();
+
+  const { sales, products: allProducts, locations, companyId, loading: inventoryLoading, updateProduct } = inventoryContext || { sales: [], products: [], locations: [], companyId: null, loading: true, updateProduct: () => {} };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedLocations = localStorage.getItem('majorstockx-locations');
-      if (storedLocations) {
-        setLocations(JSON.parse(storedLocations));
-      }
-
       const savedView = localStorage.getItem('majorstockx-sales-view') as 'list' | 'grid';
       const savedGridCols = localStorage.getItem('majorstockx-sales-grid-cols') as '3' | '4' | '5';
       if (savedView) setView(savedView);
@@ -50,35 +49,49 @@ export default function SalesPage() {
     localStorage.setItem('majorstockx-sales-grid-cols', cols);
   }
 
-  const handleAddSale = (newSale: Sale, updatedProducts: Product[]) => {
-    setSales([newSale, ...sales]);
-    setAllProducts(updatedProducts);
+  const handleAddSale = (newSaleData:  Omit<Sale, 'id' | 'guideNumber'>, updatedProducts: Product[]) => {
+    if (!firestore || !companyId) return;
+
+    const now = new Date();
+    const guideNumber = `GT${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${Date.now().toString().slice(-3)}`;
+
+    const salesCollectionRef = collection(firestore, `companies/${companyId}/sales`);
+    addDoc(salesCollectionRef, { ...newSaleData, guideNumber });
+
+    const productSold = updatedProducts.find(p => p.id === newSaleData.productId);
+    if(productSold && productSold.instanceId){
+        updateProduct(productSold.instanceId, { reservedStock: productSold.reservedStock });
+    }
   };
 
   const handleUpdateSale = (updatedSale: Sale) => {
-    setSales(sales.map(s => s.id === updatedSale.id ? updatedSale : s));
-    toast({
-        title: "Venda Atualizada",
-        description: `A venda #${updatedSale.guideNumber} foi atualizada com sucesso.`,
-    });
+     if(updatedSale.id && firestore && companyId) {
+         const saleDocRef = doc(firestore, `companies/${companyId}/sales`, updatedSale.id);
+         updateDoc(saleDocRef, updatedSale as any);
+         toast({
+            title: "Venda Atualizada",
+            description: `A venda #${updatedSale.guideNumber} foi atualizada com sucesso.`,
+        });
+     }
   };
 
   const handleConfirmPickup = (saleId: string) => {
     const saleToUpdate = sales.find(s => s.id === saleId);
-    if (!saleToUpdate) return;
+    if (!saleToUpdate || !firestore || !companyId) return;
+    
+    if (saleToUpdate.id) {
+        const saleDocRef = doc(firestore, `companies/${companyId}/sales`, saleToUpdate.id);
+        updateDoc(saleDocRef, { status: 'Levantado' });
+    }
 
-    setSales(sales.map(s => s.id === saleId ? { ...s, status: 'Levantado' } : s));
+    const productToUpdate = allProducts.find(p => p.name === saleToUpdate.productName && (p.location === saleToUpdate.location || !(inventoryContext?.isMultiLocation)));
 
-    setAllProducts(allProducts.map(p => {
-      if (p.id === saleToUpdate.productId && (p.location === saleToUpdate.location || !saleToUpdate.location)) {
-        return {
-          ...p,
-          stock: p.stock - saleToUpdate.quantity,
-          reservedStock: p.reservedStock - saleToUpdate.quantity,
-        };
-      }
-      return p;
-    }));
+    if(productToUpdate && productToUpdate.instanceId){
+        updateProduct(productToUpdate.instanceId, { 
+            stock: productToUpdate.stock - saleToUpdate.quantity,
+            reservedStock: productToUpdate.reservedStock - saleToUpdate.quantity,
+        });
+    }
 
     toast({
       title: "Material Levantado",
@@ -100,6 +113,19 @@ export default function SalesPage() {
     return result;
   }, [sales, nameFilter, statusFilter]);
 
+  if (inventoryLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-1/3" />
+        <Skeleton className="h-8 w-1/4" />
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
@@ -186,8 +212,8 @@ export default function SalesPage() {
       {view === 'list' ? (
         <SalesDataTable 
           columns={columns({ 
-              locations,
-              products: allProducts,
+              locations: locations || [],
+              products: allProducts || [],
               onUpdateSale: handleUpdateSale,
               onConfirmPickup: handleConfirmPickup,
           })} 
@@ -204,17 +230,17 @@ export default function SalesPage() {
                 <SaleCard 
                     key={sale.id}
                     sale={sale}
-                    locations={locations}
-                    products={allProducts}
+                    locations={locations || []}
+                    products={allProducts || []}
                     onUpdateSale={handleUpdateSale}
                     onConfirmPickup={handleConfirmPickup}
-                    isMultiLocation={locations.length > 0}
+                    isMultiLocation={!!(inventoryContext?.isMultiLocation)}
                     viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
                 />
             ))}
         </div>
       )}
-       <AddSaleDialog products={allProducts} onAddSale={handleAddSale} triggerType="fab" />
+       <AddSaleDialog onAddSale={handleAddSale} triggerType="fab" />
     </div>
   );
 }

@@ -3,16 +3,18 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useContext } from 'react';
 import { cn } from '@/lib/utils';
 import { mainNavItems } from '@/lib/data';
 import { Header } from './header';
 import { SubHeader } from './sub-header';
+import { InventoryContext } from '@/context/inventory-context';
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const router = useRouter();
+  const authContext = useContext(InventoryContext);
 
   const [animationClass, setAnimationClass] = useState('animate-in');
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -23,6 +25,27 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const currentPageIndex = mainNavItems.findIndex(
     (item) => item.href === pathname
   );
+
+  const isAuthPage = pathname === '/login' || pathname === '/register';
+
+  useEffect(() => {
+    if (!authContext?.loading && !authContext?.user && !isAuthPage) {
+      router.replace('/login');
+    }
+  }, [authContext?.loading, authContext?.user, isAuthPage, router]);
+
+  if (authContext?.loading && !isAuthPage) {
+    return <div className="flex h-screen w-full items-center justify-center">A carregar aplicação...</div>;
+  }
+  
+  if (!authContext?.user && !isAuthPage) {
+    return <div className="flex h-screen w-full items-center justify-center">A redirecionar...</div>;
+  }
+  
+  if (isAuthPage) {
+      return <>{children}</>;
+  }
+
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchEndRef.current = null;

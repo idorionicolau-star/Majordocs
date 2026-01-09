@@ -25,11 +25,11 @@ export default function OrdersPage() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { orders, loading: inventoryLoading, updateProductStock, userData } = inventoryContext || { orders: [], loading: true, updateProductStock: () => {}, userData: null };
+  const { orders, companyId, loading: inventoryLoading, updateProductStock, user: userData } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null };
 
 
   const handleAddOrder = (newOrderData: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'>) => {
-    if (!firestore) return;
+    if (!firestore || !companyId) return;
 
     const order: Omit<Order, 'id'> = {
       ...newOrderData,
@@ -40,7 +40,7 @@ export default function OrdersPage() {
       productionStartDate: null,
     };
     
-    const ordersCollectionRef = collection(firestore, `orders`);
+    const ordersCollectionRef = collection(firestore, `companies/${companyId}/orders`);
     addDoc(ordersCollectionRef, order);
 
     toast({
@@ -50,7 +50,7 @@ export default function OrdersPage() {
   };
   
   const handleUpdateOrderStatus = (orderId: string, newStatus: 'Pendente' | 'Em produção' | 'Concluída') => {
-    if (!firestore) return;
+    if (!firestore || !companyId) return;
     
     let orderToUpdate = orders.find(o => o.id === orderId);
     
@@ -60,7 +60,7 @@ export default function OrdersPage() {
             update.productionStartDate = new Date().toISOString();
         }
         
-        const orderDocRef = doc(firestore, `orders`, orderId);
+        const orderDocRef = doc(firestore, `companies/${companyId}/orders`, orderId);
         updateDoc(orderDocRef, update);
 
         if (newStatus === 'Concluída' && orderToUpdate) {
@@ -79,7 +79,7 @@ export default function OrdersPage() {
   };
 
   const handleAddProductionLog = (orderId: string, logData: { quantity: number; notes?: string }) => {
-    if (!firestore || !userData) return;
+    if (!firestore || !companyId || !userData) return;
     
     let orderToUpdate = orders.find(o => o.id === orderId);
 
@@ -89,11 +89,11 @@ export default function OrdersPage() {
           date: new Date().toISOString(),
           quantity: logData.quantity,
           notes: logData.notes,
-          registeredBy: userData.name || 'Desconhecido',
+          registeredBy: userData.username || 'Desconhecido',
         };
         const newQuantityProduced = orderToUpdate.quantityProduced + logData.quantity;
         
-        const orderDocRef = doc(firestore, `orders`, orderId);
+        const orderDocRef = doc(firestore, `companies/${companyId}/orders`, orderId);
         updateDoc(orderDocRef, {
             quantityProduced: newQuantityProduced,
             productionLogs: arrayUnion(newLog)

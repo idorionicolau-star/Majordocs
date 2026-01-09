@@ -109,15 +109,15 @@ export default function InventoryPage() {
   };
 
   const handleTransferStock = (
-    productId: string,
+    productName: string,
     fromLocationId: string,
     toLocationId: string,
     quantity: number
   ) => {
-    transferStock(productId, fromLocationId, toLocationId, quantity);
+    transferStock(productName, fromLocationId, toLocationId, quantity);
     toast({
-        title: "Transferência de Stock Concluída",
-        description: `${quantity} unidades de "${productId}" movidas para ${locations.find(l => l.id === toLocationId)?.name}.`,
+        title: "Transferência de Stock Iniciada",
+        description: `${quantity} unidades de "${productName}" a serem movidas para ${locations.find(l => l.id === toLocationId)?.name}.`,
     });
   };
 

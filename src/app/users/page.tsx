@@ -11,12 +11,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Employee } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, addDoc, doc, deleteDoc } from "firebase/firestore";
-import { AuthContext } from "@/firebase/auth/auth-context";
 
 export default function UsersPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { companyId, user } = useContext(AuthContext) || {};
+  const { companyId, user, loading } = useContext(InventoryContext) || {};
 
   const employeesCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
@@ -27,10 +26,29 @@ export default function UsersPage() {
   
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
-  const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId'>) => {
-    if (!employeesCollectionRef) return;
+  const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId' | 'permissions'>) => {
+    if (!employeesCollectionRef || !companyId) return;
+    
     // In a real app, password should be hashed before saving
-    await addDoc(employeesCollectionRef, { ...employeeData, companyId });
+    await addDoc(employeesCollectionRef, { 
+      ...employeeData, 
+      companyId,
+      permissions: { // Default permissions for new employees
+          canViewDashboard: true,
+          canViewInventory: true,
+          canManageInventory: false,
+          canViewSales: true,
+          canManageSales: false,
+          canViewProduction: true,
+          canManageProduction: false,
+          canViewOrders: true,
+          canManageOrders: false,
+          canViewReports: false,
+          canViewSettings: false,
+          canManageUsers: false,
+      }
+    });
+
     toast({
       title: "Funcionário Adicionado",
       description: `O funcionário "${employeeData.username}" foi adicionado.`,
@@ -49,7 +67,7 @@ export default function UsersPage() {
     }
   };
 
-  if (employeesLoading) {
+  if (loading || employeesLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-12 w-1/3" />

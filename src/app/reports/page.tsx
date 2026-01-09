@@ -1,8 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
-import { sales as allSales } from '@/lib/data';
+import { useState, useMemo, useContext } from 'react';
 import { format, startOfDay, isSameDay } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,13 +17,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { InventoryContext } from '@/context/inventory-context';
+import { Skeleton } from '../ui/skeleton';
 
 export default function ReportsPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const inventoryContext = useContext(InventoryContext);
+  const { sales, companyData, loading } = inventoryContext || { sales: [], companyData: null, loading: true };
 
   const salesForDate = useMemo(() => {
-    return allSales.filter(sale => isSameDay(new Date(sale.date), selectedDate));
-  }, [selectedDate]);
+    return sales.filter(sale => isSameDay(new Date(sale.date), selectedDate));
+  }, [selectedDate, sales]);
 
   const reportSummary = useMemo(() => {
     const totalSales = salesForDate.length;
@@ -55,7 +58,7 @@ export default function ReportsPage() {
                 .container { max-width: 800px; margin: auto; padding: 2rem; border: 1px solid #eee; border-radius: 8px; }
                 .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 1rem; margin-bottom: 2rem; }
                 .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: #3498db; margin: 0; }
-                .logo { display: flex; align-items: center; gap: 0.5rem; }
+                .logo { display: flex; flex-direction: column; align-items: flex-start; }
                 .logo span { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: bold; color: #3498db; }
                 .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 2rem 0; }
                 .summary-card { background-color: #f9fafb; padding: 1rem; border-radius: 6px; }
@@ -75,12 +78,7 @@ export default function ReportsPage() {
         printWindow.document.write(`
             <div class="header">
                  <div class="logo">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #3498db;">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
-                    <line x1="12" y1="22.08" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></line>
-                    </svg>
-                    <span>MajorStockX</span>
+                    <span>${companyData?.name || 'MajorStockX'}</span>
                 </div>
                 <h1>Relatório de Vendas</h1>
             </div>
@@ -101,7 +99,7 @@ export default function ReportsPage() {
         });
         printWindow.document.write('</tbody></table>');
         
-        printWindow.document.write('<div class="footer"><p>MajorStockX &copy; ' + new Date().getFullYear() + '</p></div>');
+        printWindow.document.write(`<div class="footer"><p>${companyData?.name || 'MajorStockX'} &copy; ' + new Date().getFullYear() + '</p></div>`);
         printWindow.document.write('</div></body></html>');
         printWindow.document.close();
         
@@ -112,6 +110,22 @@ export default function ReportsPage() {
         }, 500);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-1/3" />
+        <Skeleton className="h-8 w-1/4" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-500">
@@ -204,5 +218,3 @@ const StatCard = ({ icon: Icon, title, value }: StatCardProps) => (
         </CardContent>
     </Card>
 );
-
-    
