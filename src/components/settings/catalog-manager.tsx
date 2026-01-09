@@ -45,16 +45,16 @@ export function CatalogManager() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  const companyId = inventoryContext?.users.find(u => u.id === user?.uid)?.companyId || user?.uid;
+  const { companyId } = inventoryContext || {};
 
   const catalogProductsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
-    return collection(firestore, `users/${companyId}/catalogProducts`);
+    return collection(firestore, `companies/${companyId}/catalogProducts`);
   }, [firestore, companyId]);
 
   const catalogCategoriesCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
-    return collection(firestore, `users/${companyId}/catalogCategories`);
+    return collection(firestore, `companies/${companyId}/catalogCategories`);
   }, [firestore, companyId]);
 
   const { data: products, isLoading: productsLoading } = useCollection<CatalogProduct>(catalogProductsCollectionRef);
@@ -118,10 +118,10 @@ export function CatalogManager() {
     
     toast({ title: 'A atualizar categoria...' });
     try {
-      const categoryDocRef = doc(firestore, `users/${companyId}/catalogCategories`, categoryToEdit.id);
+      const categoryDocRef = doc(firestore, `companies/${companyId}/catalogCategories`, categoryToEdit.id);
       await updateDoc(categoryDocRef, { name: newCategoryName.trim() });
       
-      const q = query(collection(firestore, `users/${companyId}/catalogProducts`), where("category", "==", categoryToEdit.name));
+      const q = query(collection(firestore, `companies/${companyId}/catalogProducts`), where("category", "==", categoryToEdit.name));
       const querySnapshot = await getDocs(q);
       const batch = writeBatch(firestore);
       querySnapshot.forEach((doc) => {
@@ -155,7 +155,7 @@ export function CatalogManager() {
       } else {
         toast({ title: 'A remover categoria...' });
         try {
-          await deleteDoc(doc(firestore, `users/${companyId}/catalogCategories`, categoryToDelete.id));
+          await deleteDoc(doc(firestore, `companies/${companyId}/catalogCategories`, categoryToDelete.id));
           toast({ title: 'Categoria Removida' });
         } catch(e) {
            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover a categoria.' });
@@ -169,7 +169,7 @@ export function CatalogManager() {
      if (productToDelete && firestore && companyId) {
         toast({ title: 'A remover produto...' });
         try {
-            await deleteDoc(doc(firestore, `users/${companyId}/catalogProducts`, productToDelete.id));
+            await deleteDoc(doc(firestore, `companies/${companyId}/catalogProducts`, productToDelete.id));
             toast({ title: 'Produto Removido do Catálogo' });
         } catch(e) {
             toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover o produto.' });
@@ -182,7 +182,7 @@ export function CatalogManager() {
     if(!firestore || !companyId || !updatedProduct.id) return;
     toast({ title: 'A atualizar produto...' });
     try {
-        const productDocRef = doc(firestore, `users/${companyId}/catalogProducts`, updatedProduct.id);
+        const productDocRef = doc(firestore, `companies/${companyId}/catalogProducts`, updatedProduct.id);
         await updateDoc(productDocRef, updatedProduct as any);
         toast({ title: "Produto do Catálogo Atualizado" });
     } catch(e) {
