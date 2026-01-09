@@ -8,12 +8,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function isEmployee(companyId) {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == companyId;
+      return isSignedIn() && getUserData().companyId == companyId;
     }
     
     function isAdmin(companyId) {
-       return isEmployee(companyId) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+       return isEmployee(companyId) && getUserData().role == 'Admin';
     }
 
     // Rules for the users collection
@@ -23,7 +27,7 @@ service cloud.firestore {
       // Allow a user to read/update their own profile
       allow read, update: if isSignedIn() && request.auth.uid == userId;
       // Allow an Admin to list users of their own company
-      allow list: if isSignedIn() && isAdmin(request.query.companyId);
+      allow list: if isSignedIn() && isAdmin(request.query.where.value);
       // Allow an Admin to delete an employee's account from the same company
       allow delete: if isSignedIn() && isAdmin(get(/databases/$(database)/documents/users/$(userId)).data.companyId);
     }
@@ -32,14 +36,19 @@ service cloud.firestore {
     match /companies/{companyId} {
         // Anyone signed in can create a company (initial setup)
         allow create: if isSignedIn();
-        // Only employees of the company can read company details
-        allow read, update: if isEmployee(companyId);
+        // Only employees of the company can read company details. Admin can update.
+        allow read: if isEmployee(companyId);
+        allow update: if isAdmin(companyId);
     }
 
     // Rules for all subcollections within a company document
     match /companies/{companyId}/{collection}/{docId} {
-      // Any employee of the company can read and write data within their company's collections
-      allow read, write: if isEmployee(companyId);
+      // Any employee of the company can read data within their company's collections
+      allow read: if isEmployee(companyId);
+      // Admins have full write access (create, update, delete)
+      allow write: if isAdmin(companyId);
+      // Employees can create certain documents (e.g. sales, productions)
+      allow create: if isEmployee(companyId);
     }
   }
 }
