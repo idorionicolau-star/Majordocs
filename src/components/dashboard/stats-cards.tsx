@@ -3,7 +3,7 @@
 
 import { useContext } from "react";
 import { Card } from "@/components/ui/card";
-import { Box, DollarSign, AlertTriangle, Users, ArrowUp, ArrowDown } from "lucide-react";
+import { Box, DollarSign, AlertTriangle, Users, Package, ShoppingCart } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
@@ -24,18 +24,22 @@ export function StatsCards() {
         );
     }
 
-    const lowStockCount = products.filter(p => p.stock < p.lowStockThreshold).length;
+    const totalItemsInStock = products.reduce((sum, p) => sum + p.stock, 0);
+    const lowStockProducts = products.filter(p => p.stock > 0 && p.stock < p.lowStockThreshold);
+    const lowStockCount = lowStockProducts.length;
+    const lowStockPercentage = products.length > 0 ? (lowStockCount / products.length) * 100 : 0;
     
-    // Calculate sales for the current month
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
-    const totalSalesValue = sales
-        .filter(sale => {
-            const saleDate = new Date(sale.date);
-            return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
-        })
-        .reduce((sum, sale) => sum + sale.totalValue, 0);
+    
+    const monthlySales = sales.filter(sale => {
+        const saleDate = new Date(sale.date);
+        return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
+    });
+    
+    const totalSalesValue = monthlySales.reduce((sum, sale) => sum + sale.totalValue, 0);
+    const totalSalesCount = monthlySales.length;
 
   const stats = [
     {
@@ -43,32 +47,36 @@ export function StatsCards() {
       value: products.length,
       icon: Box,
       color: "blue",
-      trend: "+2.5%",
-      trendDirection: "up" as "up" | "down",
+      contextLabel: "Total de Itens",
+      contextValue: totalItemsInStock,
+      contextIcon: Package,
     },
     {
       title: "Vendas (Mês)",
       value: formatCurrency(totalSalesValue),
       icon: DollarSign,
       color: "emerald",
-      trend: "+15%",
-      trendDirection: "up" as "up" | "down",
+      contextLabel: "Nº de Vendas",
+      contextValue: totalSalesCount,
+      contextIcon: ShoppingCart,
     },
     {
       title: "Estoque Baixo",
       value: lowStockCount,
       icon: AlertTriangle,
       color: "amber",
-      trend: "-3",
-      trendDirection: "down" as "up" | "down",
+      contextLabel: `dos produtos`,
+      contextValue: `${lowStockPercentage.toFixed(0)}%`,
+      contextIcon: AlertTriangle,
     },
     {
-      title: "Usuários Ativos",
+      title: "Funcionários",
       value: users.filter(u => u.status === 'Ativo').length,
       icon: Users,
       color: "slate",
-      trend: "+1",
-      trendDirection: "up" as "up" | "down",
+      contextLabel: "Total",
+      contextValue: users.length,
+      contextIcon: Users,
     },
   ];
 
@@ -79,9 +87,11 @@ export function StatsCards() {
       slate: 'text-slate-500',
   }
   
-  const trendColors = {
-      up: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10',
-      down: 'text-rose-600 bg-rose-50 dark:bg-rose-500/10'
+  const contextColors = {
+      blue: 'text-blue-600 bg-blue-50 dark:bg-blue-500/10',
+      emerald: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10',
+      amber: 'text-amber-600 bg-amber-50 dark:bg-amber-500/10',
+      slate: 'text-slate-600 bg-slate-100 dark:bg-slate-500/10'
   }
 
   return (
@@ -108,11 +118,12 @@ export function StatsCards() {
                 </div>
             </div>
              <div className={cn(
-                "absolute top-4 right-4 flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold", 
-                trendColors[stat.trendDirection]
+                "absolute top-4 right-4 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold", 
+                contextColors[stat.color as keyof typeof contextColors]
               )}>
-                {stat.trendDirection === 'up' ? <ArrowUp size={12} strokeWidth={3}/> : <ArrowDown size={12} strokeWidth={3}/> }
-                <span>{stat.trend}</span>
+                {stat.contextIcon && <stat.contextIcon size={12} strokeWidth={3}/>}
+                <span>{stat.contextValue}</span>
+                <span className="font-medium hidden sm:inline">{stat.contextLabel}</span>
             </div>
         </Card>
       ))}
