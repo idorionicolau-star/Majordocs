@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { LocationsManager } from "@/components/settings/locations-manager";
+import { EmployeeManager } from "@/components/settings/employee-manager";
 import { cn } from "@/lib/utils";
 import {
   Accordion,
@@ -268,6 +269,26 @@ export default function SettingsPage() {
                 </AccordionContent>
             </Card>
           </AccordionItem>
+          <AccordionItem value="item-employees" className="border-0">
+            <Card className="glass-card shadow-sm">
+              <AccordionTrigger className="w-full hover:no-underline">
+                <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
+                  <div className="flex-1">
+                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center flex items-center justify-center gap-2"><Users /> Gestão de Funcionários</CardTitle>
+                    <CardDescription className="text-center">
+                      Adicione, visualize e gerencie os membros da sua equipa.
+                    </CardDescription>
+                  </div>
+                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                </CardHeader>
+              </AccordionTrigger>
+              <AccordionContent>
+                <CardContent className="p-6 sm:p-8 pt-0">
+                  <EmployeeManager companyId={companyId} />
+                </CardContent>
+              </AccordionContent>
+            </Card>
+          </AccordionItem>
           <AccordionItem value="item-1" className="border-0">
             <Card className="glass-card shadow-sm">
               <AccordionTrigger className="w-full hover:no-underline">
@@ -419,3 +440,5 @@ export default function SettingsPage() {
     </>
   );
 }
+
+    
