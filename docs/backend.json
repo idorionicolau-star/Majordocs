@@ -23,6 +23,17 @@
       },
       "required": ["name", "email", "role"]
     },
+    "Employee": {
+      "title": "Employee",
+      "type": "object",
+      "description": "Represents an internal employee with username/password auth.",
+      "properties": {
+        "username": { "type": "string" },
+        "password": { "type": "string", "description": "This should be a hashed password in a real application." },
+        "role": { "type": "string", "enum": ["Admin", "Employee"] }
+      },
+      "required": ["username", "password", "role"]
+    },
     "CatalogProduct": {
       "title": "CatalogProduct",
       "type": "object",
@@ -170,6 +181,13 @@
         "definition": {
           "schema": { "$ref": "#/entities/Order" },
           "description": "Stores production orders."
+        }
+      },
+      {
+        "path": "/employees/{employeeId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/Employee" },
+          "description": "Stores internal employee user accounts."
         }
       }
     ]

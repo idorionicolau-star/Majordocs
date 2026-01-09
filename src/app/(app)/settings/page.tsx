@@ -59,7 +59,7 @@ export default function SettingsPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { companyId, userData, companyData, updateCompany } = inventoryContext || {};
+  const { companyData, updateCompany } = inventoryContext || {};
 
 
   useEffect(() => {
@@ -67,15 +67,13 @@ export default function SettingsPage() {
     if (companyData) {
       setCompanyDetails({
         name: companyData.name || '',
-        email: userData?.email || '',
+        email: companyData.email || '',
         phone: companyData.phone || '',
         address: companyData.address || '',
         taxId: companyData.taxId || ''
       });
-    } else if (userData) {
-        setCompanyDetails(prev => ({...prev, email: userData.email || ''}));
     }
-  }, [companyData, userData]);
+  }, [companyData]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -219,14 +217,14 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <Accordion type="single" collapsible className="w-full space-y-6">
+        <Accordion type="single" collapsible className="w-full space-y-6" defaultValue="item-1">
           <AccordionItem value="item-company" className="border-0">
              <Card className="glass-card shadow-sm">
                 <AccordionTrigger className="w-full hover:no-underline">
-                    <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
-                    <div className="flex-1">
-                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center flex items-center justify-center gap-2"><Building /> Detalhes da Empresa</CardTitle>
-                        <CardDescription className="text-center">
+                    <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
+                    <div className="flex-1 text-left">
+                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2"><Building /> Detalhes da Empresa</CardTitle>
+                        <CardDescription>
                             Visualize e edite os dados da sua empresa.
                         </CardDescription>
                     </div>
@@ -258,7 +256,7 @@ export default function SettingsPage() {
                                 <Input id="address" value={companyDetails.address} onChange={handleDetailChange} />
                             </div>
                           </div>
-                          <div className="flex justify-center">
+                          <div className="flex justify-end">
                             <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting ? 'A guardar...' : 'Salvar Alterações'}
                             </Button>
@@ -272,10 +270,10 @@ export default function SettingsPage() {
           <AccordionItem value="item-1" className="border-0">
             <Card className="glass-card shadow-sm">
               <AccordionTrigger className="w-full hover:no-underline">
-                <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
-                  <div className="flex-1">
-                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center">Aparência</CardTitle>
-                    <CardDescription className="text-center">
+                <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
+                  <div className="flex-1 text-left">
+                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl">Aparência</CardTitle>
+                    <CardDescription>
                       Personalize a aparência da aplicação.
                     </CardDescription>
                   </div>
@@ -368,10 +366,10 @@ export default function SettingsPage() {
           <AccordionItem value="item-2" className="border-0">
             <Card className="glass-card shadow-sm">
               <AccordionTrigger className="w-full hover:no-underline">
-                <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
-                  <div className="flex-1">
-                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center">Gestão de Localizações</CardTitle>
-                    <CardDescription className="text-center">
+                <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
+                  <div className="flex-1 text-left">
+                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl">Gestão de Localizações</CardTitle>
+                    <CardDescription>
                       Ative e gerencie múltiplas localizações para o seu negócio.
                     </CardDescription>
                   </div>
@@ -389,10 +387,10 @@ export default function SettingsPage() {
           <AccordionItem value="item-5" className="border-0">
             <Card className="glass-card shadow-sm">
               <AccordionTrigger className="w-full hover:no-underline">
-                <CardHeader className="flex-row items-center justify-center w-full p-6 sm:p-8">
-                  <div className="flex-1">
-                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl text-center flex items-center justify-center gap-2"><Code />Ferramentas de Programador</CardTitle>
-                    <CardDescription className="text-center">
+                <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
+                  <div className="flex-1 text-left">
+                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2"><Code />Ferramentas de Programador</CardTitle>
+                    <CardDescription>
                       Ações avançadas para gerir o estado da aplicação.
                     </CardDescription>
                   </div>
