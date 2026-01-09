@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { AuthContext } from '@/firebase/auth/auth-context';
+import { InventoryContext } from '@/context/inventory-context';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -26,7 +26,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const authContext = useContext(AuthContext);
+  const context = useContext(InventoryContext);
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -39,14 +39,14 @@ export default function RegisterPage() {
 
   const handleRegister = async (data: RegisterFormValues) => {
     setIsLoading(true);
-    if (!authContext?.registerCompany) {
+    if (!context?.registerCompany) {
         toast({ variant: 'destructive', title: 'Erro', description: 'Função de registo não disponível.' });
         setIsLoading(false);
         return;
     }
 
     try {
-        const success = await authContext.registerCompany(data.companyName, data.adminUsername, data.adminPassword);
+        const success = await context.registerCompany(data.companyName, data.adminUsername, data.adminPassword);
         if (success) {
             toast({
                 title: 'Empresa Registada com Sucesso!',

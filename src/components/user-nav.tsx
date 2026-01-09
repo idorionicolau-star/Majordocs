@@ -15,10 +15,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { AuthContext } from "@/firebase/auth/auth-context"
+import { InventoryContext } from "@/context/inventory-context"
 
 export function UserNav() {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout } = useContext(InventoryContext) || {};
 
   if (!user) {
     return null;

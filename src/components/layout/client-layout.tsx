@@ -3,19 +3,16 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
-import React, { useRef, useState, useEffect, useContext } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { mainNavItems } from '@/lib/data';
 import { Header } from './header';
 import { SubHeader } from './sub-header';
-import { AuthContext } from '@/firebase/auth/auth-context';
-import { InventoryProvider } from '@/context/inventory-context';
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const router = useRouter();
-  const authContext = useContext(AuthContext);
 
   const [animationClass, setAnimationClass] = useState('animate-in');
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -26,16 +23,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const currentPageIndex = mainNavItems.findIndex(
     (item) => item.href === pathname
   );
-
-  const isAuthPage = pathname === '/login' || pathname === '/register';
-
-  useEffect(() => {
-    // This is the primary guard. It runs on every navigation.
-    if (!authContext.loading && !authContext.user && !isAuthPage) {
-      router.replace('/login');
-    }
-  }, [authContext.loading, authContext.user, router, isAuthPage, pathname]);
-
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchEndRef.current = null;
@@ -107,25 +94,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         onTouchEnd: handleTouchEnd,
       }
     : {};
-
-  if (isAuthPage) {
-    return <>{children}</>;
-  }
-
-  // This is the definitive guard. We wait for loading to be false AND
-  // for user and companyId to be truthy before rendering the app.
-  if (authContext.loading || !authContext.user || !authContext.companyId) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        A carregar aplicação...
-      </div>
-    );
-  }
     
-  // Only when the authentication is confirmed and companyId is present,
-  // do we render the full application layout, now wrapped by the InventoryProvider.
   return (
-    <InventoryProvider>
       <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
         <Header />
         <SubHeader />
@@ -137,6 +107,5 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
-    </InventoryProvider>
   );
 }

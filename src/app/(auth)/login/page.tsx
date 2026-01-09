@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { AuthContext } from '@/firebase/auth/auth-context';
+import { InventoryContext } from '@/context/inventory-context';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -25,7 +25,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { login } = useContext(AuthContext);
+  const { login } = useContext(InventoryContext) || {};
   const [isLoading, setIsLoading] = useState(false);
 
   const {
