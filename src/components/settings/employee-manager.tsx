@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useContext } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
@@ -33,8 +33,10 @@ export function EmployeeManager({ companyId }: EmployeeManagerProps) {
   
   const [employeeToDelete, setEmployeeToDelete] = useState<User | null>(null);
 
+  // A consulta agora é feita aqui, garantindo que o companyId é usado.
   const usersCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
+    // Esta consulta filtra os utilizadores pela companyId, o que é seguro e eficiente.
     return query(collection(firestore, 'users'), where('companyId', '==', companyId));
   }, [firestore, companyId]);
 
@@ -45,6 +47,8 @@ export function EmployeeManager({ companyId }: EmployeeManagerProps) {
     
     toast({ title: "A remover funcionário..." });
     try {
+        // A função de apagar um utilizador não está implementada no backend,
+        // então apenas apagamos o documento do Firestore.
         await deleteDoc(doc(firestore, 'users', employeeToDelete.id));
         toast({ title: "Funcionário Removido" });
     } catch(e) {
@@ -82,6 +86,7 @@ export function EmployeeManager({ companyId }: EmployeeManagerProps) {
     <div className="space-y-4">
         <div className='flex justify-between items-center'>
             <h4 className="font-medium text-lg">Funcionários</h4>
+            {/* Passamos a companyId diretamente para o diálogo */}
             <AddEmployeeDialog companyId={companyId} />
         </div>
         <div className="rounded-md border">
@@ -94,6 +99,7 @@ export function EmployeeManager({ companyId }: EmployeeManagerProps) {
                     </div>
                   
                   <div className='flex items-center gap-2'>
+                    {/* Um admin não se pode apagar a si mesmo */}
                     {user.id !== currentUser?.uid && (
                         <Button
                             variant="ghost"

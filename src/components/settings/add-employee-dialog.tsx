@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useContext } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -40,6 +40,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface AddEmployeeDialogProps {
+    // A companyId é recebida como uma propriedade obrigatória.
     companyId: string | null;
 }
 
@@ -58,6 +59,7 @@ export function AddEmployeeDialog({ companyId }: AddEmployeeDialogProps) {
   });
 
   const onSubmit = async (values: FormValues) => {
+    // Verificamos se a companyId foi recebida corretamente.
     if (!firestore || !companyId) {
       toast({
         variant: 'destructive',
@@ -70,22 +72,22 @@ export function AddEmployeeDialog({ companyId }: AddEmployeeDialogProps) {
     toast({ title: "A criar conta de funcionário..." });
 
     try {
+        // O Firebase Auth não está ligado diretamente ao Firestore.
+        // Primeiro, criamos a conta de autenticação.
         const userCredential = await createUserWithEmail(values.email, values.password);
         const user = userCredential.user;
 
+        // Atualizamos o perfil de autenticação com o nome.
         await updateUserProfile(user, { displayName: values.name });
         
-        // **LÓGICA DA `companyId` - PASSO 3: LIGAÇÃO DO FUNCIONÁRIO À EMPRESA**
-        // Ao criar o perfil do novo funcionário:
-        // 1. A sua `role` é definida como 'Employee'.
-        // 2. A sua `companyId` é preenchida com a `companyId` do administrador que o está a criar.
-        // Isto garante que o funcionário pertence à empresa correta.
+        // Depois, criamos o documento do utilizador no Firestore,
+        // associando-o à empresa correta usando a companyId recebida.
         const userDocRef = doc(firestore, 'users', user.uid);
         await setDoc(userDocRef, {
             name: values.name,
             email: values.email,
             role: 'Employee',
-            companyId: companyId,
+            companyId: companyId, // A companyId é usada aqui.
         });
 
         toast({ title: "Sucesso!", description: `A conta para ${values.name} foi criada.` });
@@ -106,7 +108,7 @@ export function AddEmployeeDialog({ companyId }: AddEmployeeDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button size="sm" disabled={!companyId}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Adicionar Funcionário
         </Button>

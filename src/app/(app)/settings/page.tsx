@@ -51,6 +51,7 @@ export default function SettingsPage() {
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
 
+  // Obtemos a companyId do contexto principal.
   const companyId = inventoryContext?.companyId;
 
   const [companyDetails, setCompanyDetails] = useState({
@@ -376,7 +377,8 @@ export default function SettingsPage() {
               </AccordionTrigger>
               <AccordionContent>
                 <CardContent className="p-6 sm:p-8 pt-0">
-                  <EmployeeManager companyId={companyId} />
+                  {/* Passamos a companyId diretamente como uma propriedade. */}
+                  <EmployeeManager companyId={companyId || null} />
                 </CardContent>
               </AccordionContent>
             </Card>
