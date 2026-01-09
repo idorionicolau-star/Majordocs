@@ -10,7 +10,7 @@ import {
   useContext,
   useMemo,
 } from 'react';
-import type { Product, Location } from '@/lib/types';
+import type { Product, Location, Sale, User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import {
   useFirestore,
@@ -28,7 +28,7 @@ import {
   query,
   where,
 } from 'firebase/firestore';
-import { useUser } from '@/firebase/auth/use-user';
+import { useUser as useAuthUser } from '@/firebase/auth/use-user';
 import {
   setDocumentNonBlocking,
   addDocumentNonBlocking,
@@ -42,6 +42,8 @@ type CatalogCategory = { id: string; name: string };
 
 interface InventoryContextType {
   products: Product[];
+  sales: Sale[];
+  users: User[];
   catalogProducts: CatalogProduct[];
   catalogCategories: CatalogCategory[];
   locations: Location[];
@@ -76,28 +78,46 @@ export const InventoryContext = createContext<InventoryContextType | undefined>(
 
 export function InventoryProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user: authUser } = useAuthUser();
   const { toast } = useToast();
 
   // --- Firestore Collections ---
   const productsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return collection(firestore, `users/${user.uid}/products`);
-  }, [firestore, user]);
+    if (!firestore || !authUser) return null;
+    return collection(firestore, `users/${authUser.uid}/products`);
+  }, [firestore, authUser]);
+
+  const salesCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    return collection(firestore, `users/${authUser.uid}/sales`);
+  }, [firestore, authUser]);
+
+  const usersCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    // Employees are in the 'users' collection, linked by their companyId which is the admin's UID.
+    return query(collection(firestore, 'users'), where('companyId', '==', authUser.uid));
+  }, [firestore, authUser]);
+
 
   const catalogProductsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return collection(firestore, `users/${user.uid}/catalogProducts`);
-  }, [firestore, user]);
+    if (!firestore || !authUser) return null;
+    return collection(firestore, `users/${authUser.uid}/catalogProducts`);
+  }, [firestore, authUser]);
 
   const catalogCategoriesCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return collection(firestore, `users/${user.uid}/catalogCategories`);
-  }, [firestore, user]);
+    if (!firestore || !authUser) return null;
+    return collection(firestore, `users/${authUser.uid}/catalogCategories`);
+  }, [firestore, authUser]);
 
   // --- Data Hooks ---
   const { data: productsData, isLoading: productsLoading } =
     useCollection<Product>(productsCollectionRef);
+  
+  const { data: salesData, isLoading: salesLoading } =
+    useCollection<Sale>(salesCollectionRef);
+
+  const { data: usersData, isLoading: usersLoading } =
+    useCollection<User>(usersCollectionRef);
   
   const { data: catalogProductsData, isLoading: catalogProductsLoading } = 
     useCollection<CatalogProduct>(catalogProductsCollectionRef);
@@ -156,7 +176,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   );
   
   const seedInitialCatalog = useCallback(async () => {
-    if (!catalogProductsCollectionRef || !catalogCategoriesCollectionRef || !user || !firestore) {
+    if (!catalogProductsCollectionRef || !catalogCategoriesCollectionRef || !authUser || !firestore) {
       toast({
         variant: "destructive",
         title: "Erro",
@@ -222,16 +242,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         description: "Ocorreu um problema ao tentar guardar os produtos.",
       });
     }
-  }, [catalogProductsCollectionRef, catalogCategoriesCollectionRef, user, firestore, toast]);
+  }, [catalogProductsCollectionRef, catalogCategoriesCollectionRef, authUser, firestore, toast]);
 
   const updateProduct = useCallback(
     (instanceId: string, updatedData: Partial<Product>) => {
       const productToUpdate = products.find((p) => p.instanceId === instanceId);
-      if (!productToUpdate || !firestore || !user || !productToUpdate.id) return;
+      if (!productToUpdate || !firestore || !authUser || !productToUpdate.id) return;
 
       const docRef = doc(
         firestore,
-        `users/${user.uid}/products`,
+        `users/${authUser.uid}/products`,
         productToUpdate.id
       );
       updateDocumentNonBlocking(docRef, {
@@ -239,22 +259,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         lastUpdated: new Date().toISOString().split('T')[0],
       });
     },
-    [products, firestore, user]
+    [products, firestore, authUser]
   );
 
   const deleteProduct = useCallback(
     (instanceId: string) => {
       const productToDelete = products.find((p) => p.instanceId === instanceId);
-      if (!productToDelete || !firestore || !user || !productToDelete.id) return;
+      if (!productToDelete || !firestore || !authUser || !productToDelete.id) return;
 
       const docRef = doc(
         firestore,
-        `users/${user.uid}/products`,
+        `users/${authUser.uid}/products`,
         productToDelete.id
       );
       deleteDocumentNonBlocking(docRef);
     },
-    [products, firestore, user]
+    [products, firestore, authUser]
   );
 
   const transferStock = useCallback(
@@ -264,7 +284,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       toLocationId: string,
       quantity: number
     ) => {
-      if (!firestore || !user) return;
+      if (!firestore || !authUser) return;
 
       // Note: This logic assumes productId is the base ID, not instance ID
       const fromProduct = products.find(
@@ -296,7 +316,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       if(fromProduct.id){
         const fromDocRef = doc(
           firestore,
-          `users/${user.uid}/products`,
+          `users/${authUser.uid}/products`,
           fromProduct.id
         );
         batch.update(fromDocRef, { stock: fromProduct.stock - quantity });
@@ -305,7 +325,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       if (toProduct && toProduct.id) {
         const toDocRef = doc(
           firestore,
-          `users/${user.uid}/products`,
+          `users/${authUser.uid}/products`,
           toProduct.id
         );
         batch.update(toDocRef, { stock: toProduct.stock + quantity });
@@ -320,7 +340,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         };
         delete newProductData.id;
         const newDocRef = doc(
-          collection(firestore, `users/${user.uid}/products`)
+          collection(firestore, `users/${authUser.uid}/products`)
         );
         batch.set(newDocRef, newProductData);
       }
@@ -341,12 +361,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [firestore, user, products, toast]
+    [firestore, authUser, products, toast]
   );
 
   const updateProductStock = useCallback(
     async (productName: string, quantity: number, locationId?: string) => {
-      if (!firestore || !user) return;
+      if (!firestore || !authUser) return;
 
       const targetLocation =
         locationId ||
@@ -363,7 +383,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       if (existingInstance && existingInstance.id) {
         const docRef = doc(
           firestore,
-          `users/${user.uid}/products`,
+          `users/${authUser.uid}/products`,
           existingInstance.id
         );
         updateDocumentNonBlocking(docRef, {
@@ -393,16 +413,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         };
         const productsRef = collection(
           firestore,
-          `users/${user.uid}/products`
+          `users/${authUser.uid}/products`
         );
         addDocumentNonBlocking(productsRef, newProductData);
       }
     },
-    [firestore, user, products, catalogProductsData, isMultiLocation, locations, toast]
+    [firestore, authUser, products, catalogProductsData, isMultiLocation, locations, toast]
   );
   
   const clearProductsCollection = useCallback(async () => {
-    if (!productsCollectionRef || !user) {
+    if (!productsCollectionRef || !authUser) {
       toast({
         variant: "destructive",
         title: "Erro",
@@ -427,15 +447,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         description: "Ocorreu um problema ao tentar apagar os produtos.",
       });
     }
-  }, [productsCollectionRef, user, firestore, toast]);
+  }, [productsCollectionRef, authUser, firestore, toast]);
 
   const value: InventoryContextType = {
     products,
+    sales: salesData || [],
+    users: usersData || [],
     catalogProducts: catalogProductsData || [],
     catalogCategories: catalogCategoriesData || [],
     locations,
     isMultiLocation,
-    loading: productsLoading || catalogProductsLoading || catalogCategoriesLoading,
+    loading: productsLoading || catalogProductsLoading || catalogCategoriesLoading || salesLoading || usersLoading,
     addProduct,
     updateProduct,
     deleteProduct,

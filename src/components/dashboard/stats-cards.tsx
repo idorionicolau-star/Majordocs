@@ -1,15 +1,41 @@
 
 "use client";
 
+import { useContext } from "react";
 import { Card } from "@/components/ui/card";
 import { Box, DollarSign, AlertTriangle, Users, ArrowUp, ArrowDown } from "lucide-react";
-import { products, sales, users } from "@/lib/data";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { InventoryContext } from "@/context/inventory-context";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function StatsCards() {
+    const inventoryContext = useContext(InventoryContext);
+    const { products, sales, users, loading } = inventoryContext || { products: [], sales: [], users: [], loading: true };
+
+    if (loading) {
+        return (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Skeleton className="h-[100px] w-full rounded-2xl" />
+                <Skeleton className="h-[100px] w-full rounded-2xl" />
+                <Skeleton className="h-[100px] w-full rounded-2xl" />
+                <Skeleton className="h-[100px] w-full rounded-2xl" />
+            </div>
+        );
+    }
+
     const lowStockCount = products.filter(p => p.stock < p.lowStockThreshold).length;
-    const totalSalesValue = sales.reduce((sum, sale) => sum + sale.totalValue, 0);
+    
+    // Calculate sales for the current month
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    const totalSalesValue = sales
+        .filter(sale => {
+            const saleDate = new Date(sale.date);
+            return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
+        })
+        .reduce((sum, sale) => sum + sale.totalValue, 0);
 
   const stats = [
     {
@@ -66,8 +92,14 @@ export function StatsCards() {
                 strokeWidth={2.5} 
                 className={cn(
                   "h-8 w-8 flex-shrink-0",
+                  "transition-transform group-hover:scale-110",
+                  `var(--stats-icon-size, h-8 w-8)`,
                   colorClasses[stat.color as keyof typeof colorClasses]
                 )}
+                style={{
+                    height: `var(--stats-icon-size, 32px)`,
+                    width: `var(--stats-icon-size, 32px)`,
+                }}
              />
             <div className="flex flex-col">
                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
