@@ -45,15 +45,17 @@ export function CatalogManager() {
   const { user } = useUser();
   const firestore = useFirestore();
 
+  const companyId = inventoryContext?.users.find(u => u.id === user?.uid)?.companyId || user?.uid;
+
   const catalogProductsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return collection(firestore, `users/${user.uid}/catalogProducts`);
-  }, [firestore, user]);
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `users/${companyId}/catalogProducts`);
+  }, [firestore, companyId]);
 
   const catalogCategoriesCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return collection(firestore, `users/${user.uid}/catalogCategories`);
-  }, [firestore, user]);
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `users/${companyId}/catalogCategories`);
+  }, [firestore, companyId]);
 
   const { data: products, isLoading: productsLoading } = useCollection<CatalogProduct>(catalogProductsCollectionRef);
   const { data: categories, isLoading: categoriesLoading } = useCollection<CatalogCategory>(catalogCategoriesCollectionRef);
@@ -107,7 +109,7 @@ export function CatalogManager() {
   };
 
   const handleEditCategory = async () => {
-    if (!categoryToEdit || !newCategoryName.trim() || !firestore || !user) return;
+    if (!categoryToEdit || !newCategoryName.trim() || !firestore || !companyId) return;
 
     if (categories?.some(c => c.name.toLowerCase() === newCategoryName.trim().toLowerCase() && c.id !== categoryToEdit.id)) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Essa categoria já existe.' });
@@ -116,10 +118,10 @@ export function CatalogManager() {
     
     toast({ title: 'A atualizar categoria...' });
     try {
-      const categoryDocRef = doc(firestore, `users/${user.uid}/catalogCategories`, categoryToEdit.id);
+      const categoryDocRef = doc(firestore, `users/${companyId}/catalogCategories`, categoryToEdit.id);
       await updateDoc(categoryDocRef, { name: newCategoryName.trim() });
       
-      const q = query(collection(firestore, `users/${user.uid}/catalogProducts`), where("category", "==", categoryToEdit.name));
+      const q = query(collection(firestore, `users/${companyId}/catalogProducts`), where("category", "==", categoryToEdit.name));
       const querySnapshot = await getDocs(q);
       const batch = writeBatch(firestore);
       querySnapshot.forEach((doc) => {
@@ -142,7 +144,7 @@ export function CatalogManager() {
   }
 
   const confirmDeleteCategory = async () => {
-    if (categoryToDelete && firestore && user) {
+    if (categoryToDelete && firestore && companyId) {
       const isUsed = products?.some(p => p.category === categoryToDelete.name);
       if (isUsed) {
         toast({
@@ -153,7 +155,7 @@ export function CatalogManager() {
       } else {
         toast({ title: 'A remover categoria...' });
         try {
-          await deleteDoc(doc(firestore, `users/${user.uid}/catalogCategories`, categoryToDelete.id));
+          await deleteDoc(doc(firestore, `users/${companyId}/catalogCategories`, categoryToDelete.id));
           toast({ title: 'Categoria Removida' });
         } catch(e) {
            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover a categoria.' });
@@ -164,10 +166,10 @@ export function CatalogManager() {
   };
 
   const confirmDeleteProduct = async () => {
-     if (productToDelete && firestore && user) {
+     if (productToDelete && firestore && companyId) {
         toast({ title: 'A remover produto...' });
         try {
-            await deleteDoc(doc(firestore, `users/${user.uid}/catalogProducts`, productToDelete.id));
+            await deleteDoc(doc(firestore, `users/${companyId}/catalogProducts`, productToDelete.id));
             toast({ title: 'Produto Removido do Catálogo' });
         } catch(e) {
             toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover o produto.' });
@@ -177,10 +179,10 @@ export function CatalogManager() {
   }
 
   const handleUpdateProduct = async (updatedProduct: CatalogProduct) => {
-    if(!firestore || !user || !updatedProduct.id) return;
+    if(!firestore || !companyId || !updatedProduct.id) return;
     toast({ title: 'A atualizar produto...' });
     try {
-        const productDocRef = doc(firestore, `users/${user.uid}/catalogProducts`, updatedProduct.id);
+        const productDocRef = doc(firestore, `users/${companyId}/catalogProducts`, updatedProduct.id);
         await updateDoc(productDocRef, updatedProduct as any);
         toast({ title: "Produto do Catálogo Atualizado" });
     } catch(e) {
@@ -371,3 +373,5 @@ export function CatalogManager() {
     </>
   );
 }
+
+    
