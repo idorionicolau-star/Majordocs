@@ -19,62 +19,9 @@
           "type": "string",
           "description": "Role of the user (e.g., Admin, Employee).",
           "enum": ["Admin", "Employee"]
-        },
-        "companyId": {
-          "type": "string",
-          "description": "The ID of the company the user belongs to."
         }
       },
-      "required": ["name", "email", "role", "companyId"]
-    },
-    "Employee": {
-      "title": "Employee",
-      "type": "object",
-      "description": "Represents an internal employee user with username/password login.",
-      "properties": {
-        "username": {
-          "type": "string",
-          "description": "The unique username for the employee."
-        },
-        "password": {
-          "type": "string",
-          "description": "The hashed password for the employee."
-        },
-        "role": {
-          "type": "string",
-          "description": "The role assigned to the employee.",
-           "enum": ["Admin", "Employee"]
-        }
-      },
-      "required": ["username", "password", "role"]
-    },
-    "Company": {
-      "title": "Company",
-      "type": "object",
-      "description": "Represents a company using the application.",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the company."
-        },
-        "ownerId": {
-          "type": "string",
-          "description": "The UID of the user who owns/created the company."
-        },
-        "phone": {
-          "type": "string",
-          "description": "Contact phone number for the company."
-        },
-        "address": {
-          "type": "string",
-          "description": "Physical address of the company."
-        },
-        "taxId": {
-          "type": "string",
-          "description": "Tax identification number (NUIT) of the company."
-        }
-      },
-      "required": ["name", "ownerId"]
+      "required": ["name", "email", "role"]
     },
     "CatalogProduct": {
       "title": "CatalogProduct",
@@ -179,71 +126,50 @@
     }
   },
   "auth": {
-    "providers": ["password", "google"]
+    "providers": []
   },
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}",
-        "definition": {
-          "schema": { "$ref": "#/entities/User" },
-          "description": "Stores user profiles. Each user has a role and a companyId."
-        }
-      },
-      {
-        "path": "/companies/{companyId}",
-        "definition": {
-          "schema": { "$ref": "#/entities/Company" },
-          "description": "Stores company information. Owned by an admin user."
-        }
-      },
-      {
-        "path": "/companies/{companyId}/employees/{employeeId}",
-        "definition": {
-          "schema": { "$ref": "#/entities/Employee" },
-          "description": "Stores internal employee credentials for the company."
-        }
-      },
-      {
-        "path": "/companies/{companyId}/catalogProducts/{productId}",
+        "path": "/catalogProducts/{productId}",
         "definition": {
           "schema": { "$ref": "#/entities/CatalogProduct" },
-          "description": "Stores the base product catalog for a company."
+          "description": "Stores the base product catalog."
         }
       },
       {
-        "path": "/companies/{companyId}/catalogCategories/{categoryId}",
+        "path": "/catalogCategories/{categoryId}",
         "definition": {
           "schema": { "$ref": "#/entities/CatalogCategory" },
-          "description": "Stores the product categories for a company."
+          "description": "Stores the product categories."
         }
       },
       {
-        "path": "/companies/{companyId}/products/{productId}",
+        "path": "/products/{productId}",
         "definition": {
           "schema": { "$ref": "#/entities/Product" },
-          "description": "Stores inventory items for a company."
+          "description": "Stores inventory items."
         }
       },
       {
-        "path": "/companies/{companyId}/sales/{saleId}",
+        "path": "/sales/{saleId}",
         "definition": {
           "schema": { "$ref": "#/entities/Sale" },
-          "description": "Stores sales records for a company."
+          "description": "Stores sales records."
         }
       },
       {
-        "path": "/companies/{companyId}/productions/{productionId}",
+        "path": "/productions/{productionId}",
         "definition": {
           "schema": { "$ref": "#/entities/Production" },
-          "description": "Stores production records for a company."
+          "description": "Stores production records."
         }
       },
       {
-        "path": "/companies/{companyId}/orders/{orderId}",
+        "path": "/orders/{orderId}",
         "definition": {
           "schema": { "$ref": "#/entities/Order" },
-          "description": "Stores production orders for a company."
+          "description": "Stores production orders."
         }
       }
     ]
