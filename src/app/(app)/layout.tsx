@@ -10,35 +10,18 @@ import { useContext } from 'react';
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading: userLoading } = useUser();
   const inventoryContext = useContext(InventoryContext);
-  const { companyData, loading: dataLoading } = inventoryContext || { companyData: null, loading: true };
+  const { loading: dataLoading } = inventoryContext || { loading: true };
   const router = useRouter();
   
   const isLoading = userLoading || dataLoading;
 
   useEffect(() => {
-    if (isLoading) {
-      return; 
-    }
-
-    if (!user) {
+    if (!isLoading && !user) {
       router.push('/login');
-      return;
     }
+  }, [user, isLoading, router]);
 
-    if (!companyData?.name) {
-      // If company data is missing, we assume it's being created
-      // and wait for the context to update. A timeout can prevent infinite loops.
-      const timer = setTimeout(() => {
-         if (!companyData?.name) {
-            console.warn("Company data not found, user might be stuck.");
-            // Potentially redirect to a safe page or show an error.
-         }
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [user, companyData, isLoading, router]);
-
-  if (isLoading || !user || !companyData?.name) {
+  if (isLoading || !user) {
     return <div className="flex h-screen w-full items-center justify-center">A carregar aplicação...</div>;
   }
 
