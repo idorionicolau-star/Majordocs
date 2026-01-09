@@ -10,8 +10,7 @@ import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/firebase/auth/use-user';
-import { updateUserProfile } from '@/firebase/auth/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 
 export default function RegisterCompanyPage() {
@@ -37,16 +36,12 @@ export default function RegisterCompanyPage() {
     setIsSubmitting(true);
 
     try {
-      // Update the user's document in Firestore with the company name.
-      const userDocRef = doc(firestore, 'users', user.uid);
-      await updateDoc(userDocRef, {
-        name: companyName.trim(), // Using the 'name' field for the company name
+      // Create the company document with the user as the owner
+      const companyDocRef = doc(firestore, 'companies', user.uid);
+      await setDoc(companyDocRef, {
+        name: companyName.trim(),
+        ownerId: user.uid,
       });
-      
-      // Also update the display name in Firebase Auth profile if it's different
-      if (user.displayName !== companyName.trim()) {
-        await updateUserProfile(user, { displayName: companyName.trim() });
-      }
 
       toast({
         title: 'Empresa Registrada!',

@@ -1,27 +1,26 @@
 
+
 export type User = {
   id: string;
   name: string;
   email: string;
-  avatar: string;
-  role: 'Admin' | 'Funcionário';
-  status: 'Ativo' | 'Pendente';
-  permissions: {
-    canSell: boolean;
-    canRegisterProduction: boolean;
-    canEditInventory: boolean;
-    canTransferStock: boolean;
-    canViewReports: boolean;
-  };
-  companyId?: string; // Links employee to an admin's company
-  phone?: string;
-  address?: string;
-  taxId?: string;
+  role: 'Admin' | 'Employee';
+  companyId: string; // Links user to a company
+  status?: 'Ativo' | 'Pendente'; // For employee management
+};
+
+export type Company = {
+    id: string;
+    name: string;
+    ownerId: string;
+    phone?: string;
+    address?: string;
+    taxId?: string;
 };
 
 export type Product = {
-  id?: string; // Document ID from Firestore - now optional
-  instanceId: string; // Temporary UI-only ID
+  id?: string; // Document ID from Firestore
+  instanceId: string; // Temporary UI-only ID for React keys
   name: string;
   category: string;
   stock: number;
@@ -69,7 +68,7 @@ export type ProductionLog = {
 
 export type Order = {
   id: string;
-  productId: string;
+  productId: string; // This can be the name or a catalog ID
   productName: string;
   quantity: number;
   unit: 'un' | 'm²' | 'm' | 'cj' | 'outro';
@@ -106,3 +105,4 @@ export type InitialCatalog = {
     [subType: string]: string[];
   };
 };
+

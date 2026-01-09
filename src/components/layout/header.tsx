@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ConnectionStatus } from "@/components/connection-status"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
-import { ThemeSwitcher } from "../theme-switcher";
+import { UserNav } from "../user-nav";
 
 export function Header() {
   return (
@@ -22,7 +22,7 @@ export function Header() {
             <ConnectionStatus />
           </div>
           <NotificationsDropdown />
-          <ThemeSwitcher />
+          <UserNav />
         </div>
     </header>
   );

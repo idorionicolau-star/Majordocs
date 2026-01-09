@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from "react";
-import { sales as initialSales, currentUser } from "@/lib/data";
 import type { Sale, Location, Product } from "@/lib/types";
 import { columns } from "@/components/sales/columns";
 import { SalesDataTable } from "@/components/sales/data-table";
@@ -17,17 +16,20 @@ import { SaleCard } from "@/components/sales/sale-card";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "../ui/skeleton";
+import { addDocumentNonBlocking } from "@/firebase";
+import { collection } from "firebase/firestore";
+import { useFirestore } from "@/firebase";
 
 export default function SalesPage() {
-  const [sales, setSales] = useState<Sale[]>(initialSales);
   const [nameFilter, setNameFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
+  const firestore = useFirestore();
 
-  const { products: allProducts, locations, loading: inventoryLoading, updateProduct } = inventoryContext || { products: [], locations: [], loading: true, updateProduct: () => {} };
+  const { companyId, sales, products: allProducts, locations, loading: inventoryLoading, updateProduct } = inventoryContext || { companyId: null, sales: [], products: [], locations: [], loading: true, updateProduct: () => {} };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -48,32 +50,42 @@ export default function SalesPage() {
     localStorage.setItem('majorstockx-sales-grid-cols', cols);
   }
 
-  const handleAddSale = (newSale: Sale) => {
-    setSales([newSale, ...sales]);
-    // Optimistically update reserved stock
-    const productSold = allProducts.find(p => p.id === newSale.productId);
-    if(productSold){
-        updateProduct(productSold.instanceId, { reservedStock: productSold.reservedStock + newSale.quantity });
+  const handleAddSale = (newSaleData:  Omit<Sale, 'id' | 'guideNumber'>, updatedProducts: Product[]) => {
+    if (!firestore || !companyId) return;
+
+    const now = new Date();
+    const guideNumber = `GT${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${Date.now().toString().slice(-3)}`;
+
+    const salesCollectionRef = collection(firestore, `companies/${companyId}/sales`);
+    addDocumentNonBlocking(salesCollectionRef, { ...newSaleData, guideNumber });
+
+    const productSold = updatedProducts.find(p => p.id === newSaleData.productId);
+    if(productSold && productSold.instanceId){
+        updateProduct(productSold.instanceId, { reservedStock: productSold.reservedStock });
     }
   };
 
   const handleUpdateSale = (updatedSale: Sale) => {
-    setSales(sales.map(s => s.id === updatedSale.id ? updatedSale : s));
-    toast({
-        title: "Venda Atualizada",
-        description: `A venda #${updatedSale.guideNumber} foi atualizada com sucesso.`,
-    });
+     if(updatedSale.id) {
+         updateProduct(updatedSale.id, updatedSale);
+         toast({
+            title: "Venda Atualizada",
+            description: `A venda #${updatedSale.guideNumber} foi atualizada com sucesso.`,
+        });
+     }
   };
 
   const handleConfirmPickup = (saleId: string) => {
     const saleToUpdate = sales.find(s => s.id === saleId);
     if (!saleToUpdate) return;
+    
+    if (saleToUpdate.id) {
+        updateProduct(saleToUpdate.id, { status: 'Levantado' });
+    }
 
-    setSales(sales.map(s => s.id === saleId ? { ...s, status: 'Levantado' } : s));
+    const productToUpdate = allProducts.find(p => p.id === saleToUpdate.productId && (p.location === saleToUpdate.location || !(inventoryContext?.isMultiLocation)));
 
-    const productToUpdate = allProducts.find(p => p.id === saleToUpdate.productId && (p.location === saleToUpdate.location || !saleToUpdate.location));
-
-    if(productToUpdate){
+    if(productToUpdate && productToUpdate.instanceId){
         updateProduct(productToUpdate.instanceId, { 
             stock: productToUpdate.stock - saleToUpdate.quantity,
             reservedStock: productToUpdate.reservedStock - saleToUpdate.quantity,

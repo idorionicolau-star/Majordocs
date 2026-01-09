@@ -26,7 +26,7 @@ function UserNavContent() {
 
   const handleSignOut = async () => {
     await signOutUser();
-    router.push('/');
+    router.push('/login');
   };
 
   const getInitials = (name: string) => {

@@ -70,7 +70,7 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog }: OrderCa
                            <StatusIcon className={cn("h-5 w-5", statusColor)}/>
                            {order.productName}
                         </CardTitle>
-                        <CardDescription className="text-xs pt-1">Encomenda #{order.id}</CardDescription>
+                        <CardDescription className="text-xs pt-1">Encomenda #{order.id.slice(-6).toUpperCase()}</CardDescription>
                     </div>
                      <div className={cn("inline-flex items-center gap-2 text-xs font-bold", statusColor)}>
                         <span>{order.status}</span>

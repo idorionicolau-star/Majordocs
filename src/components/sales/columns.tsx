@@ -2,10 +2,10 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Sale, Location, Product } from "@/lib/types"
+import { Sale, Location, Product, User } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Edit, Printer, FileSearch, CheckCircle, PackageCheck } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useContext } from "react"
 import { SaleDetailsDialogContent } from "./sale-details-dialog"
 import { formatCurrency } from "@/lib/utils"
 import { EditSaleDialog } from "./edit-sale-dialog"
@@ -15,7 +15,8 @@ import {
   DialogTrigger,
   DialogContent,
 } from "@/components/ui/dialog"
-import { currentUser } from "@/lib/data"
+import { InventoryContext } from "@/context/inventory-context"
+
 
 interface ColumnsOptions {
   locations: Location[];
@@ -24,7 +25,7 @@ interface ColumnsOptions {
   onConfirmPickup: (saleId: string) => void;
 }
 
-const handlePrintGuide = (sale: Sale, isMultiLocation: boolean, locations: Location[]) => {
+const handlePrintGuide = (sale: Sale, companyName: string, isMultiLocation: boolean, locations: Location[]) => {
   const printWindow = window.open('', '', 'height=800,width=800');
   if (printWindow) {
       printWindow.document.write('<!DOCTYPE html><html><head><title>Guia de Remessa</title>');
@@ -39,7 +40,7 @@ const handlePrintGuide = (sale: Sale, isMultiLocation: boolean, locations: Locat
               .container { max-width: 800px; margin: auto; padding: 2rem; border: 1px solid #eee; border-radius: 8px; }
               .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 1rem; margin-bottom: 2rem; }
               .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2.5rem; color: #3498db; margin: 0; }
-              .logo { display: flex; align-items: center; gap: 0.5rem; }
+              .logo { display: flex; flex-direction: column; align-items: flex-start; }
               .logo span { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: bold; color: #3498db; }
               .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
               .details-grid div { background-color: #f9fafb; padding: 1rem; border-radius: 6px; }
@@ -60,12 +61,7 @@ const handlePrintGuide = (sale: Sale, isMultiLocation: boolean, locations: Locat
       printWindow.document.write(`
           <div class="header">
                <div class="logo">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #3498db;">
-                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                  <polyline points="3.27 6.96 12 12.01 20.73 6.96" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
-                  <line x1="12" y1="22.08" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></line>
-                  </svg>
-                  <span>MajorStockX</span>
+                  <span>${companyName}</span>
               </div>
               <h1>Guia de Remessa</h1>
           </div>
@@ -87,7 +83,7 @@ const handlePrintGuide = (sale: Sale, isMultiLocation: boolean, locations: Locat
       printWindow.document.write('</tbody></table>');
 
       printWindow.document.write('<div style="margin-top: 4rem;"><p>Recebido por: ___________________________________</p><p>Data: ____/____/______</p></div>');
-      printWindow.document.write('<div class="footer"><p>MajorStockX &copy; ' + new Date().getFullYear() + '</p></div>');
+      printWindow.document.write(`<div class="footer"><p>${companyName} &copy; ' + new Date().getFullYear() + '</p></div>`);
       printWindow.document.write('</div></body></html>');
       printWindow.document.close();
       
@@ -101,18 +97,13 @@ const handlePrintGuide = (sale: Sale, isMultiLocation: boolean, locations: Locat
 
 
 const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) => {
-    const [isMultiLocation, setIsMultiLocation] = useState(false);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const sale = row.original as Sale;
-    const canConfirmPickup = currentUser.role === 'Admin' || currentUser.permissions.canSell;
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const multiLocationEnabled = localStorage.getItem('majorstockx-multi-location-enabled') === 'true';
-            setIsMultiLocation(multiLocationEnabled);
-        }
-    }, []);
+    const inventoryContext = useContext(InventoryContext);
+    const { userData, companyData, isMultiLocation, locations } = inventoryContext || {};
+    
+    const canConfirmPickup = userData?.role === 'Admin';
     
     return (
         <div className="flex items-center justify-end gap-2">
@@ -132,7 +123,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
                         </TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
-                <SaleDetailsDialogContent sale={sale} locations={options.locations} isMultiLocation={isMultiLocation} />
+                <SaleDetailsDialogContent sale={sale} locations={locations || []} isMultiLocation={isMultiLocation || false} />
             </Dialog>
 
             {sale.status === 'Pago' && canConfirmPickup && (
@@ -179,7 +170,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrintGuide(sale, isMultiLocation, options.locations)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrintGuide(sale, companyData?.name || 'MajorStockX', isMultiLocation || false, locations || [])}>
                         <Printer className="h-4 w-4" />
                         <span className="sr-only">Imprimir Guia</span>
                     </Button>

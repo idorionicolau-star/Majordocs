@@ -33,17 +33,16 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from '@/hooks/use-toast';
-import type { Product, Location, Sale } from '@/lib/types';
+import type { Product, Location, Sale, User } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { currentUser } from '@/lib/data';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { InventoryContext } from '@/context/inventory-context';
+import { useUser } from '@/firebase/auth/use-user';
 
-type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
 const formSchema = z.object({
-  productId: z.string().nonempty({ message: "Por favor, selecione um produto." }),
+  productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
   unitPrice: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
   location: z.string().optional(),
@@ -52,48 +51,49 @@ const formSchema = z.object({
 type AddSaleFormValues = z.infer<typeof formSchema>;
 
 interface AddSaleDialogProps {
-    onAddSale: (data: Sale, updatedProducts: Product[]) => void;
+    onAddSale: (data: Omit<Sale, 'id' | 'guideNumber'>, updatedProducts: Product[]) => void;
     triggerType?: 'button' | 'fab';
 }
 
 function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogProps) {
   const [open, setOpen] = useState(false);
   const inventoryContext = useContext(InventoryContext);
+  const { user } = useUser();
   const {
     products,
     catalogProducts,
     catalogCategories,
     locations,
     isMultiLocation
-  } = inventoryContext || {};
+  } = inventoryContext || { products: [], catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false};
   const { toast } = useToast();
   
   const form = useForm<AddSaleFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      productId: "",
+      productName: "",
       quantity: 1,
       unitPrice: 0,
       location: "",
     },
   });
   
-  const watchedProductId = useWatch({ control: form.control, name: 'productId' });
+  const watchedProductName = useWatch({ control: form.control, name: 'productName' });
   const watchedQuantity = useWatch({ control: form.control, name: 'quantity' });
   const watchedUnitPrice = useWatch({ control: form.control, name: 'unitPrice' });
   const watchedLocation = useWatch({ control: form.control, name: 'location' });
 
-  const selectedProductInstance = products?.find(p => p.name === watchedProductId && (isMultiLocation ? p.location === watchedLocation : true));
+  const selectedProductInstance = products?.find(p => p.name === watchedProductName && (isMultiLocation ? p.location === watchedLocation : true));
   const availableStock = selectedProductInstance ? selectedProductInstance.stock - selectedProductInstance.reservedStock : 0;
   
   useEffect(() => {
-    const catalogProduct = catalogProducts?.find(p => p.name === watchedProductId);
+    const catalogProduct = catalogProducts?.find(p => p.name === watchedProductName);
     if (catalogProduct) {
       form.setValue('unitPrice', catalogProduct.price);
     } else {
       form.setValue('unitPrice', 0);
     }
-  }, [watchedProductId, catalogProducts, form]);
+  }, [watchedProductName, catalogProducts, form]);
 
   useEffect(() => {
     if(selectedProductInstance){
@@ -103,12 +103,12 @@ function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogP
       } else {
         form.clearErrors("quantity");
       }
-    } else if (watchedProductId && isMultiLocation) {
+    } else if (watchedProductName && isMultiLocation) {
          form.setError("location", { type: "manual", message: `Produto sem estoque nesta localização.` });
-    } else if (watchedProductId) {
+    } else if (watchedProductName) {
         form.clearErrors("location");
     }
-  }, [watchedQuantity, availableStock, selectedProductInstance, watchedProductId, isMultiLocation, form]);
+  }, [watchedQuantity, availableStock, selectedProductInstance, watchedProductName, isMultiLocation, form]);
 
 
   const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
@@ -145,16 +145,14 @@ function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogP
     }
 
     const now = new Date();
-    const newSale: Sale = {
-      id: `SALE${Date.now().toString().slice(-4)}`,
+    const newSale: Omit<Sale, 'id' | 'guideNumber'> = {
       date: now.toISOString(),
       productId: selectedProductInstance.id || '', // Should have an ID
       productName: selectedProductInstance.name,
       quantity: values.quantity,
       unitPrice: values.unitPrice,
       totalValue: values.quantity * values.unitPrice,
-      soldBy: currentUser.name,
-      guideNumber: `GT${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${Date.now().toString().slice(-3)}`,
+      soldBy: user?.displayName || 'Desconhecido',
       location: values.location,
       status: 'Pago',
     };
@@ -221,7 +219,7 @@ function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogP
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
             <FormField
               control={form.control}
-              name="productId"
+              name="productName"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Produto</FormLabel>

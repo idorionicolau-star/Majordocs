@@ -1,28 +1,21 @@
 
 'use client';
 
-import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
+import React, { DependencyList, createContext, useContext, ReactNode, useMemo } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
-import { Auth, User } from 'firebase/auth';
+import { Auth } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 import { initializeFirebase } from '.';
-import { InventoryProvider } from '@/context/inventory-context';
 
-// Since auth is removed, we only need to provide firestore and the app instance.
 export interface FirebaseContextState {
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
-  auth: Auth | null; // Keep for type consistency, but will be null
+  auth: Auth | null;
 }
 
-// React Context
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
-/**
- * FirebaseProvider manages and provides Firebase services.
- * Now simplified as auth is removed.
- */
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({
   children
 }) => {
@@ -33,24 +26,18 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({
     return {
       firebaseApp: services.firebaseApp,
       firestore: services.firestore,
-      auth: services.auth, // This will be the auth instance but not used for user state
+      auth: services.auth,
     };
   }, [services]);
 
   return (
     <FirebaseContext.Provider value={contextValue}>
-      <InventoryProvider>
-        <FirebaseErrorListener />
-        {children}
-      </InventoryProvider>
+      <FirebaseErrorListener />
+      {children}
     </FirebaseContext.Provider>
   );
 };
 
-/**
- * Hook to access core Firebase services.
- * Throws error if used outside provider.
- */
 export const useFirebase = (): { firebaseApp: FirebaseApp, firestore: Firestore, auth: Auth } => {
   const context = useContext(FirebaseContext);
 
@@ -69,19 +56,16 @@ export const useFirebase = (): { firebaseApp: FirebaseApp, firestore: Firestore,
   };
 };
 
-/** Hook to access Firebase Auth instance. */
 export const useAuth = (): Auth => {
   const { auth } = useFirebase();
   return auth;
 };
 
-/** Hook to access Firestore instance. */
 export const useFirestore = (): Firestore => {
   const { firestore } = useFirebase();
   return firestore;
 };
 
-/** Hook to access Firebase App instance. */
 export const useFirebaseApp = (): FirebaseApp => {
   const { firebaseApp } = useFirebase();
   return firebaseApp;
@@ -97,5 +81,3 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | 
   
   return memoized;
 }
-
-// useUser hook is removed as it's no longer needed.

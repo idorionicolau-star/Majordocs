@@ -1,458 +1,222 @@
-
 {
   "entities": {
     "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
       "description": "Represents a user of the MajorStockX application.",
       "properties": {
-        "id": {
+        "name": {
           "type": "string",
-          "description": "Unique identifier for the User entity."
-        },
-        "googleId": {
-          "type": "string",
-          "description": "Google ID of the user, if logged in with Google."
+          "description": "Full name of the user."
         },
         "email": {
           "type": "string",
           "description": "Email address of the user.",
           "format": "email"
         },
-        "name": {
-          "type": "string",
-          "description": "Full name of the user or the company name if they are an admin."
-        },
         "role": {
           "type": "string",
-          "description": "Role of the user (e.g., Admin, Manager, Worker)."
+          "description": "Role of the user (e.g., Admin, Employee).",
+          "enum": ["Admin", "Employee"]
         },
-        "permissions": {
-          "type": "array",
-          "description": "List of permissions granted to the user.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "status": {
+        "companyId": {
           "type": "string",
-          "description": "Status of the user account (e.g., Active, Pending)."
+          "description": "The ID of the company the user belongs to."
+        }
+      },
+      "required": ["name", "email", "role", "companyId"]
+    },
+    "Company": {
+      "title": "Company",
+      "type": "object",
+      "description": "Represents a company using the application.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the company."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The UID of the user who owns/created the company."
         },
         "phone": {
-            "type": "string",
-            "description": "Contact phone number for the company."
+          "type": "string",
+          "description": "Contact phone number for the company."
         },
         "address": {
-            "type": "string",
-            "description": "Physical address of the company."
+          "type": "string",
+          "description": "Physical address of the company."
         },
         "taxId": {
-            "type": "string",
-            "description": "Tax identification number (NUIT) of the company."
+          "type": "string",
+          "description": "Tax identification number (NUIT) of the company."
         }
       },
-      "required": [
-        "id",
-        "email",
-        "name",
-        "role",
-        "status"
-      ]
+      "required": ["name", "ownerId"]
     },
-    "ProductCategory": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ProductCategory",
+    "CatalogProduct": {
+      "title": "CatalogProduct",
       "type": "object",
-      "description": "Represents a category of products (e.g., Grelhas, Pavê).",
+      "description": "Represents a base product in the company's catalog.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ProductCategory entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the product category."
-        },
-        "description": {
-          "type": "string",
-          "description": "Description of the product category."
-        }
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "lowStockThreshold": { "type": "number" },
+        "criticalStockThreshold": { "type": "number" },
+        "unit": { "type": "string" }
       },
-      "required": [
-        "id",
-        "name"
-      ]
+      "required": ["name", "category", "price"]
+    },
+    "CatalogCategory": {
+      "title": "CatalogCategory",
+      "type": "object",
+      "description": "Represents a product category in the company's catalog.",
+      "properties": {
+        "name": { "type": "string" }
+      },
+      "required": ["name"]
     },
     "Product": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Product",
       "type": "object",
-      "description": "Represents a specific product in the inventory.",
+      "description": "Represents a specific product instance in the inventory.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Product entity."
-        },
-        "categoryId": {
-          "type": "string",
-          "description": "Reference to ProductCategory. (Relationship: ProductCategory 1:N Product)"
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the product."
-        },
-        "description": {
-          "type": "string",
-          "description": "Description of the product."
-        },
-        "unitPrice": {
-          "type": "number",
-          "description": "Unit price of the product."
-        }
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "stock": { "type": "number" },
+        "reservedStock": { "type": "number" },
+        "price": { "type": "number" },
+        "lowStockThreshold": { "type": "number" },
+        "criticalStockThreshold": { "type": "number" },
+        "lastUpdated": { "type": "string", "format": "date" },
+        "location": { "type": "string" },
+        "unit": { "type": "string" }
       },
-      "required": [
-        "id",
-        "categoryId",
-        "name",
-        "unitPrice"
-      ]
-    },
-    "Inventory": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Inventory",
-      "type": "object",
-      "description": "Represents the stock level of a product at a specific location.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Inventory entity."
-        },
-        "productId": {
-          "type": "string",
-          "description": "Reference to Product. (Relationship: Product 1:N Inventory)"
-        },
-        "location": {
-          "type": "string",
-          "description": "Location where the stock is stored (e.g., Warehouse A, Estaleiro 1)."
-        },
-        "quantity": {
-          "type": "number",
-          "description": "Current quantity of the product in stock."
-        },
-        "lowStockThreshold": {
-          "type": "number",
-          "description": "Threshold below which a low stock alert is triggered."
-        }
-      },
-      "required": [
-        "id",
-        "productId",
-        "location",
-        "quantity"
-      ]
+      "required": ["name", "category", "stock", "price", "lastUpdated"]
     },
     "Sale": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Sale",
       "type": "object",
       "description": "Represents a sale transaction.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Sale entity."
-        },
-        "saleDate": {
-          "type": "string",
-          "description": "Date and time of the sale.",
-          "format": "date-time"
-        },
-        "totalAmount": {
-          "type": "number",
-          "description": "Total amount of the sale."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Sale)"
-        }
+        "date": { "type": "string", "format": "date-time" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unitPrice": { "type": "number" },
+        "totalValue": { "type": "number" },
+        "soldBy": { "type": "string" },
+        "guideNumber": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pago", "Levantado"] }
       },
-      "required": [
-        "id",
-        "saleDate",
-        "totalAmount",
-        "userId"
-      ]
-    },
-    "SaleItem": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "SaleItem",
-      "type": "object",
-      "description": "Represents an item within a sale transaction.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the SaleItem entity."
-        },
-        "saleId": {
-          "type": "string",
-          "description": "Reference to Sale. (Relationship: Sale 1:N SaleItem)"
-        },
-        "productId": {
-          "type": "string",
-          "description": "Reference to Product. (Relationship: Product 1:N SaleItem)"
-        },
-        "quantity": {
-          "type": "number",
-          "description": "Quantity of the product sold."
-        },
-        "unitPrice": {
-          "type": "number",
-          "description": "Unit price of the product at the time of sale."
-        }
-      },
-      "required": [
-        "id",
-        "saleId",
-        "productId",
-        "quantity",
-        "unitPrice"
-      ]
+      "required": ["date", "productId", "productName", "quantity", "totalValue", "soldBy", "guideNumber", "status"]
     },
     "Production": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Production",
       "type": "object",
       "description": "Represents a production record.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Production entity."
-        },
-        "productionDate": {
-          "type": "string",
-          "description": "Date and time of the production.",
-          "format": "date-time"
-        },
-        "productId": {
-          "type": "string",
-          "description": "Reference to Product. (Relationship: Product 1:N Production)"
-        },
-        "quantity": {
-          "type": "number",
-          "description": "Quantity of the product produced."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Production)"
-        }
+        "date": { "type": "string", "format": "date" },
+        "productName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "registeredBy": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string", "enum": ["Concluído", "Transferido"] }
       },
-      "required": [
-        "id",
-        "productionDate",
-        "productId",
-        "quantity",
-        "userId"
-      ]
+      "required": ["date", "productName", "quantity", "registeredBy", "status"]
     },
-    "Notification": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Notification",
+    "Order": {
+      "title": "Order",
       "type": "object",
-      "description": "Represents an in-app notification.",
+      "description": "Represents a production order.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Notification entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Notification)"
-        },
-        "message": {
-          "type": "string",
-          "description": "Message content of the notification."
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "Timestamp of when the notification was created.",
-          "format": "date-time"
-        },
-        "type": {
-          "type": "string",
-          "description": "Type of the notification (e.g., Low Stock, New Sale)."
-        },
-        "isRead": {
-          "type": "boolean",
-          "description": "Indicates whether the notification has been read by the user."
+        "productName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "clientName": { "type": "string" },
+        "deliveryDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Pendente", "Em produção", "Concluída"] },
+        "productionStartDate": { "type": "string", "format": "date-time" },
+        "quantityProduced": { "type": "number" },
+        "productionLogs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": { "type": "string", "format": "date-time" },
+              "quantity": { "type": "number" },
+              "notes": { "type": "string" },
+              "registeredBy": { "type": "string" }
+            }
+          }
         }
       },
-      "required": [
-        "id",
-        "userId",
-        "message",
-        "timestamp",
-        "type",
-        "isRead"
-      ]
+      "required": ["productName", "quantity", "unit", "deliveryDate", "status", "quantityProduced"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "google"]
   },
   "firestore": {
     "structure": [
       {
         "path": "/users/{userId}",
         "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profiles. Uses path-based ownership for data isolation and user-specific data access.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "Unique identifier for the user."
-            }
-          ]
+          "schema": { "$ref": "#/entities/User" },
+          "description": "Stores user profiles. Each user has a role and a companyId."
         }
       },
       {
-        "path": "/productCategories/{productCategoryId}",
+        "path": "/companies/{companyId}",
         "definition": {
-          "entityName": "ProductCategory",
-          "schema": {
-            "$ref": "#/backend/entities/ProductCategory"
-          },
-          "description": "Stores product category information.  Assuming global read access for all users. Access management through rules can be implemented for create/update/delete operations.",
-          "params": [
-            {
-              "name": "productCategoryId",
-              "description": "Unique identifier for the product category."
-            }
-          ]
+          "schema": { "$ref": "#/entities/Company" },
+          "description": "Stores company information. Owned by an admin user."
         }
       },
       {
-        "path": "/products/{productId}",
+        "path": "/companies/{companyId}/catalogProducts/{productId}",
         "definition": {
-          "entityName": "Product",
-          "schema": {
-            "$ref": "#/backend/entities/Product"
-          },
-          "description": "Stores product information. Assuming global read access for all users. Access management through rules can be implemented for create/update/delete operations.",
-          "params": [
-            {
-              "name": "productId",
-              "description": "Unique identifier for the product."
-            }
-          ]
+          "schema": { "$ref": "#/entities/CatalogProduct" },
+          "description": "Stores the base product catalog for a company."
         }
       },
       {
-        "path": "/inventories/{inventoryId}",
+        "path": "/companies/{companyId}/catalogCategories/{categoryId}",
         "definition": {
-          "entityName": "Inventory",
-          "schema": {
-            "$ref": "#/backend/entities/Inventory"
-          },
-          "description": "Stores inventory information for each product. Assuming global read access, but write access can be limited using security rules based on user roles.",
-          "params": [
-            {
-              "name": "inventoryId",
-              "description": "Unique identifier for the inventory record."
-            }
-          ]
+          "schema": { "$ref": "#/entities/CatalogCategory" },
+          "description": "Stores the product categories for a company."
         }
       },
       {
-        "path": "/users/{userId}/sales/{saleId}",
+        "path": "/companies/{companyId}/products/{productId}",
         "definition": {
-          "entityName": "Sale",
-          "schema": {
-            "$ref": "#/backend/entities/Sale"
-          },
-          "description": "Stores sales data for each user. Path-based ownership ensures only the user can access their sales data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "Unique identifier for the user."
-            },
-            {
-              "name": "saleId",
-              "description": "Unique identifier for the sale."
-            }
-          ]
+          "schema": { "$ref": "#/entities/Product" },
+          "description": "Stores inventory items for a company."
         }
       },
       {
-        "path": "/users/{userId}/sales/{saleId}/saleItems/{saleItemId}",
+        "path": "/companies/{companyId}/sales/{saleId}",
         "definition": {
-          "entityName": "SaleItem",
-          "schema": {
-            "$ref": "#/backend/entities/SaleItem"
-          },
-          "description": "Stores individual items within a sale transaction. Inherits access control from the parent 'Sale' document.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "Unique identifier for the user."
-            },
-            {
-              "name": "saleId",
-              "description": "Unique identifier for the sale."
-            },
-            {
-              "name": "saleItemId",
-              "description": "Unique identifier for the sale item."
-            }
-          ]
+          "schema": { "$ref": "#/entities/Sale" },
+          "description": "Stores sales records for a company."
         }
       },
       {
-        "path": "/users/{userId}/productions/{productionId}",
+        "path": "/companies/{companyId}/productions/{productionId}",
         "definition": {
-          "entityName": "Production",
-          "schema": {
-            "$ref": "#/backend/entities/Production"
-          },
-          "description": "Stores production records for each user.  Path-based ownership ensures only the user can access their production data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "Unique identifier for the user."
-            },
-            {
-              "name": "productionId",
-              "description": "Unique identifier for the production."
-            }
-          ]
+          "schema": { "$ref": "#/entities/Production" },
+          "description": "Stores production records for a company."
         }
       },
       {
-        "path": "/users/{userId}/notifications/{notificationId}",
+        "path": "/companies/{companyId}/orders/{orderId}",
         "definition": {
-          "entityName": "Notification",
-          "schema": {
-            "$ref": "#/backend/entities/Notification"
-          },
-          "description": "Stores in-app notifications for each user. Path-based ownership ensures only the user can access their notifications.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "Unique identifier for the user."
-            },
-            {
-              "name": "notificationId",
-              "description": "Unique identifier for the notification."
-            }
-          ]
+          "schema": { "$ref": "#/entities/Order" },
+          "description": "Stores production orders for a company."
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to support MajorStockX's requirements for user management, product catalog, inventory, sales, production, and notifications, all while ensuring offline functionality and real-time synchronization.  The design prioritizes authorization independence by denormalizing relevant authorization data (user roles) where necessary, enabling secure and scalable operations. It also follows the principle of Structural Segregation to ensure consistent security postures within collections.\n\nUsers are stored in a top-level collection, as are Product Categories. Products, Inventory, Sales, Production, and Notifications are then nested under appropriate parent documents to reflect their relationships and to enable granular access control. This also facilitates simpler queries for data related to specific entities.\n\nSpecifically, authorization independence is achieved through path-based ownership and the use of denormalization.  For example, Sales, Production, and Notifications are placed under `/users/{userId}`, granting ownership to the user and allowing for easy querying of data related to that user. If more complex authorization is needed (e.g., shared access to sales data), a 'members' map could be added to the Sale documents (denormalized from user roles or a separate access control list), though path-based ownership is sufficient given the application requirements.\n\nThe structure supports secure `list` operations (QAPs) by ensuring that collections contain documents with homogeneous security requirements. User-specific data is stored under the respective user ID, ensuring that listing operations are inherently scoped to the authorized user.  For example, listing sales under `/users/{userId}/sales` will only return sales associated with that user. Collections such as 'productCategories' and 'products' are assumed to be globally accessible, or access can be managed by implementing specific security rules based on roles (e.g., only admins can list product categories).\n\nExplicit state modeling is achieved through the `status` field in the User entity, allowing for clear tracking of user states (Active, Pending). This removes ambiguity and improves the robustness of the security rules."
+    ]
   }
 }

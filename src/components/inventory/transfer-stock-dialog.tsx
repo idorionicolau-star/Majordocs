@@ -37,7 +37,7 @@ import type { Product, Location } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const formSchema = z.object({
-  productId: z.string().nonempty({ message: "Por favor, selecione um produto." }),
+  productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   fromLocationId: z.string().nonempty({ message: "Por favor, selecione a localização de origem." }),
   toLocationId: z.string().nonempty({ message: "Por favor, selecione a localização de destino." }),
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
@@ -51,7 +51,7 @@ type TransferFormValues = z.infer<typeof formSchema>;
 interface TransferStockDialogProps {
     products: Product[];
     locations: Location[];
-    onTransfer: (productId: string, fromLocationId: string, toLocationId: string, quantity: number) => void;
+    onTransfer: (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => void;
 }
 
 export function TransferStockDialog({ products, locations, onTransfer }: TransferStockDialogProps) {
@@ -61,33 +61,33 @@ export function TransferStockDialog({ products, locations, onTransfer }: Transfe
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      productId: "",
+      productName: "",
       fromLocationId: "",
       toLocationId: "",
       quantity: 1,
     },
   });
 
-  const watchedProductId = useWatch({ control: form.control, name: 'productId' });
+  const watchedProductName = useWatch({ control: form.control, name: 'productName' });
   const watchedFromLocation = useWatch({ control: form.control, name: 'fromLocationId' });
   const watchedQuantity = useWatch({ control: form.control, name: 'quantity' });
 
   const uniqueProducts = useMemo(() => {
     const seen = new Set<string>();
     return products.filter(p => {
-        if (seen.has(p.id)) {
+        if (seen.has(p.name)) {
             return false;
         }
-        seen.add(p.id);
+        seen.add(p.name);
         return true;
     });
   }, [products]);
 
   const availableStock = useMemo(() => {
-    if (!watchedProductId || !watchedFromLocation) return 0;
-    const productInstance = products.find(p => p.id === watchedProductId && p.location === watchedFromLocation);
+    if (!watchedProductName || !watchedFromLocation) return 0;
+    const productInstance = products.find(p => p.name === watchedProductName && p.location === watchedFromLocation);
     return productInstance?.stock ?? 0;
-  }, [products, watchedProductId, watchedFromLocation]);
+  }, [products, watchedProductName, watchedFromLocation]);
 
   useEffect(() => {
     if (watchedQuantity > availableStock) {
@@ -99,7 +99,7 @@ export function TransferStockDialog({ products, locations, onTransfer }: Transfe
 
 
   function onSubmit(values: TransferFormValues) {
-    onTransfer(values.productId, values.fromLocationId, values.toLocationId, values.quantity);
+    onTransfer(values.productName, values.fromLocationId, values.toLocationId, values.quantity);
     form.reset();
     setOpen(false);
   }
@@ -131,7 +131,7 @@ export function TransferStockDialog({ products, locations, onTransfer }: Transfe
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
             <FormField
               control={form.control}
-              name="productId"
+              name="productName"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Produto</FormLabel>
@@ -143,7 +143,7 @@ export function TransferStockDialog({ products, locations, onTransfer }: Transfe
                     </FormControl>
                     <SelectContent>
                       {uniqueProducts.map(product => (
-                        <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                        <SelectItem key={product.name} value={product.name}>{product.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -208,7 +208,7 @@ export function TransferStockDialog({ products, locations, onTransfer }: Transfe
                 <FormItem>
                   <div className="flex justify-between items-center">
                     <FormLabel>Quantidade</FormLabel>
-                    {watchedProductId && watchedFromLocation && <p className="text-xs text-muted-foreground mt-1">Disponível: {availableStock}</p>}
+                    {watchedProductName && watchedFromLocation && <p className="text-xs text-muted-foreground mt-1">Disponível: {availableStock}</p>}
                   </div>
                   <FormControl>
                     <Input type="number" min="1" {...field} />
@@ -227,5 +227,3 @@ export function TransferStockDialog({ products, locations, onTransfer }: Transfe
     </Dialog>
   );
 }
-
-    

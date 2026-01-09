@@ -60,8 +60,8 @@ export function SaleDetailsDialogContent({ sale, locations, isMultiLocation }: S
         <DetailItem icon={DollarSign} label="Valor Total da Venda" value={formattedTotalValue} />
         <DetailItem icon={Hash} label="Quantidade" value={sale.quantity} />
         <DetailItem icon={User} label="Vendedor" value={sale.soldBy} />
-        <DetailItem icon={Calendar} label="Data" value={saleDate.toLocaleDateString('pt-BR')} />
-        <DetailItem icon={Clock} label="Hora" value={saleDate.toLocaleTimeString('pt-BR')} />
+        <DetailItem icon={Calendar} label="Data" value={saleDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })} />
+        <DetailItem icon={Clock} label="Hora" value={saleDate.toLocaleTimeString('pt-BR',  { timeZone: 'UTC' })} />
         </div>
         {isMultiLocation && locationName && (
             <DetailItem icon={MapPin} label="Localização" value={locationName} />

@@ -32,7 +32,7 @@ import { Plus, Hammer } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import type { Product, Location, Production } from '@/lib/types';
+import type { Production, Location } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { InventoryContext } from '@/context/inventory-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
@@ -58,7 +58,7 @@ export function AddProductionDialog({ onAddProduction, triggerType = 'fab' }: Ad
     catalogCategories,
     locations,
     isMultiLocation
-  } = inventoryContext || {};
+  } = inventoryContext || { catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false};
   
   const form = useForm<AddProductionFormValues>({
     resolver: zodResolver(formSchema),

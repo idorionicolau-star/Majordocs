@@ -71,7 +71,7 @@ export function StatsCards() {
     },
     {
       title: "Funcionários",
-      value: users.filter(u => u.status === 'Ativo').length,
+      value: users.length,
       icon: Users,
       color: "slate",
       contextLabel: "Total",
