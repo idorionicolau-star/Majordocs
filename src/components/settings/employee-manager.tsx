@@ -4,7 +4,6 @@
 import { useState, useContext } from 'react';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import { InventoryContext } from '@/context/inventory-context';
 import { Skeleton } from '../ui/skeleton';
 import { AddEmployeeDialog } from './add-employee-dialog';
 import type { User } from '@/lib/types';
@@ -23,15 +22,16 @@ import { useUser } from '@/firebase/auth/use-user';
 import { doc, deleteDoc, query, collection, where } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 
-export function EmployeeManager() {
+interface EmployeeManagerProps {
+    companyId: string | null;
+}
+
+export function EmployeeManager({ companyId }: EmployeeManagerProps) {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   
   const [employeeToDelete, setEmployeeToDelete] = useState<User | null>(null);
-
-  const inventoryContext = useContext(InventoryContext);
-  const companyId = inventoryContext?.companyId;
 
   const usersCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;

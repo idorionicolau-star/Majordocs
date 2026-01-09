@@ -51,6 +51,8 @@ export default function SettingsPage() {
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
 
+  const companyId = inventoryContext?.companyId;
+
   const [companyDetails, setCompanyDetails] = useState({
     name: 'A Minha Empresa',
     email: 'contacto@empresa.com',
@@ -374,7 +376,7 @@ export default function SettingsPage() {
               </AccordionTrigger>
               <AccordionContent>
                 <CardContent className="p-6 sm:p-8 pt-0">
-                  <EmployeeManager />
+                  <EmployeeManager companyId={companyId} />
                 </CardContent>
               </AccordionContent>
             </Card>
