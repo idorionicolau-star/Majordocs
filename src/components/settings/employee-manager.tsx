@@ -82,7 +82,7 @@ export function EmployeeManager() {
     <div className="space-y-4">
         <div className='flex justify-between items-center'>
             <h4 className="font-medium text-lg">Funcionários</h4>
-            <AddEmployeeDialog />
+            <AddEmployeeDialog companyId={companyId} />
         </div>
         <div className="rounded-md border">
             <ul className="divide-y">

@@ -29,7 +29,6 @@ import { useToast } from '@/hooks/use-toast';
 import { createUserWithEmail, updateUserProfile } from '@/firebase/auth/auth';
 import { useFirestore } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
-import { InventoryContext } from '@/context/inventory-context';
 import { FirebaseError } from 'firebase/app';
 
 const formSchema = z.object({
@@ -40,12 +39,14 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function AddEmployeeDialog() {
+interface AddEmployeeDialogProps {
+    companyId: string | null;
+}
+
+export function AddEmployeeDialog({ companyId }: AddEmployeeDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
-  const inventoryContext = useContext(InventoryContext);
-  const { companyId } = inventoryContext || {};
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
