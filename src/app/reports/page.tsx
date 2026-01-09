@@ -18,7 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { InventoryContext } from '@/context/inventory-context';
-import { Skeleton } from '../ui/skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ReportsPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
