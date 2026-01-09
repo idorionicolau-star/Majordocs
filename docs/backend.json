@@ -1,27 +1,17 @@
 
 {
   "entities": {
-    "User": {
-      "title": "User",
+    "Company": {
+      "title": "Company",
       "type": "object",
-      "description": "Represents a user of the MajorStockX application.",
+      "description": "Represents a company using the application.",
       "properties": {
         "name": {
           "type": "string",
-          "description": "Full name of the user."
-        },
-        "email": {
-          "type": "string",
-          "description": "Email address of the user.",
-          "format": "email"
-        },
-        "role": {
-          "type": "string",
-          "description": "Role of the user (e.g., Admin, Employee).",
-          "enum": ["Admin", "Employee"]
+          "description": "The name of the company."
         }
       },
-      "required": ["name", "email", "role"]
+      "required": ["name"]
     },
     "Employee": {
       "title": "Employee",
@@ -30,9 +20,10 @@
       "properties": {
         "username": { "type": "string" },
         "password": { "type": "string", "description": "This should be a hashed password in a real application." },
-        "role": { "type": "string", "enum": ["Admin", "Employee"] }
+        "role": { "type": "string", "enum": ["Admin", "Employee"] },
+        "companyId": { "type": "string" }
       },
-      "required": ["username", "password", "role"]
+      "required": ["username", "password", "role", "companyId"]
     },
     "CatalogProduct": {
       "title": "CatalogProduct",
@@ -142,52 +133,59 @@
   "firestore": {
     "structure": [
       {
-        "path": "/catalogProducts/{productId}",
+        "path": "/companies/{companyId}",
         "definition": {
-          "schema": { "$ref": "#/entities/CatalogProduct" },
-          "description": "Stores the base product catalog."
+          "schema": { "$ref": "#/entities/Company" },
+          "description": "Stores company information."
         }
       },
       {
-        "path": "/catalogCategories/{categoryId}",
-        "definition": {
-          "schema": { "$ref": "#/entities/CatalogCategory" },
-          "description": "Stores the product categories."
-        }
-      },
-      {
-        "path": "/products/{productId}",
-        "definition": {
-          "schema": { "$ref": "#/entities/Product" },
-          "description": "Stores inventory items."
-        }
-      },
-      {
-        "path": "/sales/{saleId}",
-        "definition": {
-          "schema": { "$ref": "#/entities/Sale" },
-          "description": "Stores sales records."
-        }
-      },
-      {
-        "path": "/productions/{productionId}",
-        "definition": {
-          "schema": { "$ref": "#/entities/Production" },
-          "description": "Stores production records."
-        }
-      },
-      {
-        "path": "/orders/{orderId}",
-        "definition": {
-          "schema": { "$ref": "#/entities/Order" },
-          "description": "Stores production orders."
-        }
-      },
-      {
-        "path": "/employees/{employeeId}",
+        "path": "/companies/{companyId}/employees/{employeeId}",
         "definition": {
           "schema": { "$ref": "#/entities/Employee" },
-          "description": "Stores internal employee user accounts."
+          "description": "Stores internal employee user accounts for a company."
+        }
+      },
+       {
+        "path": "/companies/{companyId}/catalogProducts/{productId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/CatalogProduct" },
+          "description": "Stores the base product catalog for a company."
+        }
+      },
+      {
+        "path": "/companies/{companyId}/catalogCategories/{categoryId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/CatalogCategory" },
+          "description": "Stores the product categories for a company."
+        }
+      },
+      {
+        "path": "/companies/{companyId}/products/{productId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/Product" },
+          "description": "Stores inventory items for a company."
+        }
+      },
+      {
+        "path": "/companies/{companyId}/sales/{saleId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/Sale" },
+          "description": "Stores sales records for a company."
+        }
+      },
+      {
+        "path": "/companies/{companyId}/productions/{productionId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/Production" },
+          "description": "Stores production records for a company."
+        }
+      },
+      {
+        "path": "/companies/{companyId}/orders/{orderId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/Order" },
+          "description": "Stores production orders for a company."
         }
       }
     ]

@@ -10,9 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { AuthContext } from '@/firebase/auth/auth-context';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'O nome de utilizador é obrigatório.'),
@@ -90,6 +91,11 @@ export default function LoginPage() {
                 </Button>
             </form>
         </CardContent>
+        <CardFooter className="flex justify-center text-sm">
+            <p className="text-muted-foreground">
+                Não tem uma conta? <Link href="/register" className="text-primary hover:underline">Crie uma aqui.</Link>
+            </p>
+        </CardFooter>
        </Card>
     </div>
   );

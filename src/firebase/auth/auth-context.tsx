@@ -3,9 +3,9 @@
 
 import { createContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Employee } from '@/lib/types';
+import type { Employee, Company } from '@/lib/types';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc } from 'firebase/firestore';
 
 interface AuthContextType {
   user: Employee | null;
@@ -13,6 +13,7 @@ interface AuthContextType {
   loading: boolean;
   login: (username: string, pass: string) => Promise<boolean>;
   logout: () => void;
+  registerCompany: (companyName: string, adminUsername: string, adminPass: string) => Promise<boolean>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,7 +26,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
 
   useEffect(() => {
-    // Tenta carregar os dados da sessão do localStorage
     try {
       const storedUser = localStorage.getItem('majorstockx-user');
       const storedCompanyId = localStorage.getItem('majorstockx-company-id');
@@ -47,12 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return false;
     }
     
-    // Este é um método de autenticação SIMPLIFICADO e INSEGURO para demonstração.
-    // Numa aplicação real, a verificação de senha deve ser feita no backend.
-    
     try {
-      // 1. Encontrar o ID da empresa pelo nome de utilizador
-      // Esta é uma query ineficiente. Numa app real, o utilizador digitaria o ID da empresa.
       const companiesSnapshot = await getDocs(collection(firestore, 'companies'));
       let foundUser: Employee | null = null;
       let foundCompanyId: string | null = null;
@@ -64,8 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (!userSnapshot.empty) {
             const userData = userSnapshot.docs[0].data() as Employee;
-            // ATENÇÃO: Comparação de senha em plain text. NÃO FAÇA ISTO EM PRODUÇÃO.
-            if (userData.password === pass) {
+            if (userData.password === pass) { // WARNING: Insecure password check
                 foundUser = { ...userData, id: userSnapshot.docs[0].id };
                 foundCompanyId = companyDoc.id;
                 break;
@@ -74,9 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (foundUser && foundCompanyId) {
-        // Remover a senha do objeto do utilizador antes de guardar no estado/localStorage
         const { password, ...userToStore } = foundUser;
-
         setUser(userToStore);
         setCompanyId(foundCompanyId);
         localStorage.setItem('majorstockx-user', JSON.stringify(userToStore));
@@ -93,6 +85,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const registerCompany = async (companyName: string, adminUsername: string, adminPass: string): Promise<boolean> => {
+    if (!firestore) return false;
+
+    // Check if username already exists across all companies (inefficient but necessary for this model)
+     const companiesSnapshot = await getDocs(collection(firestore, 'companies'));
+     for (const companyDoc of companiesSnapshot.docs) {
+        const employeesCollection = collection(firestore, `companies/${companyDoc.id}/employees`);
+        const q = query(employeesCollection, where("username", "==", adminUsername));
+        const userSnapshot = await getDocs(q);
+        if (!userSnapshot.empty) {
+            console.error("Username already exists");
+            return false;
+        }
+     }
+
+    try {
+        // Create Company
+        const companyCollectionRef = collection(firestore, 'companies');
+        const companyDocRef = await addDoc(companyCollectionRef, { name: companyName });
+
+        // Create Admin Employee for that company
+        const employeesCollectionRef = collection(firestore, `companies/${companyDocRef.id}/employees`);
+        await addDoc(employeesCollectionRef, {
+            username: adminUsername,
+            password: adminPass, // WARNING: Storing plain text password
+            role: 'Admin',
+            companyId: companyDocRef.id,
+        });
+
+        return true;
+    } catch (error) {
+        console.error("Registration error: ", error);
+        return false;
+    }
+  };
+
+
   const logout = () => {
     setUser(null);
     setCompanyId(null);
@@ -101,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/login');
   };
 
-  const value = { user, companyId, loading, login, logout };
+  const value = { user, companyId, loading, login, logout, registerCompany };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

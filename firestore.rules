@@ -2,10 +2,23 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Em modo de utilizador único, permitir acesso aberto.
-    // A segurança é gerida pela posse física do dispositivo.
-    match /{document=**} {
-      allow read, write: if true;
+    // Allow public read/write to companies for registration
+    match /companies/{companyId} {
+      allow read, create: if true;
+      allow update, delete: if request.auth.uid == get(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid)).data.uid; // Basic ownership
+    }
+
+    // Allow employees to be created during company registration
+     match /companies/{companyId}/employees/{employeeId} {
+      allow read, create: if true;
+      // Only admins of the company can manage employees
+      allow write: if get(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // Secure all other company data
+    match /companies/{companyId}/{document=**} {
+      // Allow read/write only if the user is an employee of that company
+      allow read, write: if exists(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid));
     }
   }
 }
