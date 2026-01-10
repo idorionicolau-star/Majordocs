@@ -1,4 +1,5 @@
 
+
 export type User = {
   id: string;
   name: string;
@@ -13,21 +14,7 @@ export type Employee = {
   password?: string; // Should be handled securely, never stored in plain text
   role: 'Admin' | 'Employee';
   companyId: string;
-  permissions: {
-    canViewDashboard: boolean;
-    canViewInventory: boolean;
-    canManageInventory: boolean;
-    canViewSales: boolean;
-    canManageSales: boolean;
-    canViewProduction: boolean;
-    canManageProduction: boolean;
-    canViewOrders: boolean;
-    canManageOrders: boolean;
-    canViewReports: boolean;
-    canViewSettings: boolean;
-    canManageUsers: boolean;
-  }
-}
+};
 
 export type Company = {
     id: string;

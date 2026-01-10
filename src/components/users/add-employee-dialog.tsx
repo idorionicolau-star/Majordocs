@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import { useState } from 'react';
@@ -43,7 +44,7 @@ const formSchema = z.object({
 type AddEmployeeFormValues = z.infer<typeof formSchema>;
 
 interface AddEmployeeDialogProps {
-  onAddEmployee: (employee: Omit<Employee, 'id'>) => void;
+  onAddEmployee: (employee: Omit<Employee, 'id' | 'companyId'>) => void;
 }
 
 export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
@@ -59,7 +60,7 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
   });
 
   function onSubmit(values: AddEmployeeFormValues) {
-    onAddEmployee(values);
+    onAddEmployee(values as Omit<Employee, 'id' | 'companyId'>);
     form.reset();
     setOpen(false);
   }

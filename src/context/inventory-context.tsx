@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -169,40 +170,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         const companyCollectionRef = collection(firestore, 'companies');
         const companyDocRef = await addDoc(companyCollectionRef, { name: companyName });
 
-        // Step 2: Check for existing username *within the new company* (will always be false, but good practice).
+        // Step 2: Create the admin employee within the company's subcollection.
         const employeesCollectionRef = collection(firestore, `companies/${companyDocRef.id}/employees`);
-        const q = query(employeesCollectionRef, where("username", "==", adminUsername));
-        const existingUserSnapshot = await getDocs(q);
-
-        if (!existingUserSnapshot.empty) {
-            // This case should ideally not happen on initial registration.
-            // If it does, it might indicate a race condition or repeated attempt.
-            // For robustness, we can delete the created company or handle it.
-            await deleteDoc(companyDocRef); // Clean up orphaned company
-            console.error("Username already exists for this new company ID, which is unexpected.");
-            return false;
-        }
-
-        // Step 3: Create the admin employee.
         await addDoc(employeesCollectionRef, {
             username: adminUsername,
             password: adminPass, // Insecure, but for demo purposes
             role: 'Admin',
             companyId: companyDocRef.id,
-            permissions: {
-                canViewDashboard: true,
-                canViewInventory: true,
-                canManageInventory: true,
-                canViewSales: true,
-                canManageSales: true,
-                canViewProduction: true,
-                canManageProduction: true,
-                canViewOrders: true,
-                canManageOrders: true,
-                canViewReports: true,
-                canViewSettings: true,
-                canManageUsers: true,
-            }
         });
 
         return true;
@@ -437,21 +411,20 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [companyDocRef]);
 
   // --- RENDER LOGIC ---
-
   const isAuthPage = pathname === '/login' || pathname === '/register';
-
-  useEffect(() => {
-    if (!authLoading && !user && !isAuthPage) {
-      router.replace('/login');
-    }
-  }, [authLoading, user, isAuthPage, router]);
 
   if (authLoading) {
     return <div className="flex h-screen w-full items-center justify-center">A carregar aplicação...</div>;
   }
   
   if (!user && !isAuthPage) {
+     router.replace('/login');
      return <div className="flex h-screen w-full items-center justify-center">A redirecionar para o login...</div>;
+  }
+  
+  if (user && isAuthPage) {
+      router.replace('/dashboard');
+      return <div className="flex h-screen w-full items-center justify-center">A redirecionar para o dashboard...</div>;
   }
 
   const value: InventoryContextType = {
@@ -469,4 +442,5 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
+
 
