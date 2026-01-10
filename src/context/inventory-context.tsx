@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -117,35 +116,44 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = async (username: string, pass: string): Promise<boolean> => {
+  const login = async (fullUsername: string, pass: string): Promise<boolean> => {
     setAuthLoading(true);
-    if (!firestore) {
+    if (!firestore || !fullUsername.includes('@')) {
       setAuthLoading(false);
       return false;
     }
-    
+  
+    const [username, companyDomain] = fullUsername.split('@');
+  
     try {
-      const companiesSnapshot = await getDocs(collection(firestore, 'companies'));
-      let foundUser: Employee | null = null;
-      let foundCompanyId: string | null = null;
-
-      for (const companyDoc of companiesSnapshot.docs) {
-        const employeesCollection = collection(firestore, `companies/${companyDoc.id}/employees`);
-        const q = query(employeesCollection, where("username", "==", username));
-        const userSnapshot = await getDocs(q);
-
-        if (!userSnapshot.empty) {
-            const userData = userSnapshot.docs[0].data() as Employee;
-            if (userData.password === pass) { // WARNING: Insecure password check
-                foundUser = { ...userData, id: userSnapshot.docs[0].id };
-                foundCompanyId = companyDoc.id;
-                break;
-            }
-        }
+      // 1. Find the company by its domain-like name
+      const companiesRef = collection(firestore, 'companies');
+      const companyQuery = query(companiesRef, where("name", "==", companyDomain));
+      const companySnapshot = await getDocs(companyQuery);
+  
+      if (companySnapshot.empty) {
+        throw new Error(`Empresa "${companyDomain}" não encontrada.`);
       }
+      
+      const companyDoc = companySnapshot.docs[0];
+      const foundCompanyId = companyDoc.id;
+  
+      // 2. Find the user within that specific company's employee list
+      const employeesRef = collection(firestore, `companies/${foundCompanyId}/employees`);
+      const userQuery = query(employeesRef, where("username", "==", fullUsername));
+      const userSnapshot = await getDocs(userQuery);
+  
+      if (userSnapshot.empty) {
+        throw new Error(`Utilizador "${username}" não encontrado na empresa "${companyDomain}".`);
+      }
+  
+      const userData = userSnapshot.docs[0].data() as Employee;
+      
+      // 3. Verify password
+      if (userData.password === pass) { // WARNING: Insecure password check
+        const userToStore = { ...userData, id: userSnapshot.docs[0].id };
+        delete userToStore.password; // Do not store password in state or localStorage
 
-      if (foundUser && foundCompanyId) {
-        const { password, ...userToStore } = foundUser;
         setUser(userToStore);
         setCompanyId(foundCompanyId);
         localStorage.setItem('majorstockx-user', JSON.stringify(userToStore));
@@ -153,11 +161,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         setAuthLoading(false);
         return true;
       } else {
-        throw new Error("Credenciais inválidas");
+        throw new Error("Senha incorreta.");
       }
     } catch (error) {
       console.error("Login error: ", error);
       setAuthLoading(false);
+      // Re-throw to be caught by the UI
+      if (error instanceof Error) {
+        throw error;
+      }
       return false;
     }
   };
@@ -166,15 +178,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!firestore) return false;
 
     try {
-        // Step 1: Create the company first.
-        const companyCollectionRef = collection(firestore, 'companies');
-        const companyDocRef = await addDoc(companyCollectionRef, { name: companyName });
+        const companiesRef = collection(firestore, 'companies');
+        const companyQuery = query(companiesRef, where("name", "==", companyName));
+        const existingCompanySnapshot = await getDocs(companyQuery);
+        if (!existingCompanySnapshot.empty) {
+            throw new Error("Uma empresa com este nome já existe.");
+        }
 
-        // Step 2: Create the admin employee within the company's subcollection.
+        const companyDocRef = await addDoc(companiesRef, { name: companyName });
+
         const employeesCollectionRef = collection(firestore, `companies/${companyDocRef.id}/employees`);
         await addDoc(employeesCollectionRef, {
             username: adminUsername,
-            password: adminPass, // Insecure, but for demo purposes
+            password: adminPass,
             role: 'Admin',
             companyId: companyDocRef.id,
         });
@@ -182,6 +198,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         return true;
     } catch (error) {
         console.error("Registration error: ", error);
+        if (error instanceof Error) {
+          throw error;
+        }
         return false;
     }
   };
@@ -442,5 +461,3 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
-
-

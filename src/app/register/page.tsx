@@ -16,8 +16,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 const registerSchema = z.object({
-  companyName: z.string().min(3, 'O nome da empresa deve ter pelo menos 3 caracteres.'),
-  adminUsername: z.string().min(3, 'O nome de utilizador deve ter pelo menos 3 caracteres.'),
+  companyName: z.string().min(3, 'O nome da empresa deve ter pelo menos 3 caracteres.').refine(s => !s.includes('@'), 'O nome da empresa não pode conter "@".'),
+  adminUsername: z.string().min(3, 'O nome de utilizador deve ter pelo menos 3 caracteres.').refine(s => !s.includes('@'), 'O nome de utilizador não pode conter "@".'),
   adminPassword: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.'),
 });
 
@@ -46,15 +46,16 @@ export default function RegisterPage() {
     }
 
     try {
-        const success = await context.registerCompany(data.companyName, data.adminUsername, data.adminPassword);
+        const fullAdminUsername = `${data.adminUsername}@${data.companyName.toLowerCase().replace(/\s+/g, '')}`;
+        const success = await context.registerCompany(data.companyName, fullAdminUsername, data.adminPassword);
         if (success) {
             toast({
                 title: 'Empresa Registada com Sucesso!',
-                description: 'Pode agora fazer login com as suas novas credenciais.',
+                description: `Pode agora fazer login com "${fullAdminUsername}".`,
             });
             router.push('/login');
         } else {
-            throw new Error('Não foi possível registar a empresa. O nome de utilizador pode já existir.');
+            throw new Error('Não foi possível registar a empresa. O nome da empresa ou utilizador pode já existir.');
         }
     } catch (error: any) {
         toast({
@@ -86,7 +87,8 @@ export default function RegisterPage() {
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="adminUsername">Nome de Utilizador do Administrador</Label>
-                    <Input id="adminUsername" {...register('adminUsername')} placeholder="Ex: admin.empresa" />
+                    <Input id="adminUsername" {...register('adminUsername')} placeholder="Ex: admin" />
+                     <p className="text-[10px] text-muted-foreground">Será criado como: admin@nomedaempresa</p>
                     {errors.adminUsername && <p className="text-xs text-red-500">{errors.adminUsername.message}</p>}
                 </div>
                 <div className="space-y-2">

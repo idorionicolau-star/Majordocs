@@ -16,7 +16,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 const loginSchema = z.object({
-  username: z.string().min(1, 'O nome de utilizador é obrigatório.'),
+  username: z.string().min(1, 'O nome de utilizador é obrigatório.').includes('@', { message: 'O formato deve ser utilizador@empresa' }),
   password: z.string().min(1, 'A senha é obrigatória.'),
 });
 
@@ -77,8 +77,8 @@ export default function LoginPage() {
         <CardContent>
              <form onSubmit={handleSubmit(handleLogin)} className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="username">Nome de Utilizador</Label>
-                    <Input id="username" {...register('username')} placeholder="O seu nome de utilizador" />
+                    <Label htmlFor="username">Email ou Nome de Utilizador</Label>
+                    <Input id="username" {...register('username')} placeholder="utilizador@empresa" />
                     {errors.username && <p className="text-xs text-red-500">{errors.username.message}</p>}
                 </div>
                 <div className="space-y-2">
