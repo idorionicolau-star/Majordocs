@@ -140,7 +140,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   
       // 2. Find the user within that specific company's employee list
       const employeesRef = collection(firestore, `companies/${foundCompanyId}/employees`);
-      const userQuery = query(employeesRef, where("username", "==", fullUsername));
+      const userQuery = query(employeesRef, where("username", "==", username));
       const userSnapshot = await getDocs(userQuery);
   
       if (userSnapshot.empty) {
@@ -176,34 +176,34 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   
   const registerCompany = async (companyName: string, adminUsername: string, adminPass: string): Promise<boolean> => {
     if (!firestore) return false;
-
+  
     const normalizedCompanyName = companyName.toLowerCase().replace(/\s+/g, '');
-
+  
     try {
-        const companiesRef = collection(firestore, 'companies');
-        const companyQuery = query(companiesRef, where("name", "==", normalizedCompanyName));
-        const existingCompanySnapshot = await getDocs(companyQuery);
-        if (!existingCompanySnapshot.empty) {
-            throw new Error("Uma empresa com este nome já existe.");
-        }
-
-        const companyDocRef = await addDoc(companiesRef, { name: normalizedCompanyName });
-
-        const employeesCollectionRef = collection(firestore, `companies/${companyDocRef.id}/employees`);
-        await addDoc(employeesCollectionRef, {
-            username: adminUsername,
-            password: adminPass,
-            role: 'Admin',
-            companyId: companyDocRef.id,
-        });
-
-        return true;
+      const companiesRef = collection(firestore, 'companies');
+      const companyQuery = query(companiesRef, where('name', '==', normalizedCompanyName));
+      const existingCompanySnapshot = await getDocs(companyQuery);
+      if (!existingCompanySnapshot.empty) {
+        throw new Error('Uma empresa com este nome já existe.');
+      }
+  
+      const companyDocRef = await addDoc(companiesRef, { name: normalizedCompanyName });
+  
+      const employeesCollectionRef = collection(firestore, `companies/${companyDocRef.id}/employees`);
+      await addDoc(employeesCollectionRef, {
+        username: adminUsername.split('@')[0], // Save only the username part
+        password: adminPass, // In a real app, hash this password
+        role: 'Admin',
+        companyId: companyDocRef.id,
+      });
+  
+      return true;
     } catch (error) {
-        console.error("Registration error: ", error);
-        if (error instanceof Error) {
-          throw error;
-        }
-        return false;
+      console.error('Registration error: ', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      return false;
     }
   };
 
