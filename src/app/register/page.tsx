@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { InventoryContext } from '@/context/inventory-context';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const registerSchema = z.object({
   companyName: z.string().min(3, 'O nome da empresa deve ter pelo menos 3 caracteres.').refine(s => !s.includes('@'), 'O nome da empresa não pode conter "@".'),
@@ -28,6 +29,7 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const context = useContext(InventoryContext);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -94,8 +96,17 @@ export default function RegisterPage() {
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="adminPassword">Senha do Administrador</Label>
-                    <Input id="adminPassword" type="password" {...register('adminPassword')} placeholder="Crie uma senha segura" />
+                    <Input id="adminPassword" type={showPassword ? 'text' : 'password'} {...register('adminPassword')} placeholder="Crie uma senha segura" />
                     {errors.adminPassword && <p className="text-xs text-red-500">{errors.adminPassword.message}</p>}
+                </div>
+                <div className="flex items-center space-x-2">
+                    <Checkbox id="show-password" checked={showPassword} onCheckedChange={(checked) => setShowPassword(!!checked)} />
+                    <label
+                        htmlFor="show-password"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                        Mostrar senha
+                    </label>
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'A registar...' : 'Registar Empresa'}

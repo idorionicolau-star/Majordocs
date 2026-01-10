@@ -75,7 +75,7 @@ interface InventoryContextType {
     locationId?: string
   ) => void;
   seedInitialCatalog: () => Promise<void>;
-  clearProductsCollection: () => Promise<void>;
+  clearCompanyData: () => Promise<void>;
   updateCompany: (details: Partial<Company>) => Promise<void>;
 }
 
@@ -408,22 +408,25 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       }
     }, [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast]);
 
-  const clearProductsCollection = useCallback(async () => {
-    if (!productsCollectionRef) {
-      toast({ variant: "destructive", title: "Erro", description: "Base de dados não acessível." });
+  const clearCompanyData = useCallback(async () => {
+    if (!firestore || !companyId) {
+      toast({ variant: "destructive", title: "Erro", description: "Utilizador ou empresa não identificado." });
       return;
     }
+    const collectionsToDelete = ['products', 'sales', 'productions', 'orders', 'catalogProducts', 'catalogCategories', 'employees'];
+    const batch = writeBatch(firestore);
     try {
-      const q = query(productsCollectionRef);
-      const querySnapshot = await getDocs(q);
-      const batch = writeBatch(firestore);
-      querySnapshot.forEach((doc) => { batch.delete(doc.ref); });
+      for (const collectionName of collectionsToDelete) {
+        const collRef = collection(firestore, `companies/${companyId}/${collectionName}`);
+        const snapshot = await getDocs(query(collRef));
+        snapshot.forEach(doc => batch.delete(doc.ref));
+      }
       await batch.commit();
     } catch (error) {
-      console.error("Error clearing products collection: ", error);
-      toast({ variant: "destructive", title: "Erro ao Limpar Coleção" });
+      console.error("Error clearing company data: ", error);
+      toast({ variant: "destructive", title: "Erro ao Limpar Dados" });
     }
-  }, [productsCollectionRef, firestore, toast]);
+  }, [firestore, companyId, toast]);
 
   const updateCompany = useCallback(async (details: Partial<Company>) => {
       if(companyDocRef) {
@@ -454,7 +457,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
     locations, isMultiLocation, addProduct, updateProduct, deleteProduct, transferStock,
-    updateProductStock, seedInitialCatalog, clearProductsCollection, updateCompany,
+    updateProductStock, seedInitialCatalog, clearCompanyData, updateCompany,
   };
 
   return (

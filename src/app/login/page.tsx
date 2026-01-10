@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { InventoryContext } from '@/context/inventory-context';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'O nome de utilizador é obrigatório.').includes('@', { message: 'O formato deve ser utilizador@empresa' }),
@@ -27,6 +28,7 @@ export default function LoginPage() {
   const { toast } = useToast();
   const { login } = useContext(InventoryContext) || {};
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -83,8 +85,17 @@ export default function LoginPage() {
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="password">Senha</Label>
-                    <Input id="password" type="password" {...register('password')} placeholder="A sua senha" />
+                    <Input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} placeholder="A sua senha" />
                     {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
+                </div>
+                <div className="flex items-center space-x-2">
+                    <Checkbox id="show-password" checked={showPassword} onCheckedChange={(checked) => setShowPassword(!!checked)} />
+                    <label
+                        htmlFor="show-password"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                        Mostrar senha
+                    </label>
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'A entrar...' : 'Entrar'}

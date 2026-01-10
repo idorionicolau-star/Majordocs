@@ -59,7 +59,7 @@ export default function SettingsPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { companyData, updateCompany } = inventoryContext || {};
+  const { companyData, updateCompany, clearCompanyData } = inventoryContext || {};
 
 
   useEffect(() => {
@@ -158,11 +158,12 @@ export default function SettingsPage() {
     }
   };
   
-  const handleClearProducts = async () => {
-    if (inventoryContext?.clearProductsCollection) {
-      toast({ title: "A limpar...", description: "A apagar todos os produtos do inventário no Firestore." });
-      await inventoryContext.clearProductsCollection();
-      toast({ title: "Sucesso!", description: "A coleção de produtos foi limpa." });
+  const handleClearData = async () => {
+    if (clearCompanyData) {
+      toast({ title: "A limpar...", description: "A apagar todos os dados da empresa no Firestore." });
+      await clearCompanyData();
+      toast({ title: "Sucesso!", description: "Os dados foram limpos. A página será recarregada." });
+      setTimeout(() => window.location.reload(), 2000);
     }
     setShowClearConfirm(false);
   };
@@ -197,12 +198,12 @@ export default function SettingsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação é irreversível e irá apagar permanentemente **todos** os produtos do seu inventário no Firestore. Não será possível recuperar estes dados.
+              Esta ação é irreversível e irá apagar permanentemente **todos** os dados da sua empresa do Firestore (produtos, vendas, funcionários etc.). Não será possível recuperar estes dados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearProducts} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogAction onClick={handleClearData} className="bg-destructive hover:bg-destructive/90">
               Sim, apagar tudo
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -400,14 +401,14 @@ export default function SettingsPage() {
               <AccordionContent>
                 <CardContent className="p-6 sm:p-8 pt-0 space-y-4">
                    <div>
-                    <h3 className="font-semibold">Limpar Coleção de Produtos</h3>
+                    <h3 className="font-semibold">Limpar Dados da Empresa</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Esta ação irá apagar todos os documentos da coleção de produtos no Firestore. Utilize esta opção se quiser limpar o inventário e recomeçar.
+                      Esta ação irá apagar todos os documentos (produtos, vendas, funcionários, etc.) relacionados a esta empresa no Firestore.
                     </p>
                    </div>
                    <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Limpar Produtos do Firestore
+                    Apagar Todos os Dados
                    </Button>
                 </CardContent>
               </AccordionContent>
