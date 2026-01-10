@@ -177,15 +177,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const registerCompany = async (companyName: string, adminUsername: string, adminPass: string): Promise<boolean> => {
     if (!firestore) return false;
 
+    const normalizedCompanyName = companyName.toLowerCase().replace(/\s+/g, '');
+
     try {
         const companiesRef = collection(firestore, 'companies');
-        const companyQuery = query(companiesRef, where("name", "==", companyName));
+        const companyQuery = query(companiesRef, where("name", "==", normalizedCompanyName));
         const existingCompanySnapshot = await getDocs(companyQuery);
         if (!existingCompanySnapshot.empty) {
             throw new Error("Uma empresa com este nome já existe.");
         }
 
-        const companyDocRef = await addDoc(companiesRef, { name: companyName });
+        const companyDocRef = await addDoc(companiesRef, { name: normalizedCompanyName });
 
         const employeesCollectionRef = collection(firestore, `companies/${companyDocRef.id}/employees`);
         await addDoc(employeesCollectionRef, {

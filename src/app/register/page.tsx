@@ -46,7 +46,8 @@ export default function RegisterPage() {
     }
 
     try {
-        const fullAdminUsername = `${data.adminUsername}@${data.companyName.toLowerCase().replace(/\s+/g, '')}`;
+        const normalizedCompanyName = data.companyName.toLowerCase().replace(/\s+/g, '');
+        const fullAdminUsername = `${data.adminUsername}@${normalizedCompanyName}`;
         const success = await context.registerCompany(data.companyName, fullAdminUsername, data.adminPassword);
         if (success) {
             toast({
