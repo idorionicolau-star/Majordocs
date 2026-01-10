@@ -10,7 +10,17 @@ import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Employee } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, addDoc, doc, deleteDoc } from "firebase/firestore";
+import { collection, addDoc, doc, deleteDoc, getDocs, query, where } from "firebase/firestore";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function UsersPage() {
   const { toast } = useToast();
@@ -26,27 +36,26 @@ export default function UsersPage() {
   
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
-  const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId' | 'permissions'>) => {
+  const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId'>) => {
     if (!employeesCollectionRef || !companyId) return;
+
+    // Check if username already exists in the company
+    const q = query(employeesCollectionRef, where("username", "==", employeeData.username));
+    const existingUserSnapshot = await getDocs(q);
+
+    if (!existingUserSnapshot.empty) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Este nome de utilizador já existe nesta empresa.",
+      });
+      return;
+    }
     
     // In a real app, password should be hashed before saving
     await addDoc(employeesCollectionRef, { 
       ...employeeData, 
       companyId,
-      permissions: { // Default permissions for new employees
-          canViewDashboard: true,
-          canViewInventory: true,
-          canManageInventory: false,
-          canViewSales: true,
-          canManageSales: false,
-          canViewProduction: true,
-          canManageProduction: false,
-          canViewOrders: true,
-          canManageOrders: false,
-          canViewReports: false,
-          canViewSettings: false,
-          canManageUsers: false,
-      }
     });
 
     toast({
@@ -79,6 +88,20 @@ export default function UsersPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
+        <AlertDialog open={!!employeeToDelete} onOpenChange={(open) => !open && setEmployeeToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta ação irá remover permanentemente o funcionário "{employeeToDelete?.username}".
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteEmployee}>Remover</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h1 className="text-2xl md:text-3xl font-headline font-bold">Gestão de Funcionários</h1>
