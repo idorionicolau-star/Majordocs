@@ -22,7 +22,11 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const minSwipeDistance = 50;
   const navigationDirection = useRef<'left' | 'right' | null>(null);
 
-  const currentPageIndex = mainNavItems.findIndex(
+  const navItems = authContext?.user?.role === 'Admin' 
+    ? mainNavItems 
+    : mainNavItems.filter(item => !item.adminOnly);
+
+  const currentPageIndex = navItems.findIndex(
     (item) => item.href === pathname
   );
 
@@ -80,17 +84,17 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
     if (isLeftSwipe) {
       const nextPageIndex = currentPageIndex + 1;
-      if (nextPageIndex < mainNavItems.length) {
+      if (nextPageIndex < navItems.length) {
         navigationDirection.current = 'left';
         setAnimationClass('animate-slide-out-to-left');
-        const nextPath = mainNavItems[nextPageIndex].href;
+        const nextPath = navItems[nextPageIndex].href;
         setTimeout(() => router.push(nextPath), 150);
       }
     } else if (isRightSwipe) {
       const prevPageIndex = currentPageIndex - 1;
       if (prevPageIndex >= 0) {
         navigationDirection.current = 'right';
-        const prevPath = mainNavItems[prevPageIndex].href;
+        const prevPath = navItems[prevPageIndex].href;
         setTimeout(() => router.push(prevPath), 150);
       }
     }

@@ -9,9 +9,12 @@ import { Trash2 } from "lucide-react"
 interface ColumnsOptions {
     onDelete: (employee: Employee) => void;
     currentUserId?: string | null;
+    isAdmin: boolean;
 }
 
-export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => [
+export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
+
+    const baseColumns: ColumnDef<Employee>[] = [
     {
         accessorKey: "username",
         header: "Nome de Utilizador",
@@ -31,27 +34,32 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => [
                 </span>
             )
         }
-    },
-    {
-        id: "actions",
-        cell: ({ row }) => {
-            const employee = row.original;
-            // Prevent deleting oneself
-            const isCurrentUser = employee.id === options.currentUserId;
+    }];
 
-            return (
-                <div className="text-right">
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => options.onDelete(employee)}
-                        disabled={isCurrentUser}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                </div>
-            )
-        }
+    if (options.isAdmin) {
+        baseColumns.push({
+            id: "actions",
+            cell: ({ row }) => {
+                const employee = row.original;
+                // Prevent deleting oneself
+                const isCurrentUser = employee.id === options.currentUserId;
+
+                return (
+                    <div className="text-right">
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => options.onDelete(employee)}
+                            disabled={isCurrentUser}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                )
+            }
+        });
     }
-];
+
+    return baseColumns;
+};

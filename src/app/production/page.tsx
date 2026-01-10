@@ -41,6 +41,8 @@ export default function ProductionPage() {
 
   const { productions, companyId, updateProductStock, locations, isMultiLocation, loading: inventoryLoading, user: userData } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, locations: [], isMultiLocation: false, loading: true, user: null };
 
+  const isAdmin = userData?.role === 'Admin';
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -220,12 +222,13 @@ export default function ProductionPage() {
                     isMultiLocation={isMultiLocation}
                     onTransfer={() => setProductionToTransfer(production)}
                     viewMode={gridCols === '5' ? 'condensed' : 'normal'}
+                    isAdmin={isAdmin}
                 />
             ))}
         </div>
       )}
 
-      <AddProductionDialog onAddProduction={handleAddProduction} triggerType="fab" />
+      {isAdmin && <AddProductionDialog onAddProduction={handleAddProduction} triggerType="fab" />}
     </div>
     </>
   );

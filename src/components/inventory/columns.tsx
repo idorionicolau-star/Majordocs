@@ -24,6 +24,7 @@ interface ColumnsOptions {
   onProductUpdate: (product: Product) => void;
   isMultiLocation: boolean;
   locations: Location[];
+  isAdmin: boolean;
 }
 
 export const getStockStatus = (product: Product) => {
@@ -41,7 +42,7 @@ export const getStockStatus = (product: Product) => {
 };
 
 export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
-  const { isMultiLocation, locations } = options;
+  const { isMultiLocation, locations, isAdmin } = options;
 
   const baseColumns: ColumnDef<Product>[] = [
     {
@@ -135,43 +136,47 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
             Estável
         </div>
       }
-    },
-    {
-      id: "actions",
-      cell: ({ row }) => {
-        const product = row.original
-        return (
-          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <EditProductDialog 
-              product={product} 
-              onProductUpdate={options.onProductUpdate} 
-              isMultiLocation={isMultiLocation}
-              locations={locations}
-              trigger="icon"
-            />
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="p-3 h-auto w-auto text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all"
-                    onClick={() => options.onAttemptDelete(product)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Apagar</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Apagar Produto</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        )
-      },
     }
   );
+
+  if (isAdmin) {
+    baseColumns.push({
+        id: "actions",
+        cell: ({ row }) => {
+          const product = row.original
+          return (
+            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <EditProductDialog 
+                product={product} 
+                onProductUpdate={options.onProductUpdate} 
+                isMultiLocation={isMultiLocation}
+                locations={locations}
+                trigger="icon"
+              />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="p-3 h-auto w-auto text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all"
+                      onClick={() => options.onAttemptDelete(product)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Apagar</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Apagar Produto</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )
+        },
+      });
+  }
+
 
   return baseColumns;
 }

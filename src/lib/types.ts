@@ -101,6 +101,7 @@ export type NavItem = {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
+  adminOnly?: boolean;
 };
 
 export type Location = {

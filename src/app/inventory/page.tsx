@@ -56,8 +56,11 @@ export default function InventoryPage() {
     updateProduct, 
     deleteProduct, 
     transferStock,
-    loading: inventoryLoading
-  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true };
+    loading: inventoryLoading,
+    user
+  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, user: null };
+
+  const isAdmin = user?.role === 'Admin';
 
 
   useEffect(() => {
@@ -340,7 +343,7 @@ export default function InventoryPage() {
                 />
                 <div className="flex items-center gap-2">
                     <TooltipProvider>
-                        {isMultiLocation && (
+                        {isMultiLocation && isAdmin && (
                            <>
                             <TransferStockDialog 
                                 products={products}
@@ -492,6 +495,7 @@ export default function InventoryPage() {
                 onProductUpdate: handleUpdateProduct,
                 isMultiLocation: isMultiLocation,
                 locations: locations,
+                isAdmin: isAdmin
               })} 
               data={filteredProducts} 
             />
@@ -512,23 +516,24 @@ export default function InventoryPage() {
                         onProductUpdate={handleUpdateProduct}
                         onAttemptDelete={setProductToDelete}
                         viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
+                        isAdmin={isAdmin}
                     />
                 ))}
             </div>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <p>Nenhum produto no inventário.</p>
-              <p className="text-sm">Comece por adicionar um novo produto.</p>
+              {isAdmin && <p className="text-sm">Comece por adicionar um novo produto.</p>}
             </div>
           )
         )}
       </div>
-      <AddProductDialog 
+      {isAdmin && <AddProductDialog 
         onAddProduct={handleAddProduct}
         isMultiLocation={isMultiLocation}
         locations={locations}
         triggerType="fab"
-      />
+      />}
     </>
   );
 }

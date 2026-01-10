@@ -16,11 +16,11 @@ export const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Inventário', href: '/inventory', icon: Box },
   { title: 'Vendas', href: '/sales', icon: ShoppingCart },
-  { title: 'Produção', href: '/production', icon: Hammer },
-  { title: 'Encomendas', href: '/orders', icon: ClipboardList },
-  { title: 'Relatórios', href: '/reports', icon: BarChart3 },
-  { title: 'Utilizadores', href: '/users', icon: Users },
-  { title: 'Ajustes', href: '/settings', icon: Settings },
+  { title: 'Produção', href: '/production', icon: Hammer, adminOnly: true },
+  { title: 'Encomendas', href: '/orders', icon: ClipboardList, adminOnly: true },
+  { title: 'Relatórios', href: '/reports', icon: BarChart3, adminOnly: true },
+  { title: 'Utilizadores', href: '/users', icon: Users, adminOnly: true },
+  { title: 'Ajustes', href: '/settings', icon: Settings, adminOnly: true },
 ];
 
 export const initialCatalog: InitialCatalog = {
@@ -95,4 +95,3 @@ export const currentUser = {
         canViewReports: true,
     }
 };
-

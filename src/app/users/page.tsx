@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useContext } from "react";
@@ -26,6 +27,7 @@ export default function UsersPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { companyId, user, loading } = useContext(InventoryContext) || {};
+  const isAdmin = user?.role === 'Admin';
 
   const employeesCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
@@ -39,8 +41,10 @@ export default function UsersPage() {
   const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId'>) => {
     if (!employeesCollectionRef || !companyId) return;
 
+    const usernameWithoutCompany = employeeData.username.split('@')[0];
+
     // Check if username already exists in the company
-    const q = query(employeesCollectionRef, where("username", "==", employeeData.username));
+    const q = query(employeesCollectionRef, where("username", "==", usernameWithoutCompany));
     const existingUserSnapshot = await getDocs(q);
 
     if (!existingUserSnapshot.empty) {
@@ -54,13 +58,14 @@ export default function UsersPage() {
     
     // In a real app, password should be hashed before saving
     await addDoc(employeesCollectionRef, { 
-      ...employeeData, 
+      ...employeeData,
+      username: usernameWithoutCompany, // Save only the username
       companyId,
     });
 
     toast({
       title: "Funcionário Adicionado",
-      description: `O funcionário "${employeeData.username}" foi adicionado.`,
+      description: `O funcionário "${usernameWithoutCompany}" foi adicionado.`,
     });
   };
 
@@ -109,13 +114,14 @@ export default function UsersPage() {
                     Adicione, edite e remova funcionários do sistema.
                 </p>
             </div>
-            <AddEmployeeDialog onAddEmployee={handleAddEmployee} />
+            {isAdmin && <AddEmployeeDialog onAddEmployee={handleAddEmployee} />}
         </div>
       
         <UsersDataTable 
             columns={columns({
                 onDelete: (employee) => setEmployeeToDelete(employee),
-                currentUserId: user?.id
+                currentUserId: user?.id,
+                isAdmin: isAdmin
             })} 
             data={employees || []} 
         />

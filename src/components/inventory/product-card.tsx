@@ -18,9 +18,10 @@ interface ProductCardProps {
     onProductUpdate: (product: Product) => void;
     onAttemptDelete: (product: Product) => void;
     viewMode?: 'normal' | 'condensed';
+    isAdmin: boolean;
 }
 
-export function ProductCard({ product, locations, isMultiLocation, onProductUpdate, onAttemptDelete, viewMode = 'normal' }: ProductCardProps) {
+export function ProductCard({ product, locations, isMultiLocation, onProductUpdate, onAttemptDelete, viewMode = 'normal', isAdmin }: ProductCardProps) {
     const status = getStockStatus(product);
     
     const statusInfo = {
@@ -74,7 +75,7 @@ export function ProductCard({ product, locations, isMultiLocation, onProductUpda
                     </div>
                  )}
             </CardContent>
-            <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
+            {isAdmin && <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
                  <EditProductDialog
                     product={product}
                     onProductUpdate={onProductUpdate}
@@ -102,7 +103,7 @@ export function ProductCard({ product, locations, isMultiLocation, onProductUpda
                         </TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
-            </CardFooter>
+            </CardFooter>}
         </Card>
     );
 }

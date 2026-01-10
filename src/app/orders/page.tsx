@@ -27,6 +27,8 @@ export default function OrdersPage() {
 
   const { orders, companyId, loading: inventoryLoading, updateProductStock, user: userData } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null };
 
+  const isAdmin = userData?.role === 'Admin';
+
 
   const handleAddOrder = (newOrderData: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'>) => {
     if (!firestore || !companyId) return;
@@ -181,6 +183,7 @@ export default function OrdersPage() {
                     order={order}
                     onUpdateStatus={handleUpdateOrderStatus}
                     onAddProductionLog={handleAddProductionLog}
+                    isAdmin={isAdmin}
                 />
             ))}
             {filteredOrders.length === 0 && (
@@ -191,10 +194,10 @@ export default function OrdersPage() {
         </div>
 
       </div>
-      <AddOrderDialog 
+      {isAdmin && <AddOrderDialog 
         onAddOrder={handleAddOrder}
         triggerType="fab"
-      />
+      />}
     </>
   );
 }

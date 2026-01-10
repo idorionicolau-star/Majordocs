@@ -1,28 +1,74 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow public read/write to companies for registration
+
+    // --- HELPER FUNCTIONS ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserRole(companyId) {
+      return get(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid)).data.role;
+    }
+
+    function isEmployeeOf(companyId) {
+      return exists(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid));
+    }
+    
+    function isAdminOf(companyId) {
+        return isEmployeeOf(companyId) && getUserRole(companyId) == 'Admin';
+    }
+
+    // --- COLLECTIONS ---
+
+    // Company documents
     match /companies/{companyId} {
-      allow read, create: if true;
-      // Only an admin of that company can update or delete the company doc
-      allow update, delete: if get(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid)).data.role == 'Admin';
+      allow create: if true; // For registration
+      allow read: if isEmployeeOf(companyId);
+      allow update, delete: if isAdminOf(companyId);
     }
 
-    // Allow employees to be created during company registration (by anyone)
-    // or by an admin of that company.
-     match /companies/{companyId}/employees/{employeeId} {
-      allow create: if true;
-      // Allow read by any employee of the company
-      allow read: if exists(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid));
-      // Only admins of the company can manage (write/delete) other employees
-      allow write: if get(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid)).data.role == 'Admin';
+    // Employees subcollection
+    match /companies/{companyId}/employees/{employeeId} {
+      allow create: if isAdminOf(companyId) || request.auth.uid == employeeId; // Admin can add, or user can be created during registration
+      allow read: if isEmployeeOf(companyId);
+      allow update, delete: if isAdminOf(companyId); // Only admins can manage employees
+    }
+    
+    // Catalog is managed by Admins
+    match /companies/{companyId}/catalogProducts/{productId} {
+        allow read: if isEmployeeOf(companyId);
+        allow write: if isAdminOf(companyId);
+    }
+    match /companies/{companyId}/catalogCategories/{categoryId} {
+        allow read: if isEmployeeOf(companyId);
+        allow write: if isAdminOf(companyId);
     }
 
-    // Secure all other company data
-    match /companies/{companyId}/{document=**} {
-      // Allow read/write only if the user is a registered employee of that company
-      allow read, write: if exists(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid));
+    // Inventory can be read by anyone in the company, but only written by Admins
+    match /companies/{companyId}/products/{productId} {
+      allow read: if isEmployeeOf(companyId);
+      allow write: if isAdminOf(companyId);
+    }
+    
+    // Sales can be read by anyone, but only created/updated by employees (Admins included)
+    match /companies/{companyId}/sales/{saleId} {
+        allow read: if isEmployeeOf(companyId);
+        allow write: if isEmployeeOf(companyId); // Any employee can make a sale
+    }
+    
+    // Production and Orders can be read by anyone, but only written by Admins
+    match /companies/{companyId}/productions/{productionId} {
+        allow read: if isEmployeeOf(companyId);
+        allow write: if isAdminOf(companyId);
+    }
+    
+    match /companies/{companyId}/orders/{orderId} {
+        allow read: if isEmployeeOf(companyId);
+        allow write: if isAdminOf(companyId);
     }
   }
 }

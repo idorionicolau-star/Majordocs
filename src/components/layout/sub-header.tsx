@@ -6,11 +6,18 @@ import { usePathname } from "next/navigation";
 import { mainNavItems } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import React from "react";
+import React, { useContext } from "react";
+import { InventoryContext } from "@/context/inventory-context";
 
 export function SubHeader() {
   const pathname = usePathname();
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const { user } = useContext(InventoryContext) || {};
+
+  const navItems = user?.role === 'Admin' 
+    ? mainNavItems 
+    : mainNavItems.filter(item => !item.adminOnly);
+
 
   React.useEffect(() => {
     const activeLink = document.getElementById(`nav-link-${pathname.replace('/', '')}`);
@@ -35,7 +42,7 @@ export function SubHeader() {
           "flex w-max md:w-full md:justify-center mx-auto",
           "animate-peek md:animate-none"
         )}>
-          {mainNavItems.map((item) => {
+          {navItems.map((item) => {
             const isActive = pathname === item.href;
 
             return (

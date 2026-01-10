@@ -15,9 +15,10 @@ interface ProductionCardProps {
     isMultiLocation: boolean;
     onTransfer: (production: Production) => void;
     viewMode?: 'normal' | 'condensed';
+    isAdmin: boolean;
 }
 
-export function ProductionCard({ production, locations, isMultiLocation, onTransfer, viewMode = 'normal' }: ProductionCardProps) {
+export function ProductionCard({ production, locations, isMultiLocation, onTransfer, viewMode = 'normal', isAdmin }: ProductionCardProps) {
     const isCondensed = viewMode === 'condensed';
     const location = locations.find(l => l.id === production.location);
     const isTransferred = production.status === 'Transferido';
@@ -68,7 +69,7 @@ export function ProductionCard({ production, locations, isMultiLocation, onTrans
                     </div>
                  )}
             </CardContent>
-            <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
+            {isAdmin && <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
                {!isTransferred && (
                  <TooltipProvider>
                     <Tooltip>
@@ -84,7 +85,7 @@ export function ProductionCard({ production, locations, isMultiLocation, onTrans
                     </Tooltip>
                 </TooltipProvider>
                )}
-            </CardFooter>
+            </CardFooter>}
         </Card>
     );
 }
