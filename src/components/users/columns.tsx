@@ -21,7 +21,6 @@ const displayPassword = (password: string | undefined): string => {
     return '';
   }
   try {
-    // Tenta decodificar de Base64 para UTF-8
     const decoded = Buffer.from(password, 'base64').toString('utf-8');
     // Verifica se a string decodificada contém caracteres de controle inválidos,
     // o que pode indicar que não era uma string Base64 válida para texto.
@@ -35,15 +34,24 @@ const displayPassword = (password: string | undefined): string => {
   }
 };
 
-const LoginFormatCell = ({ row, companyName }: { row: any, companyName: string | null }) => {
+const LoginFormatCell = ({ row, companyName, isAdmin }: { row: any, companyName: string | null, isAdmin: boolean }) => {
     const { toast } = useToast();
     const username = row.original.username;
     
-    const password = displayPassword(row.original.password);
+    // A senha só estará disponível se o utilizador for admin
+    const password = isAdmin ? displayPassword(row.original.password) : '********';
 
     const loginFormat = `${username}@${companyName || ''}`;
     
     const handleCopy = () => {
+        if (!isAdmin) {
+            toast({
+                variant: "destructive",
+                title: "Ação não permitida",
+                description: "Apenas administradores podem copiar credenciais.",
+            });
+            return;
+        }
         const textToCopy = `Login: ${loginFormat}\nSenha: ${password}`;
         navigator.clipboard.writeText(textToCopy);
         toast({
@@ -55,7 +63,7 @@ const LoginFormatCell = ({ row, companyName }: { row: any, companyName: string |
     return (
         <div className="flex items-center gap-2">
             <span className="font-mono text-xs p-2 rounded-md bg-muted text-muted-foreground">{loginFormat}</span>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} disabled={!isAdmin}>
                 <Copy className="h-4 w-4" />
             </Button>
         </div>
@@ -72,7 +80,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
     {
         id: 'loginFormat',
         header: 'Formato de Login',
-        cell: ({ row }) => <LoginFormatCell row={row} companyName={options.companyName} />
+        cell: ({ row }) => <LoginFormatCell row={row} companyName={options.companyName} isAdmin={options.isAdmin} />
     },
     {
         accessorKey: "role",

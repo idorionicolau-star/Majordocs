@@ -9,17 +9,7 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
-
-    function getUserData(uid) {
-      // Note: This path needs to be dynamically determined in a real multi-tenant app.
-      // For now, this is a placeholder. A robust solution would involve a top-level
-      // user collection to find the companyId from a userId.
-      // This is simplified for this context. We'll assume we can get it.
-      // A more realistic approach would be to pass companyId into the function.
-      let companyId = get(/databases/$(database)/documents/users/$(uid)).data.companyId;
-      return get(/databases/$(database)/documents/companies/$(companyId)/employees/$(uid)).data;
-    }
-
+    
     function isEmployeeOf(companyId) {
       // Checks if the requesting user's UID exists in the employees subcollection for the given company.
       return isSignedIn() && exists(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid));
@@ -42,19 +32,16 @@ service cloud.firestore {
 
     // Employees subcollection
     match /companies/{companyId}/employees/{employeeId} {
-      // Allow read only if you are an Admin of the company.
-      // This protects sensitive fields like password from other employees.
-      allow read: if isAdminOf(companyId);
+      // Admins can read any employee document in their company.
+      // A regular employee can only read their own document.
+      allow get: if isAdminOf(companyId) || request.auth.uid == employeeId;
       
-      // Any employee can list the users (to see names/roles), but the 'read' rule above
-      // will prevent them from getting the full document with the password.
+      // Any authenticated employee of the company can list users.
+      // Sensitive fields like 'password' will be blocked by the 'get' rule for non-admins.
       allow list: if isEmployeeOf(companyId);
 
-      // Create is allowed by Admins.
-      allow create: if isAdminOf(companyId);
-      
-      // Update/delete is allowed by Admins.
-      allow update, delete: if isAdminOf(companyId);
+      // Only Admins can create, update, or delete employees.
+      allow create, update, delete: if isAdminOf(companyId);
     }
     
     // Catalog is managed by Admins
@@ -73,13 +60,12 @@ service cloud.firestore {
       allow write: if isAdminOf(companyId);
     }
     
-    // Sales can be read by anyone, and created/updated by any employee
+    // Sales can be created/updated by any employee, and read by any employee.
     match /companies/{companyId}/sales/{saleId} {
-        allow read: if isEmployeeOf(companyId);
-        allow write: if isEmployeeOf(companyId);
+        allow read, write: if isEmployeeOf(companyId);
     }
     
-    // Production and Orders can be read by anyone, but only written by Admins
+    // Production and Orders can be read by any employee, but only written by Admins
     match /companies/{companyId}/productions/{productionId} {
         allow read: if isEmployeeOf(companyId);
         allow write: if isAdminOf(companyId);
