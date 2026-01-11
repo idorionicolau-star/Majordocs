@@ -24,8 +24,17 @@ const LoginFormatCell = ({ row, companyName }: { row: any, companyName: string |
     let password = '';
     if (row.original.password) {
         try {
-            password = Buffer.from(row.original.password, 'base64').toString('utf-8');
+            // Try to decode from Base64. If it fails, assume it's plain text.
+            const decoded = Buffer.from(row.original.password, 'base64').toString('utf-8');
+            // A simple check to see if the decoded string is plausible plain text.
+            // This regex checks for common non-printable characters.
+            if (/[\x00-\x08\x0E-\x1F]/.test(decoded)) {
+               password = row.original.password; // It's likely not Base64, use original.
+            } else {
+               password = decoded; // Decoding succeeded and looks like text.
+            }
         } catch (e) {
+            // If decoding throws an error, it's definitely not Base64.
             password = row.original.password;
         }
     }

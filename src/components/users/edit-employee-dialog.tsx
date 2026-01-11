@@ -76,8 +76,11 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
       username: values.username,
       role: values.role,
     };
-    if (values.password) {
+    if (values.password && values.password.length >= 6) {
       updatedEmployee.password = values.password;
+    } else if (values.password && values.password.length > 0) {
+        form.setError("password", { message: "A nova senha deve ter pelo menos 6 caracteres."});
+        return;
     } else {
         // If password is not provided, we don't want to send it in the update
         delete updatedEmployee.password;
@@ -88,10 +91,18 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
   
   let currentPassword = '';
     if (employee.password) {
-        try {
-            currentPassword = Buffer.from(employee.password, 'base64').toString('utf-8');
-             if (currentPassword.includes('')) throw new Error('Invalid character');
+       try {
+            // Try to decode from Base64. If it fails, assume it's plain text.
+            const decoded = Buffer.from(employee.password, 'base64').toString('utf-8');
+            // A simple check to see if the decoded string is plausible plain text.
+            // This regex checks for common non-printable characters.
+            if (/[\x00-\x08\x0E-\x1F]/.test(decoded)) {
+               currentPassword = employee.password; // It's likely not Base64, use original.
+            } else {
+               currentPassword = decoded; // Decoding succeeded and looks like text.
+            }
         } catch (e) {
+            // If decoding throws an error, it's definitely not Base64.
             currentPassword = employee.password;
         }
     }
