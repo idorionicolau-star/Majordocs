@@ -166,174 +166,176 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
             Preencha os detalhes abaixo para adicionar um novo produto ao inventário.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoria</FormLabel>
-                    <Select onValueChange={(value) => {
-                      field.onChange(value);
-                      form.setValue('name', '');
-                      setProductSelectorOpen(true);
-                    }} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma categoria" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {catalogCategories.sort((a,b) => a.name.localeCompare(b.name)).map(cat => (
-                          <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Categoria</FormLabel>
+                      <Select onValueChange={(value) => {
+                        field.onChange(value);
+                        form.setValue('name', '');
+                        setProductSelectorOpen(true);
+                      }} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma categoria" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {catalogCategories.sort((a,b) => a.name.localeCompare(b.name)).map(cat => (
+                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome do Produto</FormLabel>
+                          <Collapsible open={productSelectorOpen} onOpenChange={setProductSelectorOpen}>
+                              <CollapsibleTrigger asChild>
+                                  <FormControl>
+                                      <Button
+                                      variant="outline"
+                                      role="combobox"
+                                      disabled={!watchedCategory}
+                                      className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                                      >
+                                      {field.value || "Selecione um produto do catálogo"}
+                                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                      </Button>
+                                  </FormControl>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                  <div className='relative mt-2'>
+                                      <div className='absolute top-0 left-0 w-full h-full rounded-md border'>
+                                          <Command>
+                                              <CommandInput placeholder="Pesquisar produto..." />
+                                              <ScrollArea className="h-32">
+                                              <CommandList>
+                                                  <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+                                                  <CommandGroup>
+                                                      {filteredCatalogProducts.map((product) => (
+                                                      <CommandItem
+                                                          value={product.name}
+                                                          key={product.id}
+                                                          onSelect={() => handleProductSelect(product)}
+                                                      >
+                                                          <Check className={cn("mr-2 h-4 w-4", product.name === field.value ? "opacity-100" : "opacity-0")} />
+                                                          {product.name}
+                                                      </CommandItem>
+                                                      ))}
+                                                  </CommandGroup>
+                                              </CommandList>
+                                              </ScrollArea>
+                                          </Command>
+                                      </div>
+                                  </div>
+                              </CollapsibleContent>
+                          </Collapsible>
+                          <FormMessage />
+                        </FormItem>
+                    )}
+                />
+              </div>
+              
+              {isMultiLocation && (
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Localização</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma localização" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {locations.map(location => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                   control={form.control}
-                  name="name"
+                  name="price"
                   render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nome do Produto</FormLabel>
-                        <Collapsible open={productSelectorOpen} onOpenChange={setProductSelectorOpen}>
-                            <CollapsibleTrigger asChild>
-                                <FormControl>
-                                    <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    disabled={!watchedCategory}
-                                    className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
-                                    >
-                                    {field.value || "Selecione um produto do catálogo"}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </FormControl>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                                <div className='relative mt-2'>
-                                    <div className='absolute top-0 left-0 w-full h-full rounded-md border'>
-                                        <Command>
-                                            <CommandInput placeholder="Pesquisar produto..." />
-                                            <ScrollArea className="h-32">
-                                            <CommandList>
-                                                <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
-                                                <CommandGroup>
-                                                    {filteredCatalogProducts.map((product) => (
-                                                    <CommandItem
-                                                        value={product.name}
-                                                        key={product.id}
-                                                        onSelect={() => handleProductSelect(product)}
-                                                    >
-                                                        <Check className={cn("mr-2 h-4 w-4", product.name === field.value ? "opacity-100" : "opacity-0")} />
-                                                        {product.name}
-                                                    </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                            </ScrollArea>
-                                        </Command>
-                                    </div>
-                                </div>
-                            </CollapsibleContent>
-                        </Collapsible>
-                        <FormMessage />
+                      <FormLabel>Preço Unitário (MT)</FormLabel>
+                      <FormControl>
+                          <Input type="number" step="0.01" {...field} />
+                      </FormControl>
+                      <FormMessage />
                       </FormItem>
                   )}
-              />
-            </div>
-            
-             {isMultiLocation && (
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Localização</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  />
+              <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                  control={form.control}
+                  name="stock"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Estoque Inicial</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma localização" />
-                        </SelectTrigger>
+                          <Input type="number" {...field} />
                       </FormControl>
-                      <SelectContent>
-                        {locations.map(location => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-             <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Preço Unitário (MT)</FormLabel>
-                    <FormControl>
-                        <Input type="number" step="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            <div className="grid grid-cols-3 gap-4">
-                <FormField
-                control={form.control}
-                name="stock"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Estoque Inicial</FormLabel>
-                    <FormControl>
-                        <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="lowStockThreshold"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Alerta Baixo</FormLabel>
-                    <FormControl>
-                        <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="criticalStockThreshold"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Alerta Crítico</FormLabel>
-                    <FormControl>
-                        <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
-            <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button type="submit">Adicionar Produto</Button>
-            </DialogFooter>
-          </form>
-        </Form>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+                  />
+                  <FormField
+                  control={form.control}
+                  name="lowStockThreshold"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Alerta Baixo</FormLabel>
+                      <FormControl>
+                          <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+                  />
+                  <FormField
+                  control={form.control}
+                  name="criticalStockThreshold"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Alerta Crítico</FormLabel>
+                      <FormControl>
+                          <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+                  />
+              </div>
+              <DialogFooter className="pt-4">
+                  <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+                  <Button type="submit">Adicionar Produto</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

@@ -32,6 +32,7 @@ import type { Product, Sale } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { InventoryContext } from '@/context/inventory-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
+import { ScrollArea } from '../ui/scroll-area';
 
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
@@ -102,64 +103,66 @@ export function EditSaleDialog({ sale, products, onUpdateSale, onOpenChange, ope
         <DialogHeader>
           <DialogTitle>Editar Venda #{sale.guideNumber}</DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-            <FormField
-              control={form.control}
-              name="productName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Produto</FormLabel>
-                   <CatalogProductSelector 
-                     products={catalogProducts || []}
-                     categories={catalogCategories || []}
-                     selectedValue={field.value}
-                     onValueChange={field.onChange}
-                   />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-2 gap-4">
-                <FormField
+        <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
+              <FormField
                 control={form.control}
-                name="quantity"
+                name="productName"
                 render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Quantidade</FormLabel>
-                    <FormControl>
-                        <Input type="number" min="1" {...field} />
-                    </FormControl>
+                  <FormItem>
+                    <FormLabel>Produto</FormLabel>
+                    <CatalogProductSelector 
+                      products={catalogProducts || []}
+                      categories={catalogCategories || []}
+                      selectedValue={field.value}
+                      onValueChange={field.onChange}
+                    />
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
-                <FormField
-                    control={form.control}
-                    name="unitPrice"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Preço Unitário</FormLabel>
-                        <FormControl>
-                            <Input type="number" step="0.01" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </div>
-            
-            <div className="rounded-lg bg-muted p-4 text-right">
-                <p className="text-sm font-medium text-muted-foreground">Novo Valor Total</p>
-                <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
-            </div>
+              />
+              <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Quantidade</FormLabel>
+                      <FormControl>
+                          <Input type="number" min="1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="unitPrice"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Preço Unitário</FormLabel>
+                          <FormControl>
+                              <Input type="number" step="0.01" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+              </div>
+              
+              <div className="rounded-lg bg-muted p-4 text-right">
+                  <p className="text-sm font-medium text-muted-foreground">Novo Valor Total</p>
+                  <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
+              </div>
 
-            <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                <Button type="submit">Salvar Alterações</Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              <DialogFooter className="pt-4">
+                  <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
+                  <Button type="submit">Salvar Alterações</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </ScrollArea>
       </DialogContent>
   );
 }

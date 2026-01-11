@@ -38,6 +38,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { InventoryContext } from '@/context/inventory-context';
+import { ScrollArea } from '../ui/scroll-area';
 
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
@@ -184,95 +185,97 @@ function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogP
             A venda será marcada como 'Paga' e o stock ficará reservado.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-            <FormField
-              control={form.control}
-              name="productName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Produto</FormLabel>
-                   <FormControl>
-                    <CatalogProductSelector
-                        products={catalogProducts || []}
-                        categories={catalogCategories || []}
-                        selectedValue={field.value}
-                        onValueChange={field.onChange}
-                    />
-                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             {isMultiLocation && (
+        <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
               <FormField
                 control={form.control}
-                name="location"
+                name="productName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Localização de Origem</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a localização" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {locations?.map(location => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Produto</FormLabel>
+                    <FormControl>
+                      <CatalogProductSelector
+                          products={catalogProducts || []}
+                          categories={catalogCategories || []}
+                          selectedValue={field.value}
+                          onValueChange={field.onChange}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {isMultiLocation && (
                 <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
                     <FormItem>
-                    <div className="flex justify-between items-baseline">
-                        <FormLabel>Quantidade</FormLabel>
-                        {selectedProductInstance && <p className="text-xs text-muted-foreground">Disponível: {availableStock}</p>}
-                    </div>
-                    <FormControl>
-                        <Input type="number" min="1" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                    control={form.control}
-                    name="unitPrice"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Preço Unitário</FormLabel>
+                      <FormLabel>Localização de Origem</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                            <Input type="number" step="0.01" {...field} />
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a localização" />
+                          </SelectTrigger>
                         </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
+                        <SelectContent>
+                          {locations?.map(location => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-            </div>
-            
-            <div className="rounded-lg bg-muted p-4 text-right">
-                <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
-                <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
-            </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                      <FormItem>
+                      <div className="flex justify-between items-baseline">
+                          <FormLabel>Quantidade</FormLabel>
+                          {selectedProductInstance && <p className="text-xs text-muted-foreground">Disponível: {availableStock}</p>}
+                      </div>
+                      <FormControl>
+                          <Input type="number" min="1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="unitPrice"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Preço Unitário</FormLabel>
+                          <FormControl>
+                              <Input type="number" step="0.01" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+              </div>
+              
+              <div className="rounded-lg bg-muted p-4 text-right">
+                  <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
+                  <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
+              </div>
 
-            <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button type="submit" disabled={isSubmitDisabled}>Registrar Venda</Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              <DialogFooter className="pt-4">
+                  <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+                  <Button type="submit" disabled={isSubmitDisabled}>Registrar Venda</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
@@ -300,5 +303,3 @@ export function AddSaleDialog(props: AddSaleDialogProps) {
 
   return <AddSaleDialogContent {...props} />;
 }
-
-    
