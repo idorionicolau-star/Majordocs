@@ -260,7 +260,7 @@ export default function SettingsPage() {
 
         <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <ScrollArea className="w-full whitespace-nowrap" ref={scrollRef}>
-            <TabsList className="w-max">
+            <TabsList className={cn("w-max", "animate-peek md:animate-none")}>
               <TabsTrigger value="profile" id="tab-trigger-profile"><UserIcon className="mr-2 h-4 w-4" />Perfil</TabsTrigger>
               <TabsTrigger value="appearance" id="tab-trigger-appearance"><Palette className="mr-2 h-4 w-4" />Aparência</TabsTrigger>
               {isAdmin && (
