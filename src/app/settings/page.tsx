@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useRef } from "react";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 
 const colorOptions = [
@@ -96,6 +97,8 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const { user } = inventoryContext || {};
   const isAdmin = user?.role === 'Admin';
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState("profile");
 
 
   const [companyDetails, setCompanyDetails] = useState({
@@ -174,6 +177,22 @@ export default function SettingsPage() {
       root.style.setProperty('--stats-icon-size', `${iconSize}px`);
     }
   }, [iconSize, isClient]);
+  
+   useEffect(() => {
+    const activeLink = document.getElementById(`tab-trigger-${activeTab}`);
+    if (activeLink && scrollRef.current) {
+      const scrollArea = scrollRef.current;
+      const linkRect = activeLink.getBoundingClientRect();
+      const scrollAreaRect = scrollArea.getBoundingClientRect();
+      
+      const scrollOffset = (linkRect.left - scrollAreaRect.left) - (scrollAreaRect.width / 2) + (linkRect.width / 2);
+      
+      scrollArea.querySelector('[data-radix-scroll-area-viewport]')?.scrollBy({
+        left: scrollOffset,
+        behavior: 'smooth',
+      });
+    }
+  }, [activeTab]);
 
   const handleBorderRadiusChange = (value: number[]) => {
     const newRadius = value[0];
@@ -239,18 +258,21 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="profile"><UserIcon className="mr-2 h-4 w-4" />Perfil</TabsTrigger>
-            <TabsTrigger value="appearance"><Palette className="mr-2 h-4 w-4" />Aparência</TabsTrigger>
-            {isAdmin && (
-              <>
-                <TabsTrigger value="company"><Building className="mr-2 h-4 w-4" />Empresa</TabsTrigger>
-                <TabsTrigger value="catalog"><Book className="mr-2 h-4 w-4" />Catálogo</TabsTrigger>
-                <TabsTrigger value="locations"><Map className="mr-2 h-4 w-4" />Localizações</TabsTrigger>
-              </>
-            )}
-          </TabsList>
+        <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <ScrollArea className="w-full whitespace-nowrap" ref={scrollRef}>
+            <TabsList className="w-max">
+              <TabsTrigger value="profile" id="tab-trigger-profile"><UserIcon className="mr-2 h-4 w-4" />Perfil</TabsTrigger>
+              <TabsTrigger value="appearance" id="tab-trigger-appearance"><Palette className="mr-2 h-4 w-4" />Aparência</TabsTrigger>
+              {isAdmin && (
+                <>
+                  <TabsTrigger value="company" id="tab-trigger-company"><Building className="mr-2 h-4 w-4" />Empresa</TabsTrigger>
+                  <TabsTrigger value="catalog" id="tab-trigger-catalog"><Book className="mr-2 h-4 w-4" />Catálogo</TabsTrigger>
+                  <TabsTrigger value="locations" id="tab-trigger-locations"><Map className="mr-2 h-4 w-4" />Localizações</TabsTrigger>
+                </>
+              )}
+            </TabsList>
+            <ScrollBar orientation="horizontal" className="h-0.5 md:hidden" />
+          </ScrollArea>
 
           <TabsContent value="profile">
             <ProfileTab />
@@ -416,4 +438,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
