@@ -14,7 +14,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { ChevronDown, Trash2, Code, Building, Users } from "lucide-react";
+import { ChevronDown, Trash2, Code, Building, Users, Book } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
@@ -190,7 +190,7 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <Accordion type="single" collapsible className="w-full space-y-6" defaultValue="item-1">
+        <Accordion type="multiple" className="w-full space-y-6" defaultValue={['item-company']}>
           <AccordionItem value="item-company" className="border-0">
              <Card className="glass-card shadow-sm">
                 <AccordionTrigger className="w-full hover:no-underline">
@@ -240,7 +240,49 @@ export default function SettingsPage() {
             </Card>
           </AccordionItem>
           
-          <AccordionItem value="item-1" className="border-0">
+          <AccordionItem value="item-catalog" className="border-0" id="catalog">
+             <Card className="glass-card shadow-sm">
+                <AccordionTrigger className="w-full hover:no-underline">
+                    <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
+                    <div className="flex-1 text-left">
+                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2"><Book /> Gestor de Catálogo</CardTitle>
+                        <CardDescription>
+                            Gerencie os produtos, categorias e importe dados.
+                        </CardDescription>
+                    </div>
+                    <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                    </CardHeader>
+                </AccordionTrigger>
+                <AccordionContent>
+                    <CardContent className="p-6 sm:p-8 pt-0">
+                      <CatalogManager />
+                    </CardContent>
+                </AccordionContent>
+            </Card>
+          </AccordionItem>
+
+          <AccordionItem value="item-locations" className="border-0">
+            <Card className="glass-card shadow-sm">
+              <AccordionTrigger className="w-full hover:no-underline">
+                <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
+                  <div className="flex-1 text-left">
+                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl">Gestão de Localizações</CardTitle>
+                    <CardDescription>
+                      Ative e gerencie múltiplas localizações para o seu negócio.
+                    </CardDescription>
+                  </div>
+                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                </CardHeader>
+              </AccordionTrigger>
+              <AccordionContent>
+                <CardContent className="p-6 sm:p-8 pt-0">
+                  <LocationsManager />
+                </CardContent>
+              </AccordionContent>
+            </Card>
+          </AccordionItem>
+
+          <AccordionItem value="item-appearance" className="border-0">
             <Card className="glass-card shadow-sm">
               <AccordionTrigger className="w-full hover:no-underline">
                 <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
@@ -331,27 +373,6 @@ export default function SettingsPage() {
                       </span>
                     </div>
                   </div>
-                </CardContent>
-              </AccordionContent>
-            </Card>
-          </AccordionItem>
-          
-          <AccordionItem value="item-2" className="border-0">
-            <Card className="glass-card shadow-sm">
-              <AccordionTrigger className="w-full hover:no-underline">
-                <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
-                  <div className="flex-1 text-left">
-                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl">Gestão de Localizações</CardTitle>
-                    <CardDescription>
-                      Ative e gerencie múltiplas localizações para o seu negócio.
-                    </CardDescription>
-                  </div>
-                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                </CardHeader>
-              </AccordionTrigger>
-              <AccordionContent>
-                <CardContent className="p-6 sm:p-8 pt-0">
-                  <LocationsManager />
                 </CardContent>
               </AccordionContent>
             </Card>
