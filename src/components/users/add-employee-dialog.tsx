@@ -164,7 +164,7 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
                         </FormDescription>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
-                        {allPermissions.filter(p => !p.adminOnly).map((module) => (
+                        {allPermissions.map((module) => (
                           <FormField
                             key={module.id}
                             control={form.control}
