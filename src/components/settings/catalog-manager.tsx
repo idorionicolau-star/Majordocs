@@ -36,8 +36,9 @@ import { Skeleton } from '../ui/skeleton';
 import { AddCatalogProductDialog } from './add-catalog-product-dialog';
 import { initialCatalog } from '@/lib/data';
 import { DataImporter } from './data-importer';
+import { Checkbox } from '../ui/checkbox';
 
-type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
+type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'> & { id: string };
 type CatalogCategory = { id: string; name: string };
 
 export function CatalogManager() {
@@ -46,6 +47,10 @@ export function CatalogManager() {
   const firestore = useFirestore();
 
   const { companyId } = inventoryContext || {};
+  
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [showDeleteSelectedConfirm, setShowDeleteSelectedConfirm] = useState(false);
+
 
   const catalogProductsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
@@ -65,6 +70,10 @@ export function CatalogManager() {
   const [categoryToEdit, setCategoryToEdit] = useState<CatalogCategory | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
+  
+  useEffect(() => {
+    setSelectedProducts([]);
+  }, [products]);
 
 
   if (!inventoryContext) {
@@ -187,6 +196,42 @@ export function CatalogManager() {
         toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar o produto.' });
     }
   };
+  
+  const handleToggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedProducts(sortedProducts.map(p => p.id));
+    } else {
+      setSelectedProducts([]);
+    }
+  };
+
+  const handleToggleSelectProduct = (productId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedProducts(prev => [...prev, productId]);
+    } else {
+      setSelectedProducts(prev => prev.filter(id => id !== productId));
+    }
+  };
+  
+  const handleDeleteSelected = async () => {
+    if (!firestore || !companyId || selectedProducts.length === 0) return;
+
+    toast({ title: `A apagar ${selectedProducts.length} produtos...` });
+    try {
+      const batch = writeBatch(firestore);
+      selectedProducts.forEach(productId => {
+        const docRef = doc(firestore, `companies/${companyId}/catalogProducts`, productId);
+        batch.delete(docRef);
+      });
+      await batch.commit();
+      toast({ title: 'Produtos Apagados', description: `${selectedProducts.length} produtos foram removidos do catálogo.` });
+      setSelectedProducts([]);
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível apagar os produtos selecionados.' });
+    }
+    setShowDeleteSelectedConfirm(false);
+  };
+
 
   const sortedCategories = categories ? [...categories].sort((a, b) => a.name.localeCompare(b.name)) : [];
   const sortedProducts = products ? [...products].sort((a,b) => a.name.localeCompare(b.name)) : [];
@@ -219,6 +264,21 @@ export function CatalogManager() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeleteProduct}>Apagar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+       <AlertDialog open={showDeleteSelectedConfirm} onOpenChange={setShowDeleteSelectedConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar Produtos Selecionados?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem a certeza que quer apagar os {selectedProducts.length} produtos selecionados do catálogo? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSelected} variant="destructive">Sim, Apagar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -283,7 +343,15 @@ export function CatalogManager() {
         <TabsContent value="products" className="mt-4">
            <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <p className="text-sm text-muted-foreground">Gerencie os produtos base do seu catálogo.</p>
+              <div className='flex items-center gap-4'>
+                 <p className="text-sm text-muted-foreground">Gerencie os produtos base do seu catálogo.</p>
+                  {selectedProducts.length > 0 && (
+                  <Button variant="destructive" size="sm" onClick={() => setShowDeleteSelectedConfirm(true)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Apagar ({selectedProducts.length})
+                  </Button>
+                )}
+              </div>
                <AddCatalogProductDialog 
                     categories={sortedCategories.map(c => c.name)}
                     onAdd={handleAddProduct}
@@ -293,6 +361,13 @@ export function CatalogManager() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[50px] px-4">
+                       <Checkbox
+                        checked={sortedProducts.length > 0 && selectedProducts.length === sortedProducts.length}
+                        onCheckedChange={(checked) => handleToggleSelectAll(!!checked)}
+                        aria-label="Selecionar tudo"
+                      />
+                    </TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>Categoria</TableHead>
                     <TableHead className="text-right">Preço</TableHead>
@@ -302,12 +377,19 @@ export function CatalogManager() {
                 <TableBody>
                   {productsLoading ? (
                      <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
+                        <TableCell colSpan={5} className="h-24 text-center">
                            <Skeleton className="h-6 w-full" />
                         </TableCell>
                     </TableRow>
                   ) : sortedProducts && sortedProducts.length > 0 ? sortedProducts.map(product => (
-                    <TableRow key={product.id}>
+                    <TableRow key={product.id} data-state={selectedProducts.includes(product.id) && "selected"}>
+                       <TableCell className="px-4">
+                        <Checkbox
+                          checked={selectedProducts.includes(product.id)}
+                          onCheckedChange={(checked) => handleToggleSelectProduct(product.id, !!checked)}
+                          aria-label={`Selecionar ${product.name}`}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell>{product.category}</TableCell>
                       <TableCell className="text-right">{product.price.toFixed(2)} MT</TableCell>
@@ -324,7 +406,7 @@ export function CatalogManager() {
                     </TableRow>
                   )) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
                         Nenhum produto base no catálogo.
                       </TableCell>
                     </TableRow>
@@ -376,5 +458,3 @@ export function CatalogManager() {
     </>
   );
 }
-
-    
