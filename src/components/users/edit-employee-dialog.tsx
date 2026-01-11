@@ -37,7 +37,7 @@ import type { Employee } from '@/lib/types';
 const formSchema = z.object({
   username: z.string().min(3, { message: "O nome de utilizador deve ter pelo menos 3 caracteres." }),
   password: z.string().optional(),
-  role: z.enum(['Admin', 'Employee']),
+  role: z.enum(['Admin', 'Employee'], { required_error: "A função é obrigatória." }),
 });
 
 type EditEmployeeFormValues = z.infer<typeof formSchema>;
@@ -70,41 +70,48 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
   }, [open, employee, form]);
 
   function onSubmit(values: EditEmployeeFormValues) {
+    // Validate password only if it's entered
+    if (values.password && values.password.length > 0 && values.password.length < 6) {
+      form.setError("password", { message: "A nova senha deve ter pelo menos 6 caracteres."});
+      return;
+    }
+
     const updatedEmployee: Employee = {
       ...employee,
       username: values.username,
       role: values.role,
     };
+    
+    // Only include password in update if a new one was provided
     if (values.password && values.password.length >= 6) {
       updatedEmployee.password = values.password;
-    } else if (values.password && values.password.length > 0) {
-        form.setError("password", { message: "A nova senha deve ter pelo menos 6 caracteres."});
-        return;
     } else {
-        // If password is not provided, we don't want to send it in the update
-        // Keep the original password from the employee object
-        updatedEmployee.password = employee.password;
+      // Important: if we don't do this, the existing password might be overwritten with undefined
+      delete updatedEmployee.password; 
     }
+    
     onUpdateEmployee(updatedEmployee);
     setOpen(false);
   }
   
-  let currentPassword = '';
-    if (employee.password) {
-       try {
-            // Attempt to decode from Base64. If it fails, assume it's plain text.
-            const decoded = Buffer.from(employee.password, 'base64').toString('utf-8');
-            // A simple check to see if the decoded string is plausible plain text.
-            if (/[\x00-\x08\x0E-\x1F]/.test(decoded) && decoded !== employee.password) {
-               currentPassword = employee.password; // It's likely not valid text after decoding, use original.
-            } else {
-               currentPassword = decoded; // Decoding succeeded and looks like text.
-            }
-        } catch (e) {
-            // If decoding throws an error, it's definitely not Base64.
-            currentPassword = employee.password;
-        }
+  const displayPassword = (password: string | undefined): string => {
+    if (!password) {
+      return '';
     }
+    try {
+      // Try to decode. If it fails, it's not Base64, so return original.
+      const decoded = Buffer.from(password, 'base64').toString('utf-8');
+      // This check helps detect if the decoded string is garbled binary data.
+      if (/[\x00-\x08\x0E-\x1F]/.test(decoded) && decoded !== password) {
+          return password; 
+      }
+      return decoded;
+    } catch (e) {
+      return password; // Not a base64 string
+    }
+  };
+  
+  const currentPassword = displayPassword(employee.password);
 
 
   return (
@@ -118,7 +125,7 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
         <DialogHeader>
           <DialogTitle>Editar Funcionário</DialogTitle>
           <DialogDescription>
-            Atualize as informações do funcionário.
+            Atualize o nome de utilizador, senha (opcional) e função deste funcionário.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -141,11 +148,11 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nova Senha</FormLabel>
+                  <FormLabel>Nova Senha (Opcional)</FormLabel>
                   <FormControl>
                     <Input type="password" {...field} placeholder="Deixar em branco para manter a atual" />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground">Senha atual: {currentPassword}</p>
+                   {currentPassword && <p className="text-xs text-muted-foreground">Senha atual: {currentPassword}</p>}
                   <FormMessage />
                 </FormItem>
               )}
@@ -155,11 +162,11 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
               name="role"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Função</FormLabel>
+                  <FormLabel>Função na Empresa</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Selecione a função" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

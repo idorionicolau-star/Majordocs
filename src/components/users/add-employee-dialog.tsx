@@ -1,5 +1,4 @@
 
-
 "use client"
 
 import { useState } from 'react';
@@ -38,7 +37,7 @@ import type { Employee } from '@/lib/types';
 const formSchema = z.object({
   username: z.string().min(3, { message: "O nome de utilizador deve ter pelo menos 3 caracteres." }),
   password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
-  role: z.enum(['Admin', 'Employee']),
+  role: z.enum(['Admin', 'Employee'], { required_error: "A função é obrigatória." }),
 });
 
 type AddEmployeeFormValues = z.infer<typeof formSchema>;
@@ -77,7 +76,7 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
         <DialogHeader>
           <DialogTitle>Adicionar Novo Funcionário</DialogTitle>
           <DialogDescription>
-            Crie uma conta interna para um novo membro da equipe.
+            Crie uma conta interna para um novo membro da equipe, definindo o seu nome, senha e função na empresa.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -102,7 +101,7 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
                 <FormItem>
                   <FormLabel>Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" {...field} />
+                    <Input type="password" placeholder="Mínimo 6 caracteres" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -113,11 +112,11 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
               name="role"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Função</FormLabel>
+                  <FormLabel>Função na Empresa</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Selecione a função" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
