@@ -11,7 +11,7 @@ import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Employee } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, addDoc, doc, deleteDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, addDoc, doc, deleteDoc, getDocs, query, where, updateDoc } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,6 +72,29 @@ export default function UsersPage() {
     });
   };
 
+  const handleUpdateEmployee = async (employee: Employee) => {
+    if (!firestore || !companyId || !employee.id) return;
+    
+    const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employee.id);
+    
+    const updateData: Partial<Employee> = {
+        username: employee.username,
+        role: employee.role,
+    };
+    
+    // Only update password if it's not an empty string
+    if (employee.password) {
+        updateData.password = btoa(employee.password);
+    }
+    
+    await updateDoc(employeeDocRef, updateData);
+    
+    toast({
+      title: "Funcionário Atualizado",
+      description: `As informações de "${employee.username}" foram atualizadas.`,
+    });
+  };
+
   const handleDeleteEmployee = async () => {
     if (employeeToDelete && employeeToDelete.id && firestore && companyId) {
       const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employeeToDelete.id);
@@ -123,6 +146,7 @@ export default function UsersPage() {
         <UsersDataTable 
             columns={columns({
                 onDelete: (employee) => setEmployeeToDelete(employee),
+                onUpdate: handleUpdateEmployee,
                 currentUserId: user?.id,
                 isAdmin: isAdmin,
                 companyName: companyData?.name || null

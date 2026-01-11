@@ -4,14 +4,42 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Employee } from "@/lib/types"
 import { Button } from "../ui/button"
-import { Trash2 } from "lucide-react"
+import { Trash2, Edit, Copy } from "lucide-react"
 import { atob } from "buffer"
+import { useToast } from "@/hooks/use-toast"
+import { EditEmployeeDialog } from "./edit-employee-dialog"
 
 interface ColumnsOptions {
     onDelete: (employee: Employee) => void;
+    onUpdate: (employee: Employee) => void;
     currentUserId?: string | null;
     isAdmin: boolean;
     companyName: string | null;
+}
+
+const LoginFormatCell = ({ row, companyName }: { row: any, companyName: string | null }) => {
+    const { toast } = useToast();
+    const username = row.original.username;
+    const password = row.original.password ? atob(row.original.password) : '';
+    const loginFormat = `${username}@${companyName || ''}`;
+    
+    const handleCopy = () => {
+        const textToCopy = `Login: ${loginFormat}\nSenha: ${password}`;
+        navigator.clipboard.writeText(textToCopy);
+        toast({
+            title: "Credenciais Copiadas",
+            description: "O login e a senha foram copiados.",
+        });
+    };
+
+    return (
+        <div className="flex items-center gap-2">
+            <span className="font-mono text-xs p-2 rounded-md bg-muted text-muted-foreground">{loginFormat}</span>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy}>
+                <Copy className="h-4 w-4" />
+            </Button>
+        </div>
+    )
 }
 
 export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
@@ -24,13 +52,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
     {
         id: 'loginFormat',
         header: 'Formato de Login',
-        cell: ({ row }) => {
-            const username = row.original.username;
-            const loginFormat = `${username}@${options.companyName || ''}`;
-            return (
-                <span className="font-mono text-xs p-2 rounded-md bg-muted text-muted-foreground">{loginFormat}</span>
-            )
-        }
+        cell: ({ row }) => <LoginFormatCell row={row} companyName={options.companyName} />
     },
     {
         accessorKey: "role",
@@ -75,6 +97,10 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
 
                 return (
                     <div className="text-right">
+                        <EditEmployeeDialog 
+                            employee={employee}
+                            onUpdateEmployee={options.onUpdate}
+                        />
                         <Button 
                             variant="ghost" 
                             size="icon" 
