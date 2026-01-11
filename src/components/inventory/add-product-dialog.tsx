@@ -38,6 +38,7 @@ import { InventoryContext } from '@/context/inventory-context';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '../ui/scroll-area';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -209,30 +210,36 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
                                     disabled={!watchedCategory}
                                     className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
                                     >
-                                    {field.value || "Selecione um produto..."}
+                                    {field.value || "Selecione um produto do catálogo"}
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                     </Button>
                                 </FormControl>
                             </CollapsibleTrigger>
                             <CollapsibleContent>
-                                <Command className="mt-2 border rounded-md">
-                                    <CommandInput placeholder="Pesquisar produto..." />
-                                    <CommandList>
-                                        <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
-                                        <CommandGroup>
-                                            {filteredCatalogProducts.map((product) => (
-                                            <CommandItem
-                                                value={product.name}
-                                                key={product.id}
-                                                onSelect={() => handleProductSelect(product)}
-                                            >
-                                                <Check className={cn("mr-2 h-4 w-4", product.name === field.value ? "opacity-100" : "opacity-0")} />
-                                                {product.name}
-                                            </CommandItem>
-                                            ))}
-                                        </CommandGroup>
-                                    </CommandList>
-                                </Command>
+                                <div className='relative mt-2'>
+                                    <div className='absolute top-0 left-0 w-full h-full rounded-md border'>
+                                        <Command>
+                                            <CommandInput placeholder="Pesquisar produto..." />
+                                            <ScrollArea className="h-[200px]">
+                                            <CommandList>
+                                                <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {filteredCatalogProducts.map((product) => (
+                                                    <CommandItem
+                                                        value={product.name}
+                                                        key={product.id}
+                                                        onSelect={() => handleProductSelect(product)}
+                                                    >
+                                                        <Check className={cn("mr-2 h-4 w-4", product.name === field.value ? "opacity-100" : "opacity-0")} />
+                                                        {product.name}
+                                                    </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                            </ScrollArea>
+                                        </Command>
+                                    </div>
+                                </div>
                             </CollapsibleContent>
                         </Collapsible>
                         <FormMessage />
