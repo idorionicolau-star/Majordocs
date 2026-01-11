@@ -2,11 +2,12 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Employee } from "@/lib/types"
+import { Employee, ModulePermission } from "@/lib/types"
 import { Button } from "../ui/button"
 import { Trash2, Edit, Copy } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { EditEmployeeDialog } from "./edit-employee-dialog"
+import { allPermissions } from "@/lib/data"
 
 interface ColumnsOptions {
     onDelete: (employee: Employee) => void;
@@ -21,29 +22,28 @@ const displayPassword = (password: string | undefined): string => {
     return '';
   }
   try {
+    // Check if it might be base64. A simple check is to see if it decodes.
+    // A more robust check might be needed if passwords can naturally look like base64.
     const decoded = Buffer.from(password, 'base64').toString('utf-8');
-    // Verifica se a string decodificada contém caracteres de controle inválidos,
-    // o que pode indicar que não era uma string Base64 válida para texto.
+     // Simple heuristic: if decoding results in non-printable chars, it wasn't valid text.
     if (/[\x00-\x08\x0E-\x1F]/.test(decoded) && decoded !== password) {
-        return password; // Retorna a string original se a decodificação resultar em lixo
+       return password;
     }
     return decoded;
   } catch (e) {
-    // Se a decodificação falhar (não era Base64), retorna o texto original
+    // If it fails to decode, it's plain text.
     return password;
   }
 };
 
+
 const LoginFormatCell = ({ row, companyName, isAdmin }: { row: any, companyName: string | null, isAdmin: boolean }) => {
     const { toast } = useToast();
     const username = row.original.username;
-    
-    // A senha só estará disponível se o utilizador for admin
     const password = isAdmin ? displayPassword(row.original.password) : '********';
-
     const loginFormat = `${username}@${companyName || ''}`;
     
-    const handleCopy = () => {
+    const handleCopy = async () => {
         if (!isAdmin) {
             toast({
                 variant: "destructive",
@@ -52,12 +52,33 @@ const LoginFormatCell = ({ row, companyName, isAdmin }: { row: any, companyName:
             });
             return;
         }
+
         const textToCopy = `Login: ${loginFormat}\nSenha: ${password}`;
-        navigator.clipboard.writeText(textToCopy);
-        toast({
+
+        if (!document.hasFocus()) {
+            window.focus();
+        }
+
+        try {
+            await navigator.clipboard.writeText(textToCopy);
+            toast({
             title: "Credenciais Copiadas",
             description: "O login e a senha foram copiados.",
-        });
+            });
+        } catch (err) {
+            const textArea = document.createElement("textarea");
+            textArea.value = textToCopy;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                toast({ title: "Copiado", description: "Credenciais copiadas (via fallback)." });
+            } catch (e) {
+                console.error("Erro ao copiar: ", e);
+                toast({ variant: "destructive", title: "Erro", description: "Não foi possível copiar as credenciais." });
+            }
+            document.body.removeChild(textArea);
+        }
     };
 
     return (
@@ -97,14 +118,38 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
                 </span>
             )
         }
-    }];
+    },
+    {
+        accessorKey: 'permissions',
+        header: 'Módulos Permitidos',
+        cell: ({ row }) => {
+            const permissions = row.original.permissions || [];
+            const role = row.original.role;
+            if (role === 'Admin') {
+                return <span className="text-xs text-muted-foreground italic">Acesso total</span>;
+            }
+            if (permissions.length === 0) {
+                return <span className="text-xs text-muted-foreground italic">Nenhum</span>;
+            }
+            const permissionLabels = permissions.map(pId => allPermissions.find(p => p.id === pId)?.label || pId);
+            return (
+                <div className="flex flex-wrap gap-1 max-w-xs">
+                    {permissionLabels.map(label => (
+                        <span key={label} className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
+                            {label}
+                        </span>
+                    ))}
+                </div>
+            )
+        }
+    }
+];
     
     if (options.isAdmin) {
         baseColumns.push({
             id: "actions",
             cell: ({ row }) => {
                 const employee = row.original;
-                // Prevent deleting oneself
                 const isCurrentUser = employee.id === options.currentUserId;
 
                 return (

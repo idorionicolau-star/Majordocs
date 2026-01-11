@@ -1,5 +1,5 @@
 
-"use client"
+"use client";
 
 import { useState } from 'react';
 import {
@@ -40,7 +40,7 @@ const formSchema = z.object({
   username: z.string().min(3, { message: "O nome de utilizador deve ter pelo menos 3 caracteres." }),
   password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
   role: z.enum(['Admin', 'Employee'], { required_error: "A função é obrigatória." }),
-  permissions: z.array(z.string()).optional(),
+  permissions: z.array(z.nativeEnum(allPermissions.reduce((acc, p) => ({...acc, [p.id]: p.id}), {} as Record<ModulePermission, ModulePermission>))).optional(),
 });
 
 type AddEmployeeFormValues = z.infer<typeof formSchema>;
@@ -58,7 +58,7 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
       username: "",
       password: "",
       role: 'Employee',
-      permissions: ['dashboard', 'inventory', 'sales'], // Default permissions for new employees
+      permissions: ['dashboard', 'inventory', 'sales'],
     },
   });
 
@@ -69,10 +69,15 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
       username: values.username,
       password: values.password,
       role: values.role,
-      permissions: role === 'Admin' ? allPermissions.map(p => p.id) : (values.permissions as ModulePermission[] || []),
+      permissions: role === 'Admin' ? allPermissions.map(p => p.id) : (values.permissions || []),
     };
     onAddEmployee(employeeData);
-    form.reset();
+    form.reset({
+        username: "",
+        password: "",
+        role: 'Employee',
+        permissions: ['dashboard', 'inventory', 'sales'],
+    });
     setOpen(false);
   }
 
@@ -88,7 +93,7 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
         <DialogHeader>
           <DialogTitle>Adicionar Novo Funcionário</DialogTitle>
           <DialogDescription>
-            Crie uma conta para um membro da equipe e defina suas permissões de acesso.
+            Crie uma conta interna para um novo membro da equipe e defina as suas permissões de acesso.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

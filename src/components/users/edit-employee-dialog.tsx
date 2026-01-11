@@ -40,7 +40,7 @@ const formSchema = z.object({
   username: z.string().min(3, { message: "O nome de utilizador deve ter pelo menos 3 caracteres." }),
   password: z.string().optional(),
   role: z.enum(['Admin', 'Employee'], { required_error: "A função é obrigatória." }),
-  permissions: z.array(z.string()).optional(),
+  permissions: z.array(z.nativeEnum(allPermissions.reduce((acc, p) => ({...acc, [p.id]: p.id}), {} as Record<ModulePermission, ModulePermission>))).optional(),
 });
 
 type EditEmployeeFormValues = z.infer<typeof formSchema>;
@@ -77,7 +77,6 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
   }, [open, employee, form]);
 
   function onSubmit(values: EditEmployeeFormValues) {
-    // Validate password only if it's entered
     if (values.password && values.password.length > 0 && values.password.length < 6) {
       form.setError("password", { message: "A nova senha deve ter pelo menos 6 caracteres."});
       return;
@@ -87,7 +86,7 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
       ...employee,
       username: values.username,
       role: values.role,
-      permissions: role === 'Admin' ? allPermissions.map(p => p.id) : (values.permissions as ModulePermission[] || []),
+      permissions: role === 'Admin' ? allPermissions.map(p => p.id) : (values.permissions || []),
     };
     
     if (values.password && values.password.length >= 6) {
@@ -100,10 +99,8 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
     setOpen(false);
   }
   
-  const displayPassword = (password: string | undefined): string => {
-    if (!password) {
-      return '';
-    }
+  const displayPassword = (password?: string): string => {
+    if (!password) return '';
     try {
       return Buffer.from(password, 'base64').toString('utf-8');
     } catch (e) {
