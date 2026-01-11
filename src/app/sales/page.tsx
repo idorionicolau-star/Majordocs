@@ -16,7 +16,7 @@ import { SaleCard } from "@/components/sales/sale-card";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import { addDoc, collection, doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 
 export default function SalesPage() {
@@ -28,7 +28,25 @@ export default function SalesPage() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { sales, products: allProducts, locations, companyId, loading: inventoryLoading, updateProduct } = inventoryContext || { sales: [], products: [], locations: [], companyId: null, loading: true, updateProduct: () => {} };
+  const { 
+    sales, 
+    products: allProducts, 
+    locations, 
+    companyId, 
+    loading: inventoryLoading, 
+    updateProduct,
+    addSale,
+    confirmSalePickup,
+  } = inventoryContext || { 
+    sales: [], 
+    products: [], 
+    locations: [], 
+    companyId: null, 
+    loading: true, 
+    updateProduct: () => {},
+    addSale: async () => {},
+    confirmSalePickup: () => {},
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -49,18 +67,20 @@ export default function SalesPage() {
     localStorage.setItem('majorstockx-sales-grid-cols', cols);
   }
 
-  const handleAddSale = (newSaleData:  Omit<Sale, 'id' | 'guideNumber'>, updatedProducts: Product[]) => {
-    if (!firestore || !companyId) return;
-
-    const now = new Date();
-    const guideNumber = `GT${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${Date.now().toString().slice(-3)}`;
-
-    const salesCollectionRef = collection(firestore, `companies/${companyId}/sales`);
-    addDoc(salesCollectionRef, { ...newSaleData, guideNumber });
-
-    const productSold = updatedProducts.find(p => p.id === newSaleData.productId);
-    if(productSold && productSold.instanceId){
-        updateProduct(productSold.instanceId, { reservedStock: productSold.reservedStock });
+  const handleAddSale = async (newSaleData:  Omit<Sale, 'id' | 'guideNumber'>) => {
+    try {
+      if (!addSale) throw new Error("Função de venda não disponível.");
+      await addSale(newSaleData);
+      toast({
+        title: "Venda Registrada como 'Paga'",
+        description: `${newSaleData.quantity} unidades de ${newSaleData.productName} foram reservadas.`,
+      });
+    } catch (error: any) {
+       toast({
+        variant: "destructive",
+        title: "Erro ao Vender",
+        description: error.message || "Não foi possível registrar a venda.",
+      });
     }
   };
 
@@ -75,28 +95,21 @@ export default function SalesPage() {
      }
   };
 
-  const handleConfirmPickup = (saleId: string) => {
-    const saleToUpdate = sales.find(s => s.id === saleId);
-    if (!saleToUpdate || !firestore || !companyId) return;
-    
-    if (saleToUpdate.id) {
-        const saleDocRef = doc(firestore, `companies/${companyId}/sales`, saleToUpdate.id);
-        updateDoc(saleDocRef, { status: 'Levantado' });
-    }
-
-    const productToUpdate = allProducts.find(p => p.name === saleToUpdate.productName && (p.location === saleToUpdate.location || !(inventoryContext?.isMultiLocation)));
-
-    if(productToUpdate && productToUpdate.instanceId){
-        updateProduct(productToUpdate.instanceId, { 
-            stock: productToUpdate.stock - saleToUpdate.quantity,
-            reservedStock: productToUpdate.reservedStock - saleToUpdate.quantity,
+  const handleConfirmPickup = (sale: Sale) => {
+    try {
+      if (!confirmSalePickup) throw new Error("Função de levantamento não disponível.");
+      confirmSalePickup(sale);
+      toast({
+        title: "Material Levantado",
+        description: `O stock foi atualizado para a venda #${sale.guideNumber}.`,
+      });
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Erro no Levantamento",
+            description: error.message || "Não foi possível confirmar o levantamento.",
         });
     }
-
-    toast({
-      title: "Material Levantado",
-      description: `O stock foi atualizado para a venda #${saleToUpdate.guideNumber}.`,
-    });
   };
   
   const filteredSales = useMemo(() => {
@@ -244,3 +257,5 @@ export default function SalesPage() {
     </div>
   );
 }
+
+    

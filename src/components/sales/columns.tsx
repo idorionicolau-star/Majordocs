@@ -2,7 +2,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Sale, Location, Product, User } from "@/lib/types"
+import { Sale, Location, Product, Employee } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Edit, Printer, FileSearch, CheckCircle, PackageCheck } from "lucide-react"
 import { useEffect, useState, useContext } from "react"
@@ -22,7 +22,7 @@ interface ColumnsOptions {
   locations: Location[];
   products: Product[];
   onUpdateSale: (sale: Sale) => void;
-  onConfirmPickup: (saleId: string) => void;
+  onConfirmPickup: (sale: Sale) => void;
 }
 
 const handlePrintGuide = (sale: Sale, companyName: string, isMultiLocation: boolean, locations: Location[]) => {
@@ -103,7 +103,6 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
     const inventoryContext = useContext(InventoryContext);
     const { companyData, isMultiLocation, locations } = inventoryContext || {};
     
-    // In single-user mode, all actions are available.
     const canConfirmPickup = true;
     
     return (
@@ -131,7 +130,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
               <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={() => options.onConfirmPickup(sale.id)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={() => options.onConfirmPickup(sale)}>
                             <CheckCircle className="h-4 w-4" />
                             <span className="sr-only">Confirmar Levantamento</span>
                         </Button>
@@ -261,3 +260,5 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
 
   return baseColumns;
 }
+
+    

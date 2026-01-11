@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -26,6 +25,7 @@ import {
   deleteDoc,
   setDoc,
   onSnapshot,
+  runTransaction,
 } from 'firebase/firestore';
 
 type CatalogProduct = Omit<
@@ -75,6 +75,8 @@ interface InventoryContextType {
     locationId?: string
   ) => void;
   updateCompany: (details: Partial<Company>) => Promise<void>;
+  addSale: (newSaleData: Omit<Sale, 'id' | 'guideNumber'>) => Promise<void>;
+  confirmSalePickup: (sale: Sale) => void;
 }
 
 export const InventoryContext = createContext<InventoryContextType | undefined>(
@@ -162,7 +164,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       // 3. Verify password
       let storedPass = '';
       if(userData.password) {
-        try {
+         try {
             storedPass = Buffer.from(userData.password, 'base64').toString('utf-8');
         } catch (e) {
             storedPass = userData.password; // Fallback for non-base64 passwords
@@ -393,6 +395,70 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
          await setDoc(companyDocRef, details, { merge: true });
       }
   }, [companyDocRef]);
+  
+  const addSale = useCallback(async (newSaleData: Omit<Sale, 'id' | 'guideNumber'>) => {
+    if (!firestore || !companyId || !productsCollectionRef) throw new Error("Firestore não está pronto.");
+
+    const productQuery = query(
+        productsCollectionRef,
+        where("name", "==", newSaleData.productName),
+        where("location", "==", newSaleData.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
+    );
+
+    const now = new Date();
+    const guideNumber = `GT${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${Date.now().toString().slice(-3)}`;
+    const salesCollectionRef = collection(firestore, `companies/${companyId}/sales`);
+    const newSaleRef = doc(salesCollectionRef);
+
+    await runTransaction(firestore, async (transaction) => {
+        const productSnapshot = await getDocs(productQuery);
+        if (productSnapshot.empty) {
+            throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque.`);
+        }
+        const productDoc = productSnapshot.docs[0];
+        const productData = productDoc.data() as Product;
+        const availableStock = productData.stock - productData.reservedStock;
+
+        if (availableStock < newSaleData.quantity) {
+            throw new Error(`Estoque insuficiente. Disponível: ${availableStock}.`);
+        }
+
+        const newReservedStock = productData.reservedStock + newSaleData.quantity;
+        transaction.update(productDoc.ref, { reservedStock: newReservedStock });
+        transaction.set(newSaleRef, { ...newSaleData, guideNumber });
+    });
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations]);
+
+  const confirmSalePickup = useCallback(async (sale: Sale) => {
+     if (!firestore || !companyId || !productsCollectionRef) throw new Error("Firestore não está pronto.");
+
+    const productQuery = query(
+        productsCollectionRef,
+        where("name", "==", sale.productName),
+        where("location", "==", sale.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
+    );
+    const saleRef = doc(firestore, `companies/${companyId}/sales`, sale.id);
+
+    await runTransaction(firestore, async (transaction) => {
+        const productSnapshot = await getDocs(productQuery);
+        if (productSnapshot.empty) {
+            throw new Error(`Produto "${sale.productName}" não encontrado para atualizar estoque.`);
+        }
+        const productDoc = productSnapshot.docs[0];
+        const productData = productDoc.data() as Product;
+
+        const newStock = productData.stock - sale.quantity;
+        const newReservedStock = productData.reservedStock - sale.quantity;
+
+        if (newStock < 0 || newReservedStock < 0) {
+            throw new Error("Erro de consistência de dados. O estoque ficaria negativo.");
+        }
+
+        transaction.update(productDoc.ref, { stock: newStock, reservedStock: newReservedStock });
+        transaction.update(saleRef, { status: 'Levantado' });
+    });
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations]);
+
 
   const isDataLoading = authLoading || productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading;
 
@@ -416,7 +482,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
     locations, isMultiLocation, addProduct, updateProduct, deleteProduct, transferStock,
-    updateProductStock, updateCompany,
+    updateProductStock, updateCompany, addSale, confirmSalePickup
   };
 
   return (
@@ -425,3 +491,5 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
+
+    

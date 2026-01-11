@@ -33,7 +33,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from '@/hooks/use-toast';
-import type { Product, Location, Sale, User } from '@/lib/types';
+import type { Product, Sale, Employee } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
@@ -49,7 +49,7 @@ const formSchema = z.object({
 type AddSaleFormValues = z.infer<typeof formSchema>;
 
 interface AddSaleDialogProps {
-    onAddSale: (data: Omit<Sale, 'id' | 'guideNumber'>, updatedProducts: Product[]) => void;
+    onAddSale: (data: Omit<Sale, 'id' | 'guideNumber'>) => Promise<void>;
     triggerType?: 'button' | 'fab';
 }
 
@@ -62,8 +62,8 @@ function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogP
     catalogCategories,
     locations,
     isMultiLocation,
-    userData,
-  } = inventoryContext || { products: [], catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false, userData: null};
+    user,
+  } = inventoryContext || { products: [], catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false, user: null};
   const { toast } = useToast();
   
   const form = useForm<AddSaleFormValues>({
@@ -101,76 +101,47 @@ function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogP
       } else {
         form.clearErrors("quantity");
       }
-    } else if (watchedProductName && isMultiLocation) {
+    } else if (watchedProductName && isMultiLocation && watchedLocation) {
          form.setError("location", { type: "manual", message: `Produto sem estoque nesta localização.` });
-    } else if (watchedProductName) {
+    } else {
         form.clearErrors("location");
     }
-  }, [watchedQuantity, availableStock, selectedProductInstance, watchedProductName, isMultiLocation, form]);
+  }, [watchedQuantity, availableStock, selectedProductInstance, watchedProductName, watchedLocation, isMultiLocation, form]);
 
 
   const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
 
   useEffect(() => {
-    if (locations && locations.length > 0) {
+    if (locations && locations.length > 0 && !form.getValues('location')) {
         form.setValue('location', locations[0].id)
     }
   }, [locations, form]);
 
 
-  function onSubmit(values: AddSaleFormValues) {
-    if (isMultiLocation && !values.location) {
-      form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
-      return;
-    }
-
-    if (!selectedProductInstance) {
+  async function onSubmit(values: AddSaleFormValues) {
+    if (!selectedProductInstance || !user) {
         toast({
             variant: "destructive",
             title: "Erro de Validação",
-            description: "Produto não encontrado ou sem estoque na localização selecionada.",
+            description: "Produto não encontrado ou utilizador não autenticado.",
         });
         return;
     }
 
-    if (values.quantity > availableStock) {
-      toast({
-        variant: "destructive",
-        title: "Estoque Insuficiente",
-        description: `Não há estoque suficiente para ${selectedProductInstance.name}. Disponível: ${availableStock}, Solicitado: ${values.quantity}.`,
-      });
-      return;
-    }
-
-    const now = new Date();
     const newSale: Omit<Sale, 'id' | 'guideNumber'> = {
-      date: now.toISOString(),
+      date: new Date().toISOString(),
       productId: selectedProductInstance.id || '', // Should have an ID
       productName: selectedProductInstance.name,
       quantity: values.quantity,
       unitPrice: values.unitPrice,
       totalValue: values.quantity * values.unitPrice,
-      soldBy: userData?.name || 'Desconhecido',
+      soldBy: user.username,
       location: values.location,
       status: 'Pago',
     };
-
-    const updatedProducts = products?.map(p => {
-      if (p.instanceId === selectedProductInstance.instanceId) {
-        return {
-          ...p,
-          reservedStock: p.reservedStock + values.quantity,
-        };
-      }
-      return p;
-    }) || [];
-
-    onAddSale(newSale, updatedProducts);
     
-    toast({
-        title: "Venda Registrada como 'Paga'",
-        description: `${values.quantity} unidades de ${selectedProductInstance.name} foram reservadas.`,
-    })
+    await onAddSale(newSale);
+    
     form.reset();
     if (locations && locations.length > 0) {
       form.setValue('location', locations[0].id);
@@ -329,3 +300,5 @@ export function AddSaleDialog(props: Omit<AddSaleDialogProps, 'products'>) {
 
   return <AddSaleDialogContent {...props} />;
 }
+
+    
