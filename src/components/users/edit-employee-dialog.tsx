@@ -33,7 +33,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Employee } from '@/lib/types';
-import { atob } from 'buffer';
 
 const formSchema = z.object({
   username: z.string().min(3, { message: "O nome de utilizador deve ter pelo menos 3 caracteres." }),
@@ -86,7 +85,7 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
     setOpen(false);
   }
   
-  const currentPassword = employee.password ? atob(employee.password) : '';
+  const currentPassword = employee.password && typeof window !== 'undefined' ? window.atob(employee.password) : '';
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

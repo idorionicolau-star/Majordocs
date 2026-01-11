@@ -5,7 +5,6 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Employee } from "@/lib/types"
 import { Button } from "../ui/button"
 import { Trash2, Edit, Copy } from "lucide-react"
-import { atob } from "buffer"
 import { useToast } from "@/hooks/use-toast"
 import { EditEmployeeDialog } from "./edit-employee-dialog"
 
@@ -20,7 +19,8 @@ interface ColumnsOptions {
 const LoginFormatCell = ({ row, companyName }: { row: any, companyName: string | null }) => {
     const { toast } = useToast();
     const username = row.original.username;
-    const password = row.original.password ? atob(row.original.password) : '';
+    // Use window.atob for client-side decoding
+    const password = row.original.password && typeof window !== 'undefined' ? window.atob(row.original.password) : '';
     const loginFormat = `${username}@${companyName || ''}`;
     
     const handleCopy = () => {
@@ -69,24 +69,24 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
                 </span>
             )
         }
+    },
+    {
+        accessorKey: "password",
+        header: "Senha",
+        cell: ({ row }) => {
+            try {
+                // Use window.atob for client-side decoding
+                if (row.original.password && typeof window !== 'undefined') {
+                    return window.atob(row.original.password);
+                }
+                return "";
+            } catch (e) {
+                // If it fails, it might be plain text from older data
+                return row.original.password;
+            }
+        }
     }];
     
-    if (options.isAdmin) {
-        baseColumns.push({
-            accessorKey: "password",
-            header: "Senha",
-            cell: ({ row }) => {
-                try {
-                    // Try to decode from Base64
-                    return atob(row.original.password || "");
-                } catch (e) {
-                    // If it fails, it's probably plain text
-                    return row.original.password;
-                }
-            }
-        });
-    }
-
     if (options.isAdmin) {
         baseColumns.push({
             id: "actions",
