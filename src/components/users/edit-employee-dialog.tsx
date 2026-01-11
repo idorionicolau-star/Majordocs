@@ -18,6 +18,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import {
   Select,
@@ -34,14 +35,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Employee, ModulePermission } from '@/lib/types';
 import { allPermissions } from '@/lib/data';
-import { Switch } from '../ui/switch';
+import { Checkbox } from '../ui/checkbox';
+
+const permissionsEnum = z.enum(allPermissions.map(p => p.id) as [ModulePermission, ...ModulePermission[]]);
 
 const formSchema = z.object({
   username: z.string().min(3, { message: "O nome de utilizador deve ter pelo menos 3 caracteres." }),
   password: z.string().optional(),
   role: z.enum(['Admin', 'Employee'], { required_error: "A função é obrigatória." }),
-  permissions: z.array(z.nativeEnum(allPermissions.reduce((acc, p) => ({...acc, [p.id]: p.id}), {} as Record<ModulePermission, ModulePermission>))).optional(),
+  permissions: z.array(permissionsEnum).optional(),
 });
+
 
 type EditEmployeeFormValues = z.infer<typeof formSchema>;
 
@@ -177,37 +181,62 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
             />
 
             {role === 'Employee' && (
-                <div className="space-y-4 rounded-lg border p-4">
-                   <div className='flex items-center gap-2'>
-                    <ShieldCheck className="h-5 w-5 text-primary" />
-                    <h3 className="text-md font-semibold">Permissões do Módulo</h3>
-                  </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        {allPermissions.filter(p => !p.adminOnly).map((permission) => (
-                           <Controller
-                                key={permission.id}
-                                name="permissions"
-                                control={form.control}
-                                render={({ field }) => (
-                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                                        <FormLabel className="text-sm font-normal">{permission.label}</FormLabel>
-                                        <FormControl>
-                                            <Switch
-                                                checked={field.value?.includes(permission.id)}
-                                                onCheckedChange={(checked) => {
-                                                    const newPermissions = checked
-                                                        ? [...(field.value || []), permission.id]
-                                                        : (field.value || []).filter((id) => id !== permission.id);
-                                                    field.onChange(newPermissions);
-                                                }}
-                                            />
-                                        </FormControl>
-                                    </FormItem>
-                                )}
-                            />
+                <FormField
+                  control={form.control}
+                  name="permissions"
+                  render={() => (
+                    <FormItem>
+                      <div className="mb-4">
+                        <FormLabel className="text-base">Permissões de Acesso</FormLabel>
+                        <FormDescription>
+                           Selecione quais módulos este funcionário poderá visualizar e editar.
+                        </FormDescription>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        {allPermissions.filter(p => !p.adminOnly).map((module) => (
+                          <FormField
+                            key={module.id}
+                            control={form.control}
+                            name="permissions"
+                            render={({ field }) => {
+                              return (
+                                <FormItem
+                                  key={module.id}
+                                  className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4"
+                                >
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(module.id)}
+                                      onCheckedChange={(checked) => {
+                                         let updatedPermissions = [...(field.value || [])];
+                                        if (checked) {
+                                          if (!updatedPermissions.includes('dashboard')) {
+                                              updatedPermissions.push('dashboard');
+                                          }
+                                          updatedPermissions.push(module.id);
+                                        } else {
+                                          if (module.id !== 'dashboard') {
+                                            updatedPermissions = updatedPermissions.filter((value) => value !== module.id);
+                                          }
+                                        }
+                                        return field.onChange(updatedPermissions);
+                                      }}
+                                       disabled={module.id === 'dashboard'}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="font-normal cursor-pointer">
+                                    {module.label}
+                                  </FormLabel>
+                                </FormItem>
+                              );
+                            }}
+                          />
                         ))}
-                    </div>
-                </div>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
             )}
             {role === 'Admin' && (
                 <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-4 text-center">

@@ -23,11 +23,16 @@ export const mainNavItems: NavItem[] = [
   { title: 'Ajustes', href: '/settings', id: 'settings', icon: Settings, adminOnly: true },
 ];
 
-export const allPermissions: { id: ModulePermission; label: string, adminOnly: boolean }[] = mainNavItems.map(item => ({
-  id: item.id,
-  label: item.title,
-  adminOnly: !!item.adminOnly
-}));
+export const allPermissions: Readonly<{ id: ModulePermission; label: string; adminOnly: boolean; }[]> = [
+  { id: "dashboard", label: "Dashboard" , adminOnly: false},
+  { id: "inventory", label: "Inventário", adminOnly: false },
+  { id: "sales", label: "Vendas", adminOnly: false },
+  { id: "production", label: "Produção", adminOnly: true },
+  { id: "orders", label: "Encomendas", adminOnly: true },
+  { id: "reports", label: "Relatórios", adminOnly: true },
+  { id: "users", label: "Utilizadores", adminOnly: true },
+  { id: "settings", label: "Ajustes", adminOnly: true },
+] as const;
 
 
 export const initialCatalog: InitialCatalog = {
