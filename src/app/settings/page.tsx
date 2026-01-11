@@ -8,28 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { LocationsManager } from "@/components/settings/locations-manager";
 import { cn } from "@/lib/utils";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import { ChevronDown, Trash2, Code, Building, Users, Book } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Building, Book, Palette, Map, User as UserIcon } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Image from "next/image";
 
 
 const colorOptions = [
@@ -40,6 +27,65 @@ const colorOptions = [
   { name: 'Border', value: 'hsl(var(--border))', className: 'bg-border' },
 ];
 
+function ProfileTab() {
+  const { user } = useContext(InventoryContext) || {};
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+
+  const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePic(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const getInitials = (name: string) => {
+    const names = name.split(' ');
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Perfil de Utilizador</CardTitle>
+        <CardDescription>Visualize e gira as suas informações pessoais.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-center gap-6">
+          <Avatar className="h-24 w-24">
+            {profilePic ? <AvatarImage src={profilePic} alt="Foto de Perfil" /> : null}
+            <AvatarFallback className="text-3xl bg-primary text-primary-foreground">
+              {user ? getInitials(user.username) : 'U'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="space-y-2">
+            <Label htmlFor="profile-pic-upload">Foto de Perfil</Label>
+            <Input id="profile-pic-upload" type="file" accept="image/*" onChange={handleProfilePicChange} className="max-w-xs"/>
+            <p className="text-xs text-muted-foreground">Recomendado: 400x400px</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <Label>Nome de Utilizador</Label>
+            <p className="font-semibold">{user?.username}</p>
+          </div>
+          <div className="space-y-1">
+            <Label>Função</Label>
+            <p className="font-semibold">{user?.role}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function SettingsPage() {
   const [isClient, setIsClient] = useState(false);
   const [borderRadius, setBorderRadius] = useState(0.8);
@@ -48,6 +94,9 @@ export default function SettingsPage() {
   const [iconSize, setIconSize] = useState(16);
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
+  const { user } = inventoryContext || {};
+  const isAdmin = user?.role === 'Admin';
+
 
   const [companyDetails, setCompanyDetails] = useState({
     name: '',
@@ -190,113 +239,30 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <Accordion type="multiple" className="w-full space-y-6" defaultValue={['item-company']}>
-          <AccordionItem value="item-company" className="border-0">
-             <Card className="glass-card shadow-sm">
-                <AccordionTrigger className="w-full hover:no-underline">
-                    <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
-                    <div className="flex-1 text-left">
-                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2"><Building /> Detalhes da Empresa</CardTitle>
-                        <CardDescription>
-                            Visualize e edite os dados da sua empresa.
-                        </CardDescription>
-                    </div>
-                    <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                    </CardHeader>
-                </AccordionTrigger>
-                <AccordionContent>
-                    <CardContent className="p-6 sm:p-8 pt-0">
-                      <form onSubmit={handleCompanyUpdate} className="space-y-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Nome da Empresa</Label>
-                                <Input id="name" value={companyDetails.name} onChange={handleDetailChange} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email de Contacto</Label>
-                                <Input id="email" type="email" value={companyDetails.email} onChange={handleDetailChange} />
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="phone">Telefone</Label>
-                                <Input id="phone" value={companyDetails.phone} onChange={handleDetailChange} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="taxId">NUIT</Label>
-                                <Input id="taxId" value={companyDetails.taxId} onChange={handleDetailChange} />
-                            </div>
-                            <div className="space-y-2 md:col-span-2">
-                                <Label htmlFor="address">Endereço</Label>
-                                <Input id="address" value={companyDetails.address} onChange={handleDetailChange} />
-                            </div>
-                          </div>
-                          <div className="flex justify-end">
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting ? 'A guardar...' : 'Salvar Alterações'}
-                            </Button>
-                          </div>
-                      </form>
-                    </CardContent>
-                </AccordionContent>
-            </Card>
-          </AccordionItem>
+        <Tabs defaultValue="profile" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="profile"><UserIcon className="mr-2 h-4 w-4" />Perfil</TabsTrigger>
+            <TabsTrigger value="appearance"><Palette className="mr-2 h-4 w-4" />Aparência</TabsTrigger>
+            {isAdmin && (
+              <>
+                <TabsTrigger value="company"><Building className="mr-2 h-4 w-4" />Empresa</TabsTrigger>
+                <TabsTrigger value="catalog"><Book className="mr-2 h-4 w-4" />Catálogo</TabsTrigger>
+                <TabsTrigger value="locations"><Map className="mr-2 h-4 w-4" />Localizações</TabsTrigger>
+              </>
+            )}
+          </TabsList>
+
+          <TabsContent value="profile">
+            <ProfileTab />
+          </TabsContent>
           
-          <AccordionItem value="item-catalog" className="border-0" id="catalog">
-             <Card className="glass-card shadow-sm">
-                <AccordionTrigger className="w-full hover:no-underline">
-                    <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
-                    <div className="flex-1 text-left">
-                        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2"><Book /> Gestor de Catálogo</CardTitle>
-                        <CardDescription>
-                            Gerencie os produtos, categorias e importe dados.
-                        </CardDescription>
-                    </div>
-                    <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                    </CardHeader>
-                </AccordionTrigger>
-                <AccordionContent>
-                    <CardContent className="p-6 sm:p-8 pt-0">
-                      <CatalogManager />
-                    </CardContent>
-                </AccordionContent>
-            </Card>
-          </AccordionItem>
-
-          <AccordionItem value="item-locations" className="border-0">
-            <Card className="glass-card shadow-sm">
-              <AccordionTrigger className="w-full hover:no-underline">
-                <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
-                  <div className="flex-1 text-left">
-                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl">Gestão de Localizações</CardTitle>
-                    <CardDescription>
-                      Ative e gerencie múltiplas localizações para o seu negócio.
-                    </CardDescription>
-                  </div>
-                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+          <TabsContent value="appearance">
+             <Card>
+                <CardHeader>
+                  <CardTitle>Aparência</CardTitle>
+                  <CardDescription>Personalize a aparência da aplicação.</CardDescription>
                 </CardHeader>
-              </AccordionTrigger>
-              <AccordionContent>
-                <CardContent className="p-6 sm:p-8 pt-0">
-                  <LocationsManager />
-                </CardContent>
-              </AccordionContent>
-            </Card>
-          </AccordionItem>
-
-          <AccordionItem value="item-appearance" className="border-0">
-            <Card className="glass-card shadow-sm">
-              <AccordionTrigger className="w-full hover:no-underline">
-                <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
-                  <div className="flex-1 text-left">
-                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl">Aparência</CardTitle>
-                    <CardDescription>
-                      Personalize a aparência da aplicação.
-                    </CardDescription>
-                  </div>
-                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                </CardHeader>
-              </AccordionTrigger>
-              <AccordionContent>
-                <CardContent className="space-y-6 p-6 sm:p-8 pt-0">
+                <CardContent className="space-y-6">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="theme">Tema</Label>
                     <ThemeSwitcher />
@@ -374,13 +340,80 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 </CardContent>
-              </AccordionContent>
             </Card>
-          </AccordionItem>
-        </Accordion>
+          </TabsContent>
+
+          {isAdmin && (
+            <>
+              <TabsContent value="company">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Detalhes da Empresa</CardTitle>
+                    <CardDescription>Visualize e edite os dados da sua empresa.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      <form onSubmit={handleCompanyUpdate} className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Nome da Empresa</Label>
+                                <Input id="name" value={companyDetails.name} onChange={handleDetailChange} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email de Contacto</Label>
+                                <Input id="email" type="email" value={companyDetails.email} onChange={handleDetailChange} />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="phone">Telefone</Label>
+                                <Input id="phone" value={companyDetails.phone} onChange={handleDetailChange} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="taxId">NUIT</Label>
+                                <Input id="taxId" value={companyDetails.taxId} onChange={handleDetailChange} />
+                            </div>
+                            <div className="space-y-2 md:col-span-2">
+                                <Label htmlFor="address">Endereço</Label>
+                                <Input id="address" value={companyDetails.address} onChange={handleDetailChange} />
+                            </div>
+                          </div>
+                          <div className="flex justify-end">
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? 'A guardar...' : 'Salvar Alterações'}
+                            </Button>
+                          </div>
+                      </form>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="catalog">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Gestor de Catálogo</CardTitle>
+                    <CardDescription>Gerencie os produtos, categorias e importe dados.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <CatalogManager />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="locations">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Gestão de Localizações</CardTitle>
+                    <CardDescription>Ative e gerencie múltiplas localizações para o seu negócio.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <LocationsManager />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </>
+          )}
+
+        </Tabs>
       </div>
     </>
   );
 }
 
-    

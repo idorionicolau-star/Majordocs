@@ -2,7 +2,7 @@
 "use client"
 
 import { useContext } from "react"
-import { LogOut, User as UserIcon } from "lucide-react"
+import { LogOut, User as UserIcon, Settings } from "lucide-react"
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button"
@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { InventoryContext } from "@/context/inventory-context"
 
 export function UserNav() {
@@ -38,6 +38,7 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
+             {/* Add AvatarImage logic here if you store profile pics */}
              <AvatarFallback className="bg-primary text-primary-foreground font-bold">
                 {getInitials(user.username)}
              </AvatarFallback>
@@ -59,6 +60,12 @@ export function UserNav() {
             <Link href="/settings">
               <UserIcon className="mr-2 h-4 w-4" />
               <span>Perfil</span>
+            </Link>
+          </DropdownMenuItem>
+           <DropdownMenuItem asChild>
+            <Link href="/settings">
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Ajustes</span>
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
