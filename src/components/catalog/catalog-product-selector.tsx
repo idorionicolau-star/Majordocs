@@ -53,13 +53,13 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
   }, [products, selectedValue]);
 
   return (
-    <div className="flex flex-col sm:flex-row gap-2">
+    <div className="flex flex-col gap-2">
       <Select onValueChange={setCategoryFilter} defaultValue="all">
-        <SelectTrigger className="w-full sm:w-[150px]">
+        <SelectTrigger className="w-full">
           <SelectValue placeholder="Categoria" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Todas</SelectItem>
+          <SelectItem value="all">Todas as Categorias</SelectItem>
           {categories.sort((a,b) => a.name.localeCompare(b.name)).map(cat => (
             <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
           ))}
@@ -109,3 +109,5 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
     </div>
   );
 }
+
+    
