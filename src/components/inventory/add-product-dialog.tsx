@@ -220,7 +220,7 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
                                     <div className='absolute top-0 left-0 w-full h-full rounded-md border'>
                                         <Command>
                                             <CommandInput placeholder="Pesquisar produto..." />
-                                            <ScrollArea className="h-[200px]">
+                                            <ScrollArea className="h-32">
                                             <CommandList>
                                                 <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
                                                 <CommandGroup>

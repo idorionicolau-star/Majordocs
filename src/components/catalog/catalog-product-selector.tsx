@@ -59,7 +59,7 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
       <div className="rounded-md border">
         <Command>
             <CommandInput placeholder="Pesquisar produto..." />
-            <ScrollArea className="h-[200px]">
+            <ScrollArea className="h-32">
               <CommandList>
                 <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
                 <CommandGroup>
