@@ -162,16 +162,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const userData = userSnapshot.docs[0].data() as Employee;
       
       // 3. Verify password
-      let storedPass = '';
-      if(userData.password) {
-         try {
-            storedPass = Buffer.from(userData.password, 'base64').toString('utf-8');
-        } catch (e) {
-            storedPass = userData.password; // Fallback for non-base64 passwords
-        }
-      }
-
-      if (storedPass === pass) {
+      const storedPass = userData.password || '';
+      const encodedInputPass = Buffer.from(pass).toString('base64');
+      
+      // Also check against plain text for backward compatibility
+      if (storedPass === encodedInputPass || storedPass === pass) {
         const userToStore = { ...userData, id: userSnapshot.docs[0].id };
         delete userToStore.password; // Do not store password in state or localStorage
 
@@ -491,5 +486,3 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
-
-    
