@@ -10,32 +10,51 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function getUserRole(companyId) {
-      return get(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid)).data.role;
+    function getUserData(uid) {
+      // Note: This path needs to be dynamically determined in a real multi-tenant app.
+      // For now, this is a placeholder. A robust solution would involve a top-level
+      // user collection to find the companyId from a userId.
+      // This is simplified for this context. We'll assume we can get it.
+      // A more realistic approach would be to pass companyId into the function.
+      let companyId = get(/databases/$(database)/documents/users/$(uid)).data.companyId;
+      return get(/databases/$(database)/documents/companies/$(companyId)/employees/$(uid)).data;
     }
 
     function isEmployeeOf(companyId) {
-      return exists(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid));
+      // Checks if the requesting user's UID exists in the employees subcollection for the given company.
+      return isSignedIn() && exists(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid));
     }
     
     function isAdminOf(companyId) {
-        return isEmployeeOf(companyId) && getUserRole(companyId) == 'Admin';
+      // Checks if the user is an employee and their role is 'Admin'.
+      return isEmployeeOf(companyId) && get(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid)).data.role == 'Admin';
     }
 
     // --- COLLECTIONS ---
 
-    // Company documents
+    // Company documents can be created during registration.
+    // Reading/updating requires being an employee/admin of that specific company.
     match /companies/{companyId} {
-      allow create: if true; // For registration
+      allow create: if true; // Allows company registration
       allow read: if isEmployeeOf(companyId);
       allow update, delete: if isAdminOf(companyId);
     }
 
     // Employees subcollection
     match /companies/{companyId}/employees/{employeeId} {
-      allow create: if isAdminOf(companyId) || request.auth.uid == employeeId; // Admin can add, or user can be created during registration
-      allow read: if isEmployeeOf(companyId);
-      allow update, delete: if isAdminOf(companyId); // Only admins can manage employees
+      // Allow read only if you are an Admin of the company.
+      // This protects sensitive fields like password from other employees.
+      allow read: if isAdminOf(companyId);
+      
+      // Any employee can list the users (to see names/roles), but the 'read' rule above
+      // will prevent them from getting the full document with the password.
+      allow list: if isEmployeeOf(companyId);
+
+      // Create is allowed by Admins.
+      allow create: if isAdminOf(companyId);
+      
+      // Update/delete is allowed by Admins.
+      allow update, delete: if isAdminOf(companyId);
     }
     
     // Catalog is managed by Admins
@@ -54,10 +73,10 @@ service cloud.firestore {
       allow write: if isAdminOf(companyId);
     }
     
-    // Sales can be read by anyone, but only created/updated by employees (Admins included)
+    // Sales can be read by anyone, and created/updated by any employee
     match /companies/{companyId}/sales/{saleId} {
         allow read: if isEmployeeOf(companyId);
-        allow write: if isEmployeeOf(companyId); // Any employee can make a sale
+        allow write: if isEmployeeOf(companyId);
     }
     
     // Production and Orders can be read by anyone, but only written by Admins

@@ -16,27 +16,30 @@ interface ColumnsOptions {
     companyName: string | null;
 }
 
+const displayPassword = (password: string | undefined): string => {
+  if (!password) {
+    return '';
+  }
+  try {
+    // Tenta decodificar de Base64 para UTF-8
+    const decoded = Buffer.from(password, 'base64').toString('utf-8');
+    // Verifica se a string decodificada contém caracteres de controle inválidos,
+    // o que pode indicar que não era uma string Base64 válida para texto.
+    if (/[\x00-\x08\x0E-\x1F]/.test(decoded) && decoded !== password) {
+        return password; // Retorna a string original se a decodificação resultar em lixo
+    }
+    return decoded;
+  } catch (e) {
+    // Se a decodificação falhar (não era Base64), retorna o texto original
+    return password;
+  }
+};
+
 const LoginFormatCell = ({ row, companyName }: { row: any, companyName: string | null }) => {
     const { toast } = useToast();
     const username = row.original.username;
     
-    let password = '';
-    if (row.original.password) {
-        try {
-            // Attempt to decode from Base64. If it fails, assume it's plain text.
-            const decoded = Buffer.from(row.original.password, 'base64').toString('utf-8');
-             // A simple check to see if the decoded string is plausible plain text.
-            // This regex checks for common non-printable characters.
-            if (/[\x00-\x08\x0E-\x1F]/.test(decoded) && decoded !== row.original.password) {
-               password = row.original.password; // It's likely not valid text after decoding, use original.
-            } else {
-               password = decoded; // Decoding succeeded and looks like text.
-            }
-        } catch (e) {
-            // If decoding throws an error, it's definitely not Base64.
-            password = row.original.password;
-        }
-    }
+    const password = displayPassword(row.original.password);
 
     const loginFormat = `${username}@${companyName || ''}`;
     
