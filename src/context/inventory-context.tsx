@@ -26,7 +26,6 @@ import {
   setDoc,
   onSnapshot,
 } from 'firebase/firestore';
-import { initialCatalog } from '@/lib/data';
 
 type CatalogProduct = Omit<
   Product,
@@ -74,8 +73,6 @@ interface InventoryContextType {
     quantity: number,
     locationId?: string
   ) => void;
-  seedInitialCatalog: () => Promise<void>;
-  clearCompanyData: () => Promise<void>;
   updateCompany: (details: Partial<Company>) => Promise<void>;
 }
 
@@ -317,45 +314,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     [productsCollectionRef]
   );
   
-  const seedInitialCatalog = useCallback(async () => {
-    if (!catalogProductsCollectionRef || !catalogCategoriesCollectionRef || !firestore) {
-      toast({ variant: "destructive", title: "Erro", description: "A base de dados não está pronta." });
-      return;
-    }
-    const existingProducts = await getDocs(query(catalogProductsCollectionRef));
-    if (!existingProducts.empty) {
-      toast({ title: "Catálogo já existente", description: "O catálogo de produtos base já foi carregado." });
-      return;
-    }
-    toast({ title: "A carregar catálogo...", description: "Por favor, aguarde." });
-    const batch = writeBatch(firestore);
-    const categoryNameSet = new Set<string>();
-    for (const category in initialCatalog) {
-      categoryNameSet.add(category);
-      for (const subType in initialCatalog[category]) {
-        const items = initialCatalog[category][subType];
-        items.forEach((itemName: string) => {
-          const docRef = doc(catalogProductsCollectionRef);
-          batch.set(docRef, {
-            name: `${itemName} ${subType}`.trim(),
-            category: category, price: 0, lowStockThreshold: 10, criticalStockThreshold: 5, unit: "un",
-          });
-        });
-      }
-    }
-    categoryNameSet.forEach(name => {
-        const docRef = doc(catalogCategoriesCollectionRef);
-        batch.set(docRef, { name });
-    });
-    try {
-      await batch.commit();
-      toast({ title: "Sucesso!", description: "Catálogo inicial carregado." });
-    } catch (error) {
-      console.error("Error seeding catalog: ", error);
-      toast({ variant: "destructive", title: "Erro ao carregar o catálogo" });
-    }
-  }, [catalogProductsCollectionRef, catalogCategoriesCollectionRef, firestore, toast]);
-
   const updateProduct = useCallback((instanceId: string, updatedData: Partial<Product>) => {
        if (!productsCollectionRef || !instanceId) return;
       const docRef = doc(productsCollectionRef, instanceId);
@@ -420,26 +378,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       }
     }, [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast]);
 
-  const clearCompanyData = useCallback(async () => {
-    if (!firestore || !companyId) {
-      toast({ variant: "destructive", title: "Erro", description: "Utilizador ou empresa não identificado." });
-      return;
-    }
-    const collectionsToDelete = ['products', 'sales', 'productions', 'orders', 'catalogProducts', 'catalogCategories', 'employees'];
-    const batch = writeBatch(firestore);
-    try {
-      for (const collectionName of collectionsToDelete) {
-        const collRef = collection(firestore, `companies/${companyId}/${collectionName}`);
-        const snapshot = await getDocs(query(collRef));
-        snapshot.forEach(doc => batch.delete(doc.ref));
-      }
-      await batch.commit();
-    } catch (error) {
-      console.error("Error clearing company data: ", error);
-      toast({ variant: "destructive", title: "Erro ao Limpar Dados" });
-    }
-  }, [firestore, companyId, toast]);
-
   const updateCompany = useCallback(async (details: Partial<Company>) => {
       if(companyDocRef) {
          await setDoc(companyDocRef, details, { merge: true });
@@ -468,7 +406,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
     locations, isMultiLocation, addProduct, updateProduct, deleteProduct, transferStock,
-    updateProductStock, seedInitialCatalog, clearCompanyData, updateCompany,
+    updateProductStock, updateCompany,
   };
 
   return (
@@ -477,3 +415,5 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
+
+    

@@ -46,7 +46,6 @@ export default function SettingsPage() {
   const [borderWidth, setBorderWidth] = useState(1);
   const [borderColor, setBorderColor] = useState('hsl(var(--primary))');
   const [iconSize, setIconSize] = useState(16);
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
 
@@ -59,7 +58,7 @@ export default function SettingsPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { companyData, updateCompany, clearCompanyData } = inventoryContext || {};
+  const { companyData, updateCompany } = inventoryContext || {};
 
 
   useEffect(() => {
@@ -157,16 +156,6 @@ export default function SettingsPage() {
       localStorage.setItem('majorstockx-icon-size', newSize.toString());
     }
   };
-  
-  const handleClearData = async () => {
-    if (clearCompanyData) {
-      toast({ title: "A limpar...", description: "A apagar todos os dados da empresa no Firestore." });
-      await clearCompanyData();
-      toast({ title: "Sucesso!", description: "Os dados foram limpos. A página será recarregada." });
-      setTimeout(() => window.location.reload(), 2000);
-    }
-    setShowClearConfirm(false);
-  };
 
   const handleCompanyUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,23 +182,6 @@ export default function SettingsPage() {
 
   return (
     <>
-      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação é irreversível e irá apagar permanentemente **todos** os dados da sua empresa do Firestore (produtos, vendas, funcionários etc.). Não será possível recuperar estes dados.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearData} className="bg-destructive hover:bg-destructive/90">
-              Sim, apagar tudo
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
         <div>
           <h1 className="text-2xl md:text-3xl font-headline font-[900] text-slate-900 dark:text-white tracking-tighter">Configurações</h1>
@@ -384,38 +356,10 @@ export default function SettingsPage() {
               </AccordionContent>
             </Card>
           </AccordionItem>
-          
-          <AccordionItem value="item-5" className="border-0">
-            <Card className="glass-card shadow-sm">
-              <AccordionTrigger className="w-full hover:no-underline">
-                <CardHeader className="flex-row items-center justify-between w-full p-6 sm:p-8">
-                  <div className="flex-1 text-left">
-                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2"><Code />Ferramentas de Programador</CardTitle>
-                    <CardDescription>
-                      Ações avançadas para gerir o estado da aplicação.
-                    </CardDescription>
-                  </div>
-                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                </CardHeader>
-              </AccordionTrigger>
-              <AccordionContent>
-                <CardContent className="p-6 sm:p-8 pt-0 space-y-4">
-                   <div>
-                    <h3 className="font-semibold">Limpar Dados da Empresa</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Esta ação irá apagar todos os documentos (produtos, vendas, funcionários, etc.) relacionados a esta empresa no Firestore.
-                    </p>
-                   </div>
-                   <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Apagar Todos os Dados
-                   </Button>
-                </CardContent>
-              </AccordionContent>
-            </Card>
-          </AccordionItem>
         </Accordion>
       </div>
     </>
   );
 }
+
+    

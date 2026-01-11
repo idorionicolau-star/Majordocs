@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useContext } from 'react';
@@ -35,6 +34,7 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, deleteDoc, updateDoc, collection, writeBatch, query, getDocs, where, addDoc } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
 import { AddCatalogProductDialog } from './add-catalog-product-dialog';
+import { initialCatalog } from '@/lib/data';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 type CatalogCategory = { id: string; name: string };
@@ -69,9 +69,53 @@ export function CatalogManager() {
   if (!inventoryContext) {
     return <div>A carregar gestor de catálogo...</div>
   }
-
-  const { seedInitialCatalog } = inventoryContext;
   
+  const handleSeedCatalog = async () => {
+     if (!catalogProductsCollectionRef || !catalogCategoriesCollectionRef || !firestore) {
+      toast({ variant: "destructive", title: "Erro", description: "A base de dados não está pronta." });
+      return;
+    }
+    const existingProducts = await getDocs(query(catalogProductsCollectionRef));
+    if (!existingProducts.empty) {
+      toast({ title: "Catálogo já existente", description: "O catálogo de produtos base já foi carregado." });
+      return;
+    }
+    toast({ title: "A carregar catálogo...", description: "Por favor, aguarde." });
+    const batch = writeBatch(firestore);
+    const categoryNameSet = new Set<string>();
+
+    for (const category in initialCatalog) {
+      categoryNameSet.add(category);
+      for (const subType in initialCatalog[category]) {
+        const items = initialCatalog[category][subType];
+        items.forEach((itemName: string) => {
+          const docRef = doc(catalogProductsCollectionRef);
+          batch.set(docRef, {
+            name: `${itemName} ${subType}`.trim(),
+            category: category, 
+            price: 0, 
+            lowStockThreshold: 10, 
+            criticalStockThreshold: 5, 
+            unit: "un",
+          });
+        });
+      }
+    }
+    
+    categoryNameSet.forEach(name => {
+        const docRef = doc(catalogCategoriesCollectionRef);
+        batch.set(docRef, { name });
+    });
+
+    try {
+      await batch.commit();
+      toast({ title: "Sucesso!", description: "Catálogo inicial de betão carregado." });
+    } catch (error) {
+      console.error("Error seeding catalog: ", error);
+      toast({ variant: "destructive", title: "Erro ao carregar o catálogo" });
+    }
+  }
+
   const handleAddCategory = async () => {
     if (!catalogCategoriesCollectionRef) return;
     if (!newCategoryName.trim()) {
@@ -284,10 +328,32 @@ export function CatalogManager() {
            <div className="space-y-4">
             <div className="flex justify-between items-center">
               <p className="text-sm text-muted-foreground">Gerencie os produtos base do seu catálogo.</p>
+              <div className="flex gap-2">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                     <Button size="sm" variant="outline">
+                        <Download className="mr-2 h-4 w-4" />
+                        Carregar Catálogo
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Carregar Catálogo Inicial</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem a certeza de que deseja carregar o catálogo inicial de produtos de betão? Isto irá adicionar várias categorias e produtos pré-definidos ao seu catálogo. Esta ação não pode ser desfeita e só funciona se o seu catálogo estiver vazio.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleSeedCatalog}>Sim, carregar</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                <AddCatalogProductDialog 
                     categories={sortedCategories.map(c => c.name)}
                     onAdd={handleAddProduct}
                 />
+              </div>
             </div>
              <div className="rounded-md border">
               <Table>
@@ -372,3 +438,5 @@ export function CatalogManager() {
     </>
   );
 }
+
+    
