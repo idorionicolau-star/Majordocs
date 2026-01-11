@@ -115,6 +115,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       setAuthLoading(false);
     }
   }, []);
+  
+  useEffect(() => {
+    if (authLoading) return; // Don't run redirects until auth state is loaded
+
+    const isAuthPage = pathname === '/login' || pathname === '/register';
+
+    if (!user && !isAuthPage) {
+      router.replace('/login');
+    } else if (user && isAuthPage) {
+      router.replace('/dashboard');
+    }
+  }, [user, pathname, authLoading, router]);
 
   const login = async (fullUsername: string, pass: string): Promise<boolean> => {
     setAuthLoading(true);
@@ -434,7 +446,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       }
   }, [companyDocRef]);
 
-  // --- RENDER LOGIC ---
+  const isDataLoading = authLoading || productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading;
+
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
   if (authLoading) {
@@ -442,17 +455,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }
   
   if (!user && !isAuthPage) {
-     router.replace('/login');
      return <div className="flex h-screen w-full items-center justify-center">A redirecionar para o login...</div>;
   }
   
   if (user && isAuthPage) {
-      router.replace('/dashboard');
       return <div className="flex h-screen w-full items-center justify-center">A redirecionar para o dashboard...</div>;
   }
 
   const value: InventoryContextType = {
-    user, companyId, loading: authLoading || productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading,
+    user, companyId, loading: isDataLoading,
     login, logout, registerCompany,
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
