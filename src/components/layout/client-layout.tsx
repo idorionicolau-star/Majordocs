@@ -37,10 +37,19 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
   useEffect(() => {
-    if (authContext && !authContext.loading && !authContext.user && !isAuthPage) {
-      router.replace('/login');
+    if (authContext && !authContext.loading) {
+        if (!authContext.user && !isAuthPage) {
+            router.replace('/login');
+        } else if (authContext.user && isAuthPage) {
+            router.replace('/dashboard');
+        } else if (authContext.user && !isAuthPage) {
+            const currentNavItem = mainNavItems.find(item => item.href === pathname);
+            if (currentNavItem && !hasPermission(currentNavItem.id)) {
+                router.replace('/dashboard');
+            }
+        }
     }
-  }, [authContext, isAuthPage, router]);
+  }, [authContext, isAuthPage, pathname, router]);
 
   // Determine what content to show based on auth state
   let pageContent: React.ReactNode;
