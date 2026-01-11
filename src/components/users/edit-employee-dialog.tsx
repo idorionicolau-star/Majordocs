@@ -85,7 +85,15 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
     setOpen(false);
   }
   
-  const currentPassword = employee.password && typeof window !== 'undefined' ? window.atob(employee.password) : '';
+  let currentPassword = '';
+  if (employee.password && typeof window !== 'undefined') {
+      try {
+          currentPassword = window.atob(employee.password);
+      } catch (e) {
+          currentPassword = employee.password;
+      }
+  }
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

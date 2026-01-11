@@ -19,8 +19,18 @@ interface ColumnsOptions {
 const LoginFormatCell = ({ row, companyName }: { row: any, companyName: string | null }) => {
     const { toast } = useToast();
     const username = row.original.username;
-    // Use window.atob for client-side decoding
-    const password = row.original.password && typeof window !== 'undefined' ? window.atob(row.original.password) : '';
+    
+    let password = '';
+    if (row.original.password && typeof window !== 'undefined') {
+        try {
+            // Try to decode. If it fails, it's likely plain text.
+            password = window.atob(row.original.password);
+        } catch (e) {
+            // If atob fails, it's not a valid base64 string, so we assume it's the plain password.
+            password = row.original.password;
+        }
+    }
+
     const loginFormat = `${username}@${companyName || ''}`;
     
     const handleCopy = () => {
