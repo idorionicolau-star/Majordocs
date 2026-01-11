@@ -5,11 +5,13 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Employee } from "@/lib/types"
 import { Button } from "../ui/button"
 import { Trash2 } from "lucide-react"
+import { atob } from "buffer"
 
 interface ColumnsOptions {
     onDelete: (employee: Employee) => void;
     currentUserId?: string | null;
     isAdmin: boolean;
+    companyName: string | null;
 }
 
 export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
@@ -18,6 +20,17 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
     {
         accessorKey: "username",
         header: "Nome de Utilizador",
+    },
+    {
+        id: 'loginFormat',
+        header: 'Formato de Login',
+        cell: ({ row }) => {
+            const username = row.original.username;
+            const loginFormat = `${username}@${options.companyName || ''}`;
+            return (
+                <span className="font-mono text-xs p-2 rounded-md bg-muted text-muted-foreground">{loginFormat}</span>
+            )
+        }
     },
     {
         accessorKey: "role",
@@ -40,6 +53,15 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
         baseColumns.push({
             accessorKey: "password",
             header: "Senha",
+            cell: ({ row }) => {
+                try {
+                    // Try to decode from Base64
+                    return atob(row.original.password || "");
+                } catch (e) {
+                    // If it fails, it's probably plain text
+                    return row.original.password;
+                }
+            }
         });
     }
 

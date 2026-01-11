@@ -22,11 +22,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { btoa } from "buffer";
+
 
 export default function UsersPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { companyId, user, loading } = useContext(InventoryContext) || {};
+  const { companyId, user, loading, companyData } = useContext(InventoryContext) || {};
   const isAdmin = user?.role === 'Admin';
 
   const employeesCollectionRef = useMemoFirebase(() => {
@@ -60,6 +62,7 @@ export default function UsersPage() {
     await addDoc(employeesCollectionRef, { 
       ...employeeData,
       username: usernameWithoutCompany, // Save only the username
+      password: btoa(employeeData.password || ''), // Base64 encode password
       companyId,
     });
 
@@ -121,7 +124,8 @@ export default function UsersPage() {
             columns={columns({
                 onDelete: (employee) => setEmployeeToDelete(employee),
                 currentUserId: user?.id,
-                isAdmin: isAdmin
+                isAdmin: isAdmin,
+                companyName: companyData?.name || null
             })} 
             data={employees || []} 
         />
