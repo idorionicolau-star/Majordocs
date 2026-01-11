@@ -49,7 +49,9 @@ export function CatalogManager() {
   const { companyId } = inventoryContext || {};
   
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const [showDeleteSelectedConfirm, setShowDeleteSelectedConfirm] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [showDeleteSelectedProductsConfirm, setShowDeleteSelectedProductsConfirm] = useState(false);
+  const [showDeleteSelectedCategoriesConfirm, setShowDeleteSelectedCategoriesConfirm] = useState(false);
 
 
   const catalogProductsCollectionRef = useMemoFirebase(() => {
@@ -74,6 +76,10 @@ export function CatalogManager() {
   useEffect(() => {
     setSelectedProducts([]);
   }, [products]);
+
+  useEffect(() => {
+    setSelectedCategories([]);
+  }, [categories]);
 
 
   if (!inventoryContext) {
@@ -197,7 +203,7 @@ export function CatalogManager() {
     }
   };
   
-  const handleToggleSelectAll = (checked: boolean) => {
+  const handleToggleSelectAllProducts = (checked: boolean) => {
     if (checked) {
       setSelectedProducts(sortedProducts.map(p => p.id));
     } else {
@@ -213,7 +219,7 @@ export function CatalogManager() {
     }
   };
   
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelectedProducts = async () => {
     if (!firestore || !companyId || selectedProducts.length === 0) return;
 
     toast({ title: `A apagar ${selectedProducts.length} produtos...` });
@@ -229,9 +235,56 @@ export function CatalogManager() {
     } catch (e) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível apagar os produtos selecionados.' });
     }
-    setShowDeleteSelectedConfirm(false);
+    setShowDeleteSelectedProductsConfirm(false);
+  };
+  
+  const handleToggleSelectAllCategories = (checked: boolean) => {
+    if (checked) {
+      setSelectedCategories(sortedCategories.map(c => c.id));
+    } else {
+      setSelectedCategories([]);
+    }
+  };
+  
+  const handleToggleSelectCategory = (categoryId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedCategories(prev => [...prev, categoryId]);
+    } else {
+      setSelectedCategories(prev => prev.filter(id => id !== categoryId));
+    }
   };
 
+  const handleDeleteSelectedCategories = async () => {
+    if (!firestore || !companyId || selectedCategories.length === 0) return;
+
+    const categoriesToDelete = sortedCategories.filter(c => selectedCategories.includes(c.id));
+    const usedCategories = categoriesToDelete.filter(c => products?.some(p => p.category === c.name));
+
+    if (usedCategories.length > 0) {
+        toast({
+            variant: 'destructive',
+            title: 'Não é possível apagar',
+            description: `As seguintes categorias estão em uso: ${usedCategories.map(c => c.name).join(', ')}`,
+        });
+        setShowDeleteSelectedCategoriesConfirm(false);
+        return;
+    }
+
+    toast({ title: `A apagar ${selectedCategories.length} categorias...` });
+    try {
+      const batch = writeBatch(firestore);
+      selectedCategories.forEach(categoryId => {
+        const docRef = doc(firestore, `companies/${companyId}/catalogCategories`, categoryId);
+        batch.delete(docRef);
+      });
+      await batch.commit();
+      toast({ title: 'Categorias Apagadas', description: `${selectedCategories.length} categorias foram removidas.` });
+      setSelectedCategories([]);
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível apagar as categorias selecionadas.' });
+    }
+    setShowDeleteSelectedCategoriesConfirm(false);
+  };
 
   const sortedCategories = categories ? [...categories].sort((a, b) => a.name.localeCompare(b.name)) : [];
   const sortedProducts = products ? [...products].sort((a,b) => a.name.localeCompare(b.name)) : [];
@@ -268,7 +321,7 @@ export function CatalogManager() {
         </AlertDialogContent>
       </AlertDialog>
       
-       <AlertDialog open={showDeleteSelectedConfirm} onOpenChange={setShowDeleteSelectedConfirm}>
+       <AlertDialog open={showDeleteSelectedProductsConfirm} onOpenChange={setShowDeleteSelectedProductsConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Apagar Produtos Selecionados?</AlertDialogTitle>
@@ -278,10 +331,25 @@ export function CatalogManager() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteSelected} variant="destructive">Sim, Apagar</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteSelectedProducts} variant="destructive">Sim, Apagar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <AlertDialog open={showDeleteSelectedCategoriesConfirm} onOpenChange={setShowDeleteSelectedCategoriesConfirm}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Apagar Categorias Selecionadas?</AlertDialogTitle>
+                <AlertDialogDescription>
+                Tem a certeza que quer apagar as {selectedCategories.length} categorias selecionadas? Apenas categorias que não estão a ser utilizadas por nenhum produto podem ser apagadas.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteSelectedCategories} variant="destructive">Sim, Apagar</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+       </AlertDialog>
       
        <AlertDialog open={!!categoryToEdit} onOpenChange={(open) => !open && setCategoryToEdit(null)}>
         <AlertDialogContent>
@@ -346,7 +414,7 @@ export function CatalogManager() {
               <div className='flex items-center gap-4'>
                  <p className="text-sm text-muted-foreground">Gerencie os produtos base do seu catálogo.</p>
                   {selectedProducts.length > 0 && (
-                  <Button variant="destructive" size="sm" onClick={() => setShowDeleteSelectedConfirm(true)}>
+                  <Button variant="destructive" size="sm" onClick={() => setShowDeleteSelectedProductsConfirm(true)}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Apagar ({selectedProducts.length})
                   </Button>
@@ -364,7 +432,7 @@ export function CatalogManager() {
                     <TableHead className="w-[50px] px-4">
                        <Checkbox
                         checked={sortedProducts.length > 0 && selectedProducts.length === sortedProducts.length}
-                        onCheckedChange={(checked) => handleToggleSelectAll(!!checked)}
+                        onCheckedChange={(checked) => handleToggleSelectAllProducts(!!checked)}
                         aria-label="Selecionar tudo"
                       />
                     </TableHead>
@@ -420,32 +488,68 @@ export function CatalogManager() {
         <TabsContent value="categories" className="mt-4">
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <p className="text-sm text-muted-foreground">Gerencie as categorias de produtos.</p>
+               <div className="flex items-center gap-4">
+                <p className="text-sm text-muted-foreground">Gerencie as categorias de produtos.</p>
+                 {selectedCategories.length > 0 && (
+                  <Button variant="destructive" size="sm" onClick={() => setShowDeleteSelectedCategoriesConfirm(true)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Apagar ({selectedCategories.length})
+                  </Button>
+                )}
+              </div>
               <Button size="sm" onClick={() => setShowAddCategoryDialog(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Adicionar Categoria
               </Button>
             </div>
             <div className="rounded-md border">
-              <ul className="divide-y">
+              <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-[50px] px-4">
+                            <Checkbox
+                                checked={sortedCategories.length > 0 && selectedCategories.length === sortedCategories.length}
+                                onCheckedChange={(checked) => handleToggleSelectAllCategories(!!checked)}
+                                aria-label="Selecionar todas as categorias"
+                            />
+                        </TableHead>
+                        <TableHead>Nome</TableHead>
+                        <TableHead><span className="sr-only">Ações</span></TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
                  {categoriesLoading ? (
-                    <li className="p-4"><Skeleton className="h-6 w-1/2" /></li>
+                    <TableRow>
+                        <TableCell colSpan={3} className="h-24 text-center">
+                           <Skeleton className="h-6 w-1/2 mx-auto" />
+                        </TableCell>
+                    </TableRow>
                  ) : sortedCategories.length > 0 ? sortedCategories.map(category => (
-                  <li key={category.id} className="flex items-center justify-between p-3">
-                    <span className="text-sm font-medium">{category.name}</span>
-                    <div className="flex items-center">
+                  <TableRow key={category.id} data-state={selectedCategories.includes(category.id) && "selected"}>
+                    <TableCell className="px-4">
+                       <Checkbox
+                          checked={selectedCategories.includes(category.id)}
+                          onCheckedChange={(checked) => handleToggleSelectCategory(category.id, !!checked)}
+                          aria-label={`Selecionar ${category.name}`}
+                        />
+                    </TableCell>
+                    <TableCell className="font-medium">{category.name}</TableCell>
+                    <TableCell className="text-right">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditingCategory(category)}>
                             <Edit className="h-4 w-4 text-muted-foreground" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCategoryToDelete(category)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
-                    </div>
-                  </li>
+                    </TableCell>
+                  </TableRow>
                 )) : (
-                    <li className="p-4 text-center text-muted-foreground">Nenhuma categoria encontrada.</li>
+                    <TableRow>
+                        <TableCell colSpan={3} className="p-4 text-center text-muted-foreground h-24">Nenhuma categoria encontrada.</TableCell>
+                    </TableRow>
                 )}
-              </ul>
+              </TableBody>
+              </Table>
             </div>
           </div>
         </TabsContent>
