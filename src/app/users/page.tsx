@@ -22,7 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { btoa } from "buffer";
 
 
 export default function UsersPage() {
@@ -58,11 +57,10 @@ export default function UsersPage() {
       return;
     }
     
-    // In a real app, password should be hashed before saving
     await addDoc(employeesCollectionRef, { 
       ...employeeData,
       username: usernameWithoutCompany, // Save only the username
-      password: btoa(employeeData.password || ''), // Base64 encode password
+      password: window.btoa(employeeData.password || ''), // Base64 encode password
       companyId,
     });
 
@@ -84,7 +82,7 @@ export default function UsersPage() {
     
     // Only update password if it's not an empty string
     if (employee.password) {
-        updateData.password = btoa(employee.password);
+        updateData.password = window.btoa(employee.password);
     }
     
     await updateDoc(employeeDocRef, updateData);

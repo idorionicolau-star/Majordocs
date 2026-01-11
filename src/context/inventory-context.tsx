@@ -159,7 +159,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const userData = userSnapshot.docs[0].data() as Employee;
       
       // 3. Verify password
-      if (userData.password === pass) { // WARNING: Insecure password check
+      const storedPass = userData.password && typeof window !== 'undefined' ? window.atob(userData.password) : '';
+      if (storedPass === pass) {
         const userToStore = { ...userData, id: userSnapshot.docs[0].id };
         delete userToStore.password; // Do not store password in state or localStorage
 
@@ -201,7 +202,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const employeesCollectionRef = collection(firestore, `companies/${companyDocRef.id}/employees`);
       await addDoc(employeesCollectionRef, {
         username: adminUsername.split('@')[0], // Save only the username part
-        password: adminPass, // In a real app, hash this password
+        password: typeof window !== 'undefined' ? window.btoa(adminPass) : adminPass,
         role: 'Admin',
         companyId: companyDocRef.id,
       });
@@ -415,5 +416,3 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
-
-    
