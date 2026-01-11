@@ -16,11 +16,11 @@ export const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', id: 'dashboard', icon: LayoutDashboard },
   { title: 'Inventário', href: '/inventory', id: 'inventory', icon: Box },
   { title: 'Vendas', href: '/sales', id: 'sales', icon: ShoppingCart },
-  { title: 'Produção', href: '/production', id: 'production', icon: Hammer, adminOnly: true },
-  { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList, adminOnly: true },
-  { title: 'Relatórios', href: '/reports', id: 'reports', icon: BarChart3, adminOnly: true },
-  { title: 'Utilizadores', href: '/users', id: 'users', icon: Users, adminOnly: true },
-  { title: 'Ajustes', href: '/settings', id: 'settings', icon: Settings, adminOnly: true },
+  { title: 'Produção', href: '/production', id: 'production', icon: Hammer },
+  { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList },
+  { title: 'Relatórios', href: '/reports', id: 'reports', icon: BarChart3 },
+  { title: 'Utilizadores', href: '/users', id: 'users', icon: Users },
+  { title: 'Ajustes', href: '/settings', id: 'settings', icon: Settings },
 ];
 
 export const allPermissions: Readonly<{ id: ModulePermission; label: string; adminOnly: boolean; }[]> = [
