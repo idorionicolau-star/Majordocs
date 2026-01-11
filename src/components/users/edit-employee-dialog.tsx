@@ -1,5 +1,4 @@
 
-
 "use client"
 
 import { useState, useEffect } from 'react';
@@ -83,7 +82,8 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
         return;
     } else {
         // If password is not provided, we don't want to send it in the update
-        delete updatedEmployee.password;
+        // Keep the original password from the employee object
+        updatedEmployee.password = employee.password;
     }
     onUpdateEmployee(updatedEmployee);
     setOpen(false);
@@ -92,12 +92,11 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
   let currentPassword = '';
     if (employee.password) {
        try {
-            // Try to decode from Base64. If it fails, assume it's plain text.
+            // Attempt to decode from Base64. If it fails, assume it's plain text.
             const decoded = Buffer.from(employee.password, 'base64').toString('utf-8');
             // A simple check to see if the decoded string is plausible plain text.
-            // This regex checks for common non-printable characters.
-            if (/[\x00-\x08\x0E-\x1F]/.test(decoded)) {
-               currentPassword = employee.password; // It's likely not Base64, use original.
+            if (/[\x00-\x08\x0E-\x1F]/.test(decoded) && decoded !== employee.password) {
+               currentPassword = employee.password; // It's likely not valid text after decoding, use original.
             } else {
                currentPassword = decoded; // Decoding succeeded and looks like text.
             }
