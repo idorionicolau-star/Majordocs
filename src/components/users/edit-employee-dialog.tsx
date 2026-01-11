@@ -28,16 +28,19 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { Edit, ShieldCheck } from "lucide-react";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import type { Employee } from '@/lib/types';
+import type { Employee, ModulePermission } from '@/lib/types';
+import { allPermissions } from '@/lib/data';
+import { Switch } from '../ui/switch';
 
 const formSchema = z.object({
   username: z.string().min(3, { message: "O nome de utilizador deve ter pelo menos 3 caracteres." }),
   password: z.string().optional(),
   role: z.enum(['Admin', 'Employee'], { required_error: "A função é obrigatória." }),
+  permissions: z.array(z.string()).optional(),
 });
 
 type EditEmployeeFormValues = z.infer<typeof formSchema>;
@@ -56,8 +59,11 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
       username: employee.username,
       password: "",
       role: employee.role,
+      permissions: employee.permissions || [],
     },
   });
+  
+  const role = form.watch('role');
 
   useEffect(() => {
     if (open) {
@@ -65,6 +71,7 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
         username: employee.username,
         password: "",
         role: employee.role,
+        permissions: employee.permissions || [],
       });
     }
   }, [open, employee, form]);
@@ -80,13 +87,12 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
       ...employee,
       username: values.username,
       role: values.role,
+      permissions: role === 'Admin' ? allPermissions.map(p => p.id) : (values.permissions as ModulePermission[] || []),
     };
     
-    // Only include password in update if a new one was provided
     if (values.password && values.password.length >= 6) {
       updatedEmployee.password = values.password;
     } else {
-      // Important: if we don't do this, the existing password might be overwritten with undefined
       delete updatedEmployee.password; 
     }
     
@@ -99,15 +105,9 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
       return '';
     }
     try {
-      // Try to decode. If it fails, it's not Base64, so return original.
-      const decoded = Buffer.from(password, 'base64').toString('utf-8');
-      // This check helps detect if the decoded string is garbled binary data.
-      if (/[\x00-\x08\x0E-\x1F]/.test(decoded) && decoded !== password) {
-          return password; 
-      }
-      return decoded;
+      return Buffer.from(password, 'base64').toString('utf-8');
     } catch (e) {
-      return password; // Not a base64 string
+      return password; 
     }
   };
   
@@ -121,11 +121,11 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
             <Edit className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Editar Funcionário</DialogTitle>
           <DialogDescription>
-            Atualize o nome de utilizador, senha (opcional) e função deste funcionário.
+            Atualize as informações e permissões de acesso deste funcionário.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -162,7 +162,7 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
               name="role"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Função na Empresa</FormLabel>
+                  <FormLabel>Função Principal</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -178,6 +178,46 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
                 </FormItem>
               )}
             />
+
+            {role === 'Employee' && (
+                <div className="space-y-4 rounded-lg border p-4">
+                   <div className='flex items-center gap-2'>
+                    <ShieldCheck className="h-5 w-5 text-primary" />
+                    <h3 className="text-md font-semibold">Permissões do Módulo</h3>
+                  </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        {allPermissions.filter(p => !p.adminOnly).map((permission) => (
+                           <Controller
+                                key={permission.id}
+                                name="permissions"
+                                control={form.control}
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                        <FormLabel className="text-sm font-normal">{permission.label}</FormLabel>
+                                        <FormControl>
+                                            <Switch
+                                                checked={field.value?.includes(permission.id)}
+                                                onCheckedChange={(checked) => {
+                                                    const newPermissions = checked
+                                                        ? [...(field.value || []), permission.id]
+                                                        : (field.value || []).filter((id) => id !== permission.id);
+                                                    field.onChange(newPermissions);
+                                                }}
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+            {role === 'Admin' && (
+                <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-4 text-center">
+                    <p className="text-sm font-medium text-amber-700 dark:text-amber-300">Administradores têm acesso a todos os módulos.</p>
+                </div>
+             )}
+
             <DialogFooter className="pt-4">
                 <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
                 <Button type="submit">Salvar Alterações</Button>

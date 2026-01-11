@@ -1,6 +1,6 @@
 
 
-import type { NavItem, Order, Sale, Production, Notification, Product, InitialCatalog } from './types';
+import type { NavItem, Order, Sale, Production, Notification, Product, InitialCatalog, ModulePermission } from './types';
 import {
   LayoutDashboard,
   Box,
@@ -13,15 +13,22 @@ import {
 } from 'lucide-react';
 
 export const mainNavItems: NavItem[] = [
-  { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { title: 'Inventário', href: '/inventory', icon: Box },
-  { title: 'Vendas', href: '/sales', icon: ShoppingCart },
-  { title: 'Produção', href: '/production', icon: Hammer, adminOnly: true },
-  { title: 'Encomendas', href: '/orders', icon: ClipboardList, adminOnly: true },
-  { title: 'Relatórios', href: '/reports', icon: BarChart3, adminOnly: true },
-  { title: 'Utilizadores', href: '/users', icon: Users, adminOnly: true },
-  { title: 'Ajustes', href: '/settings', icon: Settings, adminOnly: true },
+  { title: 'Dashboard', href: '/dashboard', id: 'dashboard', icon: LayoutDashboard },
+  { title: 'Inventário', href: '/inventory', id: 'inventory', icon: Box },
+  { title: 'Vendas', href: '/sales', id: 'sales', icon: ShoppingCart },
+  { title: 'Produção', href: '/production', id: 'production', icon: Hammer, adminOnly: true },
+  { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList, adminOnly: true },
+  { title: 'Relatórios', href: '/reports', id: 'reports', icon: BarChart3, adminOnly: true },
+  { title: 'Utilizadores', href: '/users', id: 'users', icon: Users, adminOnly: true },
+  { title: 'Ajustes', href: '/settings', id: 'settings', icon: Settings, adminOnly: true },
 ];
+
+export const allPermissions: { id: ModulePermission; label: string, adminOnly: boolean }[] = mainNavItems.map(item => ({
+  id: item.id,
+  label: item.title,
+  adminOnly: !!item.adminOnly
+}));
+
 
 export const initialCatalog: InitialCatalog = {
   "Grelhas": {

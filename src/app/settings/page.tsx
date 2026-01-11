@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import type { ModulePermission } from "@/lib/types";
 
 
 const colorOptions = [
@@ -96,7 +97,6 @@ export default function SettingsPage() {
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
   const { user } = inventoryContext || {};
-  const isAdmin = user?.role === 'Admin';
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState("profile");
 
@@ -112,6 +112,10 @@ export default function SettingsPage() {
   
   const { companyData, updateCompany } = inventoryContext || {};
 
+  const hasPermission = (permissionId: ModulePermission) => {
+    if (user?.role === 'Admin') return true;
+    return user?.permissions?.includes(permissionId);
+  }
 
   useEffect(() => {
     setIsClient(true);
@@ -263,7 +267,7 @@ export default function SettingsPage() {
             <TabsList className={cn("w-max", "animate-peek md:animate-none")}>
               <TabsTrigger value="profile" id="tab-trigger-profile"><UserIcon className="mr-2 h-4 w-4" />Perfil</TabsTrigger>
               <TabsTrigger value="appearance" id="tab-trigger-appearance"><Palette className="mr-2 h-4 w-4" />Aparência</TabsTrigger>
-              {isAdmin && (
+              {hasPermission('settings') && (
                 <>
                   <TabsTrigger value="company" id="tab-trigger-company"><Building className="mr-2 h-4 w-4" />Empresa</TabsTrigger>
                   <TabsTrigger value="catalog" id="tab-trigger-catalog"><Book className="mr-2 h-4 w-4" />Catálogo</TabsTrigger>
@@ -365,7 +369,7 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
 
-          {isAdmin && (
+          {hasPermission('settings') && (
             <>
               <TabsContent value="company">
                 <Card>

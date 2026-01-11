@@ -8,16 +8,19 @@ import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import React, { useContext } from "react";
 import { InventoryContext } from "@/context/inventory-context";
+import type { ModulePermission } from "@/lib/types";
 
 export function SubHeader() {
   const pathname = usePathname();
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const { user } = useContext(InventoryContext) || {};
 
-  const navItems = user?.role === 'Admin' 
-    ? mainNavItems 
-    : mainNavItems.filter(item => !item.adminOnly);
+  const hasPermission = (permissionId: ModulePermission) => {
+    if (user?.role === 'Admin') return true;
+    return user?.permissions?.includes(permissionId);
+  }
 
+  const navItems = mainNavItems.filter(item => hasPermission(item.id));
 
   React.useEffect(() => {
     const activeLink = document.getElementById(`nav-link-${pathname.replace('/', '')}`);

@@ -9,6 +9,7 @@ import { mainNavItems } from '@/lib/data';
 import { Header } from './header';
 import { SubHeader } from './sub-header';
 import { InventoryContext } from '@/context/inventory-context';
+import type { ModulePermission } from '@/lib/types';
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
@@ -22,9 +23,12 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const minSwipeDistance = 50;
   const navigationDirection = useRef<'left' | 'right' | null>(null);
 
-  const navItems = authContext?.user?.role === 'Admin' 
-    ? mainNavItems 
-    : mainNavItems.filter(item => !item.adminOnly);
+  const hasPermission = (permissionId: ModulePermission) => {
+    if (authContext?.user?.role === 'Admin') return true;
+    return authContext?.user?.permissions?.includes(permissionId);
+  }
+
+  const navItems = mainNavItems.filter(item => hasPermission(item.id));
 
   const currentPageIndex = navItems.findIndex(
     (item) => item.href === pathname

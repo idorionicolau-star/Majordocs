@@ -28,16 +28,19 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusCircle } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { PlusCircle, ShieldCheck } from "lucide-react";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import type { Employee } from '@/lib/types';
+import type { Employee, ModulePermission } from '@/lib/types';
+import { allPermissions } from '@/lib/data';
+import { Switch } from '../ui/switch';
 
 const formSchema = z.object({
   username: z.string().min(3, { message: "O nome de utilizador deve ter pelo menos 3 caracteres." }),
   password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
   role: z.enum(['Admin', 'Employee'], { required_error: "A função é obrigatória." }),
+  permissions: z.array(z.string()).optional(),
 });
 
 type AddEmployeeFormValues = z.infer<typeof formSchema>;
@@ -55,11 +58,20 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
       username: "",
       password: "",
       role: 'Employee',
+      permissions: ['dashboard', 'inventory', 'sales'], // Default permissions for new employees
     },
   });
 
+  const role = form.watch('role');
+
   function onSubmit(values: AddEmployeeFormValues) {
-    onAddEmployee(values as Omit<Employee, 'id' | 'companyId'>);
+    const employeeData: Omit<Employee, 'id' | 'companyId'> = {
+      username: values.username,
+      password: values.password,
+      role: values.role,
+      permissions: role === 'Admin' ? allPermissions.map(p => p.id) : (values.permissions as ModulePermission[] || []),
+    };
+    onAddEmployee(employeeData);
     form.reset();
     setOpen(false);
   }
@@ -72,11 +84,11 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
           Adicionar Funcionário
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Adicionar Novo Funcionário</DialogTitle>
           <DialogDescription>
-            Crie uma conta interna para um novo membro da equipe, definindo o seu nome, senha e função na empresa.
+            Crie uma conta para um membro da equipe e defina suas permissões de acesso.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -112,7 +124,7 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
               name="role"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Função na Empresa</FormLabel>
+                  <FormLabel>Função Principal</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -128,6 +140,44 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
                 </FormItem>
               )}
             />
+             {role === 'Employee' && (
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div className='flex items-center gap-2'>
+                    <ShieldCheck className="h-5 w-5 text-primary" />
+                    <h3 className="text-md font-semibold">Permissões do Módulo</h3>
+                  </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        {allPermissions.filter(p => !p.adminOnly).map((permission) => (
+                           <Controller
+                                key={permission.id}
+                                name="permissions"
+                                control={form.control}
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                        <FormLabel className="text-sm font-normal">{permission.label}</FormLabel>
+                                        <FormControl>
+                                            <Switch
+                                                checked={field.value?.includes(permission.id)}
+                                                onCheckedChange={(checked) => {
+                                                    const newPermissions = checked
+                                                        ? [...(field.value || []), permission.id]
+                                                        : (field.value || []).filter((id) => id !== permission.id);
+                                                    field.onChange(newPermissions);
+                                                }}
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+             {role === 'Admin' && (
+                <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-4 text-center">
+                    <p className="text-sm font-medium text-amber-700 dark:text-amber-300">Administradores têm acesso a todos os módulos.</p>
+                </div>
+             )}
             <DialogFooter className="pt-4">
                 <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
                 <Button type="submit">Adicionar Funcionário</Button>

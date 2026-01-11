@@ -9,9 +9,10 @@ import { columns } from "@/components/users/columns";
 import { AddEmployeeDialog } from "@/components/users/add-employee-dialog";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Employee } from "@/lib/types";
+import type { Employee, ModulePermission } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, addDoc, doc, deleteDoc, getDocs, query, where, updateDoc } from "firebase/firestore";
+import { allPermissions } from "@/lib/data";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,11 +41,11 @@ export default function UsersPage() {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
   const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId'>) => {
-    if (!employeesCollectionRef || !companyId) return;
+    if (!employeesCollectionRef || !companyId || !companyData) return;
 
-    const usernameWithoutCompany = employeeData.username.split('@')[0];
+    const usernameWithoutCompany = employeeData.username;
+    const fullUsername = `${usernameWithoutCompany}@${companyData.name}`;
 
-    // Check if username already exists in the company
     const q = query(employeesCollectionRef, where("username", "==", usernameWithoutCompany));
     const existingUserSnapshot = await getDocs(q);
 
@@ -59,14 +60,15 @@ export default function UsersPage() {
     
     await addDoc(employeesCollectionRef, { 
       ...employeeData,
-      username: usernameWithoutCompany, // Save only the username
+      username: usernameWithoutCompany,
       password: Buffer.from(employeeData.password || '').toString('base64'),
       companyId,
+      permissions: employeeData.role === 'Admin' ? allPermissions.map(p => p.id) : employeeData.permissions
     });
 
     toast({
       title: "Funcionário Adicionado",
-      description: `O funcionário "${usernameWithoutCompany}" foi adicionado.`,
+      description: `O funcionário "${fullUsername}" foi adicionado.`,
     });
   };
 
@@ -75,12 +77,11 @@ export default function UsersPage() {
     
     const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employee.id);
     
+    const { id, ...rest } = employee;
     const updateData: Partial<Employee> = {
-        username: employee.username,
-        role: employee.role,
+        ...rest,
     };
     
-    // Only update password if it's not an empty string
     if (employee.password) {
         updateData.password = Buffer.from(employee.password).toString('base64');
     }

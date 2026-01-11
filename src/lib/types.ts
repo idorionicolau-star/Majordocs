@@ -1,4 +1,13 @@
 
+export type ModulePermission = 
+  | 'dashboard'
+  | 'inventory'
+  | 'sales'
+  | 'production'
+  | 'orders'
+  | 'reports'
+  | 'users'
+  | 'settings';
 
 export type User = {
   id: string;
@@ -14,6 +23,7 @@ export type Employee = {
   password?: string; // Should be handled securely, never stored in plain text
   role: 'Admin' | 'Employee';
   companyId: string;
+  permissions: ModulePermission[];
 };
 
 export type Company = {
@@ -99,6 +109,7 @@ export type Notification = {
 export type NavItem = {
   title: string;
   href: string;
+  id: ModulePermission;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
   adminOnly?: boolean;
