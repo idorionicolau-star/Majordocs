@@ -36,6 +36,7 @@ import * as z from "zod";
 import type { Employee, ModulePermission } from '@/lib/types';
 import { allPermissions } from '@/lib/data';
 import { Checkbox } from '../ui/checkbox';
+import { ScrollArea } from '../ui/scroll-area';
 
 
 const permissionsEnum = z.enum(allPermissions.map(p => p.id) as [ModulePermission, ...ModulePermission[]]);
@@ -163,47 +164,49 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
                           Selecione quais módulos este funcionário poderá visualizar e editar.
                         </FormDescription>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        {allPermissions.map((module) => (
-                          <FormField
-                            key={module.id}
-                            control={form.control}
-                            name="permissions"
-                            render={({ field }) => {
-                              return (
-                                <FormItem
-                                  key={module.id}
-                                  className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4"
-                                >
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(module.id)}
-                                      onCheckedChange={(checked) => {
-                                        let updatedPermissions = [...(field.value || [])];
-                                        if (checked) {
-                                          if (!updatedPermissions.includes('dashboard')) {
-                                              updatedPermissions.push('dashboard');
+                      <ScrollArea className="h-48 rounded-md border p-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          {allPermissions.map((module) => (
+                            <FormField
+                              key={module.id}
+                              control={form.control}
+                              name="permissions"
+                              render={({ field }) => {
+                                return (
+                                  <FormItem
+                                    key={module.id}
+                                    className="flex flex-row items-center space-x-3 space-y-0"
+                                  >
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(module.id)}
+                                        onCheckedChange={(checked) => {
+                                          let updatedPermissions = [...(field.value || [])];
+                                          if (checked) {
+                                            if (!updatedPermissions.includes('dashboard')) {
+                                                updatedPermissions.push('dashboard');
+                                            }
+                                            updatedPermissions.push(module.id);
+                                          } else {
+                                            if (module.id !== 'dashboard') {
+                                              updatedPermissions = updatedPermissions.filter((value) => value !== module.id);
+                                            }
                                           }
-                                          updatedPermissions.push(module.id);
-                                        } else {
-                                          if (module.id !== 'dashboard') {
-                                            updatedPermissions = updatedPermissions.filter((value) => value !== module.id);
-                                          }
-                                        }
-                                        return field.onChange(updatedPermissions);
-                                      }}
-                                      disabled={module.id === 'dashboard'}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="font-normal cursor-pointer">
-                                    {module.label}
-                                  </FormLabel>
-                                </FormItem>
-                              );
-                            }}
-                          />
-                        ))}
-                      </div>
+                                          return field.onChange(updatedPermissions);
+                                        }}
+                                        disabled={module.id === 'dashboard'}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="font-normal cursor-pointer text-sm">
+                                      {module.label}
+                                    </FormLabel>
+                                  </FormItem>
+                                );
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </ScrollArea>
                       <FormMessage />
                     </FormItem>
                   )}
