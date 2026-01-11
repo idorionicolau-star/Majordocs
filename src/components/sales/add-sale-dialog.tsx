@@ -278,7 +278,7 @@ function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogP
   );
 }
 
-export function AddSaleDialog(props: Omit<AddSaleDialogProps, 'products'>) {
+export function AddSaleDialog(props: AddSaleDialogProps) {
   const [isClient, setIsClient] = useState(false);
   const inventoryContext = useContext(InventoryContext);
 
@@ -300,5 +300,3 @@ export function AddSaleDialog(props: Omit<AddSaleDialogProps, 'products'>) {
 
   return <AddSaleDialogContent {...props} />;
 }
-
-    

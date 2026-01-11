@@ -53,9 +53,9 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
   }, [products, selectedValue]);
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-col sm:flex-row gap-2">
       <Select onValueChange={setCategoryFilter} defaultValue="all">
-        <SelectTrigger className="w-[150px]">
+        <SelectTrigger className="w-full sm:w-[150px]">
           <SelectValue placeholder="Categoria" />
         </SelectTrigger>
         <SelectContent>
