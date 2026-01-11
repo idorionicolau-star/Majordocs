@@ -35,6 +35,13 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
             )
         }
     }];
+    
+    if (options.isAdmin) {
+        baseColumns.push({
+            accessorKey: "password",
+            header: "Senha",
+        });
+    }
 
     if (options.isAdmin) {
         baseColumns.push({
