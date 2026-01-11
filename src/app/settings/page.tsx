@@ -25,8 +25,7 @@ const colorOptions = [
   { name: 'Primary', value: 'hsl(var(--primary))', className: 'bg-primary' },
   { name: 'Accent', value: 'hsl(var(--accent))', className: 'bg-accent' },
   { name: 'Destructive', value: 'hsl(var(--destructive))', className: 'bg-destructive' },
-  { name: 'Foreground', value: 'hsl(var(--foreground))', className: 'bg-foreground' },
-  { name: 'Border', value: 'hsl(var(--border))', className: 'bg-border' },
+  { name: 'Foreground', value: 'hsl(var(--foreground))', className: 'bg-border' },
 ];
 
 function ProfileTab() {
@@ -264,7 +263,7 @@ export default function SettingsPage() {
 
         <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <ScrollArea className="w-full whitespace-nowrap" ref={scrollRef}>
-            <TabsList className={cn("w-max", "animate-peek md:animate-none")}>
+            <TabsList className={cn("w-max md:w-full md:justify-center", "animate-peek md:animate-none")}>
               <TabsTrigger value="profile" id="tab-trigger-profile"><UserIcon className="mr-2 h-4 w-4" />Perfil</TabsTrigger>
               <TabsTrigger value="appearance" id="tab-trigger-appearance"><Palette className="mr-2 h-4 w-4" />Aparência</TabsTrigger>
               {hasPermission('settings') && (
