@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import { useState, useEffect } from 'react';
@@ -86,13 +87,14 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
   }
   
   let currentPassword = '';
-  if (employee.password && typeof window !== 'undefined') {
-      try {
-          currentPassword = window.atob(employee.password);
-      } catch (e) {
-          currentPassword = employee.password;
-      }
-  }
+    if (employee.password) {
+        try {
+            currentPassword = Buffer.from(employee.password, 'base64').toString('utf-8');
+             if (currentPassword.includes('')) throw new Error('Invalid character');
+        } catch (e) {
+            currentPassword = employee.password;
+        }
+    }
 
 
   return (

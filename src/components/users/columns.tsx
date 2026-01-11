@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
@@ -21,12 +22,14 @@ const LoginFormatCell = ({ row, companyName }: { row: any, companyName: string |
     const username = row.original.username;
     
     let password = '';
-    if (row.original.password && typeof window !== 'undefined') {
+    if (row.original.password) {
         try {
-            // Try to decode. If it fails, it's likely plain text.
-            password = window.atob(row.original.password);
+            // Try to decode from Base64
+            password = Buffer.from(row.original.password, 'base64').toString('utf-8');
+            // Basic check if decoding was successful, otherwise it might be garbled text
+            if (password.includes('')) throw new Error('Invalid character');
         } catch (e) {
-            // If atob fails, it's not a valid base64 string, so we assume it's the plain password.
+            // If decoding fails, assume it's plain text
             password = row.original.password;
         }
     }
@@ -84,14 +87,16 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
         accessorKey: "password",
         header: "Senha",
         cell: ({ row }) => {
+            if (!row.original.password) return "";
             try {
-                // Use window.atob for client-side decoding
-                if (row.original.password && typeof window !== 'undefined') {
-                    return window.atob(row.original.password);
-                }
-                return "";
+                // Try to decode from Base64
+                const decodedPass = Buffer.from(row.original.password, 'base64').toString('utf-8');
+                // A simple check to see if decoded string is plausible (no weird symbols)
+                // This is not foolproof but prevents showing garbled text.
+                if (decodedPass.includes('')) throw new Error('Invalid character');
+                return decodedPass;
             } catch (e) {
-                // If it fails, it might be plain text from older data
+                // If decoding fails, assume it's plain text.
                 return row.original.password;
             }
         }

@@ -60,7 +60,7 @@ export default function UsersPage() {
     await addDoc(employeesCollectionRef, { 
       ...employeeData,
       username: usernameWithoutCompany, // Save only the username
-      password: window.btoa(employeeData.password || ''), // Base64 encode password
+      password: Buffer.from(employeeData.password || '').toString('base64'),
       companyId,
     });
 
@@ -82,7 +82,7 @@ export default function UsersPage() {
     
     // Only update password if it's not an empty string
     if (employee.password) {
-        updateData.password = window.btoa(employee.password);
+        updateData.password = Buffer.from(employee.password).toString('base64');
     }
     
     await updateDoc(employeeDocRef, updateData);

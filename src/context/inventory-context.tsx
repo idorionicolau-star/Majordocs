@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -159,7 +160,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const userData = userSnapshot.docs[0].data() as Employee;
       
       // 3. Verify password
-      const storedPass = userData.password && typeof window !== 'undefined' ? window.atob(userData.password) : '';
+      let storedPass = '';
+      if(userData.password) {
+        try {
+            storedPass = Buffer.from(userData.password, 'base64').toString('utf-8');
+        } catch (e) {
+            storedPass = userData.password; // Fallback for non-base64 passwords
+        }
+      }
+
       if (storedPass === pass) {
         const userToStore = { ...userData, id: userSnapshot.docs[0].id };
         delete userToStore.password; // Do not store password in state or localStorage
@@ -202,7 +211,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const employeesCollectionRef = collection(firestore, `companies/${companyDocRef.id}/employees`);
       await addDoc(employeesCollectionRef, {
         username: adminUsername.split('@')[0], // Save only the username part
-        password: typeof window !== 'undefined' ? window.btoa(adminPass) : adminPass,
+        password: Buffer.from(adminPass).toString('base64'),
         role: 'Admin',
         companyId: companyDocRef.id,
       });
