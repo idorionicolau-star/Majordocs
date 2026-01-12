@@ -1,6 +1,7 @@
 
 
 
+
 import type { NavItem, Order, Sale, Production, Notification, Product, InitialCatalog, ModulePermission } from './types';
 import {
   LayoutDashboard,
@@ -22,7 +23,7 @@ export const mainNavItems: NavItem[] = [
   { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList },
   { title: 'Relatórios', href: '/reports', id: 'reports', icon: BarChart3 },
   { title: 'Empresas', href: '/companies', id: 'companies', icon: Building, adminOnly: true },
-  { title: 'Utilizadores', href: '/users', id: 'users', icon: Users },
+  { title: 'Funcionários', href: '/users', id: 'users', icon: Users, adminOnly: true },
   { title: 'Ajustes', href: '/settings', id: 'settings', icon: Settings },
 ];
 
@@ -30,11 +31,11 @@ export const allPermissions: Readonly<{ id: ModulePermission; label: string; adm
   { id: "dashboard", label: "Dashboard" , adminOnly: false},
   { id: "inventory", label: "Inventário", adminOnly: false },
   { id: "sales", label: "Vendas", adminOnly: false },
-  { id: "production", label: "Produção", adminOnly: true },
-  { id: "orders", label: "Encomendas", adminOnly: true },
-  { id: "reports", label: "Relatórios", adminOnly: true },
-  { id: "users", label: "Utilizadores", adminOnly: true },
-  { id: "settings", label: "Ajustes", adminOnly: true },
+  { id: "production", label: "Produção", adminOnly: false },
+  { id: "orders", label: "Encomendas", adminOnly: false },
+  { id: "reports", label: "Relatórios", adminOnly: false },
+  { id: "users", label: "Funcionários", adminOnly: true },
+  { id: "settings", label: "Ajustes", adminOnly: false },
   { id: "companies", label: "Empresas", adminOnly: true },
 ] as const;
 

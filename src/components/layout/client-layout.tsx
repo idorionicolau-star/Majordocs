@@ -24,8 +24,14 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const navigationDirection = useRef<'left' | 'right' | null>(null);
 
   const hasPermission = (permissionId: ModulePermission) => {
-    if (authContext?.user?.role === 'Admin') return true;
-    return authContext?.user?.permissions?.includes(permissionId);
+    if (!authContext || !authContext.user) return false;
+    if (authContext.isSuperAdmin) return true;
+    if (authContext.user.role === 'Admin') {
+      // Admins can't see the global companies list unless they are super admin
+      if (permissionId === 'companies') return false;
+      return true;
+    }
+    return authContext.user.permissions?.includes(permissionId);
   }
 
   const navItems = mainNavItems.filter(item => hasPermission(item.id));

@@ -28,6 +28,7 @@ import {
   runTransaction,
   getDoc,
 } from 'firebase/firestore';
+import { allPermissions } from '@/lib/data';
 
 type CatalogProduct = Omit<
   Product,
@@ -35,10 +36,14 @@ type CatalogProduct = Omit<
 >;
 type CatalogCategory = { id: string; name: string };
 
+// Defina o UID do Super Admin aqui. Deixe como string vazia se não houver.
+const SUPER_ADMIN_UID = "COLOQUE_O_SEU_UID_AQUI"; 
+
 interface InventoryContextType {
   // Auth related
   user: Employee | null;
   companyId: string | null;
+  isSuperAdmin: boolean;
   loading: boolean;
   login: (username: string, pass: string) => Promise<boolean>;
   logout: () => void;
@@ -91,6 +96,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [authLoading, setAuthLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const isSuperAdmin = user?.id === SUPER_ADMIN_UID;
 
   // DATA STATE
   const firestore = useFirestore();
@@ -119,10 +125,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
    const hasPermission = useCallback((permission: ModulePermission) => {
     if (!user) return false;
+    if (isSuperAdmin) return true;
     if (user.role === 'Admin') return true;
-    if (permission === 'companies') return false; // Only admins can see this
+    if (permission === 'companies') return false;
     return user.permissions?.includes(permission);
-   }, [user]);
+   }, [user, isSuperAdmin]);
   
   useEffect(() => {
     if (authLoading) return; // Don't run redirects until auth state is loaded
@@ -178,13 +185,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const encodedInputPass = Buffer.from(pass).toString('base64');
       
       if (storedPass === encodedInputPass || storedPass === pass) {
-        // Create a custom token on your backend for this user.
-        // This is a placeholder for a secure backend call.
-        // The token MUST include companyId and role for security rules.
         const userToStore = { 
             ...userData, 
             id: userDoc.id,
-            // These would come from the custom token in a real app
             token: { 
                 companyId: foundCompanyId,
                 role: userData.role
@@ -236,7 +239,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           password: Buffer.from(adminPass).toString('base64'),
           role: 'Admin',
           companyId: newCompanyRef.id,
-          permissions: allPermissions.map(p => p.id) // Admins get all permissions
+          permissions: allPermissions.map(p => p.id)
         });
       });
       return true;
@@ -498,7 +501,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }
 
   const value: InventoryContextType = {
-    user, companyId, loading: isDataLoading,
+    user, companyId, isSuperAdmin, loading: isDataLoading,
     login, logout, registerCompany,
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],

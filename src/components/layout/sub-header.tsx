@@ -1,5 +1,5 @@
 
-"use client";
+'use client';
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -13,11 +13,16 @@ import type { ModulePermission } from "@/lib/types";
 export function SubHeader() {
   const pathname = usePathname();
   const scrollRef = React.useRef<HTMLDivElement>(null);
-  const { user } = useContext(InventoryContext) || {};
+  const { user, isSuperAdmin } = useContext(InventoryContext) || {};
 
   const hasPermission = (permissionId: ModulePermission) => {
-    if (user?.role === 'Admin') return true;
-    return user?.permissions?.includes(permissionId);
+    if (!user) return false;
+    if (isSuperAdmin) return true; // Super admin sees all
+    if (user.role === 'Admin') {
+       if (permissionId === 'companies') return false; // Regular admins don't see this
+       return true;
+    }
+    return user.permissions?.includes(permissionId);
   }
 
   const navItems = mainNavItems.filter(item => hasPermission(item.id));
