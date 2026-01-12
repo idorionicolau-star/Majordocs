@@ -25,7 +25,7 @@ export function StatsCards() {
     }
 
     const totalItemsInStock = products.reduce((sum, p) => sum + p.stock, 0);
-    const lowStockProducts = products.filter(p => p.stock > 0 && p.stock < p.lowStockThreshold);
+    const lowStockProducts = products.filter(p => p.stock < p.lowStockThreshold);
     const lowStockCount = lowStockProducts.length;
     const lowStockPercentage = products.length > 0 ? (lowStockCount / products.length) * 100 : 0;
     
