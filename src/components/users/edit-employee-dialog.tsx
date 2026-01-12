@@ -86,24 +86,15 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
     let newLevel: PermissionLevel;
 
     if (level === 'write') {
-      // Logic for the 'Editar' checkbox
       newLevel = checked ? 'write' : 'read';
     } else { // level === 'read'
-      // Logic for the 'Ver' checkbox
-      if (checked) {
-        // If we are checking 'Ver', it becomes 'read' (it can't become 'write' from here)
-        newLevel = 'read';
-      } else {
-        // If we are un-checking 'Ver', everything goes to 'none'
-        newLevel = 'none';
+      newLevel = checked ? 'read' : 'none';
+      if (!checked) {
+          // If 'read' is unchecked, 'write' must also be unchecked.
+          // This logic is handled implicitly by how we derive checked state below.
       }
     }
     
-    // Ensure dashboard is always readable
-    if (moduleId === 'dashboard' && newLevel === 'none') {
-      newLevel = 'read';
-    }
-
     form.setValue(`permissions.${moduleId}`, newLevel, { shouldDirty: true });
   }
 
@@ -112,18 +103,17 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
       form.setError("password", { message: "A nova senha deve ter pelo menos 6 caracteres."});
       return;
     }
-
+    
     const permissionsForAdmin = allPermissions.reduce((acc, perm) => {
-        acc[perm.id] = 'write';
-        return acc;
+      acc[perm.id] = 'write';
+      return acc;
     }, {} as Record<ModulePermission, PermissionLevel>);
-
-
+    
     const updatedEmployee: Employee = {
       ...employee,
       username: values.username,
       role: values.role,
-      permissions: role === 'Admin' ? permissionsForAdmin : values.permissions,
+      permissions: values.role === 'Admin' ? permissionsForAdmin : values.permissions,
     };
     
     if (values.password && values.password.length >= 6) {
@@ -232,25 +222,29 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {allPermissions.filter(p => !p.adminOnly).map((module) => (
-                                    <TableRow key={module.id}>
-                                        <TableCell className="font-medium">{module.label}</TableCell>
-                                        <TableCell className="text-center">
-                                            <Checkbox
-                                                checked={form.watch(`permissions.${module.id}`) === 'read' || form.watch(`permissions.${module.id}`) === 'write'}
-                                                onCheckedChange={(checked) => handlePermissionChange(module.id, 'read', !!checked)}
-                                                disabled={module.id === 'dashboard'}
-                                            />
-                                        </TableCell>
-                                         <TableCell className="text-center">
-                                            <Checkbox
-                                                checked={form.watch(`permissions.${module.id}`) === 'write'}
-                                                onCheckedChange={(checked) => handlePermissionChange(module.id, 'write', !!checked)}
-                                                disabled={module.id === 'dashboard'}
-                                            />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {allPermissions.filter(p => !p.adminOnly).map((module) => {
+                                    const canRead = form.watch(`permissions.${module.id}`) === 'read' || form.watch(`permissions.${module.id}`) === 'write';
+                                    const canWrite = form.watch(`permissions.${module.id}`) === 'write';
+                                    return (
+                                        <TableRow key={module.id}>
+                                            <TableCell className="font-medium">{module.label}</TableCell>
+                                            <TableCell className="text-center">
+                                                <Checkbox
+                                                    checked={canRead}
+                                                    onCheckedChange={(checked) => handlePermissionChange(module.id, 'read', !!checked)}
+                                                    disabled={module.id === 'dashboard'}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Checkbox
+                                                    checked={canWrite}
+                                                    onCheckedChange={(checked) => handlePermissionChange(module.id, 'write', !!checked)}
+                                                    disabled={!canRead || module.id === 'dashboard'}
+                                                />
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })}
                             </TableBody>
                         </Table>
                     </div>

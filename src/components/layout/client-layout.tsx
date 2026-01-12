@@ -43,11 +43,21 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     }
 
     if (user && !isAuthPage) {
+      if (pathname.includes('/inventory')) return;
+
       const currentNavItem = mainNavItems.find(item => pathname.startsWith(item.href));
       
       if (currentNavItem) {
-        const permissionLevel = user.permissions[currentNavItem.id];
-        const canAccess = user.role === 'Admin' || authContext.isSuperAdmin || (permissionLevel && permissionLevel !== 'none');
+        const isSuperAdmin = authContext.isSuperAdmin;
+        const isAdmin = user.role === 'Admin';
+        const permissionLevel = user.permissions?.[currentNavItem.id];
+        
+        // Admins have access to everything except super-admin pages
+        if (isAdmin && !currentNavItem.adminOnly) {
+           return;
+        }
+
+        const canAccess = isSuperAdmin || (permissionLevel && permissionLevel !== 'none');
 
         if (!canAccess) {
           console.warn(`Acesso negado para o módulo: ${currentNavItem.id}`);
