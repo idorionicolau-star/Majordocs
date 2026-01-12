@@ -1,5 +1,6 @@
 
 
+
 import type { NavItem, Order, Sale, Production, Notification, Product, InitialCatalog, ModulePermission } from './types';
 import {
   LayoutDashboard,
@@ -10,6 +11,7 @@ import {
   ClipboardList,
   BarChart3,
   Users,
+  Building,
 } from 'lucide-react';
 
 export const mainNavItems: NavItem[] = [
@@ -19,6 +21,7 @@ export const mainNavItems: NavItem[] = [
   { title: 'Produção', href: '/production', id: 'production', icon: Hammer },
   { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList },
   { title: 'Relatórios', href: '/reports', id: 'reports', icon: BarChart3 },
+  { title: 'Empresas', href: '/companies', id: 'companies', icon: Building, adminOnly: true },
   { title: 'Utilizadores', href: '/users', id: 'users', icon: Users },
   { title: 'Ajustes', href: '/settings', id: 'settings', icon: Settings },
 ];
@@ -32,6 +35,7 @@ export const allPermissions: Readonly<{ id: ModulePermission; label: string; adm
   { id: "reports", label: "Relatórios", adminOnly: true },
   { id: "users", label: "Utilizadores", adminOnly: true },
   { id: "settings", label: "Ajustes", adminOnly: true },
+  { id: "companies", label: "Empresas", adminOnly: true },
 ] as const;
 
 

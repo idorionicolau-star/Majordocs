@@ -1,4 +1,5 @@
 
+
 export type ModulePermission = 
   | 'dashboard'
   | 'inventory'
@@ -7,7 +8,8 @@ export type ModulePermission =
   | 'orders'
   | 'reports'
   | 'users'
-  | 'settings';
+  | 'settings'
+  | 'companies'; // Super-admin permission
 
 export type User = {
   id: string;
@@ -29,7 +31,7 @@ export type Employee = {
 export type Company = {
     id: string;
     name: string;
-    ownerId: string;
+    ownerId?: string; // Optional: To track the original creator
     phone?: string;
     address?: string;
     taxId?: string;
