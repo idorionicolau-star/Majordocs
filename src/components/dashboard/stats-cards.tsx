@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
 
 export function StatsCards() {
     const inventoryContext = useContext(InventoryContext);
@@ -49,6 +50,7 @@ export function StatsCards() {
       contextLabel: "Total de Itens",
       contextValue: totalItemsInStock,
       contextIcon: Package,
+      href: "/inventory"
     },
     {
       title: "Vendas (Mês)",
@@ -58,6 +60,7 @@ export function StatsCards() {
       contextLabel: "Nº de Vendas",
       contextValue: totalSalesCount,
       contextIcon: ShoppingCart,
+      href: "/sales"
     },
     {
       title: "Estoque Baixo",
@@ -67,6 +70,7 @@ export function StatsCards() {
       contextLabel: `dos produtos`,
       contextValue: `${lowStockPercentage.toFixed(0)}%`,
       contextIcon: AlertTriangle,
+      href: "/inventory"
     },
   ];
 
@@ -85,35 +89,37 @@ export function StatsCards() {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {stats.map((stat) => (
-        <Card key={stat.title} className="glass-card relative flex items-center gap-4 p-4 rounded-2xl shadow-sm hover:shadow-lg hover:shadow-primary/5 transition-shadow duration-300 group">
-             <stat.icon 
-                strokeWidth={2.5} 
-                className={cn(
-                  "h-8 w-8 flex-shrink-0",
-                  "transition-transform group-hover:scale-110",
-                  `var(--stats-icon-size, h-8 w-8)`,
-                  colorClasses[stat.color as keyof typeof colorClasses]
-                )}
-                style={{
-                    height: `var(--stats-icon-size, 32px)`,
-                    width: `var(--stats-icon-size, 32px)`,
-                }}
-             />
-            <div className="flex flex-col">
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
-                <div className="flex items-end gap-2">
-                    <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{stat.value}</h3>
+        <Link href={stat.href} key={stat.title}>
+            <Card className="glass-card relative flex items-center gap-4 p-4 rounded-2xl shadow-sm hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group h-full">
+                <stat.icon 
+                    strokeWidth={2.5} 
+                    className={cn(
+                    "h-8 w-8 flex-shrink-0",
+                    "transition-transform group-hover:scale-110",
+                    `var(--stats-icon-size, h-8 w-8)`,
+                    colorClasses[stat.color as keyof typeof colorClasses]
+                    )}
+                    style={{
+                        height: `var(--stats-icon-size, 32px)`,
+                        width: `var(--stats-icon-size, 32px)`,
+                    }}
+                />
+                <div className="flex flex-col">
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
+                    <div className="flex items-end gap-2">
+                        <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{stat.value}</h3>
+                    </div>
                 </div>
-            </div>
-             <div className={cn(
-                "absolute top-4 right-4 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold", 
-                contextColors[stat.color as keyof typeof contextColors]
-              )}>
-                {stat.contextIcon && <stat.contextIcon size={12} strokeWidth={3}/>}
-                <span>{stat.contextValue}</span>
-                <span className="font-medium hidden sm:inline">{stat.contextLabel}</span>
-            </div>
-        </Card>
+                <div className={cn(
+                    "absolute top-4 right-4 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold", 
+                    contextColors[stat.color as keyof typeof contextColors]
+                )}>
+                    {stat.contextIcon && <stat.contextIcon size={12} strokeWidth={3}/>}
+                    <span>{stat.contextValue}</span>
+                    <span className="font-medium hidden sm:inline">{stat.contextLabel}</span>
+                </div>
+            </Card>
+        </Link>
       ))}
     </div>
   );
