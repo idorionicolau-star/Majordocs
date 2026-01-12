@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useContext, useEffect } from "react";
 import { useSearchParams } from 'next/navigation';
-import type { Order, Product, ProductionLog } from "@/lib/types";
+import type { Order, Product, ProductionLog, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Filter, List, LayoutGrid, ChevronDown } from "lucide-react";
 import { AddOrderDialog } from "@/components/orders/add-order-dialog";
@@ -30,13 +30,19 @@ export default function OrdersPage() {
 
   const { orders, companyId, loading: inventoryLoading, updateProductStock, user: userData } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null };
 
-  const isAdmin = userData?.role === 'Admin';
-  
+  const hasPermission = (permissionId: ModulePermission) => {
+    if (!userData) return false;
+    if (userData.role === 'Admin') return true;
+    return userData.permissions?.includes(permissionId);
+  }
+
+  const canAddOrders = hasPermission('orders');
+
   useEffect(() => {
-    if (searchParams.get('action') === 'add' && isAdmin) {
+    if (searchParams.get('action') === 'add' && canAddOrders) {
       setAddDialogOpen(true);
     }
-  }, [searchParams, isAdmin]);
+  }, [searchParams, canAddOrders]);
 
 
   const handleAddOrder = (newOrderData: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'>) => {
@@ -192,7 +198,7 @@ export default function OrdersPage() {
                     order={order}
                     onUpdateStatus={handleUpdateOrderStatus}
                     onAddProductionLog={handleAddProductionLog}
-                    isAdmin={isAdmin}
+                    canEdit={canAddOrders}
                 />
             ))}
             {filteredOrders.length === 0 && (
@@ -203,7 +209,7 @@ export default function OrdersPage() {
         </div>
 
       </div>
-      {isAdmin && <AddOrderDialog
+      {canAddOrders && <AddOrderDialog
         open={isAddDialogOpen}
         onOpenChange={setAddDialogOpen}
         onAddOrder={handleAddOrder}

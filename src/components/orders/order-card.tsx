@@ -17,7 +17,7 @@ interface OrderCardProps {
     order: Order;
     onUpdateStatus: (orderId: string, newStatus: 'Pendente' | 'Em produção' | 'Concluída') => void;
     onAddProductionLog: (orderId: string, logData: { quantity: number; notes?: string; }) => void;
-    isAdmin: boolean;
+    canEdit: boolean;
 }
 
 const statusConfig = {
@@ -35,7 +35,7 @@ const statusConfig = {
     }
 };
 
-export function OrderCard({ order, onUpdateStatus, onAddProductionLog, isAdmin }: OrderCardProps) {
+export function OrderCard({ order, onUpdateStatus, onAddProductionLog, canEdit }: OrderCardProps) {
     const { isMultiLocation, locations } = useContext(InventoryContext) || {};
     const { icon: StatusIcon, color: statusColor } = statusConfig[order.status];
     const progress = order.quantity > 0 ? (order.quantityProduced / order.quantity) * 100 : 0;
@@ -121,7 +121,7 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, isAdmin }
                      )}
                  </div>
             </CardContent>
-            {isAdmin && <CardFooter className="flex flex-col sm:flex-row justify-center gap-2 p-2 pt-4">
+            {canEdit && <CardFooter className="flex flex-col sm:flex-row justify-center gap-2 p-2 pt-4">
                 {order.status === 'Pendente' && (
                     <Button onClick={() => onUpdateStatus(order.id, 'Em produção')} className="flex-1" variant="outline">
                         <Play className="mr-2 h-4 w-4" />
