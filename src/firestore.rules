@@ -22,14 +22,21 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.companyId == companyId;
     }
     
-    function isAdmin() {
-      // Verifica se o utilizador autenticado tem a função de 'Admin'.
-      return isEmployeeOf(request.auth.token.companyId) && getUserData(request.auth.uid).role == 'Admin';
+    function isAdminOf(companyId) {
+      // Verifica se o utilizador autenticado tem a função de 'Admin' na sua própria empresa.
+      // Esta função é mais específica que a `isAdmin()` global.
+      return isEmployeeOf(companyId) && getUserData(request.auth.uid).role == 'Admin';
+    }
+    
+    function isAnyAdmin() {
+        // Verifica se o utilizador autenticado tem a função de 'Admin' em qualquer empresa.
+        // Utiliza os custom claims que são definidos no momento do login.
+        return isSignedIn() && request.auth.token.role == 'Admin';
     }
 
     function hasPermission(permission) {
         // Verifica se o utilizador tem uma permissão específica no seu array de permissões.
-        return isEmployeeOf(request.auth.token.companyId) && (isAdmin() || getUserData(request.auth.uid).permissions.hasAny([permission]));
+        return isEmployeeOf(request.auth.token.companyId) && (isAdminOf(request.auth.token.companyId) || getUserData(request.auth.uid).permissions.hasAny([permission]));
     }
 
     // --- Regras por Coleção ---
@@ -39,59 +46,57 @@ service cloud.firestore {
     match /companies/{companyId} {
       // Qualquer pessoa pode criar uma nova empresa (registo).
       allow create: if true;
-      // Apenas Admins podem ler, atualizar ou apagar os dados da própria empresa.
-      allow read, update, delete: if isEmployeeOf(companyId) && isAdmin();
-      // Apenas um admin geral pode listar todas as empresas.
-      // Esta regra precisa de uma lógica para identificar um "super admin".
-      // Por agora, vamos permitir que qualquer admin de qualquer empresa liste.
-      // Isto deve ser revisto para produção com uma lógica de super admin mais específica.
-      allow list: if isSignedIn() && isAdmin();
+      // Apenas Admins da empresa correspondente podem ler, atualizar ou apagar os dados da própria empresa.
+      allow read, update, delete: if isEmployeeOf(companyId) && isAdminOf(companyId);
+      
+      // Apenas um utilizador que seja Administrador em QUALQUER empresa pode listar todas as empresas.
+      // Isto efetivamente torna todos os admins em "Super Admins" para esta ação específica.
+      allow list: if isAnyAdmin();
 
       // Sub-coleção para os funcionários de uma empresa específica.
       match /employees/{employeeId} {
-        // Um funcionário pode ler os seus próprios dados. Admins podem ler os de todos.
-        allow get: if isEmployeeOf(companyId) && (request.auth.uid == employeeId || isAdmin());
+        // Um funcionário pode ler os seus próprios dados. Admins podem ler os de todos na sua empresa.
+        allow get: if isEmployeeOf(companyId) && (request.auth.uid == employeeId || isAdminOf(companyId));
         // Apenas funcionários da empresa podem listar os outros funcionários.
         allow list: if isEmployeeOf(companyId);
-        // Apenas Admins podem criar, atualizar ou apagar funcionários.
-        allow create, update, delete: if isEmployeeOf(companyId) && isAdmin();
+        // Apenas Admins da empresa podem criar, atualizar ou apagar funcionários.
+        allow create, update, delete: if isEmployeeOf(companyId) && isAdminOf(companyId);
       }
       
       // Sub-coleção para o catálogo de produtos base.
       match /catalogProducts/{productId} {
           allow read: if isEmployeeOf(companyId);
-          allow write: if isEmployeeOf(companyId) && isAdmin();
+          allow write: if isEmployeeOf(companyId) && isAdminOf(companyId);
       }
 
       // Sub-coleção para as categorias de produtos.
       match /catalogCategories/{categoryId} {
           allow read: if isEmployeeOf(companyId);
-          allow write: if isEmployeeOf(companyId) && isAdmin();
+          allow write: if isEmployeeOf(companyId) && isAdminOf(companyId);
       }
 
       // Sub-coleção para o inventário (instâncias de produtos com stock).
       match /products/{productId} {
         allow read: if isEmployeeOf(companyId) && hasPermission('inventory');
-        allow write: if isEmployeeOf(companyId) && isAdmin();
+        allow write: if isEmployeeOf(companyId) && isAdminOf(companyId);
       }
       
       // Sub-coleção para os registos de vendas.
       match /sales/{saleId} {
         allow read: if isEmployeeOf(companyId) && hasPermission('sales');
-        // Qualquer funcionário da empresa com permissão pode criar/atualizar uma venda.
         allow write: if isEmployeeOf(companyId) && hasPermission('sales');
       }
       
       // Sub-coleção para os registos de produção.
       match /productions/{productionId} {
         allow read: if isEmployeeOf(companyId) && hasPermission('production');
-        allow write: if isEmployeeOf(companyId) && isAdmin();
+        allow write: if isEmployeeOf(companyId) && isAdminOf(companyId);
       }
       
       // Sub-coleção para as encomendas de produção.
       match /orders/{orderId} {
         allow read: if isEmployeeOf(companyId) && hasPermission('orders');
-        allow write: if isEmployeeOf(companyId) && isAdmin();
+        allow write: if isEmployeeOf(companyId) && isAdminOf(companyId);
       }
     }
   }

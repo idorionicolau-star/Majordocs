@@ -9,7 +9,7 @@ export type ModulePermission =
   | 'reports'
   | 'users'
   | 'settings'
-  | 'companies'; // Super-admin permission
+  | 'companies';
 
 export type User = {
   id: string;
@@ -26,6 +26,10 @@ export type Employee = {
   role: 'Admin' | 'Employee';
   companyId: string;
   permissions: ModulePermission[];
+  token?: { // Placeholder for custom claims from a JWT
+      companyId: string;
+      role: 'Admin' | 'Employee';
+  }
 };
 
 export type Company = {

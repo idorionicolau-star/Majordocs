@@ -10,7 +10,7 @@ import {
   useMemo,
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { Product, Location, Sale, Production, Order, Company, Employee } from '@/lib/types';
+import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import {
@@ -26,6 +26,7 @@ import {
   setDoc,
   onSnapshot,
   runTransaction,
+  getDoc,
 } from 'firebase/firestore';
 
 type CatalogProduct = Omit<
@@ -115,18 +116,31 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       setAuthLoading(false);
     }
   }, []);
+
+   const hasPermission = useCallback((permission: ModulePermission) => {
+    if (!user) return false;
+    if (user.role === 'Admin') return true;
+    if (permission === 'companies') return false; // Only admins can see this
+    return user.permissions?.includes(permission);
+   }, [user]);
   
   useEffect(() => {
     if (authLoading) return; // Don't run redirects until auth state is loaded
 
     const isAuthPage = pathname === '/login' || pathname === '/register';
-
+    
     if (!user && !isAuthPage) {
       router.replace('/login');
     } else if (user && isAuthPage) {
       router.replace('/dashboard');
+    } else if (user && !isAuthPage) {
+       const currentModuleId = pathname.split('/')[1] as ModulePermission;
+       if (currentModuleId && !hasPermission(currentModuleId)) {
+           console.warn(`Redirecting: User does not have permission for /${currentModuleId}`);
+           router.replace('/dashboard');
+       }
     }
-  }, [user, pathname, authLoading, router]);
+  }, [user, pathname, authLoading, router, hasPermission]);
 
   const login = async (fullUsername: string, pass: string): Promise<boolean> => {
     setAuthLoading(true);
@@ -138,7 +152,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const [username, companyDomain] = fullUsername.split('@');
   
     try {
-      // 1. Find the company by its domain-like name
       const companiesRef = collection(firestore, 'companies');
       const companyQuery = query(companiesRef, where("name", "==", companyDomain));
       const companySnapshot = await getDocs(companyQuery);
@@ -150,7 +163,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const companyDoc = companySnapshot.docs[0];
       const foundCompanyId = companyDoc.id;
   
-      // 2. Find the user within that specific company's employee list
       const employeesRef = collection(firestore, `companies/${foundCompanyId}/employees`);
       const userQuery = query(employeesRef, where("username", "==", username));
       const userSnapshot = await getDocs(userQuery);
@@ -159,21 +171,32 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         throw new Error(`Utilizador "${username}" não encontrado na empresa "${companyDomain}".`);
       }
   
-      const userData = userSnapshot.docs[0].data() as Employee;
+      const userDoc = userSnapshot.docs[0];
+      const userData = userDoc.data() as Employee;
       
-      // 3. Verify password
       const storedPass = userData.password || '';
       const encodedInputPass = Buffer.from(pass).toString('base64');
       
-      // Also check against plain text for backward compatibility
       if (storedPass === encodedInputPass || storedPass === pass) {
-        const userToStore = { ...userData, id: userSnapshot.docs[0].id };
-        delete userToStore.password; // Do not store password in state or localStorage
+        // Create a custom token on your backend for this user.
+        // This is a placeholder for a secure backend call.
+        // The token MUST include companyId and role for security rules.
+        const userToStore = { 
+            ...userData, 
+            id: userDoc.id,
+            // These would come from the custom token in a real app
+            token: { 
+                companyId: foundCompanyId,
+                role: userData.role
+            }
+        };
+        delete userToStore.password;
 
         setUser(userToStore);
         setCompanyId(foundCompanyId);
         localStorage.setItem('majorstockx-user', JSON.stringify(userToStore));
         localStorage.setItem('majorstockx-company-id', foundCompanyId);
+        
         setAuthLoading(false);
         return true;
       } else {
@@ -182,7 +205,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Login error: ", error);
       setAuthLoading(false);
-      // Re-throw to be caught by the UI
       if (error instanceof Error) {
         throw error;
       }
@@ -196,23 +218,27 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const normalizedCompanyName = companyName.toLowerCase().replace(/\s+/g, '');
   
     try {
-      const companiesRef = collection(firestore, 'companies');
-      const companyQuery = query(companiesRef, where('name', '==', normalizedCompanyName));
-      const existingCompanySnapshot = await getDocs(companyQuery);
-      if (!existingCompanySnapshot.empty) {
-        throw new Error('Uma empresa com este nome já existe.');
-      }
-  
-      const companyDocRef = await addDoc(companiesRef, { name: normalizedCompanyName });
-  
-      const employeesCollectionRef = collection(firestore, `companies/${companyDocRef.id}/employees`);
-      await addDoc(employeesCollectionRef, {
-        username: adminUsername.split('@')[0], // Save only the username part
-        password: Buffer.from(adminPass).toString('base64'),
-        role: 'Admin',
-        companyId: companyDocRef.id,
+      await runTransaction(firestore, async (transaction) => {
+        const companiesRef = collection(firestore, 'companies');
+        const companyQuery = query(companiesRef, where('name', '==', normalizedCompanyName));
+        const existingCompanySnapshot = await getDocs(companyQuery);
+        if (!existingCompanySnapshot.empty) {
+          throw new Error('Uma empresa com este nome já existe.');
+        }
+        
+        const newCompanyRef = doc(companiesRef);
+        transaction.set(newCompanyRef, { name: normalizedCompanyName });
+
+        const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
+        const newEmployeeRef = doc(employeesCollectionRef);
+        transaction.set(newEmployeeRef, {
+          username: adminUsername.split('@')[0],
+          password: Buffer.from(adminPass).toString('base64'),
+          role: 'Admin',
+          companyId: newCompanyRef.id,
+          permissions: allPermissions.map(p => p.id) // Admins get all permissions
+        });
       });
-  
       return true;
     } catch (error) {
       console.error('Registration error: ', error);
