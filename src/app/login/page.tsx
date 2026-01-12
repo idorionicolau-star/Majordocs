@@ -50,6 +50,8 @@ export default function LoginPage() {
           });
           router.push('/dashboard');
         } else {
+          // A função login já lança um erro específico, então este else pode nunca ser alcançado
+          // se a função login for consistente. Mas é um bom fallback.
           throw new Error('Credenciais inválidas. Verifique o seu nome de utilizador e senha.');
         }
       } else {
@@ -79,7 +81,7 @@ export default function LoginPage() {
         <CardContent>
              <form onSubmit={handleSubmit(handleLogin)} className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="username">Email ou Nome de Utilizador</Label>
+                    <Label htmlFor="username">Login (utilizador@empresa)</Label>
                     <Input id="username" {...register('username')} placeholder="utilizador@empresa" />
                     {errors.username && <p className="text-xs text-red-500">{errors.username.message}</p>}
                 </div>

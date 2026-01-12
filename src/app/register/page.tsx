@@ -34,10 +34,14 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
   });
+
+  const companyName = watch('companyName');
+  const adminUsername = watch('adminUsername');
 
   const handleRegister = async (data: RegisterFormValues) => {
     setIsLoading(true);
@@ -71,6 +75,14 @@ export default function RegisterPage() {
     }
   };
 
+  const generateLoginPreview = () => {
+    const normalizedCompany = (companyName || '').toLowerCase().replace(/\s+/g, '');
+    if (adminUsername && normalizedCompany) {
+      return `${adminUsername}@${normalizedCompany}`;
+    }
+    return 'seu_user@sua_empresa';
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
        <Card className="w-full max-w-sm">
@@ -91,7 +103,9 @@ export default function RegisterPage() {
                 <div className="space-y-2">
                     <Label htmlFor="adminUsername">Nome de Utilizador do Administrador</Label>
                     <Input id="adminUsername" {...register('adminUsername')} placeholder="Ex: admin" />
-                     <p className="text-[10px] text-muted-foreground">Será criado como: admin@nomedaempresa</p>
+                    <p className="text-[11px] text-muted-foreground bg-muted p-2 rounded-md">
+                        O seu login será: <span className="font-bold font-mono">{generateLoginPreview()}</span>
+                    </p>
                     {errors.adminUsername && <p className="text-xs text-red-500">{errors.adminUsername.message}</p>}
                 </div>
                 <div className="space-y-2">
