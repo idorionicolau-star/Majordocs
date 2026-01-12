@@ -64,8 +64,9 @@ export default function InventoryPage() {
   } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, user: null };
 
   const hasPermission = (permissionId: ModulePermission) => {
-    if (user?.role === 'Admin') return true;
-    return user?.permissions?.includes(permissionId);
+    if (!user) return false;
+    if (user.role === 'Admin') return true;
+    return user.permissions?.includes(permissionId);
   }
 
   const canEditInventory = hasPermission('inventory');

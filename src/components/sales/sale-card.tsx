@@ -15,16 +15,17 @@ interface SaleCardProps {
     onUpdateSale: (sale: Sale) => void;
     onConfirmPickup: (sale: Sale) => void;
     viewMode?: 'normal' | 'condensed';
+    canEdit: boolean;
 }
 
-export function SaleCard({ sale, onUpdateSale, onConfirmPickup, viewMode = 'normal' }: SaleCardProps) {
+export function SaleCard({ sale, onUpdateSale, onConfirmPickup, viewMode = 'normal', canEdit }: SaleCardProps) {
     const { isMultiLocation, locations } = useContext(InventoryContext) || {};
     const isCondensed = viewMode === 'condensed';
     const location = isMultiLocation ? locations?.find(l => l.id === sale.location) : null;
 
     const actionsProps = {
         row: { original: sale },
-        options: { onUpdateSale, onConfirmPickup },
+        options: { onUpdateSale, onConfirmPickup, canEdit },
     };
 
     return (
@@ -67,9 +68,9 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, viewMode = 'norm
                     </div>
                  )}
             </CardContent>
-            <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
+            {canEdit && <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
                 <SaleActions {...actionsProps} />
-            </CardFooter>
+            </CardFooter>}
         </Card>
     );
 }

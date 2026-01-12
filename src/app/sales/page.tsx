@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
-import type { Sale, Location, Product } from "@/lib/types";
+import type { Sale, Location, Product, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/sales/columns";
 import { SalesDataTable } from "@/components/sales/data-table";
 import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
@@ -46,12 +46,20 @@ export default function SalesPage() {
     user: null,
     companyId: null,
   };
+
+  const hasPermission = (permissionId: ModulePermission) => {
+    if (!user) return false;
+    if (user.role === 'Admin') return true;
+    return user.permissions?.includes(permissionId);
+  }
+
+  const canEditSales = hasPermission('sales');
   
   useEffect(() => {
-    if (searchParams.get('action') === 'add' && user?.role === 'Admin') {
+    if (searchParams.get('action') === 'add' && canEditSales) {
       setAddDialogOpen(true);
     }
-  }, [searchParams, user]);
+  }, [searchParams, canEditSales]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -232,6 +240,7 @@ export default function SalesPage() {
           columns={columns({
               onUpdateSale: handleUpdateSale,
               onConfirmPickup: handleConfirmPickup,
+              canEdit: canEditSales
           })} 
           data={filteredSales} 
         />
@@ -249,16 +258,17 @@ export default function SalesPage() {
                     onUpdateSale={handleUpdateSale}
                     onConfirmPickup={handleConfirmPickup}
                     viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
+                    canEdit={canEditSales}
                 />
             ))}
         </div>
       )}
-       <AddSaleDialog
+       {canEditSales && <AddSaleDialog
         open={isAddDialogOpen}
         onOpenChange={setAddDialogOpen}
         onAddSale={handleAddSale}
         triggerType="fab"
-      />
+      />}
     </div>
   );
 }

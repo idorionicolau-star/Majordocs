@@ -21,6 +21,7 @@ import { InventoryContext } from "@/context/inventory-context"
 interface ColumnsOptions {
   onUpdateSale: (sale: Sale) => void;
   onConfirmPickup: (sale: Sale) => void;
+  canEdit: boolean;
 }
 
 const handlePrintGuide = (sale: Sale, companyName: string | undefined, isMultiLocation: boolean, locations: Location[]) => {
@@ -98,11 +99,10 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const sale = row.original as Sale;
+    const { canEdit } = options;
     const inventoryContext = useContext(InventoryContext);
     const { companyData, isMultiLocation, locations, user } = inventoryContext || {};
-    
-    const canConfirmPickup = user?.role === 'Admin';
-    
+        
     return (
         <div className="flex items-center justify-end gap-2">
             <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
@@ -124,7 +124,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
                 <SaleDetailsDialogContent sale={sale} />
             </Dialog>
 
-            {sale.status === 'Pago' && canConfirmPickup && (
+            {sale.status === 'Pago' && canEdit && (
               <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -140,7 +140,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
             </TooltipProvider>
             )}
 
-            {canConfirmPickup && <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            {canEdit && <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                  <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>

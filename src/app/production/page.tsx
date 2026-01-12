@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
 import { ProductionDataTable } from "@/components/production/data-table";
 import { AddProductionDialog } from "@/components/production/add-production-dialog";
-import type { Production, Location } from "@/lib/types";
+import type { Production, Location, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { List, LayoutGrid, ChevronDown, Package } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -44,13 +44,19 @@ export default function ProductionPage() {
 
   const { productions, companyId, updateProductStock, locations, isMultiLocation, loading: inventoryLoading, user: userData } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, locations: [], isMultiLocation: false, loading: true, user: null };
 
-  const isAdmin = userData?.role === 'Admin';
+  const hasPermission = (permissionId: ModulePermission) => {
+    if (!userData) return false;
+    if (userData.role === 'Admin') return true;
+    return userData.permissions?.includes(permissionId);
+  }
+
+  const canEditProduction = hasPermission('production');
   
   useEffect(() => {
-    if (searchParams.get('action') === 'add' && isAdmin) {
+    if (searchParams.get('action') === 'add' && canEditProduction) {
       setAddDialogOpen(true);
     }
-  }, [searchParams, isAdmin]);
+  }, [searchParams, canEditProduction]);
 
 
   useEffect(() => {
@@ -231,13 +237,13 @@ export default function ProductionPage() {
                     isMultiLocation={isMultiLocation}
                     onTransfer={() => setProductionToTransfer(production)}
                     viewMode={gridCols === '5' ? 'condensed' : 'normal'}
-                    isAdmin={isAdmin}
+                    canEdit={canEditProduction}
                 />
             ))}
         </div>
       )}
 
-      {isAdmin && <AddProductionDialog 
+      {canEditProduction && <AddProductionDialog 
         open={isAddDialogOpen}
         onOpenChange={setAddDialogOpen}
         onAddProduction={handleAddProduction} 
