@@ -30,13 +30,19 @@ export default function OrdersPage() {
 
   const { orders, companyId, loading: inventoryLoading, updateProductStock, user: userData } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null };
 
-  const hasPermission = (permissionId: ModulePermission) => {
+  const hasPermission = (permissionId: ModulePermission, level: 'read' | 'write') => {
     if (!userData) return false;
     if (userData.role === 'Admin') return true;
-    return userData.permissions?.includes(permissionId);
-  }
+    if (!userData.permissions) return false;
 
-  const canAddOrders = hasPermission('orders');
+    const userLevel = userData.permissions[permissionId];
+    if (level === 'write') {
+      return userLevel === 'write';
+    }
+    return userLevel === 'read' || userLevel === 'write';
+  };
+
+  const canAddOrders = hasPermission('orders', 'write');
 
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canAddOrders) {

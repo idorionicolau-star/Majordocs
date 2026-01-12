@@ -47,13 +47,19 @@ export default function SalesPage() {
     companyId: null,
   };
 
-  const hasPermission = (permissionId: ModulePermission) => {
+  const hasPermission = (permissionId: ModulePermission, level: 'read' | 'write') => {
     if (!user) return false;
     if (user.role === 'Admin') return true;
-    return user.permissions?.includes(permissionId);
-  }
+    if (!user.permissions) return false;
 
-  const canEditSales = hasPermission('sales');
+    const userLevel = user.permissions[permissionId];
+    if (level === 'write') {
+      return userLevel === 'write';
+    }
+    return userLevel === 'read' || userLevel === 'write';
+  };
+
+  const canEditSales = hasPermission('sales', 'write');
   
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditSales) {

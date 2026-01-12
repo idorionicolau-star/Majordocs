@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
-import type { Product, Location, ModulePermission } from "@/lib/types";
+import type { Product, Location, ModulePermission, PermissionLevel } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
@@ -63,13 +63,19 @@ export default function InventoryPage() {
     user
   } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, user: null };
 
-  const hasPermission = (permissionId: ModulePermission) => {
+  const hasPermission = (permissionId: ModulePermission, level: 'read' | 'write') => {
     if (!user) return false;
     if (user.role === 'Admin') return true;
-    return user.permissions?.includes(permissionId);
-  }
+    if (!user.permissions) return false;
+    
+    const userLevel = user.permissions[permissionId];
+    if (level === 'write') {
+      return userLevel === 'write';
+    }
+    return userLevel === 'read' || userLevel === 'write';
+  };
 
-  const canEditInventory = hasPermission('inventory');
+  const canEditInventory = hasPermission('inventory', 'write');
   
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditInventory) {
@@ -361,8 +367,6 @@ export default function InventoryPage() {
                         {isMultiLocation && canEditInventory && (
                            <>
                             <TransferStockDialog 
-                                products={products}
-                                locations={locations}
                                 onTransfer={handleTransferStock}
                             />
                             <DropdownMenu>

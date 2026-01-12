@@ -44,13 +44,19 @@ export default function ProductionPage() {
 
   const { productions, companyId, updateProductStock, locations, isMultiLocation, loading: inventoryLoading, user: userData } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, locations: [], isMultiLocation: false, loading: true, user: null };
 
-  const hasPermission = (permissionId: ModulePermission) => {
+  const hasPermission = (permissionId: ModulePermission, level: 'read' | 'write') => {
     if (!userData) return false;
     if (userData.role === 'Admin') return true;
-    return userData.permissions?.includes(permissionId);
-  }
+    if (!userData.permissions) return false;
 
-  const canEditProduction = hasPermission('production');
+    const userLevel = userData.permissions[permissionId];
+    if (level === 'write') {
+      return userLevel === 'write';
+    }
+    return userLevel === 'read' || userLevel === 'write';
+  };
+
+  const canEditProduction = hasPermission('production', 'write');
   
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditProduction) {
