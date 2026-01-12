@@ -82,21 +82,21 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
 
   const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write', checked: boolean) => {
     const currentPermissions = form.getValues("permissions");
-    const currentLevel = currentPermissions[moduleId];
-    let newLevel: PermissionLevel;
+    let newLevel: PermissionLevel = currentPermissions[moduleId] || 'none';
 
     if (level === 'write') {
-      newLevel = checked ? 'write' : 'read';
+        newLevel = checked ? 'write' : 'read';
     } else { // level === 'read'
-      newLevel = checked ? 'read' : 'none';
-      if (!checked) {
-          // If 'read' is unchecked, 'write' must also be unchecked.
-          // This logic is handled implicitly by how we derive checked state below.
-      }
+        newLevel = checked ? 'read' : 'none';
     }
-    
-    form.setValue(`permissions.${moduleId}`, newLevel, { shouldDirty: true });
+
+    if(newLevel === 'read' && level === 'write' && !checked){
+        // Do nothing, keep it as read
+    } else {
+        form.setValue(`permissions.${moduleId}`, newLevel, { shouldDirty: true });
+    }
   }
+
 
   function onSubmit(values: EditEmployeeFormValues) {
     if (values.password && values.password.length > 0 && values.password.length < 6) {
@@ -117,9 +117,9 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
     };
     
     if (values.password && values.password.length >= 6) {
-      updatedEmployee.password = values.password;
+      updatedEmployee.password = Buffer.from(values.password).toString('base64');
     } else {
-      delete updatedEmployee.password; 
+      updatedEmployee.password = employee.password; 
     }
     
     onUpdateEmployee(updatedEmployee);

@@ -43,30 +43,27 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     }
 
     if (user && !isAuthPage) {
+      // Exceção explícita para o inventário: Todos os utilizadores podem ver.
+      if (pathname.startsWith('/inventory')) {
+        return;
+      }
+      
       const currentNavItem = mainNavItems.find(item => pathname.startsWith(item.href));
-
-      // Exceção para inventário: todos podem ver
-      if (pathname.includes('/inventory')) return;
       
       if (currentNavItem) {
         const isSuperAdmin = authContext.isSuperAdmin;
         const isAdmin = user.role === 'Admin';
-        const permissionLevel = user.permissions?.[currentNavItem.id] || 'none';
-
-        let canAccess = false;
-        if (isSuperAdmin) {
-          canAccess = true;
-        } else if (isAdmin) {
-          // Admin pode aceder a tudo, exceto páginas marcadas como `adminOnly` 
-          // (que na nossa lógica de `mainNavItems` significa super-admin)
-          // A página `/users` tem `adminOnly: true` mas é para admins normais também.
-          // A página `/companies` é a única que é realmente só para Super Admin.
-           if (currentNavItem.id !== 'companies') {
-            canAccess = true;
-          }
-        } else { // Para 'Employee'
-          canAccess = permissionLevel === 'read' || permissionLevel === 'write';
+        
+        // Verifica se a página é apenas para admin (como /users)
+        if(currentNavItem.adminOnly && !isAdmin && !isSuperAdmin) {
+            router.replace('/dashboard');
+            return;
         }
+
+        const permissionLevel = user.permissions[currentNavItem.id];
+        
+        // Acesso de Leitura é suficiente para aceder à página
+        const canAccess = isSuperAdmin || isAdmin || permissionLevel === 'read' || permissionLevel === 'write';
 
         if (!canAccess) {
           console.warn(`Acesso negado para o módulo: ${currentNavItem.id}. A redirecionar...`);

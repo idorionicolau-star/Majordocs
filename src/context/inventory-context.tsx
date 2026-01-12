@@ -10,7 +10,7 @@ import {
   useMemo,
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission } from '@/lib/types';
+import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import {
@@ -123,32 +123,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-   const hasPermission = useCallback((permission: ModulePermission) => {
-    if (!user) return false;
-    if (isSuperAdmin) return true;
-    if (user.role === 'Admin') return true;
-    if (permission === 'companies') return false;
-    return user.permissions?.includes(permission);
-   }, [user, isSuperAdmin]);
-  
-  useEffect(() => {
-    if (authLoading) return; // Don't run redirects until auth state is loaded
-
-    const isAuthPage = pathname === '/login' || pathname === '/register';
-    
-    if (!user && !isAuthPage) {
-      router.replace('/login');
-    } else if (user && isAuthPage) {
-      router.replace('/dashboard');
-    } else if (user && !isAuthPage) {
-       const currentModuleId = pathname.split('/')[1] as ModulePermission;
-       if (currentModuleId && !hasPermission(currentModuleId)) {
-           console.warn(`Redirecting: User does not have permission for /${currentModuleId}`);
-           router.replace('/dashboard');
-       }
-    }
-  }, [user, pathname, authLoading, router, hasPermission]);
-
   const login = async (fullUsername: string, pass: string): Promise<boolean> => {
     setAuthLoading(true);
     if (!firestore || !fullUsername.includes('@')) {
@@ -185,12 +159,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const encodedInputPass = Buffer.from(pass).toString('base64');
       
       if (storedPass === encodedInputPass || storedPass === pass) {
-        const userToStore = { 
-            ...userData, 
+        const permissions = userData.permissions || {};
+        const userToStore: Employee = { 
+            ...userData,
             id: userDoc.id,
+            permissions: permissions,
             token: { 
                 companyId: foundCompanyId,
-                role: userData.role
+                role: userData.role,
+                permissions: permissions
             }
         };
         delete userToStore.password;
@@ -234,12 +211,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
         const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
         const newEmployeeRef = doc(employeesCollectionRef);
+        
+        const adminPermissions = allPermissions.reduce((acc, p) => {
+          acc[p.id] = 'write';
+          return acc;
+        }, {} as Record<ModulePermission, PermissionLevel>);
+        
         transaction.set(newEmployeeRef, {
           username: adminUsername.split('@')[0],
           password: Buffer.from(adminPass).toString('base64'),
           role: 'Admin',
           companyId: newCompanyRef.id,
-          permissions: allPermissions.map(p => p.id)
+          permissions: adminPermissions
         });
       });
       return true;
