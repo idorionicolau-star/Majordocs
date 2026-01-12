@@ -34,6 +34,8 @@ import { InventoryContext } from '@/context/inventory-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { ScrollArea } from '../ui/scroll-area';
 
+type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
+
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
@@ -77,13 +79,12 @@ export function EditSaleDialog({ sale, products, onUpdateSale, onOpenChange, ope
     }
   }, [open, sale, form]);
 
-  useEffect(() => {
-    const catalogProduct = catalogProducts?.find(p => p.name === watchedProductName);
-    if (catalogProduct && watchedProductName !== sale.productName) {
-        form.setValue('unitPrice', catalogProduct.price);
+  const handleProductSelect = (productName: string, product?: CatalogProduct) => {
+    form.setValue('productName', productName);
+    if (product && productName !== sale.productName) {
+      form.setValue('unitPrice', product.price);
     }
-  }, [watchedProductName, sale.productName, catalogProducts, form]);
-
+  };
 
   const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
 
@@ -116,7 +117,7 @@ export function EditSaleDialog({ sale, products, onUpdateSale, onOpenChange, ope
                       products={catalogProducts || []}
                       categories={catalogCategories || []}
                       selectedValue={field.value}
-                      onValueChange={field.onChange}
+                      onValueChange={handleProductSelect}
                     />
                     <FormMessage />
                   </FormItem>

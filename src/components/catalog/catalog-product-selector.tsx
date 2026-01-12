@@ -30,18 +30,25 @@ interface CatalogProductSelectorProps {
   products: CatalogProduct[];
   categories: CatalogCategory[];
   selectedValue: string;
-  onValueChange: (value: string) => void;
+  onValueChange: (value: string, product?: CatalogProduct) => void;
 }
 
 export function CatalogProductSelector({ products, categories, selectedValue, onValueChange }: CatalogProductSelectorProps) {
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredProducts = useMemo(() => {
-    if (categoryFilter === 'all') {
-      return products;
+    let prods = products;
+    if (categoryFilter !== 'all') {
+      prods = prods.filter(p => p.category === categoryFilter);
     }
-    return products.filter(p => p.category === categoryFilter);
-  }, [products, categoryFilter]);
+    if (searchQuery) {
+        prods = prods.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    }
+    return prods;
+  }, [products, categoryFilter, searchQuery]);
+  
+  const selectedProduct = products.find(p => p.name === selectedValue);
 
   return (
     <div className="flex flex-col gap-2">
@@ -58,7 +65,11 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
       </Select>
       <div className="rounded-md border">
         <Command>
-            <CommandInput placeholder="Pesquisar produto..." />
+            <CommandInput 
+                placeholder="Pesquisar produto..." 
+                value={searchQuery}
+                onValueChange={setSearchQuery}
+            />
             <ScrollArea className="h-32">
               <CommandList>
                 <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
@@ -68,7 +79,9 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
                       key={product.id}
                       value={product.name}
                       onSelect={(currentValue) => {
-                        onValueChange(currentValue === selectedValue ? "" : product.name);
+                        const product = products.find(p => p.name.toLowerCase() === currentValue.toLowerCase());
+                        onValueChange(currentValue === selectedValue ? "" : product?.name || "", product);
+                        setSearchQuery('');
                       }}
                     >
                       <Check

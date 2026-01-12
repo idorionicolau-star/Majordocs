@@ -40,6 +40,8 @@ import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { InventoryContext } from '@/context/inventory-context';
 import { ScrollArea } from '../ui/scroll-area';
 
+type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
+
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
@@ -85,14 +87,15 @@ function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogP
   const selectedProductInstance = products?.find(p => p.name === watchedProductName && (isMultiLocation ? p.location === watchedLocation : true));
   const availableStock = selectedProductInstance ? selectedProductInstance.stock - selectedProductInstance.reservedStock : 0;
   
-  useEffect(() => {
-    const catalogProduct = catalogProducts?.find(p => p.name === watchedProductName);
-    if (catalogProduct) {
-      form.setValue('unitPrice', catalogProduct.price);
+  const handleProductSelect = (productName: string, product?: CatalogProduct) => {
+    form.setValue('productName', productName);
+    if (product) {
+      form.setValue('unitPrice', product.price);
     } else {
       form.setValue('unitPrice', 0);
     }
-  }, [watchedProductName, catalogProducts, form]);
+  };
+
 
   useEffect(() => {
     if(selectedProductInstance){
@@ -199,7 +202,7 @@ function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogP
                           products={catalogProducts || []}
                           categories={catalogCategories || []}
                           selectedValue={field.value}
-                          onValueChange={field.onChange}
+                          onValueChange={handleProductSelect}
                       />
                     </FormControl>
                     <FormMessage />

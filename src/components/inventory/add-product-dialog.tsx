@@ -28,16 +28,14 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Box, ChevronsUpDown, Check } from "lucide-react";
-import { useForm, useWatch } from "react-hook-form";
+import { Plus, Box } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Location, Product } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { InventoryContext } from '@/context/inventory-context';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
-import { cn } from '@/lib/utils';
+import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { ScrollArea } from '../ui/scroll-area';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
@@ -63,7 +61,6 @@ interface AddProductDialogProps {
 
 function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, triggerType = 'fab' }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
-  const [productSelectorOpen, setProductSelectorOpen] = useState(false);
   const inventoryContext = useContext(InventoryContext);
   const { catalogCategories, catalogProducts } = inventoryContext || { catalogCategories: [], catalogProducts: [] };
 
@@ -79,10 +76,6 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
       location: locations.length > 0 ? locations[0].id : '',
     },
   });
-
-  const watchedCategory = useWatch({ control: form.control, name: 'category' });
-
-  const filteredCatalogProducts = catalogProducts.filter(p => p.category === watchedCategory);
 
    useEffect(() => {
     if (locations.length > 0 && !form.getValues('location')) {
@@ -101,16 +94,17 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
         criticalStockThreshold: 5,
         location: locations.length > 0 ? locations[0].id : '',
       });
-      setProductSelectorOpen(false);
     }
   }, [open, form, locations]);
 
-  const handleProductSelect = (product: CatalogProduct) => {
-    form.setValue('name', product.name);
-    form.setValue('price', product.price);
-    form.setValue('lowStockThreshold', product.lowStockThreshold);
-    form.setValue('criticalStockThreshold', product.criticalStockThreshold);
-    setProductSelectorOpen(false);
+  const handleProductSelect = (productName: string, product?: CatalogProduct) => {
+    form.setValue('name', productName);
+    if (product) {
+      form.setValue('price', product.price);
+      form.setValue('lowStockThreshold', product.lowStockThreshold);
+      form.setValue('criticalStockThreshold', product.criticalStockThreshold);
+      form.setValue('category', product.category);
+    }
   };
 
 
@@ -169,85 +163,24 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
         <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="category"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Categoria</FormLabel>
-                      <Select onValueChange={(value) => {
-                        field.onChange(value);
-                        form.setValue('name', '');
-                        setProductSelectorOpen(true);
-                      }} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma categoria" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {catalogCategories.sort((a,b) => a.name.localeCompare(b.name)).map(cat => (
-                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Produto</FormLabel>
+                      <FormControl>
+                        <CatalogProductSelector
+                            products={catalogProducts}
+                            categories={catalogCategories}
+                            selectedValue={field.value}
+                            onValueChange={handleProductSelect}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nome do Produto</FormLabel>
-                          <Collapsible open={productSelectorOpen} onOpenChange={setProductSelectorOpen}>
-                              <CollapsibleTrigger asChild>
-                                  <FormControl>
-                                      <Button
-                                      variant="outline"
-                                      role="combobox"
-                                      disabled={!watchedCategory}
-                                      className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
-                                      >
-                                      {field.value || "Selecione um produto do catálogo"}
-                                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                      </Button>
-                                  </FormControl>
-                              </CollapsibleTrigger>
-                              <CollapsibleContent>
-                                  <div className='relative mt-2'>
-                                      <div className='absolute top-0 left-0 w-full h-full rounded-md border'>
-                                          <Command>
-                                              <CommandInput placeholder="Pesquisar produto..." />
-                                              <ScrollArea className="h-32">
-                                              <CommandList>
-                                                  <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
-                                                  <CommandGroup>
-                                                      {filteredCatalogProducts.map((product) => (
-                                                      <CommandItem
-                                                          value={product.name}
-                                                          key={product.id}
-                                                          onSelect={() => handleProductSelect(product)}
-                                                      >
-                                                          <Check className={cn("mr-2 h-4 w-4", product.name === field.value ? "opacity-100" : "opacity-0")} />
-                                                          {product.name}
-                                                      </CommandItem>
-                                                      ))}
-                                                  </CommandGroup>
-                                              </CommandList>
-                                              </ScrollArea>
-                                          </Command>
-                                      </div>
-                                  </div>
-                              </CollapsibleContent>
-                          </Collapsible>
-                          <FormMessage />
-                        </FormItem>
-                    )}
-                />
-              </div>
               
               {isMultiLocation && (
                 <FormField
