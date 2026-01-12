@@ -9,7 +9,7 @@ import { columns } from "@/components/users/columns";
 import { AddEmployeeDialog } from "@/components/users/add-employee-dialog";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Employee, ModulePermission } from "@/lib/types";
+import type { Employee, ModulePermission, PermissionLevel } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, addDoc, doc, deleteDoc, getDocs, query, where, updateDoc } from "firebase/firestore";
 import { allPermissions } from "@/lib/data";
@@ -44,7 +44,7 @@ export default function UsersPage() {
     if (!employeesCollectionRef || !companyId || !companyData) return;
 
     const usernameWithoutCompany = employeeData.username;
-    const fullUsername = `${usernameWithoutCompany}@${companyData.name}`;
+    const fullUsername = `${usernameWithoutCompany}@${companyData.name.toLowerCase().replace(/\s+/g, '')}`;
 
     const q = query(employeesCollectionRef, where("username", "==", usernameWithoutCompany));
     const existingUserSnapshot = await getDocs(q);
@@ -60,10 +60,9 @@ export default function UsersPage() {
     
     await addDoc(employeesCollectionRef, { 
       ...employeeData,
-      username: usernameWithoutCompany,
       password: Buffer.from(employeeData.password || '').toString('base64'),
       companyId,
-      permissions: employeeData.role === 'Admin' ? allPermissions.map(p => p.id) : employeeData.permissions
+      permissions: employeeData.role === 'Admin' ? allPermissions.reduce((acc, p) => ({...acc, [p.id]: 'write' as PermissionLevel}), {} as Record<ModulePermission, PermissionLevel>) : employeeData.permissions
     });
 
     toast({
@@ -77,12 +76,16 @@ export default function UsersPage() {
     
     const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employee.id);
     
-    const { id, ...rest } = employee;
-    const updateData: Partial<Employee> = {
-        ...rest,
+    // Create a base object with properties that are always updated
+    const updateData: Omit<Partial<Employee>, 'id'> = {
+        username: employee.username,
+        role: employee.role,
+        permissions: employee.permissions,
     };
     
-    if (employee.password) {
+    // Only include the password if a new one was provided and is valid
+    if (employee.password && employee.password.length >= 6) {
+        // Assume password in `employee` object is the new plain text one from the form
         updateData.password = Buffer.from(employee.password).toString('base64');
     }
     
@@ -155,3 +158,4 @@ export default function UsersPage() {
     </div>
   );
 }
+

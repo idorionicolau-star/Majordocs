@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -80,23 +81,21 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
     }
   }, [open, employee, form]);
 
-  const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write', checked: boolean) => {
-    const currentPermissions = form.getValues("permissions");
-    let newLevel: PermissionLevel = currentPermissions[moduleId] || 'none';
+ const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write', checked: boolean) => {
+    const currentLevel = form.getValues(`permissions.${moduleId}`);
+    let newLevel: PermissionLevel = currentLevel;
 
     if (level === 'write') {
-        newLevel = checked ? 'write' : 'read';
+      newLevel = checked ? 'write' : 'read';
     } else { // level === 'read'
-        newLevel = checked ? 'read' : 'none';
+      newLevel = checked ? 'read' : 'none';
+      if (!checked) {
+        // If 'read' is unchecked, 'write' must also be 'lost'
+         form.setValue(`permissions.${moduleId}`, 'none');
+      }
     }
-
-    if(newLevel === 'read' && level === 'write' && !checked){
-        // Do nothing, keep it as read
-    } else {
-        form.setValue(`permissions.${moduleId}`, newLevel, { shouldDirty: true });
-    }
+     form.setValue(`permissions.${moduleId}`, newLevel, { shouldDirty: true });
   }
-
 
   function onSubmit(values: EditEmployeeFormValues) {
     if (values.password && values.password.length > 0 && values.password.length < 6) {
@@ -108,21 +107,22 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
       acc[perm.id] = 'write';
       return acc;
     }, {} as Record<ModulePermission, PermissionLevel>);
-    
-    const updatedEmployee: Employee = {
-      ...employee,
+
+    const updatedEmployeeData: Partial<Employee> = {
       username: values.username,
       role: values.role,
       permissions: values.role === 'Admin' ? permissionsForAdmin : values.permissions,
     };
-    
+
     if (values.password && values.password.length >= 6) {
-      updatedEmployee.password = Buffer.from(values.password).toString('base64');
-    } else {
-      updatedEmployee.password = employee.password; 
+      updatedEmployeeData.password = values.password;
     }
     
-    onUpdateEmployee(updatedEmployee);
+    onUpdateEmployee({
+      ...employee,
+      ...updatedEmployeeData,
+    });
+
     setOpen(false);
   }
   
