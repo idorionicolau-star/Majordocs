@@ -57,7 +57,7 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
   const [open, setOpen] = useState(false);
   
   const defaultPermissions = allPermissions.reduce((acc, perm) => {
-    acc[perm.id] = (['dashboard', 'inventory', 'sales'].includes(perm.id)) ? 'write' : 'none';
+    acc[perm.id] = (['dashboard', 'inventory', 'sales'].includes(perm.id)) ? 'read' : 'none';
     return acc;
   }, {} as Record<ModulePermission, PermissionLevel>);
   
@@ -74,27 +74,32 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
   const role = form.watch('role');
 
   const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write', checked: boolean) => {
-    const currentPermissions = { ...form.getValues("permissions") };
+    const currentPermissions = form.getValues("permissions");
+    const currentLevel = currentPermissions[moduleId];
     let newLevel: PermissionLevel;
 
     if (level === 'write') {
+      // Logic for the 'Editar' checkbox
       newLevel = checked ? 'write' : 'read';
     } else { // level === 'read'
-      newLevel = checked ? 'read' : 'none';
-      if (!checked) {
-        currentPermissions[moduleId] = 'none'; // Ensure write is also turned off
+      // Logic for the 'Ver' checkbox
+      if (checked) {
+        // If we are checking 'Ver', it becomes 'read' (it can't become 'write' from here)
+        newLevel = 'read';
+      } else {
+        // If we are un-checking 'Ver', everything goes to 'none'
+        newLevel = 'none';
       }
     }
     
-    currentPermissions[moduleId] = newLevel;
-
-    // Dashboard is always readable
-    if (currentPermissions.dashboard === 'none') {
-        currentPermissions.dashboard = 'read';
+    // Ensure dashboard is always readable
+    if (moduleId === 'dashboard' && newLevel === 'none') {
+      newLevel = 'read';
     }
 
-    form.setValue("permissions", currentPermissions);
+    form.setValue(`permissions.${moduleId}`, newLevel, { shouldDirty: true });
   }
+
 
   function onSubmit(values: AddEmployeeFormValues) {
     const permissionsForAdmin = allPermissions.reduce((acc, perm) => {
@@ -207,14 +212,14 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
                                         <TableCell className="font-medium">{module.label}</TableCell>
                                         <TableCell className="text-center">
                                             <Checkbox
-                                                checked={form.getValues(`permissions.${module.id}`) === 'read' || form.getValues(`permissions.${module.id}`) === 'write'}
+                                                checked={form.watch(`permissions.${module.id}`) === 'read' || form.watch(`permissions.${module.id}`) === 'write'}
                                                 onCheckedChange={(checked) => handlePermissionChange(module.id, 'read', !!checked)}
                                                 disabled={module.id === 'dashboard'}
                                             />
                                         </TableCell>
                                          <TableCell className="text-center">
                                             <Checkbox
-                                                checked={form.getValues(`permissions.${module.id}`) === 'write'}
+                                                checked={form.watch(`permissions.${module.id}`) === 'write'}
                                                 onCheckedChange={(checked) => handlePermissionChange(module.id, 'write', !!checked)}
                                                 disabled={module.id === 'dashboard'}
                                             />
