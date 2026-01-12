@@ -79,8 +79,8 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
                       key={product.id}
                       value={product.name}
                       onSelect={(currentValue) => {
-                        const product = products.find(p => p.name.toLowerCase() === currentValue.toLowerCase());
-                        onValueChange(currentValue === selectedValue ? "" : product?.name || "", product);
+                        const selectedProd = products.find(p => p.name.toLowerCase() === currentValue.toLowerCase());
+                        onValueChange(selectedProd?.name || "", selectedProd);
                         setSearchQuery('');
                       }}
                     >
