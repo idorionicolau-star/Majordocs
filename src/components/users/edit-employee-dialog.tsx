@@ -81,21 +81,28 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
     }
   }, [open, employee, form]);
 
- const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write', checked: boolean) => {
-      const currentLevel = form.getValues(`permissions.${moduleId}`);
-      let newLevel: PermissionLevel = currentLevel;
+ const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write') => {
+      const currentPermissions = form.getValues('permissions');
+      const currentLevel = currentPermissions[moduleId];
+      let newLevel: PermissionLevel;
 
       if (level === 'read') {
-          // Se desmarcar 'Ver', perde todas as permissões.
-          // Se marcar 'Ver', ganha permissão de leitura.
-          newLevel = checked ? 'read' : 'none';
+          // Se marcar "Ver", define para 'read'. Se desmarcar, define para 'none'.
+          newLevel = currentLevel === 'none' ? 'read' : 'none';
       } else { // level === 'write'
-          // Se marcar 'Editar', ganha permissão de escrita (que inclui leitura).
-          // Se desmarcar 'Editar', volta para apenas leitura.
-          newLevel = checked ? 'write' : 'read';
+          // Se marcar "Editar", define para 'write'. Se desmarcar, volta para 'read'.
+          newLevel = currentLevel === 'write' ? 'read' : 'write';
       }
-
-      form.setValue(`permissions.${moduleId}`, newLevel, { shouldDirty: true });
+      
+      // Se "Ver" for desmarcado, "Editar" também deve ser.
+      if (newLevel === 'none') {
+        form.setValue(`permissions.${moduleId}`, 'none', { shouldDirty: true });
+      } else if (newLevel === 'write' && currentLevel !== 'write') {
+        // Se marcar "Editar", força a leitura também.
+        form.setValue(`permissions.${moduleId}`, 'write', { shouldDirty: true });
+      } else {
+        form.setValue(`permissions.${moduleId}`, newLevel, { shouldDirty: true });
+      }
   };
 
   function onSubmit(values: EditEmployeeFormValues) {
@@ -115,10 +122,9 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
       permissions: values.role === 'Admin' ? permissionsForAdmin : values.permissions,
     };
 
+    // Apenas inclui a password no objeto de atualização se uma nova for fornecida.
     if (values.password && values.password.length >= 6) {
       updatedEmployeeData.password = values.password;
-    } else {
-      updatedEmployeeData.password = employee.password;
     }
     
     onUpdateEmployee({
@@ -128,18 +134,6 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
 
     setOpen(false);
   }
-  
-  const displayPassword = (password?: string): string => {
-    if (!password) return '';
-    try {
-      return Buffer.from(password, 'base64').toString('utf-8');
-    } catch (e) {
-      return password; 
-    }
-  };
-  
-  const currentPassword = displayPassword(employee.password);
-
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -180,7 +174,6 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
                     <FormControl>
                       <Input type="password" {...field} placeholder="Deixar em branco para manter a atual" />
                     </FormControl>
-                    {currentPassword && <p className="text-xs text-muted-foreground">Senha atual: {currentPassword}</p>}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -236,14 +229,14 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
                                             <TableCell className="text-center">
                                                 <Checkbox
                                                     checked={canRead}
-                                                    onCheckedChange={(checked) => handlePermissionChange(module.id, 'read', !!checked)}
+                                                    onCheckedChange={() => handlePermissionChange(module.id, 'read')}
                                                     disabled={module.id === 'dashboard'}
                                                 />
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <Checkbox
                                                     checked={canWrite}
-                                                    onCheckedChange={(checked) => handlePermissionChange(module.id, 'write', !!checked)}
+                                                    onCheckedChange={() => handlePermissionChange(module.id, 'write')}
                                                     disabled={!canRead || module.id === 'dashboard'}
                                                 />
                                             </TableCell>

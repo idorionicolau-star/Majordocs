@@ -77,7 +77,7 @@ export default function UsersPage() {
     const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employee.id);
     
     // Create a base object with properties that are always updated
-    const updateData: Omit<Partial<Employee>, 'id'> = {
+    const updateData: Partial<Omit<Employee, 'id' | 'companyId'>> = {
         username: employee.username,
         role: employee.role,
         permissions: employee.permissions,

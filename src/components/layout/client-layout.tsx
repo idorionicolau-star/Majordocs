@@ -46,24 +46,33 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       const currentNavItem = mainNavItems.find(item => pathname.startsWith(item.href));
       
       if (currentNavItem) {
-        // Super admin pode ver tudo
+        // O Super Admin tem acesso a tudo.
         if (isSuperAdmin) return;
         
-        // Admins podem ver tudo exceto a página de empresas
-        if (user.role === 'Admin') {
-            if (currentNavItem.id === 'companies') {
-                router.replace('/dashboard');
-            }
+        const isAdmin = user.role === 'Admin';
+        
+        // Admins normais não podem ver a página de empresas.
+        if (isAdmin && currentNavItem.id === 'companies') {
+            router.replace('/dashboard');
             return;
         }
 
-        // Lógica para funcionários normais
-        const permissionLevel = user.permissions[currentNavItem.id];
-        const canAccess = permissionLevel === 'read' || permissionLevel === 'write';
+        // Se for admin, tem acesso a tudo o resto.
+        if (isAdmin) return;
 
-        if (!canAccess) {
-          console.warn(`Acesso negado para o módulo: ${currentNavItem.id}. A redirecionar...`);
-          router.replace('/dashboard');
+        // Lógica para funcionários normais
+        const permissions = user.permissions;
+        if (typeof permissions === 'object' && permissions !== null) {
+            const level = permissions[currentNavItem.id];
+            const canAccess = level === 'read' || level === 'write';
+            if (!canAccess) {
+              console.warn(`Acesso negado para o módulo: ${currentNavItem.id}. A redirecionar...`);
+              router.replace('/dashboard');
+            }
+        } else {
+           // Fallback para o caso de as permissões não serem um objeto (ou serem nulas).
+           console.warn(`Estrutura de permissões inválida para o utilizador. A redirecionar...`);
+           router.replace('/dashboard');
         }
       }
     }

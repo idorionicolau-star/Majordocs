@@ -57,7 +57,7 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
   const [open, setOpen] = useState(false);
   
   const defaultPermissions = allPermissions.reduce((acc, perm) => {
-    acc[perm.id] = (['dashboard', 'inventory'].includes(perm.id)) ? 'read' : 'none';
+    acc[perm.id] = (['dashboard'].includes(perm.id)) ? 'read' : 'none';
     return acc;
   }, {} as Record<ModulePermission, PermissionLevel>);
   
@@ -73,18 +73,17 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
 
   const role = form.watch('role');
 
-  const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write', checked: boolean) => {
-      const currentLevel = form.getValues(`permissions.${moduleId}`);
-      let newLevel: PermissionLevel = currentLevel;
+  const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write') => {
+      const currentPermissions = form.getValues('permissions');
+      const currentLevel = currentPermissions[moduleId];
+      let newLevel: PermissionLevel;
 
       if (level === 'read') {
-          // Se desmarcar 'Ver', perde todas as permissões.
-          // Se marcar 'Ver', ganha permissão de leitura.
-          newLevel = checked ? 'read' : 'none';
+          // Se marcar "Ver", define para 'read'. Se desmarcar, define para 'none'.
+          newLevel = currentLevel === 'none' ? 'read' : 'none';
       } else { // level === 'write'
-          // Se marcar 'Editar', ganha permissão de escrita (que inclui leitura).
-          // Se desmarcar 'Editar', volta para apenas leitura.
-          newLevel = checked ? 'write' : 'read';
+          // Se marcar "Editar", define para 'write'. Se desmarcar, volta para 'read'.
+          newLevel = currentLevel === 'write' ? 'read' : 'write';
       }
 
       form.setValue(`permissions.${moduleId}`, newLevel, { shouldDirty: true });
@@ -184,7 +183,7 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
                     <div className="mb-4">
                       <FormLabel className="text-base">Permissões de Acesso</FormLabel>
                       <FormDescription>
-                        Defina o nível de acesso para cada módulo.
+                        Defina o nível de acesso para cada módulo. "Editar" inclui "Ver".
                       </FormDescription>
                     </div>
                     <div className="rounded-md border">
@@ -208,14 +207,14 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
                                         <TableCell className="text-center">
                                             <Checkbox
                                                 checked={canRead}
-                                                onCheckedChange={(checked) => handlePermissionChange(module.id, 'read', !!checked)}
+                                                onCheckedChange={() => handlePermissionChange(module.id, 'read')}
                                                 disabled={module.id === 'dashboard'}
                                             />
                                         </TableCell>
                                          <TableCell className="text-center">
                                             <Checkbox
                                                 checked={canWrite}
-                                                onCheckedChange={(checked) => handlePermissionChange(module.id, 'write', !!checked)}
+                                                onCheckedChange={() => handlePermissionChange(module.id, 'write')}
                                                 disabled={!canRead || module.id === 'dashboard'}
                                             />
                                         </TableCell>

@@ -63,16 +63,27 @@ export default function InventoryPage() {
     user
   } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, user: null };
 
-  const hasPermission = (permissionId: ModulePermission, level: 'read' | 'write') => {
+ const hasPermission = (permissionId: ModulePermission, action: 'read' | 'write' = 'read') => {
     if (!user) return false;
     if (user.role === 'Admin') return true;
     if (!user.permissions) return false;
     
-    const userLevel = user.permissions[permissionId];
-    if (level === 'write') {
-      return userLevel === 'write';
+    const perms = user.permissions;
+
+    if (typeof perms === 'object' && !Array.isArray(perms)) {
+      const level = perms[permissionId];
+      if (action === 'write') {
+        return level === 'write';
+      }
+      return level === 'read' || level === 'write';
     }
-    return userLevel === 'read' || userLevel === 'write';
+
+    if (Array.isArray(perms)) {
+       // @ts-ignore
+      return perms.includes(permissionId);
+    }
+    
+    return false;
   };
 
   const canEditInventory = hasPermission('inventory', 'write');

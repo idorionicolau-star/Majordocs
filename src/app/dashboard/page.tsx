@@ -9,7 +9,7 @@ import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
 import { AddProductionDialog } from "@/components/production/add-production-dialog";
 import { products, sales, productions, orders as initialOrders } from "@/lib/data";
 import { useState, useContext } from "react";
-import type { Product, Sale, Production, Location, Order, ModulePermission } from "@/lib/types";
+import type { Product, Sale, Production, Location, Order, ModulePermission, PermissionLevel } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { AddOrderDialog } from "@/components/orders/add-order-dialog";
@@ -32,24 +32,34 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user } = useContext(InventoryContext) || {};
 
-  const hasPermission = (permissionId: ModulePermission) => {
+  const hasPermission = (permissionId: ModulePermission, action: 'read' | 'write' = 'read') => {
     if (!user) return false;
     if (user.role === 'Admin') return true;
     if (!user.permissions) return false;
 
-    // Se as permissões forem um Objeto (Novo formato: { inventory: "read" })
-    if (typeof user.permissions === 'object' && !Array.isArray(user.permissions)) {
-        const level = user.permissions[permissionId];
-        return level === 'read' || level === 'write';
+    const perms = user.permissions;
+
+    // Se for o novo formato (Objeto/Mapa)
+    if (typeof perms === 'object' && !Array.isArray(perms)) {
+      const level = perms[permissionId]; // Pode ser 'read', 'write' ou undefined
+      if (action === 'write') {
+        return level === 'write';
+      }
+      return level === 'read' || level === 'write';
     }
 
-    // Se as permissões forem um Array (Formato antigo / incorreto)
-    if (Array.isArray(user.permissions)) {
-        return user.permissions.includes(permissionId);
+    // Se for o formato antigo (Array) - Mantém compatibilidade
+    if (Array.isArray(perms)) {
+      // @ts-ignore
+      return perms.includes(permissionId);
     }
-    
+
     return false;
-  }
+  };
+  
+  const canSee = (id: ModulePermission) => hasPermission(id, 'read');
+  const canEdit = (id: ModulePermission) => hasPermission(id, 'write');
+
 
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
@@ -64,19 +74,19 @@ export default function DashboardPage() {
           onTouchEnd={e => e.stopPropagation()}
         >
           <div className={cn("flex items-center gap-2 flex-nowrap", "animate-peek md:animate-none")}>
-              {hasPermission('inventory') && <Button asChild variant="outline">
+              {canEdit('inventory') && <Button asChild variant="outline">
                 <Link href="/inventory?action=add"><Box className="mr-2 h-4 w-4" />+ Inventário</Link>
               </Button>}
-              {hasPermission('sales') && <Button asChild variant="outline">
+              {canEdit('sales') && <Button asChild variant="outline">
                 <Link href="/sales?action=add"><ShoppingCart className="mr-2 h-4 w-4" />+ Vendas</Link>
               </Button>}
-              {hasPermission('production') && <Button asChild variant="outline">
+              {canEdit('production') && <Button asChild variant="outline">
                   <Link href="/production?action=add"><Hammer className="mr-2 h-4 w-4" />+ Produção</Link>
                 </Button>}
-              {hasPermission('orders') && <Button asChild variant="outline">
+              {canEdit('orders') && <Button asChild variant="outline">
                   <Link href="/orders?action=add"><ClipboardList className="mr-2 h-4 w-4" />+ Encomenda</Link>
                 </Button>}
-              {hasPermission('settings') && <Button asChild variant="outline">
+              {canSee('settings') && <Button asChild variant="outline">
                   <Link href="/settings#catalog"><Book className="mr-2 h-4 w-4" />Catálogo</Link>
                 </Button>}
           </div>
