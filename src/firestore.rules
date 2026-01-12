@@ -41,6 +41,11 @@ service cloud.firestore {
       allow create: if true;
       // Apenas Admins podem ler, atualizar ou apagar os dados da própria empresa.
       allow read, update, delete: if isEmployeeOf(companyId) && isAdmin();
+      // Apenas um admin geral pode listar todas as empresas.
+      // Esta regra precisa de uma lógica para identificar um "super admin".
+      // Por agora, vamos permitir que qualquer admin de qualquer empresa liste.
+      // Isto deve ser revisto para produção com uma lógica de super admin mais específica.
+      allow list: if isSignedIn() && isAdmin();
 
       // Sub-coleção para os funcionários de uma empresa específica.
       match /employees/{employeeId} {
@@ -73,7 +78,7 @@ service cloud.firestore {
       // Sub-coleção para os registos de vendas.
       match /sales/{saleId} {
         allow read: if isEmployeeOf(companyId) && hasPermission('sales');
-        // Qualquer funcionário da empresa pode criar/atualizar uma venda.
+        // Qualquer funcionário da empresa com permissão pode criar/atualizar uma venda.
         allow write: if isEmployeeOf(companyId) && hasPermission('sales');
       }
       
