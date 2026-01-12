@@ -1,6 +1,6 @@
 
 
-
+export type PermissionLevel = 'none' | 'read' | 'write';
 
 export type ModulePermission = 
   | 'dashboard'
@@ -22,15 +22,16 @@ export type User = {
 };
 
 export type Employee = {
-  id: string;
+  id:string;
   username: string;
   password?: string; // Should be handled securely, never stored in plain text
   role: 'Admin' | 'Employee';
   companyId: string;
-  permissions: ModulePermission[];
+  permissions: Partial<Record<ModulePermission, PermissionLevel>>;
   token?: { // Placeholder for custom claims from a JWT
       companyId: string;
       role: 'Admin' | 'Employee';
+      permissions: Partial<Record<ModulePermission, PermissionLevel>>;
   }
 };
 

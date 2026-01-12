@@ -29,23 +29,21 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, ShieldCheck } from "lucide-react";
-import { useForm, Controller } from "react-hook-form";
+import { PlusCircle } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import type { Employee, ModulePermission } from '@/lib/types';
+import type { Employee, ModulePermission, PermissionLevel } from '@/lib/types';
 import { allPermissions } from '@/lib/data';
 import { Checkbox } from '../ui/checkbox';
 import { ScrollArea } from '../ui/scroll-area';
-
-
-const permissionsEnum = z.enum(allPermissions.map(p => p.id) as [ModulePermission, ...ModulePermission[]]);
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 
 const formSchema = z.object({
   username: z.string().min(3, { message: "O nome de utilizador deve ter pelo menos 3 caracteres." }),
   password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
   role: z.enum(['Admin', 'Employee'], { required_error: "A função é obrigatória." }),
-  permissions: z.array(permissionsEnum).optional(),
+  permissions: z.record(z.string(), z.enum(['none', 'read', 'write'])),
 });
 
 
@@ -58,31 +56,64 @@ interface AddEmployeeDialogProps {
 export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
   const [open, setOpen] = useState(false);
   
+  const defaultPermissions = allPermissions.reduce((acc, perm) => {
+    acc[perm.id] = (['dashboard', 'inventory', 'sales'].includes(perm.id)) ? 'write' : 'none';
+    return acc;
+  }, {} as Record<ModulePermission, PermissionLevel>);
+  
   const form = useForm<AddEmployeeFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: "",
       password: "",
       role: 'Employee',
-      permissions: ['dashboard', 'inventory', 'sales'],
+      permissions: defaultPermissions,
     },
   });
 
   const role = form.watch('role');
 
+  const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write', checked: boolean) => {
+    const currentPermissions = { ...form.getValues("permissions") };
+    let newLevel: PermissionLevel;
+
+    if (level === 'write') {
+      newLevel = checked ? 'write' : 'read';
+    } else { // level === 'read'
+      newLevel = checked ? 'read' : 'none';
+      if (!checked) {
+        currentPermissions[moduleId] = 'none'; // Ensure write is also turned off
+      }
+    }
+    
+    currentPermissions[moduleId] = newLevel;
+
+    // Dashboard is always readable
+    if (currentPermissions.dashboard === 'none') {
+        currentPermissions.dashboard = 'read';
+    }
+
+    form.setValue("permissions", currentPermissions);
+  }
+
   function onSubmit(values: AddEmployeeFormValues) {
+    const permissionsForAdmin = allPermissions.reduce((acc, perm) => {
+        acc[perm.id] = 'write';
+        return acc;
+    }, {} as Record<ModulePermission, PermissionLevel>);
+
     const employeeData: Omit<Employee, 'id' | 'companyId'> = {
       username: values.username,
       password: values.password,
       role: values.role,
-      permissions: role === 'Admin' ? allPermissions.map(p => p.id) : (values.permissions || []),
+      permissions: role === 'Admin' ? permissionsForAdmin : values.permissions,
     };
     onAddEmployee(employeeData);
     form.reset({
         username: "",
         password: "",
         role: 'Employee',
-        permissions: ['dashboard', 'inventory', 'sales'],
+        permissions: defaultPermissions,
     });
     setOpen(false);
   }
@@ -154,69 +185,51 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
               />
               
               {role === 'Employee' && (
-                  <FormField
-                    control={form.control}
-                    name="permissions"
-                    render={() => (
-                      <FormItem>
-                        <div className="mb-4">
-                          <FormLabel className="text-base">Permissões de Acesso</FormLabel>
-                          <FormDescription>
-                            Selecione quais módulos este funcionário poderá visualizar e editar.
-                          </FormDescription>
-                        </div>
-                        <ScrollArea className="h-48 rounded-md border p-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            {allPermissions.map((module) => (
-                              <FormField
-                                key={module.id}
-                                control={form.control}
-                                name="permissions"
-                                render={({ field }) => {
-                                  return (
-                                    <FormItem
-                                      key={module.id}
-                                      className="flex flex-row items-center space-x-3 space-y-0"
-                                    >
-                                      <FormControl>
-                                        <Checkbox
-                                          checked={field.value?.includes(module.id)}
-                                          onCheckedChange={(checked) => {
-                                            let updatedPermissions = [...(field.value || [])];
-                                            if (checked) {
-                                              if (!updatedPermissions.includes('dashboard')) {
-                                                  updatedPermissions.push('dashboard');
-                                              }
-                                              updatedPermissions.push(module.id);
-                                            } else {
-                                              if (module.id !== 'dashboard') {
-                                                updatedPermissions = updatedPermissions.filter((value) => value !== module.id);
-                                              }
-                                            }
-                                            return field.onChange(updatedPermissions);
-                                          }}
-                                          disabled={module.id === 'dashboard'}
-                                        />
-                                      </FormControl>
-                                      <FormLabel className="font-normal cursor-pointer text-sm">
-                                        {module.label}
-                                      </FormLabel>
-                                    </FormItem>
-                                  );
-                                }}
-                              />
-                            ))}
-                          </div>
-                        </ScrollArea>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <FormItem>
+                    <div className="mb-4">
+                      <FormLabel className="text-base">Permissões de Acesso</FormLabel>
+                      <FormDescription>
+                        Defina o nível de acesso para cada módulo.
+                      </FormDescription>
+                    </div>
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Módulo</TableHead>
+                                    <TableHead className="text-center">Ver</TableHead>
+                                    <TableHead className="text-center">Editar</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {allPermissions.filter(p => !p.adminOnly).map((module) => (
+                                    <TableRow key={module.id}>
+                                        <TableCell className="font-medium">{module.label}</TableCell>
+                                        <TableCell className="text-center">
+                                            <Checkbox
+                                                checked={form.getValues(`permissions.${module.id}`) === 'read' || form.getValues(`permissions.${module.id}`) === 'write'}
+                                                onCheckedChange={(checked) => handlePermissionChange(module.id, 'read', !!checked)}
+                                                disabled={module.id === 'dashboard'}
+                                            />
+                                        </TableCell>
+                                         <TableCell className="text-center">
+                                            <Checkbox
+                                                checked={form.getValues(`permissions.${module.id}`) === 'write'}
+                                                onCheckedChange={(checked) => handlePermissionChange(module.id, 'write', !!checked)}
+                                                disabled={module.id === 'dashboard'}
+                                            />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                  </FormItem>
               )}
 
               {role === 'Admin' && (
                   <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-4 text-center">
-                      <p className="text-sm font-medium text-amber-700 dark:text-amber-300">Administradores têm acesso a todos os módulos.</p>
+                      <p className="text-sm font-medium text-amber-700 dark:text-amber-300">Administradores têm acesso de escrita a todos os módulos.</p>
                   </div>
               )}
               <DialogFooter className="pt-4">

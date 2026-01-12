@@ -22,7 +22,8 @@ export function SubHeader() {
        if (permissionId === 'companies') return false; // Regular admins don't see this
        return true;
     }
-    return user.permissions?.includes(permissionId);
+    const level = user.permissions[permissionId];
+    return level === 'read' || level === 'write';
   }
 
   const navItems = mainNavItems.filter(item => hasPermission(item.id));
@@ -51,7 +52,7 @@ export function SubHeader() {
           "animate-peek md:animate-none"
         )}>
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname.startsWith(item.href);
 
             return (
               <Link

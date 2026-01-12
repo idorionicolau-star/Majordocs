@@ -2,159 +2,80 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useIsMobile } from '@/hooks/use-mobile';
-import React, { useRef, useState, useEffect, useContext } from 'react';
-import { cn } from '@/lib/utils';
-import { mainNavItems } from '@/lib/data';
+import React, { useState, useEffect, useContext } from 'react';
+import { InventoryContext } from '@/context/inventory-context';
 import { Header } from './header';
 import { SubHeader } from './sub-header';
-import { InventoryContext } from '@/context/inventory-context';
+import { mainNavItems } from '@/lib/data';
 import type { ModulePermission } from '@/lib/types';
 
+
 export function ClientLayout({ children }: { children: React.ReactNode }) {
-  const isMobile = useIsMobile();
   const pathname = usePathname();
   const router = useRouter();
   const authContext = useContext(InventoryContext);
 
-  const [animationClass, setAnimationClass] = useState('animate-in');
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const touchEndRef = useRef<{ x: number; y: number } | null>(null);
-  const minSwipeDistance = 50;
-  const navigationDirection = useRef<'left' | 'right' | null>(null);
-
-  const hasPermission = (permissionId: ModulePermission) => {
-    if (!authContext || !authContext.user) return false;
-    if (authContext.isSuperAdmin) return true;
-    if (authContext.user.role === 'Admin') {
-      // Admins can't see the global companies list unless they are super admin
-      if (permissionId === 'companies') return false;
-      return true;
-    }
-    return authContext.user.permissions?.includes(permissionId);
+  // 1. ESTADO DE PROTEÇÃO: Enquanto estiver a carregar, não mostramos nada
+  if (!authContext || authContext.loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="text-sm text-muted-foreground">A carregar aplicação...</p>
+        </div>
+      </div>
+    );
   }
 
-  const navItems = mainNavItems.filter(item => hasPermission(item.id));
-
-  const currentPageIndex = navItems.findIndex(
-    (item) => item.href === pathname
-  );
-
+  const { user } = authContext;
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
+  // 2. LÓGICA DE REDIRECIONAMENTO (Executada após o loading)
   useEffect(() => {
-    if (authContext && !authContext.loading) {
-        if (!authContext.user && !isAuthPage) {
-            router.replace('/login');
-        } else if (authContext.user && isAuthPage) {
-            router.replace('/dashboard');
-        } else if (authContext.user && !isAuthPage) {
-            const currentNavItem = mainNavItems.find(item => item.href === pathname);
-            if (currentNavItem && !hasPermission(currentNavItem.id)) {
-                router.replace('/dashboard');
-            }
-        }
-    }
-  }, [authContext, isAuthPage, pathname, router]);
-
-  // Determine what content to show based on auth state
-  let pageContent: React.ReactNode;
-  if (isAuthPage) {
-    pageContent = children;
-  } else if (authContext?.loading) {
-    pageContent = <div className="flex h-full w-full items-center justify-center">A carregar aplicação...</div>;
-  } else if (!authContext?.user) {
-    pageContent = <div className="flex h-full w-full items-center justify-center">A redirecionar...</div>;
-  } else {
-     pageContent = children;
-  }
-  
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchEndRef.current = null;
-    touchStartRef.current = {
-      x: e.targetTouches[0].clientX,
-      y: e.targetTouches[0].clientY,
-    };
-    navigationDirection.current = null;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStartRef.current) return;
-    touchEndRef.current = {
-      x: e.targetTouches[0].clientX,
-      y: e.targetTouches[0].clientY,
-    };
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStartRef.current || !touchEndRef.current) return;
-
-    const xDiff = touchStartRef.current.x - touchEndRef.current.x;
-    const yDiff = touchStartRef.current.y - touchEndRef.current.y;
-
-    if (Math.abs(yDiff) > Math.abs(xDiff)) {
-      touchStartRef.current = null;
-      touchEndRef.current = null;
+    if (!user && !isAuthPage) {
+      router.replace('/login');
       return;
     }
 
-    const isLeftSwipe = xDiff > minSwipeDistance;
-    const isRightSwipe = xDiff < -minSwipeDistance;
-
-    if (isLeftSwipe) {
-      const nextPageIndex = currentPageIndex + 1;
-      if (nextPageIndex < navItems.length) {
-        navigationDirection.current = 'left';
-        setAnimationClass('animate-slide-out-to-left');
-        const nextPath = navItems[nextPageIndex].href;
-        setTimeout(() => router.push(nextPath), 150);
-      }
-    } else if (isRightSwipe) {
-      const prevPageIndex = currentPageIndex - 1;
-      if (prevPageIndex >= 0) {
-        navigationDirection.current = 'right';
-        const prevPath = navItems[prevPageIndex].href;
-        setTimeout(() => router.push(prevPath), 150);
-      }
+    if (user && isAuthPage) {
+      router.replace('/dashboard');
+      return;
     }
 
-    touchStartRef.current = null;
-    touchEndRef.current = null;
-  };
+    if (user && !isAuthPage) {
+      const currentNavItem = mainNavItems.find(item => pathname.startsWith(item.href));
+      
+      if (currentNavItem) {
+        const permissionLevel = user.permissions[currentNavItem.id];
+        const canAccess = user.role === 'Admin' || authContext.isSuperAdmin || (permissionLevel && permissionLevel !== 'none');
 
-  useEffect(() => {
-    if (navigationDirection.current === 'left') {
-      setAnimationClass('animate-slide-in-from-right');
-    } else if (navigationDirection.current === 'right') {
-      setAnimationClass('animate-slide-in-from-left');
-    } else {
-      setAnimationClass('animate-in');
-    }
-  }, [pathname]);
-
-  const touchHandlers = isMobile
-    ? {
-        onTouchStart: handleTouchStart,
-        onTouchMove: handleTouchMove,
-        onTouchEnd: handleTouchEnd,
+        if (!canAccess) {
+          console.warn(`Acesso negado para o módulo: ${currentNavItem.id}`);
+          router.replace('/dashboard');
+        }
       }
-    : {};
+    }
+  }, [user, isAuthPage, pathname, router, authContext.isSuperAdmin]);
 
-  if (isAuthPage) {
-      return <>{pageContent}</>;
-  }
-    
-  return (
-      <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
-        <Header />
-        <SubHeader />
-        <main
-          key={pathname}
-          className={cn('flex-1 p-4 sm:p-6 md:p-8', isMobile && animationClass)}
-          {...touchHandlers}
-        >
-          {pageContent}
-        </main>
+
+  // 3. RENDERIZAÇÃO CONDICIONAL
+  if (isAuthPage) return <>{children}</>;
+  if (!user) return (
+     <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="text-sm text-muted-foreground">A redirecionar para o login...</p>
+        </div>
       </div>
+  );
+
+  return (
+    <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
+      <Header />
+      <SubHeader />
+      <main className="flex-1 p-4 sm:p-6 md:p-8">
+        {children}
+      </main>
+    </div>
   );
 }

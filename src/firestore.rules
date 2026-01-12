@@ -7,79 +7,89 @@ service cloud.firestore {
     // --- Funções de Ajuda ---
 
     function isSignedIn() {
-      // Verifica se o utilizador está autenticado.
       return request.auth != null;
     }
 
     function isSuperAdmin() {
-      // ESTA É A REGRA DO SUPER ADMIN.
       // SUBSTITUA "COLOQUE_O_SEU_UID_AQUI" PELO ID DO SEU UTILIZADOR ADMIN.
-      // Este utilizador terá acesso total a todos os dados.
       return request.auth.uid == "COLOQUE_O_SEU_UID_AQUI";
     }
     
     function getUserData(userId) {
-      // Obtém os dados do documento do funcionário que está a fazer o pedido.
-      // O `request.auth.token.companyId` vem do custom claim que definimos no login.
       return get(/databases/$(database)/documents/companies/$(request.auth.token.companyId)/employees/$(userId)).data;
     }
 
     function isEmployeeOf(companyId) {
-      // Verifica se o utilizador autenticado pertence à empresa especificada.
       return isSignedIn() && (request.auth.token.companyId == companyId || isSuperAdmin());
     }
     
     function isAdminOf(companyId) {
-      // Verifica se o utilizador autenticado tem a função de 'Admin' na sua própria empresa.
       return isEmployeeOf(companyId) && (getUserData(request.auth.uid).role == 'Admin' || isSuperAdmin());
     }
     
-    function hasPermission(permission) {
-        // Verifica se o utilizador tem uma permissão específica. O Super Admin tem todas.
-        return isSuperAdmin() || (isEmployeeOf(request.auth.token.companyId) && (isAdminOf(request.auth.token.companyId) || getUserData(request.auth.uid).permissions.hasAny([permission])));
+    function can(module, level) {
+      // O Super Admin tem acesso total.
+      if (isSuperAdmin()) {
+        return true;
+      }
+      // O Admin da empresa tem acesso de escrita a tudo.
+      if (isAdminOf(request.auth.token.companyId)) {
+        return true;
+      }
+      // Verifica as permissões do funcionário
+      let userPermissions = getUserData(request.auth.uid).permissions;
+      if (level == 'write') {
+        return userPermissions[module] == 'write';
+      }
+      if (level == 'read') {
+        return userPermissions[module] == 'read' || userPermissions[module] == 'write';
+      }
+      return false;
     }
 
     // --- Regras por Coleção ---
 
     match /companies/{companyId} {
-      // Qualquer pessoa pode criar uma nova empresa (registo).
       allow create: if true;
-      // Apenas Admins da empresa ou o Super Admin podem ler, atualizar ou apagar dados.
       allow read, update, delete: if isEmployeeOf(companyId) && isAdminOf(companyId);
-      
-      // Apenas o Super Admin pode listar todas as empresas.
       allow list: if isSuperAdmin();
 
-      // Sub-coleção para os funcionários de uma empresa específica.
       match /employees/{employeeId} {
-        // Um funcionário pode ler os seus próprios dados. Admins podem ler os de todos na sua empresa. O Super Admin pode ver tudo.
         allow get, list: if isEmployeeOf(companyId);
-        // Apenas Admins da empresa ou o Super Admin podem gerir funcionários.
         allow create, update, delete: if isEmployeeOf(companyId) && isAdminOf(companyId);
       }
       
-      // Acesso total para o Super Admin em todas as sub-coleções de dados.
-      // Acesso restrito por permissão para os outros utilizadores.
       match /catalogProducts/{productId} {
-          allow read, write: if hasPermission('settings');
+          allow read: if can('settings', 'read');
+          allow write: if can('settings', 'write');
       }
       match /catalogCategories/{categoryId} {
-          allow read, write: if hasPermission('settings');
+          allow read: if can('settings', 'read');
+          allow write: if can('settings', 'write');
       }
       match /products/{productId} {
-        allow read: if hasPermission('inventory');
-        allow write: if isAdminOf(companyId);
+        allow read: if can('inventory', 'read');
+        allow write: if can('inventory', 'write');
       }
       match /sales/{saleId} {
-        allow read, write: if hasPermission('sales');
+        allow read: if can('sales', 'read');
+        allow write: if can('sales', 'write');
       }
       match /productions/{productionId} {
-        allow read: if hasPermission('production');
-        allow write: if isAdminOf(companyId);
+        allow read: if can('production', 'read');
+        allow write: if can('production', 'write');
       }
       match /orders/{orderId} {
-        allow read: if hasPermission('orders');
-        allow write: if isAdminOf(companyId);
+        allow read: if can('orders', 'read');
+        allow write: if can('orders', 'write');
+      }
+      match /reports/{reportId} {
+        allow read: if can('reports', 'read');
+        allow write: if can('reports', 'write');
+      }
+       match /users/{userId} {
+        allow read: if can('users', 'read');
+        allow write: if can('users', 'write');
       }
     }
   }

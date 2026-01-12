@@ -2,12 +2,13 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Employee, ModulePermission } from "@/lib/types"
+import { Employee, ModulePermission, PermissionLevel } from "@/lib/types"
 import { Button } from "../ui/button"
-import { Trash2, Edit, Copy } from "lucide-react"
+import { Trash2, Edit, Copy, Eye, Pencil } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { EditEmployeeDialog } from "./edit-employee-dialog"
 import { allPermissions } from "@/lib/data"
+import { cn } from "@/lib/utils"
 
 interface ColumnsOptions {
     onDelete: (employee: Employee) => void;
@@ -109,11 +110,12 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
         cell: ({ row }) => {
             const role = row.original.role;
             return (
-                 <span className={`text-[10px] font-black px-3 py-1.5 rounded-full ${
+                 <span className={cn(
+                    "text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-wider",
                     role === 'Admin' 
                     ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
                     : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-                 } uppercase tracking-wider`}>
+                 )}>
                     {role}
                 </span>
             )
@@ -121,21 +123,35 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
     },
     {
         accessorKey: 'permissions',
-        header: 'Módulos Permitidos',
+        header: 'Permissões',
         cell: ({ row }) => {
-            const permissions = row.original.permissions || [];
+            const permissions = row.original.permissions || {};
             const role = row.original.role;
             if (role === 'Admin') {
-                return <span className="text-xs text-muted-foreground italic">Acesso total</span>;
+                return <span className="text-xs text-muted-foreground italic">Acesso total de escrita</span>;
             }
-            if (permissions.length === 0) {
-                return <span className="text-xs text-muted-foreground italic">Nenhum</span>;
+            
+            const grantedPermissions = Object.entries(permissions)
+                .filter(([, level]) => level !== 'none')
+                .map(([id, level]) => ({
+                    label: allPermissions.find(p => p.id === id)?.label || id,
+                    level
+                }));
+            
+            if (grantedPermissions.length === 0) {
+                return <span className="text-xs text-muted-foreground italic">Nenhuma</span>;
             }
-            const permissionLabels = permissions.map(pId => allPermissions.find(p => p.id === pId)?.label || pId);
+
             return (
-                <div className="flex flex-wrap gap-1 max-w-xs">
-                    {permissionLabels.map(label => (
-                        <span key={label} className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
+                <div className="flex flex-wrap gap-1 max-w-sm">
+                    {grantedPermissions.map(({label, level}) => (
+                        <span key={label} className={cn(
+                            "flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full",
+                             level === 'write'
+                                ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                        )}>
+                            {level === 'write' ? <Pencil className="h-2.5 w-2.5" /> : <Eye className="h-2.5 w-2.5" />}
                             {label}
                         </span>
                     ))}
