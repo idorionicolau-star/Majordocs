@@ -27,7 +27,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const { user } = authContext;
+  const { user, isSuperAdmin } = authContext;
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
   // 2. LÓGICA DE REDIRECIONAMENTO (Executada após o loading)
@@ -43,27 +43,23 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     }
 
     if (user && !isAuthPage) {
-      // Exceção explícita para o inventário: Todos os utilizadores podem ver.
-      if (pathname.startsWith('/inventory')) {
-        return;
-      }
-      
       const currentNavItem = mainNavItems.find(item => pathname.startsWith(item.href));
       
       if (currentNavItem) {
-        const isSuperAdmin = authContext.isSuperAdmin;
-        const isAdmin = user.role === 'Admin';
+        // Super admin pode ver tudo
+        if (isSuperAdmin) return;
         
-        // Verifica se a página é apenas para admin (como /users)
-        if(currentNavItem.adminOnly && !isAdmin && !isSuperAdmin) {
-            router.replace('/dashboard');
+        // Admins podem ver tudo exceto a página de empresas
+        if (user.role === 'Admin') {
+            if (currentNavItem.id === 'companies') {
+                router.replace('/dashboard');
+            }
             return;
         }
 
+        // Lógica para funcionários normais
         const permissionLevel = user.permissions[currentNavItem.id];
-        
-        // Acesso de Leitura é suficiente para aceder à página
-        const canAccess = isSuperAdmin || isAdmin || permissionLevel === 'read' || permissionLevel === 'write';
+        const canAccess = permissionLevel === 'read' || permissionLevel === 'write';
 
         if (!canAccess) {
           console.warn(`Acesso negado para o módulo: ${currentNavItem.id}. A redirecionar...`);
@@ -71,7 +67,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         }
       }
     }
-  }, [user, isAuthPage, pathname, router, authContext.isSuperAdmin]);
+  }, [user, isAuthPage, pathname, router, isSuperAdmin]);
 
 
   // 3. RENDERIZAÇÃO CONDICIONAL

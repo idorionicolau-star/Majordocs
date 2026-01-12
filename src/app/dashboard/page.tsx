@@ -33,8 +33,22 @@ export default function DashboardPage() {
   const { user } = useContext(InventoryContext) || {};
 
   const hasPermission = (permissionId: ModulePermission) => {
-    if (user?.role === 'Admin') return true;
-    return user?.permissions?.includes(permissionId);
+    if (!user) return false;
+    if (user.role === 'Admin') return true;
+    if (!user.permissions) return false;
+
+    // Se as permissões forem um Objeto (Novo formato: { inventory: "read" })
+    if (typeof user.permissions === 'object' && !Array.isArray(user.permissions)) {
+        const level = user.permissions[permissionId];
+        return level === 'read' || level === 'write';
+    }
+
+    // Se as permissões forem um Array (Formato antigo / incorreto)
+    if (Array.isArray(user.permissions)) {
+        return user.permissions.includes(permissionId);
+    }
+    
+    return false;
   }
 
   return (

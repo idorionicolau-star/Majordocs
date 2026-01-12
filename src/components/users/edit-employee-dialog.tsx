@@ -82,20 +82,21 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
   }, [open, employee, form]);
 
  const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write', checked: boolean) => {
-    const currentLevel = form.getValues(`permissions.${moduleId}`);
-    let newLevel: PermissionLevel = currentLevel;
+      const currentLevel = form.getValues(`permissions.${moduleId}`);
+      let newLevel: PermissionLevel = currentLevel;
 
-    if (level === 'write') {
-      newLevel = checked ? 'write' : 'read';
-    } else { // level === 'read'
-      newLevel = checked ? 'read' : 'none';
-      if (!checked) {
-        // If 'read' is unchecked, 'write' must also be 'lost'
-         form.setValue(`permissions.${moduleId}`, 'none');
+      if (level === 'read') {
+          // Se desmarcar 'Ver', perde todas as permissões.
+          // Se marcar 'Ver', ganha permissão de leitura.
+          newLevel = checked ? 'read' : 'none';
+      } else { // level === 'write'
+          // Se marcar 'Editar', ganha permissão de escrita (que inclui leitura).
+          // Se desmarcar 'Editar', volta para apenas leitura.
+          newLevel = checked ? 'write' : 'read';
       }
-    }
-     form.setValue(`permissions.${moduleId}`, newLevel, { shouldDirty: true });
-  }
+
+      form.setValue(`permissions.${moduleId}`, newLevel, { shouldDirty: true });
+  };
 
   function onSubmit(values: EditEmployeeFormValues) {
     if (values.password && values.password.length > 0 && values.password.length < 6) {
@@ -116,6 +117,8 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
 
     if (values.password && values.password.length >= 6) {
       updatedEmployeeData.password = values.password;
+    } else {
+      updatedEmployeeData.password = employee.password;
     }
     
     onUpdateEmployee({
@@ -223,8 +226,10 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
                             </TableHeader>
                             <TableBody>
                                 {allPermissions.filter(p => !p.adminOnly).map((module) => {
-                                    const canRead = form.watch(`permissions.${module.id}`) === 'read' || form.watch(`permissions.${module.id}`) === 'write';
-                                    const canWrite = form.watch(`permissions.${module.id}`) === 'write';
+                                    const permissionValue = form.watch(`permissions.${module.id}`);
+                                    const canRead = permissionValue === 'read' || permissionValue === 'write';
+                                    const canWrite = permissionValue === 'write';
+
                                     return (
                                         <TableRow key={module.id}>
                                             <TableCell className="font-medium">{module.label}</TableCell>
