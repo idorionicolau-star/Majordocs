@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
@@ -15,7 +16,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const authContext = useContext(InventoryContext);
 
-  // 1. ESTADO DE PROTEÇÃO: Enquanto estiver a carregar, não mostramos nada
+  // 1. ESTADO DE PROTEÇÃO: Enquanto o contexto está a carregar, mostramos um spinner.
   if (!authContext || authContext.loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -30,66 +31,34 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const { user, isSuperAdmin } = authContext;
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
-  // 2. LÓGICA DE REDIRECIONAMENTO (Executada após o loading)
+  // 2. LÓGICA DE REDIRECIONAMENTO (Executada APÓS o loading do contexto)
   useEffect(() => {
-    if (!user && !isAuthPage) {
+    // Se o contexto terminou de carregar e não há utilizador, e não estamos numa página de autenticação, redireciona.
+    if (!authContext.loading && !user && !isAuthPage) {
       router.replace('/login');
-      return;
     }
-
-    if (user && isAuthPage) {
-      router.replace('/dashboard');
-      return;
-    }
-
-    if (user && !isAuthPage) {
-      const currentNavItem = mainNavItems.find(item => pathname.startsWith(item.href));
-      
-      if (currentNavItem) {
-        // O Super Admin tem acesso a tudo.
-        if (isSuperAdmin) return;
-        
-        const isAdmin = user.role === 'Admin';
-        
-        // Admins normais não podem ver a página de empresas.
-        if (isAdmin && currentNavItem.id === 'companies') {
-            router.replace('/dashboard');
-            return;
-        }
-
-        // Se for admin, tem acesso a tudo o resto.
-        if (isAdmin) return;
-
-        // Lógica para funcionários normais
-        const permissions = user.permissions;
-        if (typeof permissions === 'object' && permissions !== null) {
-            const level = permissions[currentNavItem.id];
-            const canAccess = level === 'read' || level === 'write';
-            if (!canAccess) {
-              console.warn(`Acesso negado para o módulo: ${currentNavItem.id}. A redirecionar...`);
-              router.replace('/dashboard');
-            }
-        } else {
-           // Fallback para o caso de as permissões não serem um objeto (ou serem nulas).
-           console.warn(`Estrutura de permissões inválida para o utilizador. A redirecionar...`);
-           router.replace('/dashboard');
-        }
-      }
-    }
-  }, [user, isAuthPage, pathname, router, isSuperAdmin]);
+  }, [authContext.loading, user, isAuthPage, router]);
 
 
   // 3. RENDERIZAÇÃO CONDICIONAL
-  if (isAuthPage) return <>{children}</>;
-  if (!user) return (
-     <div className="flex h-screen w-full items-center justify-center bg-background">
+  // Se for uma página de autenticação, renderiza o conteúdo diretamente.
+  if (isAuthPage) {
+    return <>{children}</>;
+  }
+
+  // Se o contexto terminou de carregar mas ainda não há utilizador, mostra uma mensagem de redirecionamento.
+  if (!authContext.loading && !user) {
+     return (
+       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
           <p className="text-sm text-muted-foreground">A redirecionar para o login...</p>
         </div>
       </div>
-  );
-
+    );
+  }
+  
+  // Se o utilizador está autenticado, mostra o layout principal com o conteúdo.
   return (
     <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
       <Header />

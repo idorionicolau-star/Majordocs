@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -235,13 +236,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     setCompanyId(null);
     localStorage.removeItem('majorstockx-user');
     localStorage.removeItem('majorstockx-company-id');
     router.push('/login');
-  };
+    toast({ title: "Sessão terminada", description: "Foi desconectado com sucesso." });
+  }, [router, toast]);
 
   // --- DATA FETCHING LOGIC ---
 
@@ -468,20 +470,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
 
   const isDataLoading = authLoading || productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading;
-
-  const isAuthPage = pathname === '/login' || pathname === '/register';
-
-  if (authLoading) {
-    return <div className="flex h-screen w-full items-center justify-center">A carregar aplicação...</div>;
-  }
-  
-  if (!user && !isAuthPage) {
-     return <div className="flex h-screen w-full items-center justify-center">A redirecionar para o login...</div>;
-  }
-  
-  if (user && isAuthPage) {
-      return <div className="flex h-screen w-full items-center justify-center">A redirecionar para o dashboard...</div>;
-  }
 
   const value: InventoryContextType = {
     user, companyId, isSuperAdmin, loading: isDataLoading,
