@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useContext } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -35,6 +35,7 @@ import * as z from "zod";
 import { useToast } from '@/hooks/use-toast';
 import type { Product, Location } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { InventoryContext } from '@/context/inventory-context';
 
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
@@ -49,14 +50,13 @@ const formSchema = z.object({
 type TransferFormValues = z.infer<typeof formSchema>;
 
 interface TransferStockDialogProps {
-    products: Product[];
-    locations: Location[];
     onTransfer: (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => void;
 }
 
-export function TransferStockDialog({ products, locations, onTransfer }: TransferStockDialogProps) {
+export function TransferStockDialog({ onTransfer }: TransferStockDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { products, locations } = useContext(InventoryContext) || {};
   
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(formSchema),
@@ -73,6 +73,7 @@ export function TransferStockDialog({ products, locations, onTransfer }: Transfe
   const watchedQuantity = useWatch({ control: form.control, name: 'quantity' });
 
   const uniqueProducts = useMemo(() => {
+    if (!products) return [];
     const seen = new Set<string>();
     return products.filter(p => {
         if (seen.has(p.name)) {
@@ -84,7 +85,7 @@ export function TransferStockDialog({ products, locations, onTransfer }: Transfe
   }, [products]);
 
   const availableStock = useMemo(() => {
-    if (!watchedProductName || !watchedFromLocation) return 0;
+    if (!watchedProductName || !watchedFromLocation || !products) return 0;
     const productInstance = products.find(p => p.name === watchedProductName && p.location === watchedFromLocation);
     return productInstance?.stock ?? 0;
   }, [products, watchedProductName, watchedFromLocation]);
@@ -103,6 +104,8 @@ export function TransferStockDialog({ products, locations, onTransfer }: Transfe
     form.reset();
     setOpen(false);
   }
+
+  if (!products || !locations) return null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

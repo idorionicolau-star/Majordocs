@@ -5,26 +5,26 @@ import type { Sale, Location, Product } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
-import { Calendar, User, CheckCircle, PackageCheck } from "lucide-react";
+import { Calendar, User, CheckCircle, PackageCheck, MapPin } from "lucide-react";
 import { SaleActions } from "./columns";
+import { useContext } from "react";
+import { InventoryContext } from "@/context/inventory-context";
 
 interface SaleCardProps {
     sale: Sale;
-    locations: Location[];
-    products: Product[];
     onUpdateSale: (sale: Sale) => void;
-    onConfirmPickup: (saleId: string) => void;
-    isMultiLocation: boolean;
+    onConfirmPickup: (sale: Sale) => void;
     viewMode?: 'normal' | 'condensed';
 }
 
-export function SaleCard({ sale, locations, products, onUpdateSale, onConfirmPickup, isMultiLocation, viewMode = 'normal' }: SaleCardProps) {
+export function SaleCard({ sale, onUpdateSale, onConfirmPickup, viewMode = 'normal' }: SaleCardProps) {
+    const { isMultiLocation, locations } = useContext(InventoryContext) || {};
     const isCondensed = viewMode === 'condensed';
-    const location = locations.find(l => l.id === sale.location);
+    const location = isMultiLocation ? locations?.find(l => l.id === sale.location) : null;
 
     const actionsProps = {
         row: { original: sale },
-        options: { locations, products, onUpdateSale, onConfirmPickup },
+        options: { onUpdateSale, onConfirmPickup },
     };
 
     return (
@@ -60,9 +60,9 @@ export function SaleCard({ sale, locations, products, onUpdateSale, onConfirmPic
                     <span>{sale.status}</span>
                 </div>
 
-                 {isMultiLocation && !isCondensed && (
+                 {isMultiLocation && location && !isCondensed && (
                     <div className="flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400 pt-1">
-                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                        <MapPin className="h-3 w-3" />
                         <span className="text-[10px] font-semibold">{location ? location.name : 'N/A'}</span>
                     </div>
                  )}

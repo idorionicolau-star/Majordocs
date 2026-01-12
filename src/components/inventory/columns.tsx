@@ -18,12 +18,12 @@ import {
 import { Button } from "../ui/button";
 import { Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { useContext } from "react";
+import { InventoryContext } from "@/context/inventory-context";
 
 interface ColumnsOptions {
   onAttemptDelete: (product: Product) => void;
   onProductUpdate: (product: Product) => void;
-  isMultiLocation: boolean;
-  locations: Location[];
   isAdmin: boolean;
 }
 
@@ -42,7 +42,8 @@ export const getStockStatus = (product: Product) => {
 };
 
 export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
-  const { isMultiLocation, locations, isAdmin } = options;
+  const { isMultiLocation, locations } = useContext(InventoryContext) || {};
+  const { isAdmin } = options;
 
   const baseColumns: ColumnDef<Product>[] = [
     {
@@ -52,7 +53,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
               <span className="text-sm font-[800] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">{row.original.name}</span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">ID: {row.original.id.toUpperCase().substring(0, 6)}</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">ID: {row.original.id?.toUpperCase().substring(0, 6)}</span>
           </div>
         </div>
       ),
@@ -76,7 +77,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
       accessorKey: "location",
       header: "Localização",
       cell: ({ row }) => {
-        const location = locations.find(l => l.id === row.original.location);
+        const location = locations?.find(l => l.id === row.original.location);
         return (
           <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
             <div className="h-2 w-2 rounded-full bg-blue-500" />
@@ -148,9 +149,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
             <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <EditProductDialog 
                 product={product} 
-                onProductUpdate={options.onProductUpdate} 
-                isMultiLocation={isMultiLocation}
-                locations={locations}
+                onProductUpdate={options.onProductUpdate}
                 trigger="icon"
               />
               <TooltipProvider>

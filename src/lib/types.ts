@@ -96,6 +96,7 @@ export type Order = {
   productionStartDate?: string | null;
   quantityProduced: number;
   productionLogs: ProductionLog[];
+  location?: string; // Location for the finished product
 };
 
 

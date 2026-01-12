@@ -33,31 +33,25 @@ export default function SalesPage() {
 
   const { 
     sales, 
-    products: allProducts, 
-    locations, 
-    companyId, 
     loading: inventoryLoading, 
-    updateProduct,
     addSale,
     confirmSalePickup,
     user,
+    companyId,
   } = inventoryContext || { 
     sales: [], 
-    products: [], 
-    locations: [], 
-    companyId: null, 
     loading: true, 
-    updateProduct: () => {},
     addSale: async () => {},
     confirmSalePickup: () => {},
     user: null,
+    companyId: null,
   };
   
   useEffect(() => {
-    if (searchParams.get('action') === 'add') {
+    if (searchParams.get('action') === 'add' && user?.role === 'Admin') {
       setAddDialogOpen(true);
     }
-  }, [searchParams]);
+  }, [searchParams, user]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -235,9 +229,7 @@ export default function SalesPage() {
 
       {view === 'list' ? (
         <SalesDataTable 
-          columns={columns({ 
-              locations: locations || [],
-              products: allProducts || [],
+          columns={columns({
               onUpdateSale: handleUpdateSale,
               onConfirmPickup: handleConfirmPickup,
           })} 
@@ -254,11 +246,8 @@ export default function SalesPage() {
                 <SaleCard 
                     key={sale.id}
                     sale={sale}
-                    locations={locations || []}
-                    products={allProducts || []}
                     onUpdateSale={handleUpdateSale}
                     onConfirmPickup={handleConfirmPickup}
-                    isMultiLocation={!!(inventoryContext?.isMultiLocation)}
                     viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
                 />
             ))}

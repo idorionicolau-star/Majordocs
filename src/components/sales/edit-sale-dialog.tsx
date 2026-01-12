@@ -46,13 +46,12 @@ type EditSaleFormValues = z.infer<typeof formSchema>;
 
 interface EditSaleDialogProps {
     sale: Sale;
-    products: Product[];
     onUpdateSale: (sale: Sale) => void;
     onOpenChange: (open: boolean) => void;
     open?: boolean;
 }
 
-export function EditSaleDialog({ sale, products, onUpdateSale, onOpenChange, open }: EditSaleDialogProps) {
+export function EditSaleDialog({ sale, onUpdateSale, onOpenChange, open }: EditSaleDialogProps) {
   const inventoryContext = useContext(InventoryContext);
   const { catalogProducts, catalogCategories } = inventoryContext || {};
 

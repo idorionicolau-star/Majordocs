@@ -5,23 +5,24 @@ import type { Product, Location } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertCircle, Edit2, Trash2, PackageCheck } from "lucide-react";
+import { AlertCircle, Edit2, Trash2, PackageCheck, MapPin } from "lucide-react";
 import { getStockStatus } from "./columns";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { EditProductDialog } from "./edit-product-dialog";
+import { useContext } from "react";
+import { InventoryContext } from "@/context/inventory-context";
 
 interface ProductCardProps {
     product: Product;
-    locations: Location[];
-    isMultiLocation: boolean;
     onProductUpdate: (product: Product) => void;
     onAttemptDelete: (product: Product) => void;
     viewMode?: 'normal' | 'condensed';
     isAdmin: boolean;
 }
 
-export function ProductCard({ product, locations, isMultiLocation, onProductUpdate, onAttemptDelete, viewMode = 'normal', isAdmin }: ProductCardProps) {
+export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMode = 'normal', isAdmin }: ProductCardProps) {
+    const { locations, isMultiLocation } = useContext(InventoryContext) || {};
     const status = getStockStatus(product);
     
     const statusInfo = {
@@ -31,7 +32,7 @@ export function ProductCard({ product, locations, isMultiLocation, onProductUpda
         'sem-estoque': "text-rose-600",
     }
 
-    const location = locations.find(l => l.id === product.location);
+    const location = locations?.find(l => l.id === product.location);
     const isCondensed = viewMode === 'condensed';
     const availableStock = product.stock - product.reservedStock;
 
@@ -68,10 +69,10 @@ export function ProductCard({ product, locations, isMultiLocation, onProductUpda
                         {status === 'sem-estoque' ? 'Esgotado' : status === 'crítico' ? 'Crítico' : 'Baixo'}
                     </div>
                 )}
-                 {isMultiLocation && !isCondensed && (
-                    <div className="flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400">
-                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                        <span className="text-[10px] font-semibold">{location ? location.name : 'N/A'}</span>
+                 {isMultiLocation && location && !isCondensed && (
+                    <div className="flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400 pt-1">
+                        <MapPin className="h-3 w-3" />
+                        <span className="text-[10px] font-semibold">{location.name}</span>
                     </div>
                  )}
             </CardContent>
@@ -79,8 +80,6 @@ export function ProductCard({ product, locations, isMultiLocation, onProductUpda
                  <EditProductDialog
                     product={product}
                     onProductUpdate={onProductUpdate}
-                    isMultiLocation={isMultiLocation}
-                    locations={locations}
                     trigger={'card-button'}
                 />
                 <TooltipProvider>

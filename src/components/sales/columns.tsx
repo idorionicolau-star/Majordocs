@@ -19,13 +19,11 @@ import { InventoryContext } from "@/context/inventory-context"
 
 
 interface ColumnsOptions {
-  locations: Location[];
-  products: Product[];
   onUpdateSale: (sale: Sale) => void;
   onConfirmPickup: (sale: Sale) => void;
 }
 
-const handlePrintGuide = (sale: Sale, companyName: string, isMultiLocation: boolean, locations: Location[]) => {
+const handlePrintGuide = (sale: Sale, companyName: string | undefined, isMultiLocation: boolean, locations: Location[]) => {
   const printWindow = window.open('', '', 'height=800,width=800');
   if (printWindow) {
       printWindow.document.write('<!DOCTYPE html><html><head><title>Guia de Remessa</title>');
@@ -61,7 +59,7 @@ const handlePrintGuide = (sale: Sale, companyName: string, isMultiLocation: bool
       printWindow.document.write(`
           <div class="header">
                <div class="logo">
-                  <span>${companyName}</span>
+                  <span>${companyName || 'MajorStockX'}</span>
               </div>
               <h1>Guia de Remessa</h1>
           </div>
@@ -83,7 +81,7 @@ const handlePrintGuide = (sale: Sale, companyName: string, isMultiLocation: bool
       printWindow.document.write('</tbody></table>');
 
       printWindow.document.write('<div style="margin-top: 4rem;"><p>Recebido por: ___________________________________</p><p>Data: ____/____/______</p></div>');
-      printWindow.document.write(`<div class="footer"><p>${companyName} &copy; ' + new Date().getFullYear() + '</p></div>`);
+      printWindow.document.write(`<div class="footer"><p>${companyName || 'MajorStockX'} &copy; ' + new Date().getFullYear() + '</p></div>`);
       printWindow.document.write('</div></body></html>');
       printWindow.document.close();
       
@@ -101,9 +99,9 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const sale = row.original as Sale;
     const inventoryContext = useContext(InventoryContext);
-    const { companyData, isMultiLocation, locations } = inventoryContext || {};
+    const { companyData, isMultiLocation, locations, user } = inventoryContext || {};
     
-    const canConfirmPickup = true;
+    const canConfirmPickup = user?.role === 'Admin';
     
     return (
         <div className="flex items-center justify-end gap-2">
@@ -123,7 +121,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
                         </TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
-                <SaleDetailsDialogContent sale={sale} locations={locations || []} isMultiLocation={isMultiLocation || false} />
+                <SaleDetailsDialogContent sale={sale} />
             </Dialog>
 
             {sale.status === 'Pago' && canConfirmPickup && (
@@ -142,7 +140,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
             </TooltipProvider>
             )}
 
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            {canConfirmPickup && <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                  <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -160,17 +158,16 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
                 </TooltipProvider>
                 <EditSaleDialog
                     sale={sale}
-                    products={options.products}
                     onUpdateSale={options.onUpdateSale}
                     onOpenChange={setIsEditDialogOpen}
                     open={isEditDialogOpen}
                 />
-            </Dialog>
+            </Dialog>}
             
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrintGuide(sale, companyData?.name || 'MajorStockX', isMultiLocation || false, locations || [])}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrintGuide(sale, companyData?.name, isMultiLocation || false, locations || [])}>
                         <Printer className="h-4 w-4" />
                         <span className="sr-only">Imprimir Guia</span>
                     </Button>
@@ -187,10 +184,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
 export { ActionsCell as SaleActions, handlePrintGuide };
 
 export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
-  let isMultiLocationEnabled = false;
-  if (typeof window !== 'undefined') {
-    isMultiLocationEnabled = localStorage.getItem('majorstockx-multi-location-enabled') === 'true';
-  }
+  const { isMultiLocation, locations } = useContext(InventoryContext) || {};
 
   const baseColumns: ColumnDef<Sale>[] = [
     {
@@ -203,12 +197,12 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
     },
   ];
 
-  if (isMultiLocationEnabled) {
+  if (isMultiLocation) {
     baseColumns.push({
       accessorKey: "location",
       header: "Localização",
       cell: ({ row }) => {
-        const location = options.locations.find(l => l.id === row.original.location);
+        const location = locations?.find(l => l.id === row.original.location);
         return location ? location.name : 'N/A';
       },
     });
@@ -260,5 +254,3 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
 
   return baseColumns;
 }
-
-    

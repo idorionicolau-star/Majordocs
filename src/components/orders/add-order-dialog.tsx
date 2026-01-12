@@ -46,6 +46,7 @@ const formSchema = z.object({
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']),
   clientName: z.string().optional(),
   deliveryDate: z.string().nonempty({ message: "A data de entrega é obrigatória." }),
+  location: z.string().optional(),
 });
 
 type AddOrderFormValues = z.infer<typeof formSchema>;
@@ -59,7 +60,7 @@ interface AddOrderDialogProps {
 
 export function AddOrderDialog({ open, onOpenChange, onAddOrder, triggerType = 'fab' }: AddOrderDialogProps) {
   const inventoryContext = useContext(InventoryContext);
-  const { catalogProducts, catalogCategories } = inventoryContext || {};
+  const { catalogProducts, catalogCategories, isMultiLocation, locations } = inventoryContext || {};
   
   const form = useForm<AddOrderFormValues>({
     resolver: zodResolver(formSchema),
@@ -69,6 +70,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder, triggerType = '
       unit: 'un',
       clientName: "",
       deliveryDate: "",
+      location: "",
     },
   });
   
@@ -80,17 +82,29 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder, triggerType = '
         unit: 'un',
         clientName: "",
         deliveryDate: "",
+        location: locations && locations.length > 0 ? locations[0].id : "",
       });
     }
-  }, [open, form]);
+  }, [open, form, locations]);
+
+  useEffect(() => {
+     if (locations && locations.length > 0 && !form.getValues('location')) {
+      form.setValue('location', locations[0].id);
+    }
+  }, [locations, form])
 
   function onSubmit(values: AddOrderFormValues) {
+    if (isMultiLocation && !values.location) {
+      form.setError("location", { type: "manual", message: "A localização de produção é obrigatória." });
+      return;
+    }
     const newOrder: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'> = {
       productName: values.productName,
       quantity: values.quantity,
       unit: values.unit,
       clientName: values.clientName,
       deliveryDate: new Date(values.deliveryDate).toISOString(),
+      location: values.location,
     };
     onAddOrder(newOrder);
 
@@ -150,6 +164,32 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder, triggerType = '
                   </FormItem>
                 )}
               />
+              {isMultiLocation && (
+                 <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Localização de Produção</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a localização" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {locations?.map(location => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}

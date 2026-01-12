@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -32,10 +32,11 @@ import { Edit2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import type { Product, Location } from '@/lib/types';
+import type { Product } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
+import { InventoryContext } from '@/context/inventory-context';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -52,12 +53,11 @@ type EditProductFormValues = z.infer<typeof formSchema>;
 interface EditProductDialogProps {
     product: Product;
     onProductUpdate: (product: Product) => void;
-    isMultiLocation: boolean;
-    locations: Location[];
     trigger: 'icon' | 'button' | 'card-button';
 }
 
-function EditProductDialogContent({ product, onProductUpdate, isMultiLocation, locations, trigger }: EditProductDialogProps) {
+function EditProductDialogContent({ product, onProductUpdate, trigger }: EditProductDialogProps) {
+  const { isMultiLocation, locations } = useContext(InventoryContext) || {};
   const [open, setOpen] = useState(false);
   const form = useForm<EditProductFormValues>({
     resolver: zodResolver(formSchema),
@@ -200,7 +200,7 @@ function EditProductDialogContent({ product, onProductUpdate, isMultiLocation, l
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {locations.map(location => (
+                          {locations?.map(location => (
                             <SelectItem key={location.id} value={location.id}>
                               {location.name}
                             </SelectItem>

@@ -1,14 +1,16 @@
 
 "use client";
 
-import type { Order } from "@/lib/types";
+import type { Order, Location } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, ClipboardList, Play, Check, CircleHelp, PlusCircle, TrendingUp } from "lucide-react";
+import { Calendar, User, ClipboardList, Play, Check, CircleHelp, PlusCircle, TrendingUp, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { AddProductionLogDialog } from "./add-production-log-dialog";
 import { differenceInDays, addDays } from 'date-fns';
+import { useContext } from "react";
+import { InventoryContext } from "@/context/inventory-context";
 
 
 interface OrderCardProps {
@@ -34,9 +36,11 @@ const statusConfig = {
 };
 
 export function OrderCard({ order, onUpdateStatus, onAddProductionLog, isAdmin }: OrderCardProps) {
+    const { isMultiLocation, locations } = useContext(InventoryContext) || {};
     const { icon: StatusIcon, color: statusColor } = statusConfig[order.status];
     const progress = order.quantity > 0 ? (order.quantityProduced / order.quantity) * 100 : 0;
     const remainingQuantity = order.quantity - order.quantityProduced;
+    const locationName = isMultiLocation ? locations?.find(l => l.id === order.location)?.name : null;
     
     const calculateEstimatedCompletionDate = () => {
         if (!order.productionStartDate || order.quantityProduced <= 0) {
@@ -109,6 +113,12 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, isAdmin }
                             <span>Previsão: {estimatedCompletionDate.toLocaleDateString('pt-BR')}</span>
                         </div>
                     )}
+                     {locationName && (
+                        <div className="flex items-center gap-2">
+                            <MapPin size={14} />
+                            <span className="font-semibold">{locationName}</span>
+                        </div>
+                     )}
                  </div>
             </CardContent>
             {isAdmin && <CardFooter className="flex flex-col sm:flex-row justify-center gap-2 p-2 pt-4">

@@ -12,6 +12,8 @@ import {
 import type { Sale, Location } from "@/lib/types";
 import { Calendar, Clock, Box, User, Hash, MapPin, DollarSign, Tag } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { useContext } from "react";
+import { InventoryContext } from "@/context/inventory-context";
 
 
 export function SaleDetailsDialog() {
@@ -22,8 +24,6 @@ export function SaleDetailsDialog() {
 
 interface SaleDetailsDialogProps {
   sale: Sale;
-  locations: Location[];
-  isMultiLocation: boolean;
 }
 
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
@@ -36,9 +36,10 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
     </div>
 );
 
-export function SaleDetailsDialogContent({ sale, locations, isMultiLocation }: SaleDetailsDialogProps) {
+export function SaleDetailsDialogContent({ sale }: SaleDetailsDialogProps) {
+  const { isMultiLocation, locations } = useContext(InventoryContext) || {};
   const saleDate = new Date(sale.date);
-  const locationName = isMultiLocation ? locations.find(l => l.id === sale.location)?.name || 'N/A' : null;
+  const locationName = isMultiLocation ? locations?.find(l => l.id === sale.location)?.name || 'N/A' : null;
   const unitPrice = sale.quantity > 0 ? sale.totalValue / sale.quantity : 0;
   
   const formattedTotalValue = formatCurrency(sale.totalValue);
