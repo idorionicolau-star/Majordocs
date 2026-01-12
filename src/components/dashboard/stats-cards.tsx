@@ -96,7 +96,7 @@ export function StatsCards() {
              return (
                  <div key={stat.title}>
                     <Card className="glass-card relative flex items-center justify-center gap-4 p-4 rounded-2xl shadow-sm h-full text-center">
-                        <div className="absolute inset-0 bg-background/95 z-10 rounded-2xl flex items-center justify-center">
+                        <div className="absolute inset-0 bg-background z-10 rounded-2xl flex items-center justify-center">
                             <div className="flex flex-col items-center gap-2 text-muted-foreground font-bold">
                                 <Lock className="h-6 w-6"/>
                                 <span>Acesso Restrito</span>
