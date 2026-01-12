@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from "react";
+import { useSearchParams } from 'next/navigation';
 import type { Sale, Location, Product } from "@/lib/types";
 import { columns } from "@/components/sales/columns";
 import { SalesDataTable } from "@/components/sales/data-table";
@@ -20,10 +21,12 @@ import { doc, updateDoc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 
 export default function SalesPage() {
+  const searchParams = useSearchParams();
   const [nameFilter, setNameFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
+  const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
@@ -37,6 +40,7 @@ export default function SalesPage() {
     updateProduct,
     addSale,
     confirmSalePickup,
+    user,
   } = inventoryContext || { 
     sales: [], 
     products: [], 
@@ -46,7 +50,14 @@ export default function SalesPage() {
     updateProduct: () => {},
     addSale: async () => {},
     confirmSalePickup: () => {},
+    user: null,
   };
+  
+  useEffect(() => {
+    if (searchParams.get('action') === 'add') {
+      setAddDialogOpen(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -253,7 +264,12 @@ export default function SalesPage() {
             ))}
         </div>
       )}
-       <AddSaleDialog onAddSale={handleAddSale} triggerType="fab" />
+       <AddSaleDialog
+        open={isAddDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onAddSale={handleAddSale}
+        triggerType="fab"
+      />
     </div>
   );
 }

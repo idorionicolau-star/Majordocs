@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useContext } from "react";
+import { useSearchParams } from 'next/navigation';
 import type { Product, Location } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
@@ -40,12 +41,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function InventoryPage() {
   const inventoryContext = useContext(InventoryContext);
+  const searchParams = useSearchParams();
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [nameFilter, setNameFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
+  const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { 
@@ -61,6 +64,12 @@ export default function InventoryPage() {
   } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, user: null };
 
   const isAdmin = user?.role === 'Admin';
+  
+  useEffect(() => {
+    if (searchParams.get('action') === 'add' && isAdmin) {
+      setAddDialogOpen(true);
+    }
+  }, [searchParams, isAdmin]);
 
 
   useEffect(() => {
@@ -529,6 +538,8 @@ export default function InventoryPage() {
         )}
       </div>
       {isAdmin && <AddProductDialog 
+        open={isAddDialogOpen}
+        onOpenChange={setAddDialogOpen}
         onAddProduct={handleAddProduct}
         isMultiLocation={isMultiLocation}
         locations={locations}

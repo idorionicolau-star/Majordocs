@@ -3,6 +3,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from "react";
+import { useSearchParams } from 'next/navigation';
 import { ProductionDataTable } from "@/components/production/data-table";
 import { AddProductionDialog } from "@/components/production/add-production-dialog";
 import type { Production, Location } from "@/lib/types";
@@ -31,6 +32,7 @@ import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
 
 export default function ProductionPage() {
   const inventoryContext = useContext(InventoryContext);
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const firestore = useFirestore();
 
@@ -38,10 +40,17 @@ export default function ProductionPage() {
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('4');
   const [productionToTransfer, setProductionToTransfer] = useState<Production | null>(null);
+  const [isAddDialogOpen, setAddDialogOpen] = useState(false);
 
   const { productions, companyId, updateProductStock, locations, isMultiLocation, loading: inventoryLoading, user: userData } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, locations: [], isMultiLocation: false, loading: true, user: null };
 
   const isAdmin = userData?.role === 'Admin';
+  
+  useEffect(() => {
+    if (searchParams.get('action') === 'add' && isAdmin) {
+      setAddDialogOpen(true);
+    }
+  }, [searchParams, isAdmin]);
 
 
   useEffect(() => {
@@ -228,7 +237,12 @@ export default function ProductionPage() {
         </div>
       )}
 
-      {isAdmin && <AddProductionDialog onAddProduction={handleAddProduction} triggerType="fab" />}
+      {isAdmin && <AddProductionDialog 
+        open={isAddDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onAddProduction={handleAddProduction} 
+        triggerType="fab" 
+      />}
     </div>
     </>
   );

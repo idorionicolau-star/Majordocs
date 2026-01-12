@@ -51,16 +51,16 @@ export default function DashboardPage() {
         >
           <div className={cn("flex items-center gap-2 flex-nowrap", "animate-peek md:animate-none")}>
               {hasPermission('inventory') && <Button asChild variant="outline">
-                <Link href="/inventory"><Box className="mr-2 h-4 w-4" />+ Inventário</Link>
+                <Link href="/inventory?action=add"><Box className="mr-2 h-4 w-4" />+ Inventário</Link>
               </Button>}
               {hasPermission('sales') && <Button asChild variant="outline">
-                <Link href="/sales"><ShoppingCart className="mr-2 h-4 w-4" />+ Vendas</Link>
+                <Link href="/sales?action=add"><ShoppingCart className="mr-2 h-4 w-4" />+ Vendas</Link>
               </Button>}
               {hasPermission('production') && <Button asChild variant="outline">
-                  <Link href="/production"><Hammer className="mr-2 h-4 w-4" />+ Produção</Link>
+                  <Link href="/production?action=add"><Hammer className="mr-2 h-4 w-4" />+ Produção</Link>
                 </Button>}
               {hasPermission('orders') && <Button asChild variant="outline">
-                  <Link href="/orders"><ClipboardList className="mr-2 h-4 w-4" />+ Encomenda</Link>
+                  <Link href="/orders?action=add"><ClipboardList className="mr-2 h-4 w-4" />+ Encomenda</Link>
                 </Button>}
               {hasPermission('settings') && <Button asChild variant="outline">
                   <Link href="/settings#catalog"><Book className="mr-2 h-4 w-4" />Catálogo</Link>

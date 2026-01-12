@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -51,12 +51,13 @@ const formSchema = z.object({
 type AddOrderFormValues = z.infer<typeof formSchema>;
 
 interface AddOrderDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
     onAddOrder: (order: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'>) => void;
     triggerType?: 'button' | 'fab';
 }
 
-export function AddOrderDialog({ onAddOrder, triggerType = 'fab' }: AddOrderDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddOrderDialog({ open, onOpenChange, onAddOrder, triggerType = 'fab' }: AddOrderDialogProps) {
   const inventoryContext = useContext(InventoryContext);
   const { catalogProducts, catalogCategories } = inventoryContext || {};
   
@@ -70,6 +71,18 @@ export function AddOrderDialog({ onAddOrder, triggerType = 'fab' }: AddOrderDial
       deliveryDate: "",
     },
   });
+  
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        productName: "",
+        quantity: 1,
+        unit: 'un',
+        clientName: "",
+        deliveryDate: "",
+      });
+    }
+  }, [open, form]);
 
   function onSubmit(values: AddOrderFormValues) {
     const newOrder: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'> = {
@@ -82,18 +95,16 @@ export function AddOrderDialog({ onAddOrder, triggerType = 'fab' }: AddOrderDial
     onAddOrder(newOrder);
 
     form.reset();
-    setOpen(false);
+    onOpenChange(false);
   }
   
   const TriggerComponent = triggerType === 'fab' ? (
     <TooltipProvider>
         <Tooltip>
             <TooltipTrigger asChild>
-                <DialogTrigger asChild>
-                    <Button className="fixed bottom-6 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
-                        <Plus className="h-6 w-6" />
-                    </Button>
-                </DialogTrigger>
+                <Button onClick={() => onOpenChange(true)} className="fixed bottom-6 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
+                    <Plus className="h-6 w-6" />
+                </Button>
             </TooltipTrigger>
             <TooltipContent side="left">
                 <p>Nova Encomenda</p>
@@ -101,17 +112,15 @@ export function AddOrderDialog({ onAddOrder, triggerType = 'fab' }: AddOrderDial
         </Tooltip>
     </TooltipProvider>
   ) : (
-    <DialogTrigger asChild>
-        <Button variant="outline">
-            <ClipboardList className="mr-2 h-4 w-4" />+ Encomenda
-        </Button>
-    </DialogTrigger>
+    <Button variant="outline" onClick={() => onOpenChange(true)}>
+        <ClipboardList className="mr-2 h-4 w-4" />+ Encomenda
+    </Button>
   );
 
   if (!inventoryContext) return null;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       {TriggerComponent}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -201,7 +210,7 @@ export function AddOrderDialog({ onAddOrder, triggerType = 'fab' }: AddOrderDial
                 )}
               />
               <DialogFooter className="pt-4">
-                <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+                <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
                 <Button type="submit">Adicionar Encomenda</Button>
               </DialogFooter>
             </form>

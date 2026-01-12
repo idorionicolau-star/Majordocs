@@ -53,14 +53,15 @@ const formSchema = z.object({
 type AddProductFormValues = z.infer<typeof formSchema>;
 
 interface AddProductDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
     onAddProduct: (product: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => void;
     isMultiLocation: boolean;
     locations: Location[];
     triggerType?: 'button' | 'fab';
 }
 
-function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, triggerType = 'fab' }: AddProductDialogProps) {
-  const [open, setOpen] = useState(false);
+function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLocation, locations, triggerType = 'fab' }: AddProductDialogProps) {
   const inventoryContext = useContext(InventoryContext);
   const { catalogCategories, catalogProducts } = inventoryContext || { catalogCategories: [], catalogProducts: [] };
 
@@ -124,18 +125,16 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
     };
     onAddProduct(newProduct);
     form.reset();
-    setOpen(false);
+    onOpenChange(false);
   }
   
   const TriggerComponent = triggerType === 'fab' ? (
     <TooltipProvider>
         <Tooltip>
             <TooltipTrigger asChild>
-                <DialogTrigger asChild>
-                    <Button className="fixed bottom-6 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
-                        <Plus className="h-6 w-6" />
-                    </Button>
-                </DialogTrigger>
+                <Button onClick={() => onOpenChange(true)} className="fixed bottom-6 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
+                    <Plus className="h-6 w-6" />
+                </Button>
             </TooltipTrigger>
             <TooltipContent side="left">
                 <p>Adicionar Produto</p>
@@ -143,15 +142,13 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
         </Tooltip>
     </TooltipProvider>
   ) : (
-    <DialogTrigger asChild>
-        <Button variant="outline">
-            <Box className="mr-2 h-4 w-4" />+ Inventário
-        </Button>
-    </DialogTrigger>
+    <Button variant="outline" onClick={() => onOpenChange(true)}>
+        <Box className="mr-2 h-4 w-4" />+ Inventário
+    </Button>
   );
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       {TriggerComponent}
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
@@ -263,7 +260,7 @@ function AddProductDialogContent({ onAddProduct, isMultiLocation, locations, tri
                   />
               </div>
               <DialogFooter className="pt-4">
-                  <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+                  <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
                   <Button type="submit">Adicionar Produto</Button>
               </DialogFooter>
             </form>

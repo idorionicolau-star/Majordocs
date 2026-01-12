@@ -47,12 +47,13 @@ const formSchema = z.object({
 type AddProductionFormValues = z.infer<typeof formSchema>;
 
 interface AddProductionDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
     onAddProduction: (data: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => void;
     triggerType?: 'button' | 'fab';
 }
 
-export function AddProductionDialog({ onAddProduction, triggerType = 'fab' }: AddProductionDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddProductionDialog({ open, onOpenChange, onAddProduction, triggerType = 'fab' }: AddProductionDialogProps) {
   const inventoryContext = useContext(InventoryContext);
   const {
     catalogProducts,
@@ -69,6 +70,16 @@ export function AddProductionDialog({ onAddProduction, triggerType = 'fab' }: Ad
       location: "",
     },
   });
+  
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        productName: "",
+        quantity: 1,
+        location: locations && locations.length > 0 ? locations[0].id : "",
+      });
+    }
+  }, [open, form, locations]);
 
   useEffect(() => {
     if (locations && locations.length > 0) {
@@ -92,18 +103,16 @@ export function AddProductionDialog({ onAddProduction, triggerType = 'fab' }: Ad
      if (locations && locations.length > 0) {
       form.setValue('location', locations[0].id);
     }
-    setOpen(false);
+    onOpenChange(false);
   }
   
    const TriggerComponent = triggerType === 'fab' ? (
     <TooltipProvider>
         <Tooltip>
             <TooltipTrigger asChild>
-                <DialogTrigger asChild>
-                    <Button className="fixed bottom-6 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
-                        <Plus className="h-6 w-6" />
-                    </Button>
-                </DialogTrigger>
+                <Button onClick={() => onOpenChange(true)} className="fixed bottom-6 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
+                    <Plus className="h-6 w-6" />
+                </Button>
             </TooltipTrigger>
             <TooltipContent side="left">
                 <p>Registrar Produção</p>
@@ -111,11 +120,9 @@ export function AddProductionDialog({ onAddProduction, triggerType = 'fab' }: Ad
         </Tooltip>
     </TooltipProvider>
   ) : (
-     <DialogTrigger asChild>
-        <Button variant="outline">
-            <Hammer className="mr-2 h-4 w-4" />+ Produção
-        </Button>
-    </DialogTrigger>
+     <Button variant="outline" onClick={() => onOpenChange(true)}>
+        <Hammer className="mr-2 h-4 w-4" />+ Produção
+    </Button>
   );
 
   if (!inventoryContext) {
@@ -123,7 +130,7 @@ export function AddProductionDialog({ onAddProduction, triggerType = 'fab' }: Ad
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       {TriggerComponent}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -193,7 +200,7 @@ export function AddProductionDialog({ onAddProduction, triggerType = 'fab' }: Ad
                 )}
               />
               <DialogFooter className="pt-4">
-                  <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+                  <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
                   <Button type="submit">Registrar</Button>
               </DialogFooter>
             </form>

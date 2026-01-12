@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useState, useMemo, useContext } from "react";
+import { useState, useMemo, useContext, useEffect } from "react";
+import { useSearchParams } from 'next/navigation';
 import type { Order, Product, ProductionLog } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Filter, List, LayoutGrid, ChevronDown } from "lucide-react";
@@ -18,9 +19,11 @@ import { useFirestore } from "@/firebase";
 import { collection, addDoc, doc, updateDoc, arrayUnion } from "firebase/firestore";
 
 export default function OrdersPage() {
+  const searchParams = useSearchParams();
   const [nameFilter, setNameFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [view, setView] = useState<'list' | 'grid'>('grid'); // 'list' view to be implemented
+  const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
@@ -28,6 +31,12 @@ export default function OrdersPage() {
   const { orders, companyId, loading: inventoryLoading, updateProductStock, user: userData } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null };
 
   const isAdmin = userData?.role === 'Admin';
+  
+  useEffect(() => {
+    if (searchParams.get('action') === 'add' && isAdmin) {
+      setAddDialogOpen(true);
+    }
+  }, [searchParams, isAdmin]);
 
 
   const handleAddOrder = (newOrderData: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'>) => {
@@ -194,7 +203,9 @@ export default function OrdersPage() {
         </div>
 
       </div>
-      {isAdmin && <AddOrderDialog 
+      {isAdmin && <AddOrderDialog
+        open={isAddDialogOpen}
+        onOpenChange={setAddDialogOpen}
         onAddOrder={handleAddOrder}
         triggerType="fab"
       />}

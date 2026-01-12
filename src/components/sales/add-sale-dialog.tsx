@@ -52,12 +52,13 @@ const formSchema = z.object({
 type AddSaleFormValues = z.infer<typeof formSchema>;
 
 interface AddSaleDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
     onAddSale: (data: Omit<Sale, 'id' | 'guideNumber'>) => Promise<void>;
     triggerType?: 'button' | 'fab';
 }
 
-function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogProps) {
-  const [open, setOpen] = useState(false);
+function AddSaleDialogContent({ open, onOpenChange, onAddSale, triggerType = 'fab' }: AddSaleDialogProps) {
   const inventoryContext = useContext(InventoryContext);
   const {
     products,
@@ -79,6 +80,17 @@ function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogP
     },
   });
   
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        productName: "",
+        quantity: 1,
+        unitPrice: 0,
+        location: locations && locations.length > 0 ? locations[0].id : "",
+      });
+    }
+  }, [open, form, locations]);
+
   const watchedProductName = useWatch({ control: form.control, name: 'productName' });
   const watchedQuantity = useWatch({ control: form.control, name: 'quantity' });
   const watchedUnitPrice = useWatch({ control: form.control, name: 'unitPrice' });
@@ -150,7 +162,7 @@ function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogP
     if (locations && locations.length > 0) {
       form.setValue('location', locations[0].id);
     }
-    setOpen(false);
+    onOpenChange(false);
   }
   
   const isSubmitDisabled = !form.formState.isValid || form.formState.isSubmitting;
@@ -159,11 +171,9 @@ function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogP
      <TooltipProvider>
         <Tooltip>
             <TooltipTrigger asChild>
-                <DialogTrigger asChild>
-                    <Button className="fixed bottom-6 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
-                        <Plus className="h-6 w-6" />
-                    </Button>
-                </DialogTrigger>
+                <Button onClick={() => onOpenChange(true)} className="fixed bottom-6 right-4 sm:right-6 h-14 w-14 rounded-full shadow-2xl z-50">
+                    <Plus className="h-6 w-6" />
+                </Button>
             </TooltipTrigger>
             <TooltipContent side="left">
                 <p>Registrar Venda</p>
@@ -171,15 +181,13 @@ function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogP
         </Tooltip>
     </TooltipProvider>
   ) : (
-     <DialogTrigger asChild>
-        <Button variant="outline">
-            <ShoppingCart className="mr-2 h-4 w-4" />+ Vendas
-        </Button>
-    </DialogTrigger>
+     <Button variant="outline" onClick={() => onOpenChange(true)}>
+        <ShoppingCart className="mr-2 h-4 w-4" />+ Vendas
+    </Button>
   );
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       {TriggerComponent}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -273,7 +281,7 @@ function AddSaleDialogContent({ onAddSale, triggerType = 'fab' }: AddSaleDialogP
               </div>
 
               <DialogFooter className="pt-4">
-                  <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+                  <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
                   <Button type="submit" disabled={isSubmitDisabled}>Registrar Venda</Button>
               </DialogFooter>
             </form>
