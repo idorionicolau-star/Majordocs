@@ -24,7 +24,7 @@ import { InventoryContext } from "@/context/inventory-context";
 interface ColumnsOptions {
   onAttemptDelete: (product: Product) => void;
   onProductUpdate: (product: Product) => void;
-  isAdmin: boolean;
+  canEdit: boolean;
 }
 
 export const getStockStatus = (product: Product) => {
@@ -43,7 +43,7 @@ export const getStockStatus = (product: Product) => {
 
 export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
   const { isMultiLocation, locations } = useContext(InventoryContext) || {};
-  const { isAdmin } = options;
+  const { canEdit } = options;
 
   const baseColumns: ColumnDef<Product>[] = [
     {
@@ -140,7 +140,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
     }
   );
 
-  if (isAdmin) {
+  if (canEdit) {
     baseColumns.push({
         id: "actions",
         cell: ({ row }) => {

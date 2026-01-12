@@ -18,10 +18,10 @@ interface ProductCardProps {
     onProductUpdate: (product: Product) => void;
     onAttemptDelete: (product: Product) => void;
     viewMode?: 'normal' | 'condensed';
-    isAdmin: boolean;
+    canEdit: boolean;
 }
 
-export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMode = 'normal', isAdmin }: ProductCardProps) {
+export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMode = 'normal', canEdit }: ProductCardProps) {
     const { locations, isMultiLocation } = useContext(InventoryContext) || {};
     const status = getStockStatus(product);
     
@@ -76,7 +76,7 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                     </div>
                  )}
             </CardContent>
-            {isAdmin && <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
+            {canEdit && <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
                  <EditProductDialog
                     product={product}
                     onProductUpdate={onProductUpdate}

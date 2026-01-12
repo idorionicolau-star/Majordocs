@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
-import type { Product, Location } from "@/lib/types";
+import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
@@ -63,13 +63,18 @@ export default function InventoryPage() {
     user
   } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, user: null };
 
-  const isAdmin = user?.role === 'Admin';
+  const hasPermission = (permissionId: ModulePermission) => {
+    if (user?.role === 'Admin') return true;
+    return user?.permissions?.includes(permissionId);
+  }
+
+  const canEditInventory = hasPermission('inventory');
   
   useEffect(() => {
-    if (searchParams.get('action') === 'add' && isAdmin) {
+    if (searchParams.get('action') === 'add' && canEditInventory) {
       setAddDialogOpen(true);
     }
-  }, [searchParams, isAdmin]);
+  }, [searchParams, canEditInventory]);
 
 
   useEffect(() => {
@@ -352,7 +357,7 @@ export default function InventoryPage() {
                 />
                 <div className="flex items-center gap-2">
                     <TooltipProvider>
-                        {isMultiLocation && isAdmin && (
+                        {isMultiLocation && canEditInventory && (
                            <>
                             <TransferStockDialog 
                                 products={products}
@@ -502,9 +507,7 @@ export default function InventoryPage() {
               columns={columns({ 
                 onAttemptDelete: (product) => setProductToDelete(product),
                 onProductUpdate: handleUpdateProduct,
-                isMultiLocation: isMultiLocation,
-                locations: locations,
-                isAdmin: isAdmin
+                canEdit: canEditInventory
               })} 
               data={filteredProducts} 
             />
@@ -520,24 +523,22 @@ export default function InventoryPage() {
                     <ProductCard 
                         key={product.instanceId}
                         product={product}
-                        locations={locations}
-                        isMultiLocation={isMultiLocation}
                         onProductUpdate={handleUpdateProduct}
                         onAttemptDelete={setProductToDelete}
                         viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
-                        isAdmin={isAdmin}
+                        canEdit={canEditInventory}
                     />
                 ))}
             </div>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <p>Nenhum produto no inventário.</p>
-              {isAdmin && <p className="text-sm">Comece por adicionar um novo produto.</p>}
+              {canEditInventory && <p className="text-sm">Comece por adicionar um novo produto.</p>}
             </div>
           )
         )}
       </div>
-      {isAdmin && <AddProductDialog 
+      {canEditInventory && <AddProductDialog 
         open={isAddDialogOpen}
         onOpenChange={setAddDialogOpen}
         onAddProduct={handleAddProduct}
