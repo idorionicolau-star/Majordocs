@@ -7,91 +7,88 @@ service cloud.firestore {
     // --- Funções de Ajuda ---
 
     function isSignedIn() {
-      // Verifica se o utilizador está autenticado.
       return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      // SUBSTITUA "COLOQUE_O_SEU_UID_AQUI" PELO ID DO SEU UTILIZADOR ADMIN.
+      return request.auth.uid == "COLOQUE_O_SEU_UID_AQUI";
     }
     
     function getUserData(userId) {
-      // Obtém os dados do documento do funcionário que está a fazer o pedido.
-      // O `request.auth.token.companyId` vem do custom claim que definimos no login.
       return get(/databases/$(database)/documents/companies/$(request.auth.token.companyId)/employees/$(userId)).data;
     }
 
     function isEmployeeOf(companyId) {
-      // Verifica se o utilizador autenticado pertence à empresa especificada.
-      return isSignedIn() && request.auth.token.companyId == companyId;
+      return isSignedIn() && (request.auth.token.companyId == companyId || isSuperAdmin());
     }
     
-    function isAdmin() {
-      // Verifica se o utilizador autenticado tem a função de 'Admin'.
-      return isEmployeeOf(request.auth.token.companyId) && getUserData(request.auth.uid).role == 'Admin';
+    function isAdminOf(companyId) {
+      return isEmployeeOf(companyId) && (getUserData(request.auth.uid).role == 'Admin' || isSuperAdmin());
     }
-
-    function hasPermission(permission) {
-        // Verifica se o utilizador tem uma permissão específica no seu array de permissões.
-        return isEmployeeOf(request.auth.token.companyId) && (isAdmin() || getUserData(request.auth.uid).permissions.hasAny([permission]));
+    
+    function can(module, level) {
+      // O Super Admin tem acesso total.
+      if (isSuperAdmin()) {
+        return true;
+      }
+      // O Admin da empresa tem acesso de escrita a tudo.
+      if (isAdminOf(request.auth.token.companyId)) {
+        // Admins não podem aceder à lista de empresas
+        if (module == 'companies') return false;
+        return true;
+      }
+      // Verifica as permissões do funcionário
+      let userPermissions = getUserData(request.auth.uid).permissions;
+      if (level == 'write') {
+        return userPermissions[module] == 'write';
+      }
+      if (level == 'read') {
+        return userPermissions[module] == 'read' || userPermissions[module] == 'write';
+      }
+      return false;
     }
 
     // --- Regras por Coleção ---
 
-    // A coleção `companies` guarda a informação principal de cada empresa.
-    // O ID do documento aqui é a chave para todas as sub-coleções de dados.
     match /companies/{companyId} {
-      // Qualquer pessoa pode criar uma nova empresa (registo).
       allow create: if true;
-      // Apenas Admins podem ler, atualizar ou apagar os dados da própria empresa.
-      allow read, update, delete: if isEmployeeOf(companyId) && isAdmin();
-      // Apenas um admin geral pode listar todas as empresas.
-      // Esta regra precisa de uma lógica para identificar um "super admin".
-      // Por agora, vamos permitir que qualquer admin de qualquer empresa liste.
-      // Isto deve ser revisto para produção com uma lógica de super admin mais específica.
-      allow list: if isSignedIn() && isAdmin();
+      allow read, update, delete: if isAdminOf(companyId);
+      allow list: if isSuperAdmin();
 
-      // Sub-coleção para os funcionários de uma empresa específica.
       match /employees/{employeeId} {
-        // Um funcionário pode ler os seus próprios dados. Admins podem ler os de todos.
-        allow get: if isEmployeeOf(companyId) && (request.auth.uid == employeeId || isAdmin());
-        // Apenas funcionários da empresa podem listar os outros funcionários.
-        allow list: if isEmployeeOf(companyId);
-        // Apenas Admins podem criar, atualizar ou apagar funcionários.
-        allow create, update, delete: if isEmployeeOf(companyId) && isAdmin();
+        allow get: if isEmployeeOf(companyId);
+        allow list: if can('users', 'read');
+        allow create, update, delete: if can('users', 'write');
       }
       
-      // Sub-coleção para o catálogo de produtos base.
       match /catalogProducts/{productId} {
-          allow read: if isEmployeeOf(companyId);
-          allow write: if isEmployeeOf(companyId) && isAdmin();
+          allow read: if can('settings', 'read');
+          allow write: if can('settings', 'write');
       }
-
-      // Sub-coleção para as categorias de produtos.
       match /catalogCategories/{categoryId} {
-          allow read: if isEmployeeOf(companyId);
-          allow write: if isEmployeeOf(companyId) && isAdmin();
+          allow read: if can('settings', 'read');
+          allow write: if can('settings', 'write');
       }
-
-      // Sub-coleção para o inventário (instâncias de produtos com stock).
       match /products/{productId} {
-        allow read: if isEmployeeOf(companyId) && hasPermission('inventory');
-        allow write: if isEmployeeOf(companyId) && isAdmin();
+        allow read: if can('inventory', 'read');
+        allow write: if can('inventory', 'write');
       }
-      
-      // Sub-coleção para os registos de vendas.
       match /sales/{saleId} {
-        allow read: if isEmployeeOf(companyId) && hasPermission('sales');
-        // Qualquer funcionário da empresa com permissão pode criar/atualizar uma venda.
-        allow write: if isEmployeeOf(companyId) && hasPermission('sales');
+        allow read: if can('sales', 'read');
+        allow write: if can('sales', 'write');
       }
-      
-      // Sub-coleção para os registos de produção.
       match /productions/{productionId} {
-        allow read: if isEmployeeOf(companyId) && hasPermission('production');
-        allow write: if isEmployeeOf(companyId) && isAdmin();
+        allow read: if can('production', 'read');
+        allow write: if can('production', 'write');
       }
-      
-      // Sub-coleção para as encomendas de produção.
       match /orders/{orderId} {
-        allow read: if isEmployeeOf(companyId) && hasPermission('orders');
-        allow write: if isEmployeeOf(companyId) && isAdmin();
+        allow read: if can('orders', 'read');
+        allow write: if can('orders', 'write');
+      }
+      match /reports/{reportId} {
+        allow read: if can('reports', 'read');
+        allow write: if can('reports', 'write');
       }
     }
   }
