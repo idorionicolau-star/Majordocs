@@ -131,6 +131,11 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const hash = window.location.hash.substring(1);
+      if (hash) {
+          setActiveTab(hash);
+      }
+
       const root = document.documentElement;
 
       const storedRadius = localStorage.getItem('majorstockx-border-radius');
@@ -441,3 +446,5 @@ export default function SettingsPage() {
     </>
   );
 }
+
+    
