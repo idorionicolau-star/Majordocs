@@ -16,6 +16,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Info } from 'lucide-react';
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 const loginSchema = z.object({
   email: z.string().email('O email fornecido não é válido.'),
@@ -83,16 +84,25 @@ export default function LoginPage() {
         <CardContent>
              <form onSubmit={handleSubmit(handleLogin)} className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="email">Email de Login</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="email">Email de Login</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger type="button">
+                            <Info className="h-4 w-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" align="end" className="max-w-xs">
+                             <p className="text-xs">
+                                <strong>Admin:</strong> use o email completo do registo (ex: `admin@empresa.com`).
+                                <br />
+                                <strong>Funcionário:</strong> use o formato `utilizador@empresa.com`.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Input id="email" {...register('email')} placeholder="ex: admin@suaempresa.com" type="email" />
                     {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
-                     <div className="text-[11px] text-muted-foreground bg-muted p-2 rounded-md flex items-start gap-2">
-                        <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                        <span>
-                            **Admin:** use o email completo do registo (ex: `admin@empresa.com`).<br />
-                            **Funcionário:** use o formato `utilizador@empresa.com`.
-                        </span>
-                    </div>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="password">Senha</Label>
