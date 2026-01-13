@@ -14,7 +14,7 @@ export function StatsCards() {
     const inventoryContext = useContext(InventoryContext);
     const { products, sales, loading, user } = inventoryContext || { products: [], sales: [], loading: true, user: null };
 
-    const isAdmin = user?.role === 'Admin';
+    const isAuthorized = user?.role === 'Admin' || user?.role === 'Dono';
 
     if (loading) {
         return (
@@ -63,7 +63,7 @@ export function StatsCards() {
       contextValue: totalSalesCount,
       contextIcon: ShoppingCart,
       href: "/sales",
-      adminOnly: true,
+      restricted: true,
     },
     {
       title: "Estoque Baixo",
@@ -92,7 +92,7 @@ export function StatsCards() {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {stats.map((stat) => {
-        if (stat.adminOnly && !isAdmin) {
+        if (stat.restricted && !isAuthorized) {
              return (
                  <div key={stat.title}>
                     <Card className="glass-card relative flex items-center justify-center gap-4 p-4 rounded-2xl shadow-sm h-full text-center">
