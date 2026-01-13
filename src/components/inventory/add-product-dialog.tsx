@@ -297,5 +297,3 @@ export function AddProductDialog(props: AddProductDialogProps) {
 
   return <AddProductDialogContent {...props} />;
 }
-
-    
