@@ -130,16 +130,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
               setUser({ ...employeeData, id: employeeDoc.id });
               setCompanyId(userCompanyId);
             } else {
-              // This case shouldn't happen with email/pass registration
-              // but is a safeguard.
               throw new Error("Perfil de funcionário não encontrado na empresa associada.");
             }
           } else {
-             // This indicates a problem, as users created via email/pass should always have a map.
              console.error("User map does not exist for authenticated user.");
              setUser(null);
              setCompanyId(null);
-             logout(); // Force logout for inconsistent state
+             logout(); 
           }
         } catch (error) {
           console.error("Error fetching user profile:", error);
@@ -156,7 +153,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [auth, firestore]);
+  }, [auth, firestore, toast]);
   
 
   const login = async (email: string, pass: string): Promise<boolean> => {
@@ -178,7 +175,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!firestore) return false;
   
     try {
-      // First check if company name already exists
       const companiesRef = collection(firestore, 'companies');
       const companyQuery = query(companiesRef, where('name', '==', companyName));
       const existingCompanySnapshot = await getDocs(companyQuery);
