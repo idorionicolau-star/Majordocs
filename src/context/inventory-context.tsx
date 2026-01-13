@@ -70,6 +70,8 @@ interface InventoryContextType {
   companyData: Company | null;
 
   // Functions
+  setLocations: React.Dispatch<React.SetStateAction<Location[]>>;
+  setIsMultiLocation: React.Dispatch<React.SetStateAction<boolean>>;
   addProduct: (
     newProductData: Omit<
       Product,
@@ -122,13 +124,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
           if (userMapDoc.exists()) {
             const userCompanyId = userMapDoc.data().companyId;
+            setCompanyId(userCompanyId);
+
             const employeeDocRef = doc(firestore, `companies/${userCompanyId}/employees/${fbUser.uid}`);
             const employeeDoc = await getDoc(employeeDocRef);
             
             if (employeeDoc.exists()) {
               const employeeData = employeeDoc.data() as Employee;
               setUser({ ...employeeData, id: employeeDoc.id });
-              setCompanyId(userCompanyId);
             } else {
               throw new Error("Perfil de funcionário não encontrado na empresa associada.");
             }
@@ -252,6 +255,41 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     return user.permissions?.[module] === 'write';
   };
 
+  useEffect(() => {
+    if (companyId) {
+      const storedLocations = localStorage.getItem(`majorstockx-locations-${companyId}`);
+      if (storedLocations) {
+        try {
+          setLocations(JSON.parse(storedLocations));
+        } catch (e) {
+          console.error("Failed to parse locations from localStorage", e);
+          setLocations([]);
+        }
+      } else {
+        setLocations([]);
+      }
+      
+      const multiLocationEnabled = localStorage.getItem(`majorstockx-multi-location-enabled-${companyId}`) === 'true';
+      setIsMultiLocation(multiLocationEnabled);
+    } else {
+      setLocations([]);
+      setIsMultiLocation(false);
+    }
+  }, [companyId]);
+
+  useEffect(() => {
+    if (companyId) {
+      localStorage.setItem(`majorstockx-locations-${companyId}`, JSON.stringify(locations));
+    }
+  }, [locations, companyId]);
+
+  useEffect(() => {
+    if (companyId) {
+      localStorage.setItem(`majorstockx-multi-location-enabled-${companyId}`, String(isMultiLocation));
+    }
+  }, [isMultiLocation, companyId]);
+
+
   const productsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
     return collection(firestore, `companies/${companyId}/products`);
@@ -302,20 +340,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       instanceId: p.id,
     }));
   }, [productsData]);
-
-  useEffect(() => {
-    if (companyId) {
-      const multiLocationEnabled = localStorage.getItem(`majorstockx-multi-location-enabled-${companyId}`) === 'true';
-      setIsMultiLocation(multiLocationEnabled);
-      const storedLocations = localStorage.getItem(`majorstockx-locations-${companyId}`);
-      if (storedLocations) {
-        setLocations(JSON.parse(storedLocations));
-      }
-    } else {
-        setIsMultiLocation(false);
-        setLocations([]);
-    }
-  }, [companyId]);
 
   useEffect(() => {
     if(companyDocRef) {
@@ -486,7 +510,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
     locations, isMultiLocation, addProduct, updateProduct, deleteProduct, transferStock,
-    updateProductStock, updateCompany, addSale, confirmSalePickup
+    updateProductStock, updateCompany, addSale, confirmSalePickup,
+    setLocations, setIsMultiLocation
   };
 
   return (

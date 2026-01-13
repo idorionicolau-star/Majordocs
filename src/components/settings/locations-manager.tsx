@@ -23,7 +23,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 
 export function LocationsManager() {
-  const { isMultiLocation, locations, setLocations, setIsMultiLocation, companyId } = useContext(InventoryContext) || {};
+  const { isMultiLocation, locations, setLocations, setIsMultiLocation } = useContext(InventoryContext) || { isMultiLocation: false, locations: [], setLocations: () => {}, setIsMultiLocation: () => {} };
   const { toast } = useToast();
 
   const [newLocationName, setNewLocationName] = useState('');
