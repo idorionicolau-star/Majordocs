@@ -109,7 +109,6 @@ export default function UsersPage() {
       console.error("Erro ao adicionar funcionário: ", error);
     } finally {
         // Clean up the secondary app
-        await signOut(secondaryAuth); // Sign out from the temporary app
         await deleteApp(secondaryApp);
     }
   };
