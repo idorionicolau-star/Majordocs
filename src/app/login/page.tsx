@@ -16,7 +16,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Info } from 'lucide-react';
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
 
 const loginSchema = z.object({
   email: z.string().email('O email fornecido não é válido.'),
@@ -86,20 +87,20 @@ export default function LoginPage() {
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="email">Email de Login</Label>
-                       <TooltipProvider>
-                          <Tooltip>
-                              <TooltipTrigger asChild>
-                                  <button type="button" className="p-1">
-                                    <Info className="h-4 w-4 text-muted-foreground" />
-                                  </button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                  <div className="p-2 text-xs max-w-xs space-y-1">
-                                      <p>O seu email de login tem o formato de email completo que usou no registo (ex: `utilizador@empresa.com`).</p>
-                                  </div>
-                              </TooltipContent>
-                          </Tooltip>
-                      </TooltipProvider>
+                       <Popover>
+                        <PopoverTrigger asChild>
+                          <button type="button" className="p-1" aria-label="Ajuda sobre o formato do email">
+                            <Info className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <div className="p-3 text-xs max-w-xs space-y-2">
+                              <p className="font-bold">Formato do Email de Login</p>
+                              <p><strong className="text-primary">Admin:</strong> Use o email completo do registo (ex: `admin@empresa.com`).</p>
+                              <p><strong className="text-primary">Funcionário:</strong> Use o formato `utilizador@empresa.com`.</p>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <Input id="email" {...register('email')} placeholder="ex: admin@suaempresa.com" type="email" />
                     {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
