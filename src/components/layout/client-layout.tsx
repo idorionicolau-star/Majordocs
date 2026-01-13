@@ -45,7 +45,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     );
   }
   
-  if (!authContext?.user && !isAuthPage) {
+  if (!authContext?.user && !isAuthPage && !isOnboardingPage) {
      return (
        <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
@@ -56,7 +56,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (isAuthPage || (authContext?.needsOnboarding && isOnboardingPage)) {
+  if (isAuthPage || isOnboardingPage) {
     return <>{children}</>;
   }
 
