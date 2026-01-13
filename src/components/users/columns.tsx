@@ -90,9 +90,9 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
             return (
                  <span className={cn(
                     "text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-wider",
-                    role === 'Admin' 
-                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                    role === 'Admin' && 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300',
+                    role === 'Dono' && 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
+                    role === 'Employee' && 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                  )}>
                     {role}
                 </span>
@@ -107,6 +107,9 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
             const role = row.original.role;
             if (role === 'Admin') {
                 return <span className="text-xs text-muted-foreground italic">Acesso total de escrita</span>;
+            }
+             if (role === 'Dono') {
+                return <span className="text-xs text-muted-foreground italic">Acesso total de leitura</span>;
             }
             
             const grantedPermissions = Object.entries(permissions)

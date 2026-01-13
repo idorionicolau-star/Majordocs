@@ -244,7 +244,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const canView = (module: ModulePermission) => {
     if (!user) return false;
-    if (user.role === 'Admin') return true;
+    if (user.role === 'Admin' || user.role === 'Dono') return true;
     const level = user.permissions?.[module];
     return level === 'read' || level === 'write';
   };
@@ -252,6 +252,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const canEdit = (module: ModulePermission) => {
     if (!user) return false;
     if (user.role === 'Admin') return true;
+    // Dono (Owner) role has read-only access
+    if (user.role === 'Dono') return false;
     return user.permissions?.[module] === 'write';
   };
 

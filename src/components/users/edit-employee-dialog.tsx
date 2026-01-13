@@ -41,7 +41,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 
 const formSchema = z.object({
   username: z.string().min(3, { message: "O nome de utilizador deve ter pelo menos 3 caracteres." }),
-  role: z.enum(['Admin', 'Employee'], { required_error: "A função é obrigatória." }),
+  role: z.enum(['Admin', 'Employee', 'Dono'], { required_error: "A função é obrigatória." }),
   permissions: z.record(z.string(), z.enum(['none', 'read', 'write'])),
 });
 
@@ -101,10 +101,22 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
       return acc;
     }, {} as Record<ModulePermission, PermissionLevel>);
 
+     const permissionsForDono = allPermissions.reduce((acc, perm) => {
+      acc[perm.id] = 'read';
+      return acc;
+    }, {} as Record<ModulePermission, PermissionLevel>);
+
+    let finalPermissions = values.permissions;
+    if (values.role === 'Admin') {
+        finalPermissions = permissionsForAdmin;
+    } else if (values.role === 'Dono') {
+        finalPermissions = permissionsForDono;
+    }
+
     const updatedEmployeeData: Partial<Employee> = {
       username: values.username,
       role: values.role,
-      permissions: values.role === 'Admin' ? permissionsForAdmin : values.permissions,
+      permissions: finalPermissions,
     };
     
     onUpdateEmployee({
@@ -166,6 +178,7 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
                       <SelectContent>
                         <SelectItem value="Employee">Funcionário</SelectItem>
                         <SelectItem value="Admin">Administrador</SelectItem>
+                        <SelectItem value="Dono">Dono (Apenas Leitura)</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -224,6 +237,11 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
               {role === 'Admin' && (
                   <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-4 text-center">
                       <p className="text-sm font-medium text-amber-700 dark:text-amber-300">Administradores têm acesso de escrita a todos os módulos.</p>
+                  </div>
+              )}
+               {role === 'Dono' && (
+                  <div className="rounded-lg bg-purple-50 dark:bg-purple-900/20 p-4 text-center">
+                      <p className="text-sm font-medium text-purple-700 dark:text-purple-300">Donos têm acesso de leitura a todos os módulos, mas não podem editar.</p>
                   </div>
               )}
 

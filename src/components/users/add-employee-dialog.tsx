@@ -43,7 +43,7 @@ const formSchema = z.object({
   username: z.string().min(3, { message: "O nome de utilizador deve ter pelo menos 3 caracteres." }),
   email: z.string().min(1, { message: "O email base é obrigatório." }).refine(s => !s.includes('@'), 'Não inclua o "@" no email base.'),
   password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
-  role: z.enum(['Admin', 'Employee'], { required_error: "A função é obrigatória." }),
+  role: z.enum(['Admin', 'Employee', 'Dono'], { required_error: "A função é obrigatória." }),
   permissions: z.record(z.string(), z.enum(['none', 'read', 'write'])),
 });
 
@@ -99,12 +99,24 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
         return acc;
     }, {} as Record<ModulePermission, PermissionLevel>);
 
+    const permissionsForDono = allPermissions.reduce((acc, perm) => {
+        acc[perm.id] = 'read';
+        return acc;
+    }, {} as Record<ModulePermission, PermissionLevel>);
+
+    let finalPermissions = values.permissions;
+    if (role === 'Admin') {
+        finalPermissions = permissionsForAdmin;
+    } else if (role === 'Dono') {
+        finalPermissions = permissionsForDono;
+    }
+
     const employeeData = {
       username: values.username,
       email: values.email,
       password: values.password,
       role: values.role,
-      permissions: role === 'Admin' ? permissionsForAdmin : values.permissions,
+      permissions: finalPermissions,
     };
 
     onAddEmployee(employeeData as any);
@@ -193,6 +205,7 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
                       <SelectContent>
                         <SelectItem value="Employee">Funcionário</SelectItem>
                         <SelectItem value="Admin">Administrador</SelectItem>
+                        <SelectItem value="Dono">Dono (Apenas Leitura)</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -252,6 +265,11 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
               {role === 'Admin' && (
                   <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-4 text-center">
                       <p className="text-sm font-medium text-amber-700 dark:text-amber-300">Administradores têm acesso de escrita a todos os módulos.</p>
+                  </div>
+              )}
+               {role === 'Dono' && (
+                  <div className="rounded-lg bg-purple-50 dark:bg-purple-900/20 p-4 text-center">
+                      <p className="text-sm font-medium text-purple-700 dark:text-purple-300">Donos têm acesso de leitura a todos os módulos, mas não podem editar.</p>
                   </div>
               )}
               <DialogFooter className="pt-4">

@@ -21,7 +21,7 @@ export type Employee = {
   username: string;
   email: string; // This is the full login email
   password?: string; // Should be handled securely, never stored in plain text
-  role: 'Admin' | 'Employee';
+  role: 'Admin' | 'Employee' | 'Dono';
   companyId: string;
   permissions: Partial<Record<ModulePermission, PermissionLevel>>;
 };
