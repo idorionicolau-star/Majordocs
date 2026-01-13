@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useContext } from 'react';
@@ -16,6 +15,7 @@ import { InventoryContext } from '@/context/inventory-context';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Info } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('O email fornecido não é válido.'),
@@ -86,6 +86,12 @@ export default function LoginPage() {
                     <Label htmlFor="email">Email de Login</Label>
                     <Input id="email" {...register('email')} placeholder="ex: admin@suaempresa.com" type="email" />
                     {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
+                     <div className="text-[11px] text-muted-foreground bg-muted p-2 rounded-md flex items-start gap-2">
+                        <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                        <span>
+                            O seu email de login tem o formato de email completo que usou no registo (ex: `utilizador@empresa.com`).
+                        </span>
+                    </div>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="password">Senha</Label>
@@ -115,5 +121,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    
