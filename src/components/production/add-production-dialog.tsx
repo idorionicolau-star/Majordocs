@@ -73,24 +73,29 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction, trigg
   
   useEffect(() => {
     if (open) {
+      const savedLocation = localStorage.getItem('majorstockx-last-production-location');
+      const locationExists = locations?.some(l => l.id === savedLocation);
+      const finalLocation = (savedLocation && locationExists) 
+        ? savedLocation 
+        : (locations && locations.length > 0 ? locations[0].id : "");
+
       form.reset({
         productName: "",
         quantity: 1,
-        location: locations && locations.length > 0 ? locations[0].id : "",
+        location: finalLocation,
       });
     }
   }, [open, form, locations]);
 
-  useEffect(() => {
-    if (locations && locations.length > 0) {
-        form.setValue('location', locations[0].id)
-    }
-  }, [locations, form]);
 
   function onSubmit(values: AddProductionFormValues) {
      if (isMultiLocation && !values.location) {
       form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
       return;
+    }
+    
+    if (values.location) {
+        localStorage.setItem('majorstockx-last-production-location', values.location);
     }
 
     onAddProduction({
@@ -100,9 +105,6 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction, trigg
     });
 
     form.reset();
-     if (locations && locations.length > 0) {
-      form.setValue('location', locations[0].id);
-    }
     onOpenChange(false);
   }
   
@@ -210,3 +212,5 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction, trigg
     </Dialog>
   );
 }
+
+    

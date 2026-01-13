@@ -74,25 +74,18 @@ function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLoca
       stock: 0,
       lowStockThreshold: 10,
       criticalStockThreshold: 5,
-      location: "", // Começamos vazio para preencher no useEffect
+      location: "",
     },
   });
 
-  // FUNÇÃO ÚNICA DE RESET E MEMÓRIA
   useEffect(() => {
     if (open) {
-      // 1. Tentar pegar do localStorage
       const savedLocation = localStorage.getItem('majorstockx-last-product-location');
-      
-      // 2. Validar se a localização salva ainda existe na lista atual
       const locationExists = locations.some(l => l.id === savedLocation);
-      
-      // 3. Definir a localização final (Salva -> ou a Primeira da lista -> ou Vazio)
       const finalLocation = (savedLocation && locationExists) 
         ? savedLocation 
         : (locations.length > 0 ? locations[0].id : "");
 
-      // 4. Resetar o formulário com os valores padrão + a localização memorizada
       form.reset({
         category: "",
         name: "",
@@ -118,13 +111,11 @@ function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLoca
 
 
   function onSubmit(values: AddProductFormValues) {
-    // Validação extra para Multi-Localização
     if (isMultiLocation && !values.location) {
       form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
       return;
     }
 
-    // MEMORIZAR: Salva a localização escolhida para a próxima vez
     if (values.location) {
       localStorage.setItem('majorstockx-last-product-location', values.location);
     }
@@ -306,3 +297,5 @@ export function AddProductDialog(props: AddProductDialogProps) {
 
   return <AddProductDialogContent {...props} />;
 }
+
+    

@@ -76,28 +76,34 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder, triggerType = '
   
   useEffect(() => {
     if (open) {
+      const savedLocation = localStorage.getItem('majorstockx-last-order-location');
+      const locationExists = locations?.some(l => l.id === savedLocation);
+      const finalLocation = (savedLocation && locationExists) 
+        ? savedLocation 
+        : (locations && locations.length > 0 ? locations[0].id : "");
+
       form.reset({
         productName: "",
         quantity: 1,
         unit: 'un',
         clientName: "",
         deliveryDate: "",
-        location: locations && locations.length > 0 ? locations[0].id : "",
+        location: finalLocation,
       });
     }
   }, [open, form, locations]);
 
-  useEffect(() => {
-     if (locations && locations.length > 0 && !form.getValues('location')) {
-      form.setValue('location', locations[0].id);
-    }
-  }, [locations, form])
 
   function onSubmit(values: AddOrderFormValues) {
     if (isMultiLocation && !values.location) {
       form.setError("location", { type: "manual", message: "A localização de produção é obrigatória." });
       return;
     }
+    
+    if (values.location) {
+        localStorage.setItem('majorstockx-last-order-location', values.location);
+    }
+
     const newOrder: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'> = {
       productName: values.productName,
       quantity: values.quantity,
@@ -260,3 +266,5 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder, triggerType = '
     </Dialog>
   );
 }
+
+    
