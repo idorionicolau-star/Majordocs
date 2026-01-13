@@ -61,10 +61,12 @@ export default function InventoryPage() {
     deleteProduct, 
     transferStock,
     loading: inventoryLoading,
-    canEdit
-  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, canEdit: () => false };
+    canEdit,
+    canView,
+  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, canEdit: () => false, canView: () => false };
 
   const canEditInventory = canEdit('inventory');
+  const canViewInventory = canView('inventory');
   
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditInventory) {
@@ -359,11 +361,11 @@ export default function InventoryPage() {
                 />
                 <div className="flex items-center gap-2">
                     <TooltipProvider>
-                        {isMultiLocation && canEditInventory && (
+                        {isMultiLocation && (
                            <>
-                            <TransferStockDialog 
+                            {canEditInventory && <TransferStockDialog 
                                 onTransfer={handleTransferStock}
-                            />
+                            />}
                             <DropdownMenu>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
