@@ -184,13 +184,27 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async (): Promise<void> => {
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     try {
       setLoading(true);
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle the rest
+      // onAuthStateChanged will handle the rest, including redirection to dashboard or onboarding
     } catch (error: any) {
-      console.error("Google Sign-In Error", error);
-      toast({ variant: 'destructive', title: 'Erro de Login', description: 'Não foi possível fazer login com o Google.' });
+      console.error("Google Sign-In Error:", { code: error.code, message: error.message });
+      let description = 'Ocorreu um erro inesperado durante o login com o Google.';
+      if (error.code === 'auth/popup-closed-by-user') {
+        description = 'A janela de login foi fechada antes da conclusão.';
+      } else if (error.code === 'auth/operation-not-allowed') {
+        description = 'O login com Google não está ativado no seu projeto Firebase. Por favor, ative-o no Console do Firebase.';
+      } else if (error.code === 'auth/unauthorized-domain') {
+          description = 'Este domínio não está autorizado para operações de login. Por favor, adicione-o à lista de domínios autorizados no Console do Firebase.';
+      }
+      toast({ 
+        variant: 'destructive', 
+        title: 'Erro de Login com Google', 
+        description: description
+      });
+    } finally {
       setLoading(false);
     }
   };
