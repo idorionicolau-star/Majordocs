@@ -74,19 +74,23 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
   const role = form.watch('role');
 
   const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write') => {
-      const currentPermissions = form.getValues('permissions');
-      const currentLevel = currentPermissions[moduleId];
-      let newLevel: PermissionLevel;
+    const currentPermissions = form.getValues('permissions');
+    const currentLevel = currentPermissions[moduleId];
+    let newLevel: PermissionLevel;
 
-      if (level === 'read') {
-          // Se marcar "Ver", define para 'read'. Se desmarcar, define para 'none'.
-          newLevel = currentLevel === 'none' ? 'read' : 'none';
-      } else { // level === 'write'
-          // Se marcar "Editar", define para 'write'. Se desmarcar, volta para 'read'.
-          newLevel = currentLevel === 'write' ? 'read' : 'write';
-      }
+    if (level === 'read') {
+      newLevel = currentLevel === 'read' || currentLevel === 'write' ? 'none' : 'read';
+    } else { // 'write'
+      newLevel = currentLevel === 'write' ? 'read' : 'write';
+    }
 
-      form.setValue(`permissions.${moduleId}`, newLevel, { shouldDirty: true });
+    if (newLevel === 'write') {
+      form.setValue(`permissions.${moduleId}`, 'write', { shouldDirty: true });
+    } else if (newLevel === 'read') {
+      form.setValue(`permissions.${moduleId}`, 'read', { shouldDirty: true });
+    } else {
+      form.setValue(`permissions.${moduleId}`, 'none', { shouldDirty: true });
+    }
   };
 
 
@@ -215,7 +219,7 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
                                             <Checkbox
                                                 checked={canWrite}
                                                 onCheckedChange={() => handlePermissionChange(module.id, 'write')}
-                                                disabled={!canRead || module.id === 'dashboard'}
+                                                disabled={module.id === 'dashboard'}
                                             />
                                         </TableCell>
                                     </TableRow>

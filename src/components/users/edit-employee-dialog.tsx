@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -81,29 +80,26 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
     }
   }, [open, employee, form]);
 
- const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write') => {
-      const currentPermissions = form.getValues('permissions');
-      const currentLevel = currentPermissions[moduleId];
-      let newLevel: PermissionLevel;
-
-      if (level === 'read') {
-          // Se marcar "Ver", define para 'read'. Se desmarcar, define para 'none'.
-          newLevel = currentLevel === 'none' ? 'read' : 'none';
-      } else { // level === 'write'
-          // Se marcar "Editar", define para 'write'. Se desmarcar, volta para 'read'.
-          newLevel = currentLevel === 'write' ? 'read' : 'write';
-      }
-      
-      // Se "Ver" for desmarcado, "Editar" também deve ser.
-      if (newLevel === 'none') {
-        form.setValue(`permissions.${moduleId}`, 'none', { shouldDirty: true });
-      } else if (newLevel === 'write' && currentLevel !== 'write') {
-        // Se marcar "Editar", força a leitura também.
-        form.setValue(`permissions.${moduleId}`, 'write', { shouldDirty: true });
-      } else {
-        form.setValue(`permissions.${moduleId}`, newLevel, { shouldDirty: true });
-      }
+  const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write') => {
+    const currentPermissions = form.getValues('permissions');
+    const currentLevel = currentPermissions[moduleId];
+    let newLevel: PermissionLevel;
+  
+    if (level === 'read') {
+      newLevel = currentLevel === 'read' || currentLevel === 'write' ? 'none' : 'read';
+    } else { // 'write'
+      newLevel = currentLevel === 'write' ? 'read' : 'write';
+    }
+  
+    if (newLevel === 'write') {
+      form.setValue(`permissions.${moduleId}`, 'write', { shouldDirty: true });
+    } else if (newLevel === 'read') {
+       form.setValue(`permissions.${moduleId}`, 'read', { shouldDirty: true });
+    } else {
+      form.setValue(`permissions.${moduleId}`, 'none', { shouldDirty: true });
+    }
   };
+
 
   function onSubmit(values: EditEmployeeFormValues) {
     if (values.password && values.password.length > 0 && values.password.length < 6) {
@@ -122,7 +118,7 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
       permissions: values.role === 'Admin' ? permissionsForAdmin : values.permissions,
     };
 
-    // Apenas inclui a password no objeto de atualização se uma nova for fornecida.
+    // Only include password if a new one is provided.
     if (values.password && values.password.length >= 6) {
       updatedEmployeeData.password = values.password;
     }
@@ -237,7 +233,7 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
                                                 <Checkbox
                                                     checked={canWrite}
                                                     onCheckedChange={() => handlePermissionChange(module.id, 'write')}
-                                                    disabled={!canRead || module.id === 'dashboard'}
+                                                    disabled={module.id === 'dashboard'}
                                                 />
                                             </TableCell>
                                         </TableRow>

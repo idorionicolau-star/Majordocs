@@ -23,16 +23,12 @@ const displayPassword = (password: string | undefined): string => {
     return '';
   }
   try {
-    // Check if it might be base64. A simple check is to see if it decodes.
-    // A more robust check might be needed if passwords can naturally look like base64.
     const decoded = Buffer.from(password, 'base64').toString('utf-8');
-     // Simple heuristic: if decoding results in non-printable chars, it wasn't valid text.
     if (/[\x00-\x08\x0E-\x1F]/.test(decoded) && decoded !== password) {
        return password;
     }
     return decoded;
   } catch (e) {
-    // If it fails to decode, it's plain text.
     return password;
   }
 };
