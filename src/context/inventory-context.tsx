@@ -220,7 +220,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const completeOnboarding = async (companyName: string): Promise<boolean> => {
-    if (!firestore || !firebaseUser) return false;
+    if (!firestore || !firebaseUser) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Utilizador não autenticado.' });
+        return false;
+    }
 
     setLoading(true);
     try {
@@ -257,12 +260,23 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         // 3. Create the company document
         transaction.set(newCompanyRef, { name: companyName, ownerId: firebaseUser.uid });
       });
-      setNeedsOnboarding(false); // Onboarding complete
-      // Re-fetch will be triggered by onAuthStateChanged finding the new doc
-      toast({ title: 'Bem-vindo!', description: 'A sua empresa foi criada com sucesso.' });
+
+      // Manually trigger state update to reflect onboarding completion
+      const userMapDoc = await getDoc(doc(firestore, `users/${firebaseUser.uid}`));
+      if(userMapDoc.exists()) {
+          const userCompanyId = userMapDoc.data().companyId;
+          const employeeDoc = await getDoc(doc(firestore, `companies/${userCompanyId}/employees/${firebaseUser.uid}`));
+          if (employeeDoc.exists()) {
+             const employeeData = employeeDoc.data() as Employee;
+             setUser({ ...employeeData, id: employeeDoc.id });
+             setCompanyId(userCompanyId);
+          }
+      }
+      setNeedsOnboarding(false);
+      
       return true;
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Erro', description: error.message });
+      toast({ variant: 'destructive', title: 'Erro ao Criar Empresa', description: error.message });
       return false;
     } finally {
       setLoading(false);

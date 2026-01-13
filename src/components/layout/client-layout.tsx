@@ -18,13 +18,20 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (authContext?.loading) return; // Wait until auth state is resolved
 
+    // If user needs onboarding and is not on the onboarding page, redirect them.
     if (authContext?.needsOnboarding && !isOnboardingPage) {
         router.replace('/onboarding');
-    } else if (!authContext?.user && !isAuthPage && !isOnboardingPage) {
+    } 
+    // If user is authenticated and doesn't need onboarding, but is on the onboarding page, redirect to dashboard.
+    else if (authContext?.user && !authContext.needsOnboarding && isOnboardingPage) {
+        router.replace('/dashboard');
+    }
+    // If user is not authenticated and not on an auth page, redirect to login.
+    else if (!authContext?.user && !isAuthPage && !isOnboardingPage) {
         router.replace('/login');
     }
 
-  }, [authContext?.loading, authContext?.user, authContext?.needsOnboarding, isAuthPage, isOnboardingPage, router]);
+  }, [authContext?.loading, authContext?.user, authContext?.needsOnboarding, isAuthPage, isOnboardingPage, pathname, router]);
 
 
   if (authContext?.loading) {
@@ -37,21 +44,22 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-
-  if (isAuthPage || isOnboardingPage) {
-    return <>{children}</>;
-  }
-
-  if (!authContext?.user) {
+  
+  if (!authContext?.user && !isAuthPage) {
      return (
        <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="text-sm text-muted-foreground">A redirecionar...</p>
+          <p className="text-sm text-muted-foreground">A redirecionar para o login...</p>
         </div>
       </div>
     );
   }
+
+  if (isAuthPage || (authContext?.needsOnboarding && isOnboardingPage)) {
+    return <>{children}</>;
+  }
+
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">

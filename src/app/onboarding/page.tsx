@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { InventoryContext } from '@/context/inventory-context';
 import Image from 'next/image';
+import { useToast } from '@/hooks/use-toast';
 
 const onboardingSchema = z.object({
   companyName: z.string().min(3, 'O nome da empresa deve ter pelo menos 3 caracteres.'),
@@ -21,8 +22,9 @@ type OnboardingFormValues = z.infer<typeof onboardingSchema>;
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { completeOnboarding, firebaseUser } = useContext(InventoryContext) || {};
-  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const { completeOnboarding, firebaseUser, loading, needsOnboarding } = useContext(InventoryContext) || {};
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     register,
@@ -31,17 +33,38 @@ export default function OnboardingPage() {
   } = useForm<OnboardingFormValues>({
     resolver: zodResolver(onboardingSchema),
   });
+  
+  useEffect(() => {
+    // This check is a safeguard, the main logic is in ClientLayout
+    if (!loading && !needsOnboarding) {
+        router.replace('/dashboard');
+    }
+  }, [loading, needsOnboarding, router]);
 
   const handleOnboarding = async (data: OnboardingFormValues) => {
-    setIsLoading(true);
+    setIsSubmitting(true);
     if (completeOnboarding) {
-      const success = await completeOnboarding(data.companyName);
-      if (success) {
-        router.push('/dashboard');
-      }
+        try {
+            const success = await completeOnboarding(data.companyName);
+            if (success) {
+                toast({ title: 'Bem-vindo(a)!', description: 'A sua empresa foi criada com sucesso.' });
+                router.push('/dashboard');
+            }
+        } catch (error: any) {
+            // Error toast is handled inside completeOnboarding, but we catch to stop spinner
+        }
     }
-    setIsLoading(false);
+    setIsSubmitting(false);
   };
+  
+  // Display a loader while the initial auth check is running
+  if (loading || !needsOnboarding) {
+     return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
@@ -60,8 +83,8 @@ export default function OnboardingPage() {
                     <Input id="companyName" {...register('companyName')} placeholder="O nome da sua empresa" />
                     {errors.companyName && <p className="text-xs text-red-500">{errors.companyName.message}</p>}
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? 'A criar empresa...' : 'Finalizar Configuração'}
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? 'A criar empresa...' : 'Finalizar Configuração'}
                 </Button>
             </form>
         </CardContent>

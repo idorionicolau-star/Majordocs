@@ -28,7 +28,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const GoogleIcon = () => (
-    <svg className="h-5 w-5" viewBox="0 0 24 24">
+    <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
@@ -54,8 +54,12 @@ export default function LoginPage() {
 
   const handleLogin = async (data: LoginFormValues) => {
     setIsLoading(true);
+    if (!login) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Serviço de autenticação indisponível.' });
+        setIsLoading(false);
+        return;
+    }
     try {
-      if (login) {
         const success = await login(data.email, data.password);
         if (success) {
           toast({
@@ -64,17 +68,8 @@ export default function LoginPage() {
           });
           router.push('/dashboard');
         } 
-      } else {
-        throw new Error('Serviço de autenticação não disponível.');
-      }
     } catch (error: any) {
-      if (!toast) {
-          toast({
-            variant: 'destructive',
-            title: 'Erro de Login',
-            description: error.message || 'Ocorreu um erro ao tentar fazer login.',
-          });
-      }
+      // Errors are toasted within the login function in the context
     } finally {
       setIsLoading(false);
     }
@@ -82,15 +77,17 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
+    if (!signInWithGoogle) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Login com Google não configurado.' });
+        setGoogleLoading(false);
+        return;
+    }
     try {
-      if (signInWithGoogle) {
         await signInWithGoogle();
         // The context's onAuthStateChanged will handle redirection
-      } else {
-        throw new Error("Login com Google não está configurado.");
-      }
     } catch (error) {
-      console.error(error);
+      // Errors are toasted within the signInWithGoogle function in the context
+      console.error("Google Sign-in error caught in page:", error);
     } finally {
       setGoogleLoading(false);
     }
@@ -125,15 +122,15 @@ export default function LoginPage() {
                         <Label htmlFor="email">Email de Login</Label>
                         <Popover>
                             <PopoverTrigger asChild>
-                            <button type="button" className="p-1" aria-label="Ajuda sobre o formato do email">
+                            <button type="button" className="p-1 rounded-full hover:bg-muted" aria-label="Ajuda sobre o formato do email">
                                 <Info className="h-4 w-4 text-muted-foreground" />
                             </button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                            <div className="p-3 text-xs max-w-xs space-y-2">
+                            <PopoverContent className="w-auto p-0 max-w-xs" side="top" align="end">
+                            <div className="p-3 text-xs space-y-2">
                                 <p className="font-bold">Formato do Email de Login</p>
                                 <p><strong className="text-primary">Admin:</strong> Use o email completo do registo (ex: `admin@empresa.com`).</p>
-                                <p><strong className="text-primary">Funcionário:</strong> Use o formato `utilizador@empresa.com`.</p>
+                                <p><strong className="text-primary">Funcionário:</strong> Use o formato `utilizador@nome-da-empresa.com`.</p>
                             </div>
                             </PopoverContent>
                         </Popover>
@@ -170,4 +167,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
