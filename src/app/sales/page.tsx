@@ -3,13 +3,13 @@
 
 import { useState, useEffect, useMemo, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
-import type { Sale, ModulePermission } from "@/lib/types";
+import type { Sale, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/sales/columns";
 import { SalesDataTable } from "@/components/sales/data-table";
 import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronDown, Filter, Lock } from "lucide-react";
+import { List, LayoutGrid, ChevronDown, Filter, Lock, MapPin } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { doc, updateDoc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function SalesPage() {
   const searchParams = useSearchParams();
@@ -28,6 +29,7 @@ export default function SalesPage() {
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+  const [locationFilter, setLocationFilter] = useState<string>('all');
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
@@ -40,6 +42,9 @@ export default function SalesPage() {
     user,
     companyId,
     canEdit,
+    canView,
+    locations,
+    isMultiLocation,
   } = inventoryContext || { 
     sales: [], 
     loading: true, 
@@ -48,9 +53,13 @@ export default function SalesPage() {
     user: null,
     companyId: null,
     canEdit: () => false,
+    canView: () => false,
+    locations: [],
+    isMultiLocation: false,
   };
 
   const canEditSales = canEdit('sales');
+  const canViewSales = canView('sales');
   
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditSales) {
@@ -133,8 +142,11 @@ export default function SalesPage() {
     if (statusFilter !== 'all') {
       result = result.filter(s => s.status === statusFilter);
     }
+    if (isMultiLocation && locationFilter !== 'all') {
+      result = result.filter(s => s.location === locationFilter);
+    }
     return result;
-  }, [sales, nameFilter, statusFilter]);
+  }, [sales, nameFilter, statusFilter, isMultiLocation, locationFilter]);
 
   if (inventoryLoading) {
     return (
@@ -190,6 +202,26 @@ export default function SalesPage() {
                         <DropdownMenuCheckboxItem checked={statusFilter === 'Levantado'} onCheckedChange={() => setStatusFilter('Levantado')}>Levantadas</DropdownMenuCheckboxItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
+                {isMultiLocation && canViewSales && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="h-12 w-full sm:w-auto shadow-lg">
+                          <MapPin className="mr-2 h-4 w-4" />
+                          {locationFilter === 'all' ? 'Todas as Localizações' : locations.find(l => l.id === locationFilter)?.name}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <ScrollArea className="h-48">
+                          <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuCheckboxItem checked={locationFilter === 'all'} onCheckedChange={() => setLocationFilter('all')}>Todas</DropdownMenuCheckboxItem>
+                          {locations.map(loc => (
+                            <DropdownMenuCheckboxItem key={loc.id} checked={locationFilter === loc.id} onCheckedChange={() => setLocationFilter(loc.id)}>{loc.name}</DropdownMenuCheckboxItem>
+                          ))}
+                        </ScrollArea>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
             </div>
             
             <div className="flex items-center justify-center gap-2 border-t pt-4">
@@ -262,6 +294,7 @@ export default function SalesPage() {
                     onConfirmPickup={handleConfirmPickup}
                     viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
                     canEdit={canEditSales}
+                    locationName={locations.find(l => l.id === sale.location)?.name}
                 />
             ))}
         </div>

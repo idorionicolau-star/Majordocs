@@ -5,7 +5,7 @@ import type { Sale } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
-import { Calendar, User, CheckCircle, PackageCheck } from "lucide-react";
+import { Calendar, User, CheckCircle, PackageCheck, MapPin } from "lucide-react";
 import { SaleActions } from "./columns";
 
 interface SaleCardProps {
@@ -14,9 +14,10 @@ interface SaleCardProps {
     onConfirmPickup: (sale: Sale) => void;
     viewMode?: 'normal' | 'condensed';
     canEdit: boolean;
+    locationName?: string;
 }
 
-export function SaleCard({ sale, onUpdateSale, onConfirmPickup, viewMode = 'normal', canEdit }: SaleCardProps) {
+export function SaleCard({ sale, onUpdateSale, onConfirmPickup, viewMode = 'normal', canEdit, locationName }: SaleCardProps) {
     const isCondensed = viewMode === 'condensed';
 
     const actionsProps = {
@@ -42,6 +43,12 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, viewMode = 'norm
                         <Calendar size={12} />
                         <span>{new Date(sale.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
                     </div>
+                     {locationName && (
+                      <div className="flex items-center gap-1.5 justify-center">
+                          <MapPin size={12} />
+                          <span>{locationName}</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-1.5 justify-center">
                         <User size={12} />
                         <span>{sale.soldBy}</span>

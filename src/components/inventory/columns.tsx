@@ -2,8 +2,8 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Product } from "@/lib/types"
-import { AlertCircle } from "lucide-react"
+import { Product, Location } from "@/lib/types"
+import { AlertCircle, MapPin } from "lucide-react"
 import { EditProductDialog } from "./edit-product-dialog"
 import { Button } from "../ui/button";
 import { Trash2 } from "lucide-react";
@@ -13,6 +13,8 @@ interface ColumnsOptions {
   onAttemptDelete: (product: Product) => void;
   onProductUpdate: (product: Product) => void;
   canEdit: boolean;
+  isMultiLocation: boolean;
+  locations: Location[];
 }
 
 export const getStockStatus = (product: Product) => {
@@ -30,7 +32,7 @@ export const getStockStatus = (product: Product) => {
 };
 
 export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
-  const { canEdit } = options;
+  const { canEdit, isMultiLocation, locations } = options;
 
   const baseColumns: ColumnDef<Product>[] = [
     {
@@ -58,6 +60,22 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
       },
     },
   ];
+
+  if (isMultiLocation) {
+    baseColumns.push({
+      accessorKey: "location",
+      header: "Localização",
+      cell: ({ row }) => {
+        const locationName = locations.find(l => l.id === row.original.location)?.name || row.original.location || "N/A";
+        return (
+          <div className="flex items-center gap-2">
+            <MapPin className="h-3 w-3 text-muted-foreground" />
+            <span className="text-xs">{locationName}</span>
+          </div>
+        );
+      },
+    });
+  }
 
   baseColumns.push(
     {

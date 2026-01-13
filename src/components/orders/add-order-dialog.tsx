@@ -32,7 +32,7 @@ import { Plus, ClipboardList } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import type { Product, Order } from '@/lib/types';
+import type { Product, Order, Location } from '@/lib/types';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { InventoryContext } from '@/context/inventory-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
@@ -46,6 +46,7 @@ const formSchema = z.object({
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']),
   clientName: z.string().optional(),
   deliveryDate: z.string().nonempty({ message: "A data de entrega é obrigatória." }),
+  location: z.string().optional(),
 });
 
 type AddOrderFormValues = z.infer<typeof formSchema>;
@@ -59,7 +60,7 @@ interface AddOrderDialogProps {
 
 export function AddOrderDialog({ open, onOpenChange, onAddOrder, triggerType = 'fab' }: AddOrderDialogProps) {
   const inventoryContext = useContext(InventoryContext);
-  const { catalogProducts, catalogCategories } = inventoryContext || {};
+  const { catalogProducts, catalogCategories, locations, isMultiLocation } = inventoryContext || { catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false };
   
   const form = useForm<AddOrderFormValues>({
     resolver: zodResolver(formSchema),
@@ -69,33 +70,49 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder, triggerType = '
       unit: 'un',
       clientName: "",
       deliveryDate: "",
+      location: "",
     },
   });
   
   useEffect(() => {
     if (open) {
+      const savedLocation = localStorage.getItem('majorstockx-last-product-location');
+      const finalLocation = savedLocation && locations.some(l => l.id === savedLocation)
+        ? savedLocation
+        : (locations.length > 0 ? locations[0].id : "");
+        
       form.reset({
         productName: "",
         quantity: 1,
         unit: 'un',
         clientName: "",
         deliveryDate: "",
+        location: finalLocation,
       });
     }
-  }, [open, form]);
+  }, [open, form, locations]);
 
 
   function onSubmit(values: AddOrderFormValues) {
+    if(isMultiLocation && !values.location) {
+      form.setError("location", {type: "manual", message: "Selecione uma localização."});
+      return;
+    }
+
+    if(values.location) {
+      localStorage.setItem('majorstockx-last-product-location', values.location);
+    }
+    
     const newOrder: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'> = {
       productName: values.productName,
       quantity: values.quantity,
       unit: values.unit,
       clientName: values.clientName,
       deliveryDate: new Date(values.deliveryDate).toISOString(),
+      location: values.location
     };
     onAddOrder(newOrder);
 
-    form.reset();
     onOpenChange(false);
   }
   
@@ -186,6 +203,32 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder, triggerType = '
                   )}
                 />
               </div>
+              {isMultiLocation && (
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Localização da Produção</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione uma localização" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {locations.map((location: Location) => (
+                              <SelectItem key={location.id} value={location.id}>
+                                {location.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               <FormField
                 control={form.control}
                 name="clientName"
@@ -221,5 +264,3 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder, triggerType = '
     </Dialog>
   );
 }
-
-    

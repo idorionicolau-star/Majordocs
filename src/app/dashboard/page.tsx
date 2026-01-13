@@ -30,37 +30,8 @@ const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").th
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user } = useContext(InventoryContext) || {};
-
-  const hasPermission = (permissionId: ModulePermission, action: 'read' | 'write' = 'read') => {
-    if (!user) return false;
-    if (user.role === 'Admin') return true;
-    if (!user.permissions) return false;
-
-    const perms = user.permissions;
-
-    // Se for o novo formato (Objeto/Mapa)
-    if (typeof perms === 'object' && !Array.isArray(perms)) {
-      const level = perms[permissionId]; // Pode ser 'read', 'write' ou undefined
-      if (action === 'write') {
-        return level === 'write';
-      }
-      return level === 'read' || level === 'write';
-    }
-
-    // Se for o formato antigo (Array) - Mantém compatibilidade
-    if (Array.isArray(perms)) {
-      // @ts-ignore
-      return perms.includes(permissionId);
-    }
-
-    return false;
-  };
+  const { user, canView, canEdit } = useContext(InventoryContext) || { user: null, canView: () => false, canEdit: () => false };
   
-  const canSee = (id: ModulePermission) => hasPermission(id, 'read');
-  const canEdit = (id: ModulePermission) => hasPermission(id, 'write');
-
-
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start gap-4">
@@ -86,7 +57,7 @@ export default function DashboardPage() {
               {canEdit('orders') && <Button asChild variant="outline">
                   <Link href="/orders?action=add"><ClipboardList className="mr-2 h-4 w-4" />+ Encomenda</Link>
                 </Button>}
-              {canSee('settings') && <Button asChild variant="outline">
+              {canView('settings') && <Button asChild variant="outline">
                   <Link href="/settings#catalog"><Book className="mr-2 h-4 w-4" />Catálogo</Link>
                 </Button>}
           </div>

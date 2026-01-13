@@ -3,11 +3,11 @@
 
 import { useState, useMemo, useEffect, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
-import type { Product, ModulePermission, PermissionLevel } from "@/lib/types";
+import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, List, LayoutGrid, ChevronDown, Lock } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -35,6 +35,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ProductCard } from "@/components/inventory/product-card";
+import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,7 @@ export default function InventoryPage() {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [nameFilter, setNameFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
@@ -52,23 +54,25 @@ export default function InventoryPage() {
 
   const { 
     products, 
+    locations, 
+    isMultiLocation, 
     addProduct, 
     updateProduct, 
     deleteProduct, 
+    transferStock,
     loading: inventoryLoading,
     canEdit,
     canView,
-  } = inventoryContext || { products: [], addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, loading: true, canEdit: () => false, canView: () => false };
-
+  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, canEdit: () => false, canView: () => false };
+  
   const canEditInventory = canEdit('inventory');
   const canViewInventory = canView('inventory');
-  
+
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditInventory) {
       setAddDialogOpen(true);
     }
   }, [searchParams, canEditInventory]);
-
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -106,6 +110,16 @@ export default function InventoryPage() {
         });
     }
   };
+  
+  const handleTransferStock = (
+    productName: string,
+    fromLocationId: string,
+    toLocationId: string,
+    quantity: number
+  ) => {
+    transferStock(productName, fromLocationId, toLocationId, quantity);
+  };
+
 
   const confirmDeleteProduct = () => {
     if (productToDelete && productToDelete.instanceId) {
@@ -270,6 +284,10 @@ export default function InventoryPage() {
   const filteredProducts = useMemo(() => {
     let result = products;
 
+    if (selectedLocation !== 'all') {
+      result = result.filter(p => p.location === selectedLocation);
+    }
+
     if (nameFilter) {
       result = result.filter(p => p.name.toLowerCase().includes(nameFilter.toLowerCase()));
     }
@@ -279,7 +297,7 @@ export default function InventoryPage() {
     }
     
     return result;
-  }, [products, nameFilter, categoryFilter]);
+  }, [products, selectedLocation, nameFilter, categoryFilter]);
   
     if (inventoryLoading) {
     return (
@@ -287,7 +305,6 @@ export default function InventoryPage() {
         <Skeleton className="h-12 w-1/3" />
         <Skeleton className="h-8 w-1/4" />
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <Skeleton className="h-64 w-full" />
           <Skeleton className="h-64 w-full" />
           <Skeleton className="h-64 w-full" />
           <Skeleton className="h-64 w-full" />
@@ -339,6 +356,48 @@ export default function InventoryPage() {
                 />
                 <div className="flex items-center gap-2">
                     <TooltipProvider>
+                       {isMultiLocation && canEditInventory && (
+                          <TransferStockDialog
+                            onTransfer={handleTransferStock}
+                          />
+                        )}
+                        {isMultiLocation && canViewInventory && (
+                            <DropdownMenu>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="outline" size="icon" className="shadow-lg h-12 w-12 rounded-2xl">
+                                                <MapPin className="h-5 w-5" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Filtrar por Localização</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                                <DropdownMenuContent align="end">
+                                    <ScrollArea className="h-[200px]">
+                                    <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuCheckboxItem
+                                        checked={selectedLocation === 'all'}
+                                        onCheckedChange={() => setSelectedLocation('all')}
+                                    >
+                                        Todas as Localizações
+                                    </DropdownMenuCheckboxItem>
+                                    {locations.map(location => (
+                                    <DropdownMenuCheckboxItem
+                                        key={location.id}
+                                        checked={selectedLocation === location.id}
+                                        onCheckedChange={() => setSelectedLocation(location.id)}
+                                    >
+                                        {location.name}
+                                    </DropdownMenuCheckboxItem>
+                                    ))}
+                                    </ScrollArea>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
                         <DropdownMenu>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -445,7 +504,9 @@ export default function InventoryPage() {
               columns={columns({ 
                 onAttemptDelete: (product) => setProductToDelete(product),
                 onProductUpdate: handleUpdateProduct,
-                canEdit: canEditInventory
+                canEdit: canEditInventory,
+                isMultiLocation: isMultiLocation,
+                locations: locations
               })} 
               data={filteredProducts} 
             />
@@ -485,5 +546,3 @@ export default function InventoryPage() {
     </>
   );
 }
-
-    

@@ -56,7 +56,7 @@ interface TransferStockDialogProps {
 export function TransferStockDialog({ onTransfer }: TransferStockDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
-  const { products, locations } = useContext(InventoryContext) || {};
+  const { products, locations } = useContext(InventoryContext) || { products: [], locations: [] };
   
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(formSchema),
@@ -87,7 +87,7 @@ export function TransferStockDialog({ onTransfer }: TransferStockDialogProps) {
   const availableStock = useMemo(() => {
     if (!watchedProductName || !watchedFromLocation || !products) return 0;
     const productInstance = products.find(p => p.name === watchedProductName && p.location === watchedFromLocation);
-    return productInstance?.stock ?? 0;
+    return productInstance ? productInstance.stock - productInstance.reservedStock : 0;
   }, [products, watchedProductName, watchedFromLocation]);
 
   useEffect(() => {

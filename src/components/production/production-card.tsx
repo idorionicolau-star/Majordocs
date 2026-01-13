@@ -4,7 +4,7 @@
 import type { Production } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Calendar, User, Hammer, Package, CheckCircle } from "lucide-react";
+import { Calendar, User, Hammer, Package, CheckCircle, MapPin } from "lucide-react";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
@@ -14,9 +14,10 @@ interface ProductionCardProps {
     onTransfer: (production: Production) => void;
     viewMode?: 'normal' | 'condensed';
     canEdit: boolean;
+    locationName?: string;
 }
 
-export function ProductionCard({ production, onTransfer, viewMode = 'normal', canEdit }: ProductionCardProps) {
+export function ProductionCard({ production, onTransfer, viewMode = 'normal', canEdit, locationName }: ProductionCardProps) {
     const isCondensed = viewMode === 'condensed';
     const isTransferred = production.status === 'Transferido';
 
@@ -53,6 +54,12 @@ export function ProductionCard({ production, onTransfer, viewMode = 'normal', ca
                         <Calendar size={12} />
                         <span>{new Date(production.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
                     </div>
+                    {locationName && (
+                      <div className="flex items-center gap-1.5 justify-center">
+                          <MapPin size={12} />
+                          <span>{locationName}</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-1.5 justify-center">
                         <User size={12} />
                         <span>{production.registeredBy}</span>

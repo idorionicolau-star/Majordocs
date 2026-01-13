@@ -36,6 +36,11 @@ export type Company = {
     email?: string;
 };
 
+export type Location = {
+  id: string;
+  name: string;
+};
+
 export type Product = {
   id?: string; // Document ID from Firestore
   instanceId: string; // Temporary UI-only ID for React keys
@@ -47,6 +52,7 @@ export type Product = {
   lowStockThreshold: number;
   criticalStockThreshold: number;
   lastUpdated: string;
+  location?: string;
   subType?: string;
   unit?: string;
 };
@@ -61,6 +67,7 @@ export type Sale = {
   totalValue: number;
   soldBy: string;
   guideNumber: string;
+  location?: string;
   status: 'Pago' | 'Levantado';
 };
 
@@ -70,6 +77,7 @@ export type Production = {
   productName: string;
   quantity: number;
   registeredBy: string;
+  location?: string;
   status: 'Concluído' | 'Transferido';
 };
 
@@ -89,6 +97,7 @@ export type Order = {
   unit: 'un' | 'm²' | 'm' | 'cj' | 'outro';
   clientName?: string;
   deliveryDate: string;
+  location?: string;
   status: 'Pendente' | 'Em produção' | 'Concluída';
   productionStartDate?: string | null;
   quantityProduced: number;

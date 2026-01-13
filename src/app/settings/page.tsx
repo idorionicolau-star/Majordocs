@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Building, Book, Palette, User as UserIcon } from "lucide-react";
+import { Building, Book, Palette, User as UserIcon, MapPin, Code, Trash2 } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
+import { LocationsManager } from "@/components/settings/locations-manager";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +18,16 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import type { ModulePermission } from "@/lib/types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 
 const colorOptions = [
@@ -92,9 +103,10 @@ export default function SettingsPage() {
   const [borderColor, setBorderColor] = useState('hsl(var(--primary))');
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
-  const { user } = inventoryContext || {};
+  const { user, clearProductsCollection } = inventoryContext || {};
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState("profile");
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
 
   const [companyDetails, setCompanyDetails] = useState({
@@ -244,6 +256,15 @@ export default function SettingsPage() {
     setCompanyDetails(prev => ({...prev, [id]: value }));
   }
 
+  const handleClearProducts = async () => {
+    if (clearProductsCollection) {
+      toast({ title: "A limpar...", description: "A apagar todos os produtos do inventário no Firestore." });
+      await clearProductsCollection();
+      toast({ title: "Sucesso!", description: "A coleção de produtos foi limpa." });
+    }
+    setShowClearConfirm(false);
+  };
+
 
   if (!isClient) {
     return null; // Or a loading skeleton
@@ -251,6 +272,22 @@ export default function SettingsPage() {
 
   return (
     <>
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é irreversível e irá apagar permanentemente **todos** os produtos do seu inventário no Firestore. Não será possível recuperar estes dados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearProducts} variant="destructive">
+              Sim, apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
         <div>
           <h1 className="text-2xl md:text-3xl font-headline font-[900] text-slate-900 dark:text-white tracking-tighter">Configurações</h1>
@@ -267,7 +304,9 @@ export default function SettingsPage() {
               {hasPermission('settings') && (
                 <>
                   <TabsTrigger value="company" id="tab-trigger-company"><Building className="mr-2 h-4 w-4" />Empresa</TabsTrigger>
+                  <TabsTrigger value="locations" id="tab-trigger-locations"><MapPin className="mr-2 h-4 w-4" />Localizações</TabsTrigger>
                   <TabsTrigger value="catalog" id="tab-trigger-catalog"><Book className="mr-2 h-4 w-4" />Catálogo</TabsTrigger>
+                  <TabsTrigger value="developer" id="tab-trigger-developer"><Code className="mr-2 h-4 w-4" />Developer</TabsTrigger>
                 </>
               )}
             </TabsList>
@@ -388,6 +427,18 @@ export default function SettingsPage() {
                   </CardContent>
                 </Card>
               </TabsContent>
+              
+              <TabsContent value="locations">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Gestão de Localizações</CardTitle>
+                    <CardDescription>Ative e gerencie múltiplas localizações para o seu negócio.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <LocationsManager />
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
               <TabsContent value="catalog">
                 <Card>
@@ -400,6 +451,27 @@ export default function SettingsPage() {
                   </CardContent>
                 </Card>
               </TabsContent>
+              
+              <TabsContent value="developer">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Ferramentas de Programador</CardTitle>
+                        <CardDescription>Ações avançadas para gerir o estado da aplicação.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div>
+                            <h3 className="font-semibold">Limpar Coleção de Produtos</h3>
+                            <p className="text-sm text-muted-foreground mt-1">
+                            Esta ação irá apagar todos os documentos da coleção de produtos no Firestore. Utilize esta opção se quiser limpar o inventário e recomeçar.
+                            </p>
+                        </div>
+                        <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Limpar Produtos do Firestore
+                        </Button>
+                    </CardContent>
+                </Card>
+              </TabsContent>
             </>
           )}
 
@@ -408,5 +480,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
-    

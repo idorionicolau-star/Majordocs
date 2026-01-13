@@ -6,11 +6,11 @@ import { useState, useEffect, useMemo, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
 import { ProductionDataTable } from "@/components/production/data-table";
 import { AddProductionDialog } from "@/components/production/add-production-dialog";
-import type { Production, ModulePermission } from "@/lib/types";
+import type { Production, Location, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronDown, Lock } from "lucide-react";
+import { List, LayoutGrid, ChevronDown, Lock, MapPin } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ProductionCard } from "@/components/production/production-card";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useFirestore } from "@/firebase";
 import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ProductionPage() {
   const inventoryContext = useContext(InventoryContext);
@@ -42,10 +43,12 @@ export default function ProductionPage() {
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('4');
   const [productionToTransfer, setProductionToTransfer] = useState<Production | null>(null);
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+  const [locationFilter, setLocationFilter] = useState<string>('all');
 
-  const { productions, companyId, updateProductStock, loading: inventoryLoading, user, canEdit } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, loading: true, user: null, canEdit: () => false };
+  const { productions, companyId, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false };
 
   const canEditProduction = canEdit('production');
+  const canViewProduction = canView('production');
   
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditProduction) {
@@ -80,6 +83,7 @@ export default function ProductionPage() {
       date: new Date().toISOString().split('T')[0],
       productName: newProductionData.productName,
       quantity: newProductionData.quantity,
+      location: newProductionData.location,
       registeredBy: user.username || 'Desconhecido',
       status: 'Concluído'
     };
@@ -96,7 +100,7 @@ export default function ProductionPage() {
   const handleConfirmTransfer = () => {
     if (!productionToTransfer || !firestore || !companyId) return;
 
-    updateProductStock(productionToTransfer.productName, productionToTransfer.quantity);
+    updateProductStock(productionToTransfer.productName, productionToTransfer.quantity, productionToTransfer.location);
 
     const prodDocRef = doc(firestore, `companies/${companyId}/productions`, productionToTransfer.id);
     updateDoc(prodDocRef, { status: 'Transferido' });
@@ -114,8 +118,11 @@ export default function ProductionPage() {
     if (nameFilter) {
       result = result.filter(p => p.productName.toLowerCase().includes(nameFilter.toLowerCase()));
     }
+    if (isMultiLocation && locationFilter !== 'all') {
+      result = result.filter(p => p.location === locationFilter);
+    }
     return result;
-  }, [productions, nameFilter]);
+  }, [productions, nameFilter, locationFilter, isMultiLocation]);
 
   if (inventoryLoading) {
     return (
@@ -138,7 +145,7 @@ export default function ProductionPage() {
         <AlertDialogHeader>
           <AlertDialogTitle>Confirmar Transferência</AlertDialogTitle>
           <AlertDialogDescription>
-            Tem a certeza que deseja transferir <span className="font-bold">{productionToTransfer?.quantity}</span> unidades de <span className="font-bold">{productionToTransfer?.productName}</span> para o inventário? Esta ação irá atualizar o stock.
+            Tem a certeza que deseja transferir <span className="font-bold">{productionToTransfer?.quantity}</span> unidades de <span className="font-bold">{productionToTransfer?.productName}</span> para o inventário {isMultiLocation && `da localização "${locations.find(l => l.id === productionToTransfer?.location)?.name}"`}? Esta ação irá atualizar o stock.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -172,6 +179,26 @@ export default function ProductionPage() {
                   onChange={(event) => setNameFilter(event.target.value)}
                   className="w-full md:max-w-sm shadow-lg h-12 text-sm"
                 />
+                 {isMultiLocation && canViewProduction && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="h-12 w-full sm:w-auto shadow-lg">
+                          <MapPin className="mr-2 h-4 w-4" />
+                          {locationFilter === 'all' ? 'Todas as Localizações' : locations.find(l => l.id === locationFilter)?.name}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <ScrollArea className="h-48">
+                          <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuCheckboxItem checked={locationFilter === 'all'} onCheckedChange={() => setLocationFilter('all')}>Todas</DropdownMenuCheckboxItem>
+                          {locations.map(loc => (
+                            <DropdownMenuCheckboxItem key={loc.id} checked={locationFilter === loc.id} onCheckedChange={() => setLocationFilter(loc.id)}>{loc.name}</DropdownMenuCheckboxItem>
+                          ))}
+                        </ScrollArea>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
             </div>
             
             <div className="flex items-center justify-center gap-2 border-t pt-4">
@@ -236,6 +263,7 @@ export default function ProductionPage() {
                     onTransfer={() => setProductionToTransfer(production)}
                     viewMode={gridCols === '5' ? 'condensed' : 'normal'}
                     canEdit={canEditProduction}
+                    locationName={locations.find(l => l.id === production.location)?.name}
                 />
             ))}
         </div>

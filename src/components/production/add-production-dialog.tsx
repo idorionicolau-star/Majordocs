@@ -19,13 +19,20 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Hammer } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import type { Production } from '@/lib/types';
+import type { Production, Location } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { InventoryContext } from '@/context/inventory-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
@@ -34,6 +41,7 @@ import { ScrollArea } from '../ui/scroll-area';
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
+  location: z.string().optional(),
 });
 
 type AddProductionFormValues = z.infer<typeof formSchema>;
@@ -50,33 +58,51 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction, trigg
   const {
     catalogProducts,
     catalogCategories,
-  } = inventoryContext || { catalogProducts: [], catalogCategories: [] };
+    locations,
+    isMultiLocation
+  } = inventoryContext || { catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false };
   
   const form = useForm<AddProductionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       productName: "",
       quantity: 1,
+      location: "",
     },
   });
   
   useEffect(() => {
     if (open) {
+      const savedLocation = localStorage.getItem('majorstockx-last-product-location');
+      const finalLocation = savedLocation && locations.some(l => l.id === savedLocation)
+        ? savedLocation
+        : (locations.length > 0 ? locations[0].id : "");
+      
       form.reset({
         productName: "",
         quantity: 1,
+        location: finalLocation,
       });
     }
-  }, [open, form]);
+  }, [open, form, locations]);
 
 
   function onSubmit(values: AddProductionFormValues) {
+    if (isMultiLocation && !values.location) {
+      form.setError("location", { type: 'manual', message: 'Selecione uma localização.'});
+      return;
+    }
+
+    if (values.location) {
+      localStorage.setItem('majorstockx-last-product-location', values.location);
+    }
+    
     onAddProduction({
       productName: values.productName,
       quantity: values.quantity,
+      location: values.location,
     });
 
-    form.reset();
     onOpenChange(false);
   }
   
@@ -147,6 +173,32 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction, trigg
                   </FormItem>
                 )}
               />
+              {isMultiLocation && (
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Localização de Produção</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione uma localização" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {locations.map((location) => (
+                              <SelectItem key={location.id} value={location.id}>
+                                {location.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               <DialogFooter className="pt-4">
                   <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
                   <Button type="submit">Registrar</Button>
