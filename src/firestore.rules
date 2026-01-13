@@ -11,85 +11,113 @@ service cloud.firestore {
     }
 
     function isSuperAdmin() {
+      // O Super Admin tem acesso total, UID codificado para controlo máximo.
       // SUBSTITUA "COLOQUE_O_SEU_UID_AQUI" PELO ID DO SEU UTILIZADOR ADMIN.
       return request.auth.uid == "COLOQUE_O_SEU_UID_AQUI";
     }
     
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/companies/$(request.auth.token.companyId)/employees/$(userId)).data;
+    function getUserData() {
+      // Busca os dados do funcionário logado a partir do seu companyId no token.
+      return get(/databases/$(database)/documents/companies/$(request.auth.token.companyId)/employees/$(request.auth.uid)).data;
     }
 
     function isEmployeeOf(companyId) {
+      // O utilizador pertence à empresa se o companyId no token corresponder ou se for Super Admin.
       return isSignedIn() && (request.auth.token.companyId == companyId || isSuperAdmin());
     }
     
     function isAdminOf(companyId) {
-      return isEmployeeOf(companyId) && (getUserData(request.auth.uid).role == 'Admin' || isSuperAdmin());
+      // É admin da empresa se pertencer a ela e a sua role for 'Admin' ou se for Super Admin.
+      return isEmployeeOf(companyId) && (getUserData().role == 'Admin' || isSuperAdmin());
     }
     
+    // Função can() refatorada para suportar a estrutura de objeto de permissões
     function can(module, level) {
-      // O Super Admin tem acesso total.
+      // O Super Admin tem acesso total a tudo.
       if (isSuperAdmin()) {
         return true;
       }
-      // O Admin da empresa tem acesso de escrita a tudo.
+      
+      // Se não for Super Admin, precisa de ter um token de empresa.
+      if (!isEmployeeOf(request.auth.token.companyId)) {
+        return false;
+      }
+      
+      // O Admin da empresa tem acesso de escrita a todos os módulos da sua empresa.
       if (isAdminOf(request.auth.token.companyId)) {
+        // Apenas Super Admin pode listar/ver todas as empresas.
+        if (module == 'companies') return false;
         return true;
       }
-      // Verifica as permissões do funcionário
-      let userPermissions = getUserData(request.auth.uid).permissions;
+      
+      // Para funcionários normais, verifica as permissões granulares no objeto 'permissions'.
+      let userPermissions = getUserData().permissions;
+      let permissionLevel = userPermissions[module];
+
       if (level == 'write') {
-        return userPermissions[module] == 'write';
+        // Acesso de escrita SÓ é permitido se a permissão for explicitamente 'write'.
+        return permissionLevel == 'write';
       }
       if (level == 'read') {
-        return userPermissions[module] == 'read' || userPermissions[module] == 'write';
+        // Acesso de leitura é permitido se a permissão for 'read' OU 'write'.
+        return permissionLevel == 'read' || permissionLevel == 'write';
       }
+      
       return false;
     }
 
     // --- Regras por Coleção ---
 
+    // A coleção 'companies' só pode ser listada pelo Super Admin.
+    // Admins de empresa podem ler os dados da sua própria empresa.
     match /companies/{companyId} {
-      allow create: if true;
-      allow read, update, delete: if isEmployeeOf(companyId) && isAdminOf(companyId);
+      allow create: if true; // Qualquer pessoa pode registar uma nova empresa.
+      allow get: if isEmployeeOf(companyId);
       allow list: if isSuperAdmin();
+      allow update, delete: if isAdminOf(companyId);
 
+      // Regras para as subcoleções de cada empresa.
+      // O acesso é sempre verificado pela função can(módulo, nível).
       match /employees/{employeeId} {
-        allow get, list: if isEmployeeOf(companyId);
-        allow create, update, delete: if isEmployeeOf(companyId) && isAdminOf(companyId);
+        // Apenas admins podem gerir funcionários.
+        allow get, list: if can('users', 'read');
+        allow create, update, delete: if can('users', 'write');
       }
       
       match /catalogProducts/{productId} {
-          allow read: if can('settings', 'read');
-          allow write: if can('settings', 'write');
+          allow get, list: if can('settings', 'read');
+          allow create, update, delete: if can('settings', 'write');
       }
+      
       match /catalogCategories/{categoryId} {
-          allow read: if can('settings', 'read');
-          allow write: if can('settings', 'write');
+          allow get, list: if can('settings', 'read');
+          allow create, update, delete: if can('settings', 'write');
       }
+      
       match /products/{productId} {
-        allow read: if can('inventory', 'read');
-        allow write: if can('inventory', 'write');
+        allow get, list: if can('inventory', 'read');
+        allow create, update, delete: if can('inventory', 'write');
       }
+      
       match /sales/{saleId} {
-        allow read: if can('sales', 'read');
-        allow write: if can('sales', 'write');
+        allow get, list: if can('sales', 'read');
+        allow create, update, delete: if can('sales', 'write');
       }
+      
       match /productions/{productionId} {
-        allow read: if can('production', 'read');
-        allow write: if can('production', 'write');
+        allow get, list: if can('production', 'read');
+        allow create, update, delete: if can('production', 'write');
       }
+      
       match /orders/{orderId} {
-        allow read: if can('orders', 'read');
-        allow write: if can('orders', 'write');
+        allow get, list: if can('orders', 'read');
+        allow create, update, delete: if can('orders', 'write');
       }
+      
       match /reports/{reportId} {
-        allow read: if can('reports', 'read');
-        allow write: if can('reports', 'write');
-      }
-       match /users/{userId} {
-        allow read: if can('users', 'read');
-        allow write: if can('users', 'write');
+        // Relatórios são tipicamente apenas de leitura para a maioria dos papéis.
+        allow get, list: if can('reports', 'read');
+        allow create, update, delete: if can('reports', 'write');
       }
     }
   }
