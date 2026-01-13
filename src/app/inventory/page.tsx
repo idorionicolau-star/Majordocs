@@ -3,11 +3,11 @@
 
 import { useState, useMemo, useEffect, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
-import type { Product, Location, ModulePermission, PermissionLevel } from "@/lib/types";
+import type { Product, ModulePermission, PermissionLevel } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Truck, Lock } from "lucide-react";
+import { FileText, ListFilter, List, LayoutGrid, ChevronDown, Lock } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -35,7 +35,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ProductCard } from "@/components/inventory/product-card";
-import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +45,6 @@ export default function InventoryPage() {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [nameFilter, setNameFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
@@ -54,16 +52,13 @@ export default function InventoryPage() {
 
   const { 
     products, 
-    locations, 
-    isMultiLocation, 
     addProduct, 
     updateProduct, 
     deleteProduct, 
-    transferStock,
     loading: inventoryLoading,
     canEdit,
     canView,
-  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, canEdit: () => false, canView: () => false };
+  } = inventoryContext || { products: [], addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, loading: true, canEdit: () => false, canView: () => false };
 
   const canEditInventory = canEdit('inventory');
   const canViewInventory = canView('inventory');
@@ -121,19 +116,6 @@ export default function InventoryPage() {
       });
       setProductToDelete(null);
     }
-  };
-
-  const handleTransferStock = (
-    productName: string,
-    fromLocationId: string,
-    toLocationId: string,
-    quantity: number
-  ) => {
-    transferStock(productName, fromLocationId, toLocationId, quantity);
-    toast({
-        title: "Transferência de Stock Iniciada",
-        description: `${quantity} unidades de "${productName}" a serem movidas para ${locations.find(l => l.id === toLocationId)?.name}.`,
-    });
   };
 
   const handlePrintCountForm = () => {
@@ -288,10 +270,6 @@ export default function InventoryPage() {
   const filteredProducts = useMemo(() => {
     let result = products;
 
-    if (selectedLocation !== 'all') {
-      result = result.filter(p => p.location === selectedLocation);
-    }
-
     if (nameFilter) {
       result = result.filter(p => p.name.toLowerCase().includes(nameFilter.toLowerCase()));
     }
@@ -301,7 +279,7 @@ export default function InventoryPage() {
     }
     
     return result;
-  }, [products, selectedLocation, nameFilter, categoryFilter]);
+  }, [products, nameFilter, categoryFilter]);
   
     if (inventoryLoading) {
     return (
@@ -361,48 +339,6 @@ export default function InventoryPage() {
                 />
                 <div className="flex items-center gap-2">
                     <TooltipProvider>
-                        {isMultiLocation && (
-                           <>
-                            {canEditInventory && <TransferStockDialog 
-                                onTransfer={handleTransferStock}
-                            />}
-                            <DropdownMenu>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" size="icon" className="shadow-lg h-12 w-12 rounded-2xl">
-                                                <MapPin className="h-5 w-5" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Filtrar por Localização</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                                <DropdownMenuContent align="end">
-                                    <ScrollArea className="h-[200px]">
-                                    <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuCheckboxItem
-                                        checked={selectedLocation === 'all'}
-                                        onCheckedChange={() => setSelectedLocation('all')}
-                                    >
-                                        Todas as Localizações
-                                    </DropdownMenuCheckboxItem>
-                                    {locations.map(location => (
-                                    <DropdownMenuCheckboxItem
-                                        key={location.id}
-                                        checked={selectedLocation === location.id}
-                                        onCheckedChange={() => setSelectedLocation(location.id)}
-                                    >
-                                        {location.name}
-                                    </DropdownMenuCheckboxItem>
-                                    ))}
-                                    </ScrollArea>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                           </>
-                        )}
                         <DropdownMenu>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -544,8 +480,6 @@ export default function InventoryPage() {
         open={isAddDialogOpen}
         onOpenChange={setAddDialogOpen}
         onAddProduct={handleAddProduct}
-        isMultiLocation={isMultiLocation}
-        locations={locations}
         triggerType="fab"
       />}
     </>

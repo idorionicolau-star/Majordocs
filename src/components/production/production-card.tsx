@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Production, Location } from "@/lib/types";
+import type { Production } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Calendar, User, Hammer, Package, CheckCircle } from "lucide-react";
@@ -11,16 +11,13 @@ import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from "../ui/
 
 interface ProductionCardProps {
     production: Production;
-    locations: Location[];
-    isMultiLocation: boolean;
     onTransfer: (production: Production) => void;
     viewMode?: 'normal' | 'condensed';
     canEdit: boolean;
 }
 
-export function ProductionCard({ production, locations, isMultiLocation, onTransfer, viewMode = 'normal', canEdit }: ProductionCardProps) {
+export function ProductionCard({ production, onTransfer, viewMode = 'normal', canEdit }: ProductionCardProps) {
     const isCondensed = viewMode === 'condensed';
-    const location = locations.find(l => l.id === production.location);
     const isTransferred = production.status === 'Transferido';
 
     return (
@@ -61,13 +58,6 @@ export function ProductionCard({ production, locations, isMultiLocation, onTrans
                         <span>{production.registeredBy}</span>
                     </div>
                  </div>
-
-                 {isMultiLocation && !isCondensed && (
-                    <div className="flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400 pt-1">
-                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                        <span className="text-[10px] font-semibold">{location ? location.name : 'N/A'}</span>
-                    </div>
-                 )}
             </CardContent>
             {canEdit && <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
                {!isTransferred && (

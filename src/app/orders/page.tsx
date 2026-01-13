@@ -76,7 +76,7 @@ export default function OrdersPage() {
         updateDoc(orderDocRef, update);
 
         if (newStatus === 'Concluída' && orderToUpdate) {
-            updateProductStock(orderToUpdate.productName, orderToUpdate.quantityProduced, orderToUpdate.location);
+            updateProductStock(orderToUpdate.productName, orderToUpdate.quantityProduced);
             toast({
                 title: "Encomenda Concluída",
                 description: `A produção de ${orderToUpdate.quantity} ${orderToUpdate.unit} de "${orderToUpdate.productName}" foi concluída. O stock foi atualizado.`

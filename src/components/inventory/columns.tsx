@@ -2,24 +2,12 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Product, Location } from "@/lib/types"
+import { Product } from "@/lib/types"
 import { AlertCircle } from "lucide-react"
 import { EditProductDialog } from "./edit-product-dialog"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "../ui/button";
 import { Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
-import { useContext } from "react";
-import { InventoryContext } from "@/context/inventory-context";
 
 interface ColumnsOptions {
   onAttemptDelete: (product: Product) => void;
@@ -42,7 +30,6 @@ export const getStockStatus = (product: Product) => {
 };
 
 export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
-  const { isMultiLocation, locations } = useContext(InventoryContext) || {};
   const { canEdit } = options;
 
   const baseColumns: ColumnDef<Product>[] = [
@@ -71,22 +58,6 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
       },
     },
   ];
-
-  if (isMultiLocation) {
-    baseColumns.push({
-      accessorKey: "location",
-      header: "Localização",
-      cell: ({ row }) => {
-        const location = locations?.find(l => l.id === row.original.location);
-        return (
-          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-            <div className="h-2 w-2 rounded-full bg-blue-500" />
-            <span className="text-xs font-semibold">{location ? location.name : 'N/A'}</span>
-          </div>
-        );
-      },
-    });
-  }
 
   baseColumns.push(
     {

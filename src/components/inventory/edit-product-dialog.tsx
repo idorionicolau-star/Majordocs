@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -19,13 +19,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Edit2 } from "lucide-react";
@@ -34,9 +27,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Product } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { cn } from '@/lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
-import { InventoryContext } from '@/context/inventory-context';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -45,7 +36,6 @@ const formSchema = z.object({
   stock: z.coerce.number().min(0, { message: "O estoque não pode ser negativo." }),
   lowStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
   criticalStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
-  location: z.string().optional(),
 });
 
 type EditProductFormValues = z.infer<typeof formSchema>;
@@ -57,7 +47,6 @@ interface EditProductDialogProps {
 }
 
 function EditProductDialogContent({ product, onProductUpdate, trigger }: EditProductDialogProps) {
-  const { isMultiLocation, locations } = useContext(InventoryContext) || {};
   const [open, setOpen] = useState(false);
   const form = useForm<EditProductFormValues>({
     resolver: zodResolver(formSchema),
@@ -68,7 +57,6 @@ function EditProductDialogContent({ product, onProductUpdate, trigger }: EditPro
         stock: product.stock,
         lowStockThreshold: product.lowStockThreshold,
         criticalStockThreshold: product.criticalStockThreshold,
-        location: product.location,
     },
   });
 
@@ -81,16 +69,11 @@ function EditProductDialogContent({ product, onProductUpdate, trigger }: EditPro
         stock: product.stock,
         lowStockThreshold: product.lowStockThreshold,
         criticalStockThreshold: product.criticalStockThreshold,
-        location: product.location,
       });
     }
   }, [open, product, form]);
 
   function onSubmit(values: EditProductFormValues) {
-    if (isMultiLocation && !values.location) {
-      form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
-      return;
-    }
     onProductUpdate({
         ...product,
         ...values,
@@ -186,32 +169,6 @@ function EditProductDialogContent({ product, onProductUpdate, trigger }: EditPro
                   )}
                   />
               </div>
-              {isMultiLocation && (
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Localização</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma localização" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {locations?.map(location => (
-                            <SelectItem key={location.id} value={location.id}>
-                              {location.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
               <FormField
                   control={form.control}
                   name="price"

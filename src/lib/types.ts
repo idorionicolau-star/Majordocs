@@ -1,5 +1,4 @@
 
-
 export type PermissionLevel = 'none' | 'read' | 'write';
 
 export type ModulePermission = 
@@ -25,11 +24,6 @@ export type Employee = {
   role: 'Admin' | 'Employee';
   companyId: string;
   permissions: Partial<Record<ModulePermission, PermissionLevel>>;
-  token?: { // Placeholder for custom claims from a JWT
-      companyId: string;
-      role: 'Admin' | 'Employee';
-      permissions: Partial<Record<ModulePermission, PermissionLevel>>;
-  }
 };
 
 export type Company = {
@@ -53,7 +47,6 @@ export type Product = {
   lowStockThreshold: number;
   criticalStockThreshold: number;
   lastUpdated: string;
-  location?: string;
   subType?: string;
   unit?: string;
 };
@@ -68,7 +61,6 @@ export type Sale = {
   totalValue: number;
   soldBy: string;
   guideNumber: string;
-  location?: string;
   status: 'Pago' | 'Levantado';
 };
 
@@ -78,7 +70,6 @@ export type Production = {
   productName: string;
   quantity: number;
   registeredBy: string;
-  location?: string;
   status: 'Concluído' | 'Transferido';
 };
 
@@ -102,7 +93,6 @@ export type Order = {
   productionStartDate?: string | null;
   quantityProduced: number;
   productionLogs: ProductionLog[];
-  location?: string; // Location for the finished product
 };
 
 
@@ -120,11 +110,6 @@ export type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
   adminOnly?: boolean;
-};
-
-export type Location = {
-  id: string;
-  name: string;
 };
 
 export type InitialCatalog = {

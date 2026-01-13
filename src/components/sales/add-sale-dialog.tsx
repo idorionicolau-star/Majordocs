@@ -19,13 +19,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, ShoppingCart } from "lucide-react";
@@ -33,7 +26,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from '@/hooks/use-toast';
-import type { Product, Sale, Employee } from '@/lib/types';
+import type { Product, Sale } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
@@ -46,7 +39,6 @@ const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
   unitPrice: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
-  location: z.string().optional(),
 });
 
 type AddSaleFormValues = z.infer<typeof formSchema>;
@@ -64,10 +56,8 @@ function AddSaleDialogContent({ open, onOpenChange, onAddSale, triggerType = 'fa
     products,
     catalogProducts,
     catalogCategories,
-    locations,
-    isMultiLocation,
     user,
-  } = inventoryContext || { products: [], catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false, user: null};
+  } = inventoryContext || { products: [], catalogProducts: [], catalogCategories: [], user: null};
   const { toast } = useToast();
   
   const form = useForm<AddSaleFormValues>({
@@ -76,7 +66,6 @@ function AddSaleDialogContent({ open, onOpenChange, onAddSale, triggerType = 'fa
       productName: "",
       quantity: 1,
       unitPrice: 0,
-      location: "",
     },
   });
   
@@ -86,17 +75,15 @@ function AddSaleDialogContent({ open, onOpenChange, onAddSale, triggerType = 'fa
         productName: "",
         quantity: 1,
         unitPrice: 0,
-        location: locations && locations.length > 0 ? locations[0].id : "",
       });
     }
-  }, [open, form, locations]);
+  }, [open, form]);
 
   const watchedProductName = useWatch({ control: form.control, name: 'productName' });
   const watchedQuantity = useWatch({ control: form.control, name: 'quantity' });
   const watchedUnitPrice = useWatch({ control: form.control, name: 'unitPrice' });
-  const watchedLocation = useWatch({ control: form.control, name: 'location' });
 
-  const selectedProductInstance = products?.find(p => p.name === watchedProductName && (isMultiLocation ? p.location === watchedLocation : true));
+  const selectedProductInstance = products?.find(p => p.name === watchedProductName);
   const availableStock = selectedProductInstance ? selectedProductInstance.stock - selectedProductInstance.reservedStock : 0;
   
   const handleProductSelect = (productName: string, product?: CatalogProduct) => {
@@ -117,22 +104,15 @@ function AddSaleDialogContent({ open, onOpenChange, onAddSale, triggerType = 'fa
       } else {
         form.clearErrors("quantity");
       }
-    } else if (watchedProductName && isMultiLocation && watchedLocation) {
-         form.setError("location", { type: "manual", message: `Produto sem estoque nesta localização.` });
+    } else if (watchedProductName) {
+        form.setError("productName", { type: "manual", message: `Produto sem estoque.` });
     } else {
-        form.clearErrors("location");
+        form.clearErrors("productName");
     }
-  }, [watchedQuantity, availableStock, selectedProductInstance, watchedProductName, watchedLocation, isMultiLocation, form]);
+  }, [watchedQuantity, availableStock, selectedProductInstance, watchedProductName, form]);
 
 
   const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
-
-  useEffect(() => {
-    if (locations && locations.length > 0 && !form.getValues('location')) {
-        form.setValue('location', locations[0].id)
-    }
-  }, [locations, form]);
-
 
   async function onSubmit(values: AddSaleFormValues) {
     if (!selectedProductInstance || !user) {
@@ -152,16 +132,12 @@ function AddSaleDialogContent({ open, onOpenChange, onAddSale, triggerType = 'fa
       unitPrice: values.unitPrice,
       totalValue: values.quantity * values.unitPrice,
       soldBy: user.username,
-      location: values.location,
       status: 'Pago',
     };
     
     await onAddSale(newSale);
     
     form.reset();
-    if (locations && locations.length > 0) {
-      form.setValue('location', locations[0].id);
-    }
     onOpenChange(false);
   }
   
@@ -217,32 +193,6 @@ function AddSaleDialogContent({ open, onOpenChange, onAddSale, triggerType = 'fa
                   </FormItem>
                 )}
               />
-              {isMultiLocation && (
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Localização de Origem</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione a localização" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {locations?.map(location => (
-                            <SelectItem key={location.id} value={location.id}>
-                              {location.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                   control={form.control}

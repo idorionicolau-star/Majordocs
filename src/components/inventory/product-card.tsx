@@ -1,17 +1,15 @@
 
 "use client";
 
-import type { Product, Location } from "@/lib/types";
+import type { Product } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertCircle, Edit2, Trash2, PackageCheck, MapPin } from "lucide-react";
+import { AlertCircle, Edit2, Trash2, PackageCheck } from "lucide-react";
 import { getStockStatus } from "./columns";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { EditProductDialog } from "./edit-product-dialog";
-import { useContext } from "react";
-import { InventoryContext } from "@/context/inventory-context";
 
 interface ProductCardProps {
     product: Product;
@@ -22,7 +20,6 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMode = 'normal', canEdit }: ProductCardProps) {
-    const { locations, isMultiLocation } = useContext(InventoryContext) || {};
     const status = getStockStatus(product);
     
     const statusInfo = {
@@ -32,7 +29,6 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
         'sem-estoque': "text-rose-600",
     }
 
-    const location = locations?.find(l => l.id === product.location);
     const isCondensed = viewMode === 'condensed';
     const availableStock = product.stock - product.reservedStock;
 
@@ -69,12 +65,6 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                         {status === 'sem-estoque' ? 'Esgotado' : status === 'crítico' ? 'Crítico' : 'Baixo'}
                     </div>
                 )}
-                 {isMultiLocation && location && !isCondensed && (
-                    <div className="flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400 pt-1">
-                        <MapPin className="h-3 w-3" />
-                        <span className="text-[10px] font-semibold">{location.name}</span>
-                    </div>
-                 )}
             </CardContent>
             {canEdit && <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
                  <EditProductDialog

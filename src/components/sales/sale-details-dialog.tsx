@@ -7,14 +7,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import type { Sale, Location } from "@/lib/types";
-import { Calendar, Clock, Box, User, Hash, MapPin, DollarSign, Tag } from "lucide-react";
+import type { Sale } from "@/lib/types";
+import { Calendar, Clock, Box, User, Hash, DollarSign, Tag } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { useContext } from "react";
-import { InventoryContext } from "@/context/inventory-context";
-
 
 export function SaleDetailsDialog() {
     // This component is now just a shell.
@@ -37,9 +33,7 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
 );
 
 export function SaleDetailsDialogContent({ sale }: SaleDetailsDialogProps) {
-  const { isMultiLocation, locations } = useContext(InventoryContext) || {};
   const saleDate = new Date(sale.date);
-  const locationName = isMultiLocation ? locations?.find(l => l.id === sale.location)?.name || 'N/A' : null;
   const unitPrice = sale.quantity > 0 ? sale.totalValue / sale.quantity : 0;
   
   const formattedTotalValue = formatCurrency(sale.totalValue);
@@ -64,9 +58,6 @@ export function SaleDetailsDialogContent({ sale }: SaleDetailsDialogProps) {
         <DetailItem icon={Calendar} label="Data" value={saleDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })} />
         <DetailItem icon={Clock} label="Hora" value={saleDate.toLocaleTimeString('pt-BR',  { timeZone: 'UTC' })} />
         </div>
-        {isMultiLocation && locationName && (
-            <DetailItem icon={MapPin} label="Localização" value={locationName} />
-        )}
     </div>
     </DialogContent>
   );

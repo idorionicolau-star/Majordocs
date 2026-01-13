@@ -6,19 +6,17 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { LocationsManager } from "@/components/settings/locations-manager";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Building, Book, Palette, Map, User as UserIcon } from "lucide-react";
+import { Building, Book, Palette, User as UserIcon } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import Image from "next/image";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import type { ModulePermission, PermissionLevel } from "@/lib/types";
+import type { ModulePermission } from "@/lib/types";
 
 
 const colorOptions = [
@@ -111,7 +109,7 @@ export default function SettingsPage() {
   
   const { companyData, updateCompany } = inventoryContext || {};
 
-  const hasPermission = (permissionId: ModulePermission, action: 'read' | 'write' = 'read') => {
+  const hasPermission = (permissionId: ModulePermission) => {
     if (!user) return false;
     if (user.role === 'Admin') return true;
     if (!user.permissions) return false;
@@ -120,9 +118,6 @@ export default function SettingsPage() {
 
     if (typeof perms === 'object' && !Array.isArray(perms)) {
       const level = perms[permissionId];
-      if (action === 'write') {
-        return level === 'write';
-      }
       return level === 'read' || level === 'write';
     }
 
@@ -293,7 +288,6 @@ export default function SettingsPage() {
                 <>
                   <TabsTrigger value="company" id="tab-trigger-company"><Building className="mr-2 h-4 w-4" />Empresa</TabsTrigger>
                   <TabsTrigger value="catalog" id="tab-trigger-catalog"><Book className="mr-2 h-4 w-4" />Catálogo</TabsTrigger>
-                  <TabsTrigger value="locations" id="tab-trigger-locations"><Map className="mr-2 h-4 w-4" />Localizações</TabsTrigger>
                 </>
               )}
             </TabsList>
@@ -441,18 +435,6 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     <CatalogManager />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="locations">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Gestão de Localizações</CardTitle>
-                    <CardDescription>Ative e gerencie múltiplas localizações para o seu negócio.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <LocationsManager />
                   </CardContent>
                 </Card>
               </TabsContent>

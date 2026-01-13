@@ -19,20 +19,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Hammer } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import type { Production, Location } from '@/lib/types';
+import type { Production } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { InventoryContext } from '@/context/inventory-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
@@ -41,7 +34,6 @@ import { ScrollArea } from '../ui/scroll-area';
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
-  location: z.string().optional(),
 });
 
 type AddProductionFormValues = z.infer<typeof formSchema>;
@@ -58,50 +50,30 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction, trigg
   const {
     catalogProducts,
     catalogCategories,
-    locations,
-    isMultiLocation
-  } = inventoryContext || { catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false};
+  } = inventoryContext || { catalogProducts: [], catalogCategories: [] };
   
   const form = useForm<AddProductionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       productName: "",
       quantity: 1,
-      location: "",
     },
   });
   
   useEffect(() => {
     if (open) {
-      const savedLocation = localStorage.getItem('majorstockx-last-production-location');
-      const locationExists = locations?.some(l => l.id === savedLocation);
-      const finalLocation = (savedLocation && locationExists) 
-        ? savedLocation 
-        : (locations && locations.length > 0 ? locations[0].id : "");
-
       form.reset({
         productName: "",
         quantity: 1,
-        location: finalLocation,
       });
     }
-  }, [open, form, locations]);
+  }, [open, form]);
 
 
   function onSubmit(values: AddProductionFormValues) {
-     if (isMultiLocation && !values.location) {
-      form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
-      return;
-    }
-    
-    if (values.location) {
-        localStorage.setItem('majorstockx-last-production-location', values.location);
-    }
-
     onAddProduction({
       productName: values.productName,
       quantity: values.quantity,
-      location: values.location,
     });
 
     form.reset();
@@ -162,32 +134,6 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction, trigg
                   </FormItem>
                 )}
               />
-              {isMultiLocation && (
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Localização de Destino</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione a localização" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {locations?.map(location => (
-                            <SelectItem key={location.id} value={location.id}>
-                              {location.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
               <FormField
                 control={form.control}
                 name="quantity"
@@ -212,5 +158,3 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction, trigg
     </Dialog>
   );
 }
-
-    

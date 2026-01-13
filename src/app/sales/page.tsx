@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
-import type { Sale, Location, Product, ModulePermission } from "@/lib/types";
+import type { Sale, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/sales/columns";
 import { SalesDataTable } from "@/components/sales/data-table";
 import { AddSaleDialog } from "@/components/sales/add-sale-dialog";

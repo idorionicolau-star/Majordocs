@@ -19,20 +19,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Box } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import type { Location, Product } from '@/lib/types';
+import type { Product } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { InventoryContext } from '@/context/inventory-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
@@ -47,7 +40,6 @@ const formSchema = z.object({
   stock: z.coerce.number().min(0, { message: "O estoque não pode ser negativo." }),
   lowStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
   criticalStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
-  location: z.string().optional(),
 });
 
 type AddProductFormValues = z.infer<typeof formSchema>;
@@ -56,12 +48,10 @@ interface AddProductDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onAddProduct: (product: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => void;
-    isMultiLocation: boolean;
-    locations: Location[];
     triggerType?: 'button' | 'fab';
 }
 
-function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLocation, locations, triggerType = 'fab' }: AddProductDialogProps) {
+function AddProductDialogContent({ open, onOpenChange, onAddProduct, triggerType = 'fab' }: AddProductDialogProps) {
   const inventoryContext = useContext(InventoryContext);
   const { catalogCategories, catalogProducts } = inventoryContext || { catalogCategories: [], catalogProducts: [] };
 
@@ -74,18 +64,11 @@ function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLoca
       stock: 0,
       lowStockThreshold: 10,
       criticalStockThreshold: 5,
-      location: "",
     },
   });
 
   useEffect(() => {
     if (open) {
-      const savedLocation = localStorage.getItem('majorstockx-last-product-location');
-      const locationExists = locations.some(l => l.id === savedLocation);
-      const finalLocation = (savedLocation && locationExists) 
-        ? savedLocation 
-        : (locations.length > 0 ? locations[0].id : "");
-
       form.reset({
         category: "",
         name: "",
@@ -93,10 +76,9 @@ function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLoca
         stock: 0,
         lowStockThreshold: 10,
         criticalStockThreshold: 5,
-        location: finalLocation,
       });
     }
-  }, [open, locations, form]);
+  }, [open, form]);
 
 
   const handleProductSelect = (productName: string, product?: CatalogProduct) => {
@@ -111,15 +93,6 @@ function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLoca
 
 
   function onSubmit(values: AddProductFormValues) {
-    if (isMultiLocation && !values.location) {
-      form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
-      return;
-    }
-
-    if (values.location) {
-      localStorage.setItem('majorstockx-last-product-location', values.location);
-    }
-
     const newProduct: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'> = {
       name: values.name,
       category: values.category,
@@ -127,7 +100,6 @@ function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLoca
       stock: values.stock,
       lowStockThreshold: values.lowStockThreshold,
       criticalStockThreshold: values.criticalStockThreshold,
-      location: values.location || (locations.length > 0 ? locations[0].id : 'Principal'),
     };
     onAddProduct(newProduct);
     onOpenChange(false);
@@ -183,33 +155,6 @@ function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLoca
                     </FormItem>
                   )}
                 />
-              
-              {isMultiLocation && (
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Localização</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma localização" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {locations.map(location => (
-                            <SelectItem key={location.id} value={location.id}>
-                              {location.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
               <FormField
                   control={form.control}
                   name="price"

@@ -2,10 +2,10 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Sale, Location, Product, Employee } from "@/lib/types"
+import { Sale } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Edit, Printer, FileSearch, CheckCircle, PackageCheck } from "lucide-react"
-import { useEffect, useState, useContext } from "react"
+import { useState, useContext } from "react"
 import { SaleDetailsDialogContent } from "./sale-details-dialog"
 import { formatCurrency } from "@/lib/utils"
 import { EditSaleDialog } from "./edit-sale-dialog"
@@ -13,7 +13,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/
 import {
   Dialog,
   DialogTrigger,
-  DialogContent,
 } from "@/components/ui/dialog"
 import { InventoryContext } from "@/context/inventory-context"
 
@@ -24,7 +23,7 @@ interface ColumnsOptions {
   canEdit: boolean;
 }
 
-const handlePrintGuide = (sale: Sale, companyName: string | undefined, isMultiLocation: boolean, locations: Location[]) => {
+const handlePrintGuide = (sale: Sale, companyName: string | undefined) => {
   const printWindow = window.open('', '', 'height=800,width=800');
   if (printWindow) {
       printWindow.document.write('<!DOCTYPE html><html><head><title>Guia de Remessa</title>');
@@ -71,7 +70,6 @@ const handlePrintGuide = (sale: Sale, companyName: string | undefined, isMultiLo
               <div><strong>Data:</strong> ${new Date(sale.date).toLocaleDateString('pt-BR')}</div>
               <div><strong>Guia N.º:</strong> ${sale.guideNumber}</div>
               <div><strong>Vendedor:</strong> ${sale.soldBy}</div>
-              ${isMultiLocation && sale.location ? `<div><strong>Localização:</strong> ${locations.find(l => l.id === sale.location)?.name || 'N/A'}</div>` : ''}
           </div>
       `);
       
@@ -101,7 +99,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
     const sale = row.original as Sale;
     const { canEdit } = options;
     const inventoryContext = useContext(InventoryContext);
-    const { companyData, isMultiLocation, locations, user } = inventoryContext || {};
+    const { companyData } = inventoryContext || {};
         
     return (
         <div className="flex items-center justify-end gap-2">
@@ -167,7 +165,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrintGuide(sale, companyData?.name, isMultiLocation || false, locations || [])}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrintGuide(sale, companyData?.name)}>
                         <Printer className="h-4 w-4" />
                         <span className="sr-only">Imprimir Guia</span>
                     </Button>
@@ -184,7 +182,6 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
 export { ActionsCell as SaleActions, handlePrintGuide };
 
 export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
-  const { isMultiLocation, locations } = useContext(InventoryContext) || {};
 
   const baseColumns: ColumnDef<Sale>[] = [
     {
@@ -195,20 +192,6 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
       accessorKey: "productName",
       header: "Produto",
     },
-  ];
-
-  if (isMultiLocation) {
-    baseColumns.push({
-      accessorKey: "location",
-      header: "Localização",
-      cell: ({ row }) => {
-        const location = locations?.find(l => l.id === row.original.location);
-        return location ? location.name : 'N/A';
-      },
-    });
-  }
-
-  baseColumns.push(
     {
       accessorKey: "quantity",
       header: "Quantidade",
@@ -250,7 +233,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
       id: "actions",
       cell: (props) => <ActionsCell {...props} options={options} />,
     }
-  );
+  ];
 
   return baseColumns;
 }

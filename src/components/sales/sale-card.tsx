@@ -1,14 +1,12 @@
 
 "use client";
 
-import type { Sale, Location, Product } from "@/lib/types";
+import type { Sale } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
-import { Calendar, User, CheckCircle, PackageCheck, MapPin } from "lucide-react";
+import { Calendar, User, CheckCircle, PackageCheck } from "lucide-react";
 import { SaleActions } from "./columns";
-import { useContext } from "react";
-import { InventoryContext } from "@/context/inventory-context";
 
 interface SaleCardProps {
     sale: Sale;
@@ -19,9 +17,7 @@ interface SaleCardProps {
 }
 
 export function SaleCard({ sale, onUpdateSale, onConfirmPickup, viewMode = 'normal', canEdit }: SaleCardProps) {
-    const { isMultiLocation, locations } = useContext(InventoryContext) || {};
     const isCondensed = viewMode === 'condensed';
-    const location = isMultiLocation ? locations?.find(l => l.id === sale.location) : null;
 
     const actionsProps = {
         row: { original: sale },
@@ -60,13 +56,6 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, viewMode = 'norm
                     {sale.status === 'Levantado' ? <CheckCircle className="h-3 w-3" /> : <PackageCheck className="h-3 w-3" />}
                     <span>{sale.status}</span>
                 </div>
-
-                 {isMultiLocation && location && !isCondensed && (
-                    <div className="flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400 pt-1">
-                        <MapPin className="h-3 w-3" />
-                        <span className="text-[10px] font-semibold">{location ? location.name : 'N/A'}</span>
-                    </div>
-                 )}
             </CardContent>
             {canEdit && <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
                 <SaleActions {...actionsProps} />

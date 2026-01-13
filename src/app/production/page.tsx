@@ -6,9 +6,9 @@ import { useState, useEffect, useMemo, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
 import { ProductionDataTable } from "@/components/production/data-table";
 import { AddProductionDialog } from "@/components/production/add-production-dialog";
-import type { Production, Location, ModulePermission } from "@/lib/types";
+import type { Production, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronDown, Package, Lock } from "lucide-react";
+import { List, LayoutGrid, ChevronDown, Lock } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -43,7 +43,7 @@ export default function ProductionPage() {
   const [productionToTransfer, setProductionToTransfer] = useState<Production | null>(null);
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
 
-  const { productions, companyId, updateProductStock, locations, isMultiLocation, loading: inventoryLoading, user, canEdit } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, locations: [], isMultiLocation: false, loading: true, user: null, canEdit: () => false };
+  const { productions, companyId, updateProductStock, loading: inventoryLoading, user, canEdit } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, loading: true, user: null, canEdit: () => false };
 
   const canEditProduction = canEdit('production');
   
@@ -81,7 +81,6 @@ export default function ProductionPage() {
       productName: newProductionData.productName,
       quantity: newProductionData.quantity,
       registeredBy: user.username || 'Desconhecido',
-      location: newProductionData.location,
       status: 'Concluído'
     };
 
@@ -97,7 +96,7 @@ export default function ProductionPage() {
   const handleConfirmTransfer = () => {
     if (!productionToTransfer || !firestore || !companyId) return;
 
-    updateProductStock(productionToTransfer.productName, productionToTransfer.quantity, productionToTransfer.location);
+    updateProductStock(productionToTransfer.productName, productionToTransfer.quantity);
 
     const prodDocRef = doc(firestore, `companies/${companyId}/productions`, productionToTransfer.id);
     updateDoc(prodDocRef, { status: 'Transferido' });
@@ -139,7 +138,7 @@ export default function ProductionPage() {
         <AlertDialogHeader>
           <AlertDialogTitle>Confirmar Transferência</AlertDialogTitle>
           <AlertDialogDescription>
-            Tem a certeza que deseja transferir <span className="font-bold">{productionToTransfer?.quantity}</span> unidades de <span className="font-bold">{productionToTransfer?.productName}</span> para o inventário {isMultiLocation && `da localização "${locations.find(l => l.id === productionToTransfer?.location)?.name}"`}? Esta ação irá atualizar o stock.
+            Tem a certeza que deseja transferir <span className="font-bold">{productionToTransfer?.quantity}</span> unidades de <span className="font-bold">{productionToTransfer?.productName}</span> para o inventário? Esta ação irá atualizar o stock.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -234,8 +233,6 @@ export default function ProductionPage() {
                 <ProductionCard 
                     key={production.id}
                     production={production}
-                    locations={locations}
-                    isMultiLocation={isMultiLocation}
                     onTransfer={() => setProductionToTransfer(production)}
                     viewMode={gridCols === '5' ? 'condensed' : 'normal'}
                     canEdit={canEditProduction}
