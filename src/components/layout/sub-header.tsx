@@ -15,7 +15,7 @@ export function SubHeader() {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const { canView } = useContext(InventoryContext) || { canView: () => false };
 
-  const navItems = mainNavItems.filter(item => canView(item.id));
+  const navItems = mainNavItems.filter(item => canView(item.id as ModulePermission));
 
   React.useEffect(() => {
     const activeLink = document.getElementById(`nav-link-${pathname.replace('/', '')}`);
