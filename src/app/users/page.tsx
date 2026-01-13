@@ -9,7 +9,7 @@ import { AddEmployeeDialog } from "@/components/users/add-employee-dialog";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Employee, ModulePermission, PermissionLevel } from "@/lib/types";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, getFirebaseAuth } from "@/firebase";
 import { collection, addDoc, doc, deleteDoc, getDocs, query, where, updateDoc, setDoc, runTransaction } from "firebase/firestore";
 import { allPermissions } from "@/lib/data";
 import {
@@ -24,12 +24,20 @@ import {
 } from "@/components/ui/alert-dialog";
 import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
 import { firebaseConfig } from "@/firebase/config";
-import { initializeApp, deleteApp } from "firebase/app";
+import { initializeApp, deleteApp, FirebaseApp } from "firebase/app";
+
+
+// Helper function to create a temporary, secondary Firebase app instance.
+const createSecondaryApp = (): FirebaseApp => {
+  const appName = `secondary-auth-app-${Date.now()}`;
+  return initializeApp(firebaseConfig, appName);
+};
 
 
 export default function UsersPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const mainAuth = getFirebaseAuth();
   const { companyId, user, loading, companyData } = useContext(InventoryContext) || {};
   const isAdmin = user?.role === 'Admin';
 
@@ -48,8 +56,7 @@ export default function UsersPage() {
     const safeCompanyName = (companyData.name || "company").toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9-]/g, '');
     const fullEmail = `${employeeData.email}@${safeCompanyName}.com`;
 
-    const secondaryAppName = `SecondaryAppForUserCreation-${Date.now()}`;
-    const secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
+    const secondaryApp = createSecondaryApp();
     const secondaryAuth = getAuth(secondaryApp);
 
     try {
@@ -90,7 +97,7 @@ export default function UsersPage() {
     } catch (error: any) {
       let message = "Ocorreu um erro ao criar o funcionário.";
       if (error.code === 'auth/email-already-in-use') {
-        message = "Este email já está a ser utilizado por outra conta.";
+        message = `O email "${fullEmail}" já está a ser utilizado por outra conta.`;
       } else if (error.code === 'auth/weak-password') {
         message = "A senha é demasiado fraca. Use pelo menos 6 caracteres.";
       }
@@ -101,6 +108,8 @@ export default function UsersPage() {
       });
       console.error("Erro ao adicionar funcionário: ", error);
     } finally {
+        // Clean up the secondary app
+        await signOut(secondaryAuth); // Sign out from the temporary app
         await deleteApp(secondaryApp);
     }
   };
