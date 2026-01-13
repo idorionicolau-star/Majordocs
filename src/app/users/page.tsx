@@ -43,25 +43,33 @@ export default function UsersPage() {
   const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId' | 'email'> & {email: string}) => {
     if (!employeesCollectionRef || !companyId || !companyData || !auth) return;
 
-    const fullEmail = `${employeeData.email}@${companyData.name.toLowerCase().replace(/\s+/g, '')}`;
+    // Use a company name safe for an email
+    const safeCompanyName = companyData.name.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9-]/g, '');
+    const fullEmail = `${employeeData.email}@${safeCompanyName}.com`;
 
     try {
+      // 1. Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, fullEmail, employeeData.password!);
       const newUserId = userCredential.user.uid;
 
+      // 2. Prepare Firestore document
       const employeeDocRef = doc(employeesCollectionRef, newUserId);
       
       const permissionsToSet = employeeData.role === 'Admin' 
         ? allPermissions.reduce((acc, p) => ({...acc, [p.id]: 'write' as PermissionLevel}), {} as Record<ModulePermission, PermissionLevel>) 
         : employeeData.permissions;
 
-      await setDoc(employeeDocRef, {
+      // The object to save in Firestore. Note: NO password.
+      const employeeForFirestore: Omit<Employee, 'id' | 'password' | 'token'> = {
         username: employeeData.username,
         email: fullEmail,
         role: employeeData.role,
         companyId: companyId,
         permissions: permissionsToSet
-      });
+      };
+
+      // 3. Save the employee document to Firestore
+      await setDoc(employeeDocRef, employeeForFirestore);
 
       toast({
         title: "Funcionário Adicionado",

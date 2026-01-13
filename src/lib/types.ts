@@ -24,6 +24,7 @@ export type User = {
 export type Employee = {
   id:string;
   username: string;
+  email: string; // This is the full login email
   password?: string; // Should be handled securely, never stored in plain text
   role: 'Admin' | 'Employee';
   companyId: string;
