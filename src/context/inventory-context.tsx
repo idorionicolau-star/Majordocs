@@ -21,8 +21,8 @@ import {
   signOut,
   User as FirebaseAuthUser,
   GoogleAuthProvider,
-  signInWithPopup,
   signInWithRedirect,
+  getRedirectResult,
 } from 'firebase/auth';
 import {
   collection,
@@ -122,58 +122,73 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [companyData, setCompanyData] = useState<Company | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      setFirebaseUser(fbUser);
-      if (fbUser) {
-        // More scalable approach: Read from the top-level /users collection first
-        const userMapDocRef = doc(firestore, `users/${fbUser.uid}`);
-        
-        try {
-          const userMapDoc = await getDoc(userMapDocRef);
+    // This effect runs once on mount to handle auth state, including redirect results.
+    const checkAuth = async () => {
+      // First, check if there's a result from a Google Sign-In redirect.
+      // This is crucial because `onAuthStateChanged` might run before `getRedirectResult`.
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          // A user has just signed in via redirect.
+          // The onAuthStateChanged listener below will handle the profile fetching.
+          // We can show a loading indicator here if needed.
+          toast({ title: 'Autenticação bem-sucedida!', description: 'A verificar o seu perfil...' });
+        }
+      } catch (error: any) {
+        console.error("Erro ao obter resultado do redirecionamento:", error);
+        toast({ variant: 'destructive', title: 'Erro de Login', description: 'Não foi possível completar o login com Google.' });
+      }
 
-          if (userMapDoc.exists()) {
-            const userMapData = userMapDoc.data();
-            const userCompanyId = userMapData.companyId;
+      // Now, set up the listener that will react to any auth state change.
+      // This handles direct loads, sign-ins, sign-outs, and the result of the redirect.
+      const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+        setFirebaseUser(fbUser);
+        if (fbUser) {
+          const userMapDocRef = doc(firestore, `users/${fbUser.uid}`);
+          try {
+            const userMapDoc = await getDoc(userMapDocRef);
 
-            if (userCompanyId) {
-                // Now fetch the detailed employee profile
+            if (userMapDoc.exists()) {
+              const userCompanyId = userMapDoc.data().companyId;
+              if (userCompanyId) {
                 const employeeDocRef = doc(firestore, `companies/${userCompanyId}/employees/${fbUser.uid}`);
                 const employeeDoc = await getDoc(employeeDocRef);
-
                 if (employeeDoc.exists()) {
-                    const employeeData = employeeDoc.data() as Employee;
-                    setUser({ ...employeeData, id: employeeDoc.id });
-                    setCompanyId(userCompanyId);
-                    setNeedsOnboarding(false);
+                  const employeeData = employeeDoc.data() as Employee;
+                  setUser({ ...employeeData, id: employeeDoc.id });
+                  setCompanyId(userCompanyId);
+                  setNeedsOnboarding(false);
                 } else {
-                    // Data inconsistency: user map exists but employee profile doesn't
-                     throw new Error("Perfil de funcionário não encontrado.");
+                  throw new Error("Perfil de funcionário não encontrado.");
                 }
-            } else {
-                 // Should not happen if data is consistent
+              } else {
                 throw new Error("ID da empresa não encontrado no perfil do utilizador.");
+              }
+            } else {
+              setUser(null);
+              setCompanyId(null);
+              setNeedsOnboarding(true);
             }
-          } else {
-            // New user (likely from Google Sign-In) who needs to complete onboarding
+          } catch (error) {
+            console.error("Error fetching user profile:", error);
             setUser(null);
             setCompanyId(null);
-            setNeedsOnboarding(true);
+            toast({ variant: 'destructive', title: 'Erro de Perfil', description: 'Não foi possível carregar os seus dados.' });
           }
-        } catch (error) {
-           console.error("Error fetching user profile:", error);
-           setUser(null); setCompanyId(null);
+        } else {
+          setUser(null);
+          setFirebaseUser(null);
+          setCompanyId(null);
+          setNeedsOnboarding(false);
         }
-      } else {
-        // User is signed out
-        setUser(null);
-        setFirebaseUser(null);
-        setCompanyId(null);
-        setNeedsOnboarding(false);
-      }
-      setLoading(false);
-    });
+        setLoading(false); // Auth state is resolved.
+      });
 
-    return () => unsubscribe();
+      // Cleanup subscription on unmount
+      return () => unsubscribe();
+    };
+
+    checkAuth();
   }, [auth, firestore]);
   
 
@@ -201,17 +216,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
-      // Use signInWithRedirect for a more robust flow that avoids popup blockers.
-      // The result of this is handled by the onAuthStateChanged listener.
+      // The user will be redirected to Google's sign-in page.
+      // The result is handled by getRedirectResult() in the main useEffect.
       await signInWithRedirect(auth, provider);
     } catch (error: any) {
       console.error("Erro ao iniciar o redirecionamento do Google:", error);
-       let description = 'Ocorreu um erro inesperado ao tentar iniciar o login com o Google.';
+      let description = 'Ocorreu um erro inesperado ao tentar o login com Google.';
       
       if (error.code === 'auth/operation-not-allowed') {
-        description = 'O login com Google não está ativado. Por favor, ative-o no Console do Firebase (Authentication > Sign-in method).';
+        description = 'O login com Google não está ativado no seu projeto Firebase.';
       } else if (error.code === 'auth/unauthorized-domain') {
-          description = 'Este domínio não está autorizado. Por favor, adicione-o à lista de domínios autorizados no Console do Firebase (Authentication > Settings).';
+          description = 'Este domínio não está autorizado para login. Adicione-o no Console do Firebase.';
       }
 
       toast({ 
@@ -219,7 +234,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         title: 'Erro de Login com Google', 
         description: description
       });
-      // Re-throw the error so the calling component knows the login failed.
       throw error;
     }
   };
@@ -247,7 +261,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           return acc;
         }, {} as Record<ModulePermission, PermissionLevel>);
         
-        // 1. Create the detailed employee document
         const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
         const newEmployeeRef = doc(employeesCollectionRef, firebaseUser.uid);
         transaction.set(newEmployeeRef, {
@@ -258,15 +271,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           permissions: adminPermissions,
         });
 
-        // 2. Create the user mapping document in the top-level /users collection
         const userMapDocRef = doc(firestore, `users/${firebaseUser.uid}`);
         transaction.set(userMapDocRef, { companyId: newCompanyRef.id });
         
-        // 3. Create the company document
         transaction.set(newCompanyRef, { name: companyName, ownerId: firebaseUser.uid });
       });
 
-      // Manually trigger state update to reflect onboarding completion
       const userMapDoc = await getDoc(doc(firestore, `users/${firebaseUser.uid}`));
       if(userMapDoc.exists()) {
           const userCompanyId = userMapDoc.data().companyId;
@@ -292,11 +302,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!firestore) return false;
   
     try {
-      // 1. Create the user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPass);
       const newUserId = userCredential.user.uid;
       
-      // 2. Run a transaction to create all necessary Firestore documents
       await runTransaction(firestore, async (transaction) => {
         const companiesRef = collection(firestore, 'companies');
         const companyQuery = query(companiesRef, where('name', '==', companyName));
@@ -312,7 +320,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           return acc;
         }, {} as Record<ModulePermission, PermissionLevel>);
         
-        // Create the detailed employee document
         const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
         const newEmployeeRef = doc(employeesCollectionRef, newUserId);
         transaction.set(newEmployeeRef, {
@@ -323,14 +330,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           permissions: adminPermissions,
         });
         
-        // Create the user mapping document
         const userMapDocRef = doc(firestore, `users/${newUserId}`);
         transaction.set(userMapDocRef, { companyId: newCompanyRef.id });
 
-        // Create the company document
         transaction.set(newCompanyRef, { name: companyName, ownerId: newUserId });
       });
-      // onAuthStateChanged will handle login and redirection
       return true;
     } catch (error: any) {
       console.error('Registration error: ', error);
@@ -371,9 +375,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (user.role === 'Admin') return true;
     return user.permissions?.[module] === 'write';
   };
-
-
-  // --- DATA FETCHING LOGIC ---
 
   const productsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
@@ -619,4 +620,3 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   );
 }
 
-    

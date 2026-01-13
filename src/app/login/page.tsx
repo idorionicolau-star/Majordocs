@@ -83,12 +83,10 @@ export default function LoginPage() {
     setGoogleLoading(true);
     try {
         await signInWithGoogle();
-        // The context's onAuthStateChanged will handle redirection
+        // The context will handle the redirection logic
     } catch (error) {
-      // Errors are toasted within the signInWithGoogle function in the context
-      // No need to console.error here as the context does it.
-    } finally {
-      setGoogleLoading(false);
+        setGoogleLoading(false);
+        // Errors are toasted within the signInWithGoogle function in the context
     }
   };
 

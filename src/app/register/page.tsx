@@ -81,19 +81,17 @@ export default function RegisterPage() {
   };
 
   const handleGoogleSignIn = async () => {
+    if (!context?.signInWithGoogle) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Login com Google não configurado.' });
+      return;
+    }
     setGoogleLoading(true);
     try {
-      if (context?.signInWithGoogle) {
-        await context.signInWithGoogle();
-        // The context's onAuthStateChanged will handle redirection to /onboarding
-      } else {
-        throw new Error("Login com Google não está configurado.");
-      }
+      await context.signInWithGoogle();
+      // The context will handle the redirection logic
     } catch (error: any) {
-      console.error("Google Sign-in error:", error);
-      // The toast is handled within the context's signInWithGoogle function
-    } finally {
       setGoogleLoading(false);
+      // Errors are toasted within the signInWithGoogle function in the context
     }
   };
 
