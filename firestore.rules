@@ -1,94 +1,51 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- Funções de Ajuda ---
-
+    
+    // Função auxiliar para verificar se o utilizador está autenticado
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isSuperAdmin() {
-      // SUBSTITUA "COLOQUE_O_SEU_UID_AQUI" PELO ID DO SEU UTILIZADOR ADMIN.
-      return request.auth.uid == "COLOQUE_O_SEU_UID_AQUI";
-    }
-    
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/companies/$(request.auth.token.companyId)/employees/$(userId)).data;
-    }
-
-    function isEmployeeOf(companyId) {
-      return isSignedIn() && (request.auth.token.companyId == companyId || isSuperAdmin());
-    }
-    
-    function isAdminOf(companyId) {
-      return isEmployeeOf(companyId) && (getUserData(request.auth.uid).role == 'Admin' || isSuperAdmin());
-    }
-    
-    function can(module, level) {
-      // O Super Admin tem acesso total.
-      if (isSuperAdmin()) {
-        return true;
-      }
-      // O Admin da empresa tem acesso de escrita a tudo.
-      if (isAdminOf(request.auth.token.companyId)) {
-        // Admins não podem aceder à lista de empresas
-        if (module == 'companies') return false;
-        return true;
-      }
-      // Verifica as permissões do funcionário
-      let userPermissions = getUserData(request.auth.uid).permissions;
-      if (level == 'write') {
-        return userPermissions[module] == 'write';
-      }
-      if (level == 'read') {
-        return userPermissions[module] == 'read' || userPermissions[module] == 'write';
-      }
-      return false;
+    // 1. Regras para o "Mapa de Utilizadores" (/users/{uid})
+    match /users/{userId} {
+      // O utilizador só pode ler o seu próprio "BI"
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      // Só pode criar ou editar se for o próprio (e não pode mudar o seu próprio companyId após criado, por segurança)
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // --- Regras por Coleção ---
-
+    // 2. Regras para a estrutura de Empresas
     match /companies/{companyId} {
-      allow create: if true;
-      allow read, update, delete: if isAdminOf(companyId);
-      allow list: if isSuperAdmin();
-
-      match /employees/{employeeId} {
-        allow get: if isEmployeeOf(companyId);
-        allow list: if can('users', 'read');
-        allow create, update, delete: if can('users', 'write');
-      }
       
-      match /catalogProducts/{productId} {
-          allow read: if can('settings', 'read');
-          allow write: if can('settings', 'write');
+      // Função para verificar se o utilizador pertence a ESTA empresa específica
+      function belongsToCompany() {
+        return isSignedIn() && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == companyId;
       }
-      match /catalogCategories/{categoryId} {
-          allow read: if can('settings', 'read');
-          allow write: if can('settings', 'write');
-      }
-      match /products/{productId} {
-        allow read: if can('inventory', 'read');
-        allow write: if can('inventory', 'write');
-      }
-      match /sales/{saleId} {
-        allow read: if can('sales', 'read');
-        allow write: if can('sales', 'write');
-      }
-      match /productions/{productionId} {
-        allow read: if can('production', 'read');
-        allow write: if can('production', 'write');
-      }
-      match /orders/{orderId} {
-        allow read: if can('orders', 'read');
-        allow write: if can('orders', 'write');
-      }
-      match /reports/{reportId} {
-        allow read: if can('reports', 'read');
-        allow write: if can('reports', 'write');
+
+      // Leitura da empresa: apenas membros
+      allow read: if belongsToCompany();
+      // Escrita na empresa: apenas para o Admin da empresa
+      allow update: if belongsToCompany() && 
+        get(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid)).data.role == 'Admin';
+
+      // 3. Regras para subcoleções (Produtos, Vendas, Funcionários, etc.)
+      match /{collectionName}/{docId} {
+        
+        // Função para obter as permissões do funcionário dentro da empresa
+        function getEmployeeData() {
+          return get(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid)).data;
+        }
+
+        // Permissão de Leitura baseada no sistema que criámos
+        allow read: if belongsToCompany() && 
+          (getEmployeeData().role == 'Admin' || getEmployeeData().permissions[collectionName] in ['read', 'write']);
+
+        // Permissão de Escrita baseada no sistema que criámos
+        allow write: if belongsToCompany() && 
+          (getEmployeeData().role == 'Admin' || getEmployeeData().permissions[collectionName] == 'write');
       }
     }
   }
