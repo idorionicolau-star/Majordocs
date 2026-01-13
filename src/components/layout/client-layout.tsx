@@ -13,17 +13,20 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const authContext = useContext(InventoryContext);
   const isAuthPage = pathname === '/login' || pathname === '/register';
+  const isOnboardingPage = pathname === '/onboarding';
 
-  // 1. CHAME SEMPRE OS HOOKS NA MESMA ORDEM
   useEffect(() => {
-    // Se o contexto terminou de carregar e não há utilizador, e não estamos numa página de autenticação, redireciona.
-    if (!authContext?.loading && !authContext?.user && !isAuthPage) {
-      router.replace('/login');
+    if (authContext?.loading) return; // Wait until auth state is resolved
+
+    if (authContext?.needsOnboarding && !isOnboardingPage) {
+        router.replace('/onboarding');
+    } else if (!authContext?.user && !isAuthPage && !isOnboardingPage) {
+        router.replace('/login');
     }
-  }, [authContext?.loading, authContext?.user, isAuthPage, router]);
+
+  }, [authContext?.loading, authContext?.user, authContext?.needsOnboarding, isAuthPage, isOnboardingPage, router]);
 
 
-  // 2. LÓGICA DE RENDERIZAÇÃO CONDICIONAL
   if (authContext?.loading) {
      return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -35,7 +38,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (isAuthPage) {
+  if (isAuthPage || isOnboardingPage) {
     return <>{children}</>;
   }
 
@@ -44,7 +47,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
        <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="text-sm text-muted-foreground">A redirecionar para o login...</p>
+          <p className="text-sm text-muted-foreground">A redirecionar...</p>
         </div>
       </div>
     );
@@ -60,5 +63,3 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-    

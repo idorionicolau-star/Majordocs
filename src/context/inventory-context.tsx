@@ -21,6 +21,8 @@ import {
   signInWithEmailAndPassword,
   signOut,
   User as FirebaseAuthUser,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from 'firebase/auth';
 import {
   collection,
@@ -49,11 +51,16 @@ type CatalogCategory = { id: string; name: string };
 interface InventoryContextType {
   // Auth related
   user: Employee | null;
+  firebaseUser: FirebaseAuthUser | null;
   companyId: string | null;
   loading: boolean;
+  needsOnboarding: boolean;
   login: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
   registerCompany: (companyName: string, adminUsername: string, adminEmail: string, adminPass: string) => Promise<boolean>;
+  signInWithGoogle: () => Promise<void>;
+  completeOnboarding: (companyName: string) => Promise<boolean>;
+
 
   // Permission helpers
   canView: (module: ModulePermission) => boolean;
@@ -101,8 +108,10 @@ export const InventoryContext = createContext<InventoryContextType | undefined>(
 
 export function InventoryProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Employee | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseAuthUser | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -113,36 +122,42 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [companyData, setCompanyData] = useState<Company | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // This is a simplification. A real app might store companyId in a custom claim.
-        // For now, we search for the user across all companies.
-        const allEmployeesRefs = await getDocs(query(collectionGroup(firestore, 'employees')));
-        const userDocSnapshot = allEmployeesRefs.docs.find(doc => doc.id === firebaseUser.uid);
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      setFirebaseUser(fbUser);
+      if (fbUser) {
+        const allEmployeesCollection = query(collectionGroup(firestore, 'employees'));
+        const q = query(allEmployeesCollection, where('__name__', '==', fbUser.uid));
+        
+        try {
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            const userDoc = snapshot.docs[0];
+            const employeeData = userDoc.data() as Employee;
+            const userCompanyId = userDoc.ref.parent.parent?.id;
 
-        if (userDocSnapshot && userDocSnapshot.exists()) {
-          const employeeData = userDocSnapshot.data() as Employee;
-          const userCompanyId = userDocSnapshot.ref.parent.parent?.id;
-
-          if (userCompanyId) {
-             setUser({ ...employeeData, id: userDocSnapshot.id });
-             setCompanyId(userCompanyId);
+            if (userCompanyId) {
+              setUser({ ...employeeData, id: userDoc.id });
+              setCompanyId(userCompanyId);
+              setNeedsOnboarding(false);
+            } else {
+              setUser(null); setCompanyId(null);
+            }
           } else {
-            // Data inconsistency
+            // New user (likely from Google Sign-In) who needs to complete onboarding
             setUser(null);
             setCompanyId(null);
-            await signOut(auth);
+            setNeedsOnboarding(true);
           }
-        } else {
-          // No profile found, log them out
-          await signOut(auth);
-          setUser(null);
-          setCompanyId(null);
+        } catch (error) {
+           console.error("Error fetching user profile:", error);
+           setUser(null); setCompanyId(null);
         }
       } else {
         // User is signed out
         setUser(null);
+        setFirebaseUser(null);
         setCompanyId(null);
+        setNeedsOnboarding(false);
       }
       setLoading(false);
     });
@@ -162,27 +177,80 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         message = "Email ou senha inválidos.";
       }
       toast({ variant: 'destructive', title: 'Erro de Login', description: message });
-      throw error; // Re-throw the error so the UI can know the login failed
+      throw error;
+    }
+  };
+
+  const signInWithGoogle = async (): Promise<void> => {
+    const provider = new GoogleAuthProvider();
+    try {
+      setLoading(true);
+      await signInWithPopup(auth, provider);
+      // onAuthStateChanged will handle the rest
+    } catch (error: any) {
+      console.error("Google Sign-In Error", error);
+      toast({ variant: 'destructive', title: 'Erro de Login', description: 'Não foi possível fazer login com o Google.' });
+      setLoading(false);
+    }
+  };
+
+  const completeOnboarding = async (companyName: string): Promise<boolean> => {
+    if (!firestore || !firebaseUser) return false;
+
+    setLoading(true);
+    try {
+      await runTransaction(firestore, async (transaction) => {
+        const companiesRef = collection(firestore, 'companies');
+        const companyQuery = query(companiesRef, where('name', '==', companyName));
+        const existingCompanySnapshot = await getDocs(companyQuery);
+        if (!existingCompanySnapshot.empty) {
+          throw new Error('Uma empresa com este nome já existe.');
+        }
+
+        const newCompanyRef = doc(companiesRef);
+        transaction.set(newCompanyRef, { name: companyName });
+
+        const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
+        const newEmployeeRef = doc(employeesCollectionRef, firebaseUser.uid);
+        
+        const adminPermissions = allPermissions.reduce((acc, p) => {
+          acc[p.id] = 'write';
+          return acc;
+        }, {} as Record<ModulePermission, PermissionLevel>);
+        
+        transaction.set(newEmployeeRef, {
+          username: firebaseUser.displayName || 'Novo Utilizador',
+          email: firebaseUser.email || 'sem-email',
+          role: 'Admin',
+          companyId: newCompanyRef.id,
+          permissions: adminPermissions,
+        });
+      });
+      setNeedsOnboarding(false); // Onboarding complete
+      // Re-fetch will be triggered by onAuthStateChanged finding the new doc
+      toast({ title: 'Bem-vindo!', description: 'A sua empresa foi criada com sucesso.' });
+      return true;
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Erro', description: error.message });
+      return false;
+    } finally {
+      setLoading(false);
     }
   };
 
   const registerCompany = async (companyName: string, adminUsername: string, adminEmail: string, adminPass: string): Promise<boolean> => {
     if (!firestore) return false;
   
-    const normalizedCompanyName = companyName.toLowerCase().replace(/\s+/g, '');
-  
     try {
-        // Step 1: Create user in Firebase Auth
         const userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPass);
         const newUserId = userCredential.user.uid;
 
-        // Step 2: Run a transaction to create company and employee docs in Firestore
         await runTransaction(firestore, async (transaction) => {
             const companiesRef = collection(firestore, 'companies');
-            const companyQuery = query(companiesRef, where('name', '==', normalizedCompanyName));
+            const companyQuery = query(companiesRef, where('name', '==', companyName));
             const existingCompanySnapshot = await getDocs(companyQuery);
             if (!existingCompanySnapshot.empty) {
-            throw new Error('Uma empresa com este nome já existe.');
+              throw new Error('Uma empresa com este nome já existe.');
             }
             
             const newCompanyRef = doc(companiesRef);
@@ -192,25 +260,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             const newEmployeeRef = doc(employeesCollectionRef, newUserId);
             
             const adminPermissions = allPermissions.reduce((acc, p) => {
-            acc[p.id] = 'write';
-            return acc;
+              acc[p.id] = 'write';
+              return acc;
             }, {} as Record<ModulePermission, PermissionLevel>);
             
             transaction.set(newEmployeeRef, {
               username: adminUsername,
-              email: adminEmail, // Storing email for reference
+              email: adminEmail,
               role: 'Admin',
               companyId: newCompanyRef.id,
-              permissions: adminPermissions
+              permissions: adminPermissions,
             });
-      });
+        });
+      // Login will be handled by onAuthStateChanged
       return true;
     } catch (error: any) {
       console.error('Registration error: ', error);
       let message = 'Ocorreu um erro inesperado durante o registo.';
        if (error.code === 'auth/email-already-in-use') {
         message = 'Este endereço de email já está a ser utilizado.';
-      } else if (error.message.includes('empresa com este nome')) {
+      } else if (error.message.includes('Uma empresa com este nome')) {
         message = error.message;
       }
       toast({ variant: 'destructive', title: 'Erro no Registo', description: message });
@@ -223,6 +292,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         await signOut(auth);
         setUser(null);
         setCompanyId(null);
+        setFirebaseUser(null);
+        setNeedsOnboarding(false);
         router.push('/login');
         toast({ title: "Sessão terminada" });
     } catch (error) {
@@ -474,8 +545,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading;
 
   const value: InventoryContextType = {
-    user, companyId, loading: isDataLoading,
-    login, logout, registerCompany,
+    user, firebaseUser, companyId, loading: isDataLoading, needsOnboarding,
+    login, logout, registerCompany, signInWithGoogle, completeOnboarding,
     canView, canEdit,
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
@@ -489,7 +560,5 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
-
-    
 
     
