@@ -125,13 +125,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
-        const allEmployeesCollection = query(collectionGroup(firestore, 'employees'));
-        const q = query(allEmployeesCollection, where('__name__', '==', fbUser.uid));
+        const allEmployeesQuery = query(collectionGroup(firestore, 'employees'));
         
         try {
-          const snapshot = await getDocs(q);
-          if (!snapshot.empty) {
-            const userDoc = snapshot.docs[0];
+          const snapshot = await getDocs(allEmployeesQuery);
+          const userDoc = snapshot.docs.find(doc => doc.id === fbUser.uid);
+
+          if (userDoc) {
             const employeeData = userDoc.data() as Employee;
             const userCompanyId = userDoc.ref.parent.parent?.id;
 
@@ -140,6 +140,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
               setCompanyId(userCompanyId);
               setNeedsOnboarding(false);
             } else {
+              // Should not happen if data is consistent
               setUser(null); setCompanyId(null);
             }
           } else {
@@ -560,5 +561,3 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
-
-    
