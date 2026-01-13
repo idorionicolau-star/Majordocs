@@ -338,7 +338,7 @@ export default function InventoryPage() {
           <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
               <div>
                   <h1 className="text-2xl md:text-3xl font-headline font-bold">Inventário</h1>
-                   <p className="text-muted-foreground">
+                   <div className="text-muted-foreground">
                       Gerencie os produtos do seu estoque.
                       {!canEditInventory && 
                         <Badge variant="outline" className="ml-2 border-amber-500/50 text-amber-600 bg-amber-50 dark:bg-amber-900/20">
@@ -346,7 +346,7 @@ export default function InventoryPage() {
                           Modo de Visualização
                         </Badge>
                       }
-                  </p>
+                  </div>
               </div>
           </div>
           <div className="py-4 space-y-4">

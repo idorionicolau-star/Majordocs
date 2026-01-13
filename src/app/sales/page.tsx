@@ -155,7 +155,7 @@ export default function SalesPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h1 className="text-2xl md:text-3xl font-headline font-bold">Vendas</h1>
-                 <p className="text-muted-foreground mt-1">
+                 <div className="text-muted-foreground mt-1">
                     Visualize e registre as vendas de produtos.
                      {!canEditSales && 
                         <Badge variant="outline" className="ml-2 border-amber-500/50 text-amber-600 bg-amber-50 dark:bg-amber-900/20">
@@ -163,7 +163,7 @@ export default function SalesPage() {
                           Modo de Visualização
                         </Badge>
                       }
-                </p>
+                </div>
             </div>
         </div>
 
