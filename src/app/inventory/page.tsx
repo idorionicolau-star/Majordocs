@@ -7,7 +7,7 @@ import type { Product, Location, ModulePermission, PermissionLevel } from "@/lib
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Truck } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Truck, Lock } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -38,6 +38,7 @@ import { ProductCard } from "@/components/inventory/product-card";
 import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 export default function InventoryPage() {
   const inventoryContext = useContext(InventoryContext);
@@ -60,33 +61,10 @@ export default function InventoryPage() {
     deleteProduct, 
     transferStock,
     loading: inventoryLoading,
-    user
-  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, user: null };
+    canEdit
+  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, canEdit: () => false };
 
- const hasPermission = (permissionId: ModulePermission, action: 'read' | 'write' = 'read') => {
-    if (!user) return false;
-    if (user.role === 'Admin') return true;
-    if (!user.permissions) return false;
-    
-    const perms = user.permissions;
-
-    if (typeof perms === 'object' && !Array.isArray(perms)) {
-      const level = perms[permissionId];
-      if (action === 'write') {
-        return level === 'write';
-      }
-      return level === 'read' || level === 'write';
-    }
-
-    if (Array.isArray(perms)) {
-       // @ts-ignore
-      return perms.includes(permissionId);
-    }
-    
-    return false;
-  };
-
-  const canEditInventory = hasPermission('inventory', 'write');
+  const canEditInventory = canEdit('inventory');
   
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditInventory) {
@@ -360,8 +338,14 @@ export default function InventoryPage() {
           <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
               <div>
                   <h1 className="text-2xl md:text-3xl font-headline font-bold">Inventário</h1>
-                  <p className="text-muted-foreground">
+                   <p className="text-muted-foreground">
                       Gerencie os produtos do seu estoque.
+                      {!canEditInventory && 
+                        <Badge variant="outline" className="ml-2 border-amber-500/50 text-amber-600 bg-amber-50 dark:bg-amber-900/20">
+                          <Lock className="mr-1 h-3 w-3" />
+                          Modo de Visualização
+                        </Badge>
+                      }
                   </p>
               </div>
           </div>

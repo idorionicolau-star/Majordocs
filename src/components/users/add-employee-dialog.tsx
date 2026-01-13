@@ -41,6 +41,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 
 const formSchema = z.object({
   username: z.string().min(3, { message: "O nome de utilizador deve ter pelo menos 3 caracteres." }),
+  email: z.string().min(1, { message: "O email base é obrigatório." }).refine(s => !s.includes('@'), 'Não inclua o "@" no email base.'),
   password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
   role: z.enum(['Admin', 'Employee'], { required_error: "A função é obrigatória." }),
   permissions: z.record(z.string(), z.enum(['none', 'read', 'write'])),
@@ -50,7 +51,7 @@ const formSchema = z.object({
 type AddEmployeeFormValues = z.infer<typeof formSchema>;
 
 interface AddEmployeeDialogProps {
-  onAddEmployee: (employee: Omit<Employee, 'id' | 'companyId'>) => void;
+  onAddEmployee: (employee: Omit<Employee, 'id' | 'companyId' | 'email'> & {email: string}) => void;
 }
 
 export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
@@ -65,6 +66,7 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: "",
+      email: "",
       password: "",
       role: 'Employee',
       permissions: defaultPermissions,
@@ -76,22 +78,17 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
   const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write') => {
     const currentPermissions = form.getValues('permissions');
     const currentLevel = currentPermissions[moduleId];
-    let newLevel: PermissionLevel;
-
+    
     if (level === 'write') {
-        newLevel = currentLevel === 'write' ? 'read' : 'write';
-        if (newLevel === 'write') {
-            form.setValue(`permissions.${moduleId}`, 'write', { shouldDirty: true });
-        } else {
-             form.setValue(`permissions.${moduleId}`, 'read', { shouldDirty: true });
-        }
+      const newLevel = currentLevel === 'write' ? 'read' : 'write';
+      form.setValue(`permissions.${moduleId}`, newLevel, { shouldDirty: true });
     } else { // 'read'
-        newLevel = currentLevel === 'read' || currentLevel === 'write' ? 'none' : 'read';
-        if (newLevel === 'read') {
-            form.setValue(`permissions.${moduleId}`, 'read', { shouldDirty: true });
-        } else {
-            form.setValue(`permissions.${moduleId}`, 'none', { shouldDirty: true });
-        }
+      const newLevel = currentLevel === 'read' || currentLevel === 'write' ? 'none' : 'read';
+      if (newLevel === 'none') {
+        form.setValue(`permissions.${moduleId}`, 'none', { shouldDirty: true });
+      } else {
+         form.setValue(`permissions.${moduleId}`, 'read', { shouldDirty: true });
+      }
     }
   };
 
@@ -102,15 +99,18 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
         return acc;
     }, {} as Record<ModulePermission, PermissionLevel>);
 
-    const employeeData: Omit<Employee, 'id' | 'companyId'> = {
+    const employeeData = {
       username: values.username,
+      email: values.email,
       password: values.password,
       role: values.role,
       permissions: role === 'Admin' ? permissionsForAdmin : values.permissions,
     };
-    onAddEmployee(employeeData);
+
+    onAddEmployee(employeeData as any);
     form.reset({
         username: "",
+        email: "",
         password: "",
         role: 'Employee',
         permissions: defaultPermissions,
@@ -145,6 +145,22 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
                     <FormControl>
                       <Input placeholder="Ex: joao.silva" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email Base para Login</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: joao.silva" {...field} />
+                    </FormControl>
+                     <FormDescription>
+                      O login final será no formato: email.base@nomeempresa.com
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

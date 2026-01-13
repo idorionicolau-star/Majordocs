@@ -18,39 +18,21 @@ interface ColumnsOptions {
     companyName: string | null;
 }
 
-const displayPassword = (password: string | undefined): string => {
-  if (!password) {
-    return '';
-  }
-  try {
-    const decoded = Buffer.from(password, 'base64').toString('utf-8');
-    if (/[\x00-\x08\x0E-\x1F]/.test(decoded) && decoded !== password) {
-       return password;
-    }
-    return decoded;
-  } catch (e) {
-    return password;
-  }
-};
-
-
 const LoginFormatCell = ({ row, companyName, isAdmin }: { row: any, companyName: string | null, isAdmin: boolean }) => {
     const { toast } = useToast();
-    const username = row.original.username;
-    const password = isAdmin ? displayPassword(row.original.password) : '********';
-    const loginFormat = `${username}@${companyName || ''}`;
+    const email = row.original.email;
     
     const handleCopy = async () => {
         if (!isAdmin) {
             toast({
                 variant: "destructive",
                 title: "Ação não permitida",
-                description: "Apenas administradores podem copiar credenciais.",
+                description: "Apenas administradores podem copiar o email.",
             });
             return;
         }
 
-        const textToCopy = `Login: ${loginFormat}\nSenha: ${password}`;
+        const textToCopy = email;
 
         if (!document.hasFocus()) {
             window.focus();
@@ -59,8 +41,8 @@ const LoginFormatCell = ({ row, companyName, isAdmin }: { row: any, companyName:
         try {
             await navigator.clipboard.writeText(textToCopy);
             toast({
-            title: "Credenciais Copiadas",
-            description: "O login e a senha foram copiados.",
+            title: "Email Copiado",
+            description: "O email de login foi copiado.",
             });
         } catch (err) {
             const textArea = document.createElement("textarea");
@@ -69,10 +51,10 @@ const LoginFormatCell = ({ row, companyName, isAdmin }: { row: any, companyName:
             textArea.select();
             try {
                 document.execCommand('copy');
-                toast({ title: "Copiado", description: "Credenciais copiadas (via fallback)." });
+                toast({ title: "Copiado", description: "Email copiado (via fallback)." });
             } catch (e) {
                 console.error("Erro ao copiar: ", e);
-                toast({ variant: "destructive", title: "Erro", description: "Não foi possível copiar as credenciais." });
+                toast({ variant: "destructive", title: "Erro", description: "Não foi possível copiar o email." });
             }
             document.body.removeChild(textArea);
         }
@@ -80,7 +62,7 @@ const LoginFormatCell = ({ row, companyName, isAdmin }: { row: any, companyName:
 
     return (
         <div className="flex items-center gap-2">
-            <span className="font-mono text-xs p-2 rounded-md bg-muted text-muted-foreground">{loginFormat}</span>
+            <span className="font-mono text-xs p-2 rounded-md bg-muted text-muted-foreground">{email}</span>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} disabled={!isAdmin}>
                 <Copy className="h-4 w-4" />
             </Button>
@@ -97,7 +79,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
     },
     {
         id: 'loginFormat',
-        header: 'Formato de Login',
+        header: 'Email de Login',
         cell: ({ row }) => <LoginFormatCell row={row} companyName={options.companyName} isAdmin={options.isAdmin} />
     },
     {

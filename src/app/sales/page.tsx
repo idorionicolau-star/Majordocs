@@ -9,7 +9,7 @@ import { SalesDataTable } from "@/components/sales/data-table";
 import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronDown, Filter } from "lucide-react";
+import { List, LayoutGrid, ChevronDown, Filter, Lock } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { doc, updateDoc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
+import { Badge } from "@/components/ui/badge";
 
 export default function SalesPage() {
   const searchParams = useSearchParams();
@@ -38,6 +39,7 @@ export default function SalesPage() {
     confirmSalePickup,
     user,
     companyId,
+    canEdit,
   } = inventoryContext || { 
     sales: [], 
     loading: true, 
@@ -45,32 +47,10 @@ export default function SalesPage() {
     confirmSalePickup: () => {},
     user: null,
     companyId: null,
+    canEdit: () => false,
   };
 
-  const hasPermission = (permissionId: ModulePermission, action: 'read' | 'write' = 'read') => {
-    if (!user) return false;
-    if (user.role === 'Admin') return true;
-    if (!user.permissions) return false;
-    
-    const perms = user.permissions;
-
-    if (typeof perms === 'object' && !Array.isArray(perms)) {
-      const level = perms[permissionId];
-      if (action === 'write') {
-        return level === 'write';
-      }
-      return level === 'read' || level === 'write';
-    }
-
-    if (Array.isArray(perms)) {
-      // @ts-ignore
-      return perms.includes(permissionId);
-    }
-    
-    return false;
-  };
-
-  const canEditSales = hasPermission('sales', 'write');
+  const canEditSales = canEdit('sales');
   
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditSales) {
@@ -175,8 +155,14 @@ export default function SalesPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h1 className="text-2xl md:text-3xl font-headline font-bold">Vendas</h1>
-                <p className="text-sm font-medium text-slate-500 mt-1">
+                 <p className="text-muted-foreground mt-1">
                     Visualize e registre as vendas de produtos.
+                     {!canEditSales && 
+                        <Badge variant="outline" className="ml-2 border-amber-500/50 text-amber-600 bg-amber-50 dark:bg-amber-900/20">
+                          <Lock className="mr-1 h-3 w-3" />
+                          Modo de Visualização
+                        </Badge>
+                      }
                 </p>
             </div>
         </div>
@@ -289,5 +275,3 @@ export default function SalesPage() {
     </div>
   );
 }
-
-    

@@ -41,7 +41,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 
 const formSchema = z.object({
   username: z.string().min(3, { message: "O nome de utilizador deve ter pelo menos 3 caracteres." }),
-  password: z.string().optional(),
   role: z.enum(['Admin', 'Employee'], { required_error: "A função é obrigatória." }),
   permissions: z.record(z.string(), z.enum(['none', 'read', 'write'])),
 });
@@ -60,7 +59,6 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: employee.username,
-      password: "",
       role: employee.role,
       permissions: employee.permissions || {},
     },
@@ -73,7 +71,6 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
       const initialPermissions = { ...allPermissions.reduce((acc, p) => ({ ...acc, [p.id]: 'none' }), {}), ...employee.permissions };
       form.reset({
         username: employee.username,
-        password: "",
         role: employee.role,
         permissions: initialPermissions,
       });
@@ -83,32 +80,22 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
   const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write') => {
     const currentPermissions = form.getValues('permissions');
     const currentLevel = currentPermissions[moduleId];
-    let newLevel: PermissionLevel;
   
      if (level === 'write') {
-        newLevel = currentLevel === 'write' ? 'read' : 'write';
-        if (newLevel === 'write') {
-            form.setValue(`permissions.${moduleId}`, 'write', { shouldDirty: true });
-        } else {
-             form.setValue(`permissions.${moduleId}`, 'read', { shouldDirty: true });
-        }
+        const newLevel = currentLevel === 'write' ? 'read' : 'write';
+        form.setValue(`permissions.${moduleId}`, newLevel, { shouldDirty: true });
     } else { // 'read'
-        newLevel = currentLevel === 'read' || currentLevel === 'write' ? 'none' : 'read';
-        if (newLevel === 'read') {
-            form.setValue(`permissions.${moduleId}`, 'read', { shouldDirty: true });
+        const newLevel = currentLevel === 'read' || currentLevel === 'write' ? 'none' : 'read';
+        if (newLevel === 'none') {
+          form.setValue(`permissions.${moduleId}`, 'none', { shouldDirty: true });
         } else {
-            form.setValue(`permissions.${moduleId}`, 'none', { shouldDirty: true });
+          form.setValue(`permissions.${moduleId}`, 'read', { shouldDirty: true });
         }
     }
   };
 
 
   function onSubmit(values: EditEmployeeFormValues) {
-    if (values.password && values.password.length > 0 && values.password.length < 6) {
-      form.setError("password", { message: "A nova senha deve ter pelo menos 6 caracteres."});
-      return;
-    }
-    
     const permissionsForAdmin = allPermissions.reduce((acc, perm) => {
       acc[perm.id] = 'write';
       return acc;
@@ -119,12 +106,6 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
       role: values.role,
       permissions: values.role === 'Admin' ? permissionsForAdmin : values.permissions,
     };
-
-    if (values.password && values.password.length >= 6) {
-        updatedEmployeeData.password = values.password;
-    } else {
-        updatedEmployeeData.password = employee.password;
-    }
     
     onUpdateEmployee({
       ...employee,
@@ -164,19 +145,12 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nova Senha (Opcional)</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} placeholder="Deixar em branco para manter a atual" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <FormItem>
+                <FormLabel>Email de Login</FormLabel>
+                <p className="text-sm text-muted-foreground font-mono p-2 bg-muted rounded-md">{employee.email}</p>
+                <FormDescription>O email de login não pode ser alterado.</FormDescription>
+              </FormItem>
+
               <FormField
                 control={form.control}
                 name="role"

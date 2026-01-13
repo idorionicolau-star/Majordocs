@@ -8,7 +8,7 @@ import { ProductionDataTable } from "@/components/production/data-table";
 import { AddProductionDialog } from "@/components/production/add-production-dialog";
 import type { Production, Location, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronDown, Package } from "lucide-react";
+import { List, LayoutGrid, ChevronDown, Package, Lock } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFirestore } from "@/firebase";
 import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
+import { Badge } from "@/components/ui/badge";
 
 export default function ProductionPage() {
   const inventoryContext = useContext(InventoryContext);
@@ -42,32 +43,9 @@ export default function ProductionPage() {
   const [productionToTransfer, setProductionToTransfer] = useState<Production | null>(null);
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
 
-  const { productions, companyId, updateProductStock, locations, isMultiLocation, loading: inventoryLoading, user: userData } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, locations: [], isMultiLocation: false, loading: true, user: null };
+  const { productions, companyId, updateProductStock, locations, isMultiLocation, loading: inventoryLoading, user, canEdit } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, locations: [], isMultiLocation: false, loading: true, user: null, canEdit: () => false };
 
-  const hasPermission = (permissionId: ModulePermission, action: 'read' | 'write' = 'read') => {
-    if (!userData) return false;
-    if (userData.role === 'Admin') return true;
-    if (!userData.permissions) return false;
-    
-    const perms = userData.permissions;
-
-    if (typeof perms === 'object' && !Array.isArray(perms)) {
-      const level = perms[permissionId];
-      if (action === 'write') {
-        return level === 'write';
-      }
-      return level === 'read' || level === 'write';
-    }
-
-    if (Array.isArray(perms)) {
-      // @ts-ignore
-      return perms.includes(permissionId);
-    }
-    
-    return false;
-  };
-
-  const canEditProduction = hasPermission('production', 'write');
+  const canEditProduction = canEdit('production');
   
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditProduction) {
@@ -96,13 +74,13 @@ export default function ProductionPage() {
   }
 
   const handleAddProduction = (newProductionData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
-    if (!firestore || !companyId || !userData) return;
+    if (!firestore || !companyId || !user) return;
     
     const newProduction: Omit<Production, 'id'> = {
       date: new Date().toISOString().split('T')[0],
       productName: newProductionData.productName,
       quantity: newProductionData.quantity,
-      registeredBy: userData.username || 'Desconhecido',
+      registeredBy: user.username || 'Desconhecido',
       location: newProductionData.location,
       status: 'Concluído'
     };
@@ -175,8 +153,14 @@ export default function ProductionPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h1 className="text-2xl md:text-3xl font-headline font-bold">Produção</h1>
-                <p className="text-sm font-medium text-slate-500 mt-1">
+                <p className="text-muted-foreground mt-1">
                     Visualize e registre a produção de novos itens.
+                     {!canEditProduction && 
+                        <Badge variant="outline" className="ml-2 border-amber-500/50 text-amber-600 bg-amber-50 dark:bg-amber-900/20">
+                          <Lock className="mr-1 h-3 w-3" />
+                          Modo de Visualização
+                        </Badge>
+                      }
                 </p>
             </div>
         </div>

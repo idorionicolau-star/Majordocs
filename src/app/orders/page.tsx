@@ -5,7 +5,7 @@ import { useState, useMemo, useContext, useEffect } from "react";
 import { useSearchParams } from 'next/navigation';
 import type { Order, Product, ProductionLog, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Filter, List, LayoutGrid, ChevronDown } from "lucide-react";
+import { Filter, List, LayoutGrid, ChevronDown, Lock } from "lucide-react";
 import { AddOrderDialog } from "@/components/orders/add-order-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -17,6 +17,7 @@ import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFirestore } from "@/firebase";
 import { collection, addDoc, doc, updateDoc, arrayUnion } from "firebase/firestore";
+import { Badge } from "@/components/ui/badge";
 
 export default function OrdersPage() {
   const searchParams = useSearchParams();
@@ -28,39 +29,15 @@ export default function OrdersPage() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { orders, companyId, loading: inventoryLoading, updateProductStock, user: userData } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null };
+  const { orders, companyId, loading: inventoryLoading, updateProductStock, user, canEdit } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null, canEdit: () => false };
 
-  const hasPermission = (permissionId: ModulePermission, action: 'read' | 'write' = 'read') => {
-    if (!userData) return false;
-    if (userData.role === 'Admin') return true;
-    if (!userData.permissions) return false;
-    
-    const perms = userData.permissions;
-
-    if (typeof perms === 'object' && !Array.isArray(perms)) {
-      const level = perms[permissionId];
-      if (action === 'write') {
-        return level === 'write';
-      }
-      return level === 'read' || level === 'write';
-    }
-
-    if (Array.isArray(perms)) {
-      // @ts-ignore
-      return perms.includes(permissionId);
-    }
-    
-    return false;
-  };
-
-
-  const canAddOrders = hasPermission('orders', 'write');
+  const canEditOrders = canEdit('orders');
 
   useEffect(() => {
-    if (searchParams.get('action') === 'add' && canAddOrders) {
+    if (searchParams.get('action') === 'add' && canEditOrders) {
       setAddDialogOpen(true);
     }
-  }, [searchParams, canAddOrders]);
+  }, [searchParams, canEditOrders]);
 
 
   const handleAddOrder = (newOrderData: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'>) => {
@@ -114,7 +91,7 @@ export default function OrdersPage() {
   };
 
   const handleAddProductionLog = (orderId: string, logData: { quantity: number; notes?: string }) => {
-    if (!firestore || !companyId || !userData) return;
+    if (!firestore || !companyId || !user) return;
     
     let orderToUpdate = orders.find(o => o.id === orderId);
 
@@ -124,7 +101,7 @@ export default function OrdersPage() {
           date: new Date().toISOString(),
           quantity: logData.quantity,
           notes: logData.notes,
-          registeredBy: userData.username || 'Desconhecido',
+          registeredBy: user.username || 'Desconhecido',
         };
         const newQuantityProduced = orderToUpdate.quantityProduced + logData.quantity;
         
@@ -178,6 +155,12 @@ export default function OrdersPage() {
                   <h1 className="text-2xl md:text-3xl font-headline font-bold">Encomendas de Produção</h1>
                   <p className="text-muted-foreground">
                       Acompanhe e gerencie as encomendas pendentes.
+                      {!canEditOrders && 
+                        <Badge variant="outline" className="ml-2 border-amber-500/50 text-amber-600 bg-amber-50 dark:bg-amber-900/20">
+                          <Lock className="mr-1 h-3 w-3" />
+                          Modo de Visualização
+                        </Badge>
+                      }
                   </p>
               </div>
           </div>
@@ -216,7 +199,7 @@ export default function OrdersPage() {
                     order={order}
                     onUpdateStatus={handleUpdateOrderStatus}
                     onAddProductionLog={handleAddProductionLog}
-                    canEdit={canAddOrders}
+                    canEdit={canEditOrders}
                 />
             ))}
             {filteredOrders.length === 0 && (
@@ -227,7 +210,7 @@ export default function OrdersPage() {
         </div>
 
       </div>
-      {canAddOrders && <AddOrderDialog
+      {canEditOrders && <AddOrderDialog
         open={isAddDialogOpen}
         onOpenChange={setAddDialogOpen}
         onAddOrder={handleAddOrder}

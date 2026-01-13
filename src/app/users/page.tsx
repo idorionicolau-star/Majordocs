@@ -22,12 +22,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 
 export default function UsersPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { companyId, user, loading, companyData } = useContext(InventoryContext) || {};
+  const { companyId, user, loading, companyData, auth } = useContext(InventoryContext) || {};
   const isAdmin = user?.role === 'Admin';
 
   const employeesCollectionRef = useMemoFirebase(() => {
@@ -39,35 +40,43 @@ export default function UsersPage() {
   
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
-  const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId'>) => {
-    if (!employeesCollectionRef || !companyId || !companyData) return;
+  const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId' | 'email'> & {email:string}) => {
+    if (!employeesCollectionRef || !companyId || !companyData || !auth) return;
 
-    const usernameWithoutCompany = employeeData.username;
-    const fullUsername = `${usernameWithoutCompany}@${companyData.name.toLowerCase().replace(/\s+/g, '')}`;
+    const fullEmail = `${employeeData.email}@${companyData.name.toLowerCase().replace(/\s+/g, '')}`;
 
-    const q = query(employeesCollectionRef, where("username", "==", usernameWithoutCompany));
-    const existingUserSnapshot = await getDocs(q);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, fullEmail, employeeData.password!);
+      const newUserId = userCredential.user.uid;
 
-    if (!existingUserSnapshot.empty) {
+      const employeeDocRef = doc(employeesCollectionRef, newUserId);
+      await setDoc(employeeDocRef, {
+        username: employeeData.username,
+        email: fullEmail,
+        role: employeeData.role,
+        companyId: companyId,
+        permissions: employeeData.role === 'Admin' ? allPermissions.reduce((acc, p) => ({...acc, [p.id]: 'write' as PermissionLevel}), {} as Record<ModulePermission, PermissionLevel>) : employeeData.permissions
+      });
+
+      toast({
+        title: "Funcionário Adicionado",
+        description: `O funcionário "${employeeData.username}" com o email "${fullEmail}" foi adicionado.`,
+      });
+
+    } catch (error: any) {
+      let message = "Ocorreu um erro ao criar o funcionário.";
+      if (error.code === 'auth/email-already-in-use') {
+        message = "Este email já está a ser utilizado por outra conta.";
+      } else if (error.code === 'auth/weak-password') {
+        message = "A senha é demasiado fraca. Use pelo menos 6 caracteres.";
+      }
       toast({
         variant: "destructive",
-        title: "Erro",
-        description: "Este nome de utilizador já existe nesta empresa.",
+        title: "Erro ao Adicionar Funcionário",
+        description: message,
       });
-      return;
+      console.error("Erro ao adicionar funcionário: ", error);
     }
-    
-    await addDoc(employeesCollectionRef, { 
-      ...employeeData,
-      password: Buffer.from(employeeData.password || '').toString('base64'),
-      companyId,
-      permissions: employeeData.role === 'Admin' ? allPermissions.reduce((acc, p) => ({...acc, [p.id]: 'write' as PermissionLevel}), {} as Record<ModulePermission, PermissionLevel>) : employeeData.permissions
-    });
-
-    toast({
-      title: "Funcionário Adicionado",
-      description: `O funcionário "${fullUsername}" foi adicionado.`,
-    });
   };
 
   const handleUpdateEmployee = async (employee: Employee) => {
@@ -76,20 +85,13 @@ export default function UsersPage() {
     const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employee.id);
     
     // Create a base object with properties that are always updated
-    const updateData: Partial<Omit<Employee, 'id' | 'companyId'>> = {
-        username: employee.username,
-        role: employee.role,
-        permissions: employee.permissions,
-    };
-    
-    // Only include the password if a new one was provided and is valid
-    if (employee.password && employee.password.length >= 6) {
-        // Assume password in `employee` object is the new plain text one from the form
-        updateData.password = Buffer.from(employee.password).toString('base64');
-    }
+    const { id, companyId: _, password, ...updateData } = employee;
     
     await updateDoc(employeeDocRef, updateData);
     
+    // Password update would be handled separately via Admin SDK or dedicated Cloud Function
+    // for security reasons. We don't update password from the client-side after creation.
+
     toast({
       title: "Funcionário Atualizado",
       description: `As informações de "${employee.username}" foram atualizadas.`,
@@ -98,11 +100,12 @@ export default function UsersPage() {
 
   const handleDeleteEmployee = async () => {
     if (employeeToDelete && employeeToDelete.id && firestore && companyId) {
+      // Deleting the user from Firestore. Deleting from Auth should be done via a Cloud Function for security.
       const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employeeToDelete.id);
       await deleteDoc(employeeDocRef);
       toast({
         title: "Funcionário Removido",
-        description: `O funcionário "${employeeToDelete.username}" foi removido.`,
+        description: `O funcionário "${employeeToDelete.username}" foi removido da base de dados.`,
       });
       setEmployeeToDelete(null);
     }
