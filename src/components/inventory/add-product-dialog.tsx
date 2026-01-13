@@ -79,13 +79,20 @@ function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLoca
   });
 
    useEffect(() => {
-    if (locations.length > 0 && !form.getValues('location')) {
-      form.setValue('location', locations[0].id);
+    if (locations.length > 0) {
+      const savedLocation = localStorage.getItem('majorstockx-last-product-location');
+      const defaultLocation = savedLocation && locations.some(l => l.id === savedLocation) ? savedLocation : locations[0].id;
+      if (!form.getValues('location')) {
+         form.setValue('location', defaultLocation);
+      }
     }
   }, [locations, form]);
 
   useEffect(() => {
     if (open) {
+      const savedLocation = localStorage.getItem('majorstockx-last-product-location');
+      const defaultLocation = savedLocation && locations.some(l => l.id === savedLocation) ? savedLocation : locations.length > 0 ? locations[0].id : '';
+      
       form.reset({
         category: "",
         name: "",
@@ -93,7 +100,7 @@ function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLoca
         stock: 0,
         lowStockThreshold: 10,
         criticalStockThreshold: 5,
-        location: locations.length > 0 ? locations[0].id : '',
+        location: defaultLocation,
       });
     }
   }, [open, form, locations]);
@@ -114,6 +121,10 @@ function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLoca
       form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
       return;
     }
+    if (values.location) {
+        localStorage.setItem('majorstockx-last-product-location', values.location);
+    }
+
     const newProduct: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'> = {
       name: values.name,
       category: values.category,
@@ -186,7 +197,7 @@ function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLoca
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Localização</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione uma localização" />
