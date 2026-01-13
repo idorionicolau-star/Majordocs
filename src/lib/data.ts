@@ -2,6 +2,7 @@
 
 
 
+
 import type { NavItem, Order, Sale, Production, Notification, Product, InitialCatalog, ModulePermission } from './types';
 import {
   LayoutDashboard,
@@ -22,7 +23,6 @@ export const mainNavItems: NavItem[] = [
   { title: 'Produção', href: '/production', id: 'production', icon: Hammer },
   { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList },
   { title: 'Relatórios', href: '/reports', id: 'reports', icon: BarChart3 },
-  { title: 'Empresas', href: '/companies', id: 'companies', icon: Building, adminOnly: true },
   { title: 'Funcionários', href: '/users', id: 'users', icon: Users, adminOnly: true },
   { title: 'Ajustes', href: '/settings', id: 'settings', icon: Settings },
 ];
@@ -36,7 +36,6 @@ export const allPermissions: Readonly<{ id: ModulePermission; label: string; adm
   { id: "reports", label: "Relatórios", adminOnly: false },
   { id: "users", label: "Funcionários", adminOnly: true },
   { id: "settings", label: "Ajustes", adminOnly: false },
-  { id: "companies", label: "Empresas", adminOnly: true },
 ] as const;
 
 

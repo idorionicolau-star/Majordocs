@@ -10,8 +10,7 @@ export type ModulePermission =
   | 'orders'
   | 'reports'
   | 'users'
-  | 'settings'
-  | 'companies';
+  | 'settings';
 
 // This is the User Map object for quick lookups.
 export type UserMap = {
