@@ -15,9 +15,21 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const authContext = useContext(InventoryContext);
+  const { user, isSuperAdmin, loading } = authContext || {};
+  
+  const isAuthPage = pathname === '/login' || pathname === '/register';
 
-  // 1. ESTADO DE PROTEÇÃO: Enquanto o contexto está a carregar, mostramos um spinner.
-  if (!authContext || authContext.loading) {
+  useEffect(() => {
+    if (loading) {
+      return; 
+    }
+
+    if (!user && !isAuthPage) {
+      router.replace('/login');
+    }
+  }, [loading, user, isAuthPage, router]);
+
+  if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
@@ -28,27 +40,12 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const { user, isSuperAdmin } = authContext;
-  const isAuthPage = pathname === '/login' || pathname === '/register';
-
-  // 2. LÓGICA DE REDIRECIONAMENTO (Executada APÓS o loading do contexto)
-  useEffect(() => {
-    // Se o contexto terminou de carregar e não há utilizador, e não estamos numa página de autenticação, redireciona.
-    if (!authContext.loading && !user && !isAuthPage) {
-      router.replace('/login');
-    }
-  }, [authContext.loading, user, isAuthPage, router]);
-
-
-  // 3. RENDERIZAÇÃO CONDICIONAL
-  // Se for uma página de autenticação, renderiza o conteúdo diretamente.
   if (isAuthPage) {
     return <>{children}</>;
   }
-
-  // Se o contexto terminou de carregar mas ainda não há utilizador, mostra uma mensagem de redirecionamento.
-  if (!authContext.loading && !user) {
-     return (
+  
+  if (!user) {
+    return (
        <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
@@ -58,7 +55,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     );
   }
   
-  // Se o utilizador está autenticado, mostra o layout principal com o conteúdo.
   return (
     <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
       <Header />
