@@ -20,9 +20,6 @@ import {
   signInWithEmailAndPassword,
   signOut,
   User as FirebaseAuthUser,
-  GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
 } from 'firebase/auth';
 import {
   collection,
@@ -38,7 +35,6 @@ import {
   onSnapshot,
   runTransaction,
   getDoc,
-  collectionGroup,
 } from 'firebase/firestore';
 import { allPermissions } from '@/lib/data';
 
@@ -54,13 +50,9 @@ interface InventoryContextType {
   firebaseUser: FirebaseAuthUser | null;
   companyId: string | null;
   loading: boolean;
-  needsOnboarding: boolean;
   login: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
   registerCompany: (companyName: string, adminUsername: string, adminEmail: string, adminPass: string) => Promise<boolean>;
-  signInWithGoogle: () => Promise<void>;
-  completeOnboarding: (companyName: string) => Promise<boolean>;
-
 
   // Permission helpers
   canView: (module: ModulePermission) => boolean;
@@ -111,7 +103,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseAuthUser | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -122,73 +113,49 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [companyData, setCompanyData] = useState<Company | null>(null);
 
   useEffect(() => {
-    // This effect runs once on mount to handle auth state, including redirect results.
-    const checkAuth = async () => {
-      // First, check if there's a result from a Google Sign-In redirect.
-      // This is crucial because `onAuthStateChanged` might run before `getRedirectResult`.
-      try {
-        const result = await getRedirectResult(auth);
-        if (result) {
-          // A user has just signed in via redirect.
-          // The onAuthStateChanged listener below will handle the profile fetching.
-          // We can show a loading indicator here if needed.
-          toast({ title: 'Autenticação bem-sucedida!', description: 'A verificar o seu perfil...' });
-        }
-      } catch (error: any) {
-        console.error("Erro ao obter resultado do redirecionamento:", error);
-        toast({ variant: 'destructive', title: 'Erro de Login', description: 'Não foi possível completar o login com Google.' });
-      }
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      setFirebaseUser(fbUser);
+      if (fbUser) {
+        const userMapDocRef = doc(firestore, `users/${fbUser.uid}`);
+        try {
+          const userMapDoc = await getDoc(userMapDocRef);
 
-      // Now, set up the listener that will react to any auth state change.
-      // This handles direct loads, sign-ins, sign-outs, and the result of the redirect.
-      const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-        setFirebaseUser(fbUser);
-        if (fbUser) {
-          const userMapDocRef = doc(firestore, `users/${fbUser.uid}`);
-          try {
-            const userMapDoc = await getDoc(userMapDocRef);
-
-            if (userMapDoc.exists()) {
-              const userCompanyId = userMapDoc.data().companyId;
-              if (userCompanyId) {
-                const employeeDocRef = doc(firestore, `companies/${userCompanyId}/employees/${fbUser.uid}`);
-                const employeeDoc = await getDoc(employeeDocRef);
-                if (employeeDoc.exists()) {
-                  const employeeData = employeeDoc.data() as Employee;
-                  setUser({ ...employeeData, id: employeeDoc.id });
-                  setCompanyId(userCompanyId);
-                  setNeedsOnboarding(false);
-                } else {
-                  throw new Error("Perfil de funcionário não encontrado.");
-                }
-              } else {
-                throw new Error("ID da empresa não encontrado no perfil do utilizador.");
-              }
+          if (userMapDoc.exists()) {
+            const userCompanyId = userMapDoc.data().companyId;
+            const employeeDocRef = doc(firestore, `companies/${userCompanyId}/employees/${fbUser.uid}`);
+            const employeeDoc = await getDoc(employeeDocRef);
+            
+            if (employeeDoc.exists()) {
+              const employeeData = employeeDoc.data() as Employee;
+              setUser({ ...employeeData, id: employeeDoc.id });
+              setCompanyId(userCompanyId);
             } else {
-              setUser(null);
-              setCompanyId(null);
-              setNeedsOnboarding(true);
+              // This case shouldn't happen with email/pass registration
+              // but is a safeguard.
+              throw new Error("Perfil de funcionário não encontrado na empresa associada.");
             }
-          } catch (error) {
-            console.error("Error fetching user profile:", error);
-            setUser(null);
-            setCompanyId(null);
-            toast({ variant: 'destructive', title: 'Erro de Perfil', description: 'Não foi possível carregar os seus dados.' });
+          } else {
+             // This indicates a problem, as users created via email/pass should always have a map.
+             console.error("User map does not exist for authenticated user.");
+             setUser(null);
+             setCompanyId(null);
+             logout(); // Force logout for inconsistent state
           }
-        } else {
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
           setUser(null);
-          setFirebaseUser(null);
           setCompanyId(null);
-          setNeedsOnboarding(false);
+          toast({ variant: 'destructive', title: 'Erro de Perfil', description: 'Não foi possível carregar os seus dados.' });
         }
-        setLoading(false); // Auth state is resolved.
-      });
+      } else {
+        setUser(null);
+        setFirebaseUser(null);
+        setCompanyId(null);
+      }
+      setLoading(false);
+    });
 
-      // Cleanup subscription on unmount
-      return () => unsubscribe();
-    };
-
-    checkAuth();
+    return () => unsubscribe();
   }, [auth, firestore]);
   
 
@@ -207,134 +174,48 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signInWithGoogle = async (): Promise<void> => {
-    if (!auth) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Serviço de autenticação não configurado.' });
-        return;
-    }
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    
-    try {
-      // The user will be redirected to Google's sign-in page.
-      // The result is handled by getRedirectResult() in the main useEffect.
-      await signInWithRedirect(auth, provider);
-    } catch (error: any) {
-      console.error("Erro ao iniciar o redirecionamento do Google:", error);
-      let description = 'Ocorreu um erro inesperado ao tentar o login com Google.';
-      
-      if (error.code === 'auth/operation-not-allowed') {
-        description = 'O login com Google não está ativado no seu projeto Firebase.';
-      } else if (error.code === 'auth/unauthorized-domain') {
-          description = 'Este domínio não está autorizado para login. Adicione-o no Console do Firebase.';
-      }
-
-      toast({ 
-        variant: 'destructive', 
-        title: 'Erro de Login com Google', 
-        description: description
-      });
-      throw error;
-    }
-  };
-
-  const completeOnboarding = async (companyName: string): Promise<boolean> => {
-    if (!firestore || !firebaseUser) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Utilizador não autenticado.' });
-        return false;
-    }
-
-    setLoading(true);
-    try {
-      await runTransaction(firestore, async (transaction) => {
-        const companiesRef = collection(firestore, 'companies');
-        const companyQuery = query(companiesRef, where('name', '==', companyName));
-        const existingCompanySnapshot = await getDocs(companyQuery);
-        if (!existingCompanySnapshot.empty) {
-          throw new Error('Uma empresa com este nome já existe.');
-        }
-
-        const newCompanyRef = doc(companiesRef);
-        
-        const adminPermissions = allPermissions.reduce((acc, p) => {
-          acc[p.id] = 'write';
-          return acc;
-        }, {} as Record<ModulePermission, PermissionLevel>);
-        
-        const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
-        const newEmployeeRef = doc(employeesCollectionRef, firebaseUser.uid);
-        transaction.set(newEmployeeRef, {
-          username: firebaseUser.displayName || 'Novo Utilizador',
-          email: firebaseUser.email || 'sem-email',
-          role: 'Admin',
-          companyId: newCompanyRef.id,
-          permissions: adminPermissions,
-        });
-
-        const userMapDocRef = doc(firestore, `users/${firebaseUser.uid}`);
-        transaction.set(userMapDocRef, { companyId: newCompanyRef.id });
-        
-        transaction.set(newCompanyRef, { name: companyName, ownerId: firebaseUser.uid });
-      });
-
-      const userMapDoc = await getDoc(doc(firestore, `users/${firebaseUser.uid}`));
-      if(userMapDoc.exists()) {
-          const userCompanyId = userMapDoc.data().companyId;
-          const employeeDoc = await getDoc(doc(firestore, `companies/${userCompanyId}/employees/${firebaseUser.uid}`));
-          if (employeeDoc.exists()) {
-             const employeeData = employeeDoc.data() as Employee;
-             setUser({ ...employeeData, id: employeeDoc.id });
-             setCompanyId(userCompanyId);
-          }
-      }
-      setNeedsOnboarding(false);
-      
-      return true;
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Erro ao Criar Empresa', description: error.message });
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const registerCompany = async (companyName: string, adminUsername: string, adminEmail: string, adminPass: string): Promise<boolean> => {
     if (!firestore) return false;
   
     try {
+      // First check if company name already exists
+      const companiesRef = collection(firestore, 'companies');
+      const companyQuery = query(companiesRef, where('name', '==', companyName));
+      const existingCompanySnapshot = await getDocs(companyQuery);
+      if (!existingCompanySnapshot.empty) {
+        throw new Error('Uma empresa com este nome já existe.');
+      }
+      
       const userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPass);
       const newUserId = userCredential.user.uid;
       
-      await runTransaction(firestore, async (transaction) => {
-        const companiesRef = collection(firestore, 'companies');
-        const companyQuery = query(companiesRef, where('name', '==', companyName));
-        const existingCompanySnapshot = await getDocs(companyQuery);
-        if (!existingCompanySnapshot.empty) {
-          throw new Error('Uma empresa com este nome já existe.');
-        }
-        
-        const newCompanyRef = doc(companiesRef);
-        
-        const adminPermissions = allPermissions.reduce((acc, p) => {
-          acc[p.id] = 'write';
-          return acc;
-        }, {} as Record<ModulePermission, PermissionLevel>);
-        
-        const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
-        const newEmployeeRef = doc(employeesCollectionRef, newUserId);
-        transaction.set(newEmployeeRef, {
-          username: adminUsername,
-          email: adminEmail,
-          role: 'Admin',
-          companyId: newCompanyRef.id,
-          permissions: adminPermissions,
-        });
-        
-        const userMapDocRef = doc(firestore, `users/${newUserId}`);
-        transaction.set(userMapDocRef, { companyId: newCompanyRef.id });
-
-        transaction.set(newCompanyRef, { name: companyName, ownerId: newUserId });
+      const newCompanyRef = doc(companiesRef);
+      
+      const adminPermissions = allPermissions.reduce((acc, p) => {
+        acc[p.id] = 'write';
+        return acc;
+      }, {} as Record<ModulePermission, PermissionLevel>);
+      
+      const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
+      const newEmployeeRef = doc(employeesCollectionRef, newUserId);
+      const userMapDocRef = doc(firestore, `users/${newUserId}`);
+      
+      const batch = writeBatch(firestore);
+      
+      batch.set(newEmployeeRef, {
+        username: adminUsername,
+        email: adminEmail,
+        role: 'Admin',
+        companyId: newCompanyRef.id,
+        permissions: adminPermissions,
       });
+      
+      batch.set(userMapDocRef, { companyId: newCompanyRef.id });
+
+      batch.set(newCompanyRef, { name: companyName, ownerId: newUserId });
+
+      await batch.commit();
+
       return true;
     } catch (error: any) {
       console.error('Registration error: ', error);
@@ -355,7 +236,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setCompanyId(null);
         setFirebaseUser(null);
-        setNeedsOnboarding(false);
         router.push('/login');
         toast({ title: "Sessão terminada" });
     } catch (error) {
@@ -604,8 +484,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading;
 
   const value: InventoryContextType = {
-    user, firebaseUser, companyId, loading: isDataLoading, needsOnboarding,
-    login, logout, registerCompany, signInWithGoogle, completeOnboarding,
+    user, firebaseUser, companyId, loading: isDataLoading,
+    login, logout, registerCompany,
     canView, canEdit,
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
@@ -619,4 +499,3 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
-
