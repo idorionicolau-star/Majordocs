@@ -9,9 +9,10 @@ import { columns } from "@/components/users/columns";
 import { AddEmployeeDialog } from "@/components/users/add-employee-dialog";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Employee } from "@/lib/types";
+import type { Employee, ModulePermission, PermissionLevel } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, addDoc, doc, deleteDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, addDoc, doc, deleteDoc, getDocs, query, where, updateDoc } from "firebase/firestore";
+import { allPermissions } from "@/lib/data";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,10 +24,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+
 export default function UsersPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { companyId, user, loading } = useContext(InventoryContext) || {};
+  const { companyId, user, loading, companyData } = useContext(InventoryContext) || {};
+  const isAdmin = user?.role === 'Admin';
 
   const employeesCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
@@ -38,10 +41,13 @@ export default function UsersPage() {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
   const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId'>) => {
-    if (!employeesCollectionRef || !companyId) return;
+    // This logic will be more complex with Firebase Auth, creating the auth user first.
+    // For now, it just adds to Firestore.
+    if (!employeesCollectionRef || !companyId || !companyData) return;
 
-    // Check if username already exists in the company
-    const q = query(employeesCollectionRef, where("username", "==", employeeData.username));
+    const usernameWithoutCompany = employeeData.username;
+
+    const q = query(employeesCollectionRef, where("username", "==", usernameWithoutCompany));
     const existingUserSnapshot = await getDocs(q);
 
     if (!existingUserSnapshot.empty) {
@@ -53,20 +59,37 @@ export default function UsersPage() {
       return;
     }
     
-    // In a real app, password should be hashed before saving
     await addDoc(employeesCollectionRef, { 
-      ...employeeData, 
+      ...employeeData,
+      password: "EncryptedInRealApp", // In a real app, this comes from Firebase Auth
       companyId,
+      permissions: employeeData.role === 'Admin' ? allPermissions.reduce((acc, p) => ({...acc, [p.id]: 'write' as PermissionLevel}), {} as Record<ModulePermission, PermissionLevel>) : employeeData.permissions
     });
 
     toast({
       title: "Funcionário Adicionado",
-      description: `O funcionário "${employeeData.username}" foi adicionado.`,
+      description: `O funcionário "${usernameWithoutCompany}" foi adicionado.`,
+    });
+  };
+
+  const handleUpdateEmployee = async (employee: Employee) => {
+    if (!firestore || !companyId || !employee.id) return;
+    
+    const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employee.id);
+    
+    const { id, companyId: empCompanyId, password, ...updateData } = employee;
+
+    await updateDoc(employeeDocRef, updateData);
+    
+    toast({
+      title: "Funcionário Atualizado",
+      description: `As informações de "${employee.username}" foram atualizadas.`,
     });
   };
 
   const handleDeleteEmployee = async () => {
     if (employeeToDelete && employeeToDelete.id && firestore && companyId) {
+      // Need to delete from Firebase Auth as well
       const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employeeToDelete.id);
       await deleteDoc(employeeDocRef);
       toast({
@@ -110,16 +133,21 @@ export default function UsersPage() {
                     Adicione, edite e remova funcionários do sistema.
                 </p>
             </div>
-            <AddEmployeeDialog onAddEmployee={handleAddEmployee} />
+            {isAdmin && <AddEmployeeDialog onAddEmployee={handleAddEmployee} />}
         </div>
       
         <UsersDataTable 
             columns={columns({
                 onDelete: (employee) => setEmployeeToDelete(employee),
-                currentUserId: user?.id
+                onUpdate: handleUpdateEmployee,
+                currentUserId: user?.id,
+                isAdmin: isAdmin,
+                companyName: companyData?.name || null
             })} 
             data={employees || []} 
         />
     </div>
   );
 }
+
+    

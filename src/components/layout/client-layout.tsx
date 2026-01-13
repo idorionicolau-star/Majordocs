@@ -7,30 +7,25 @@ import React, { useState, useEffect, useContext } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
 import { Header } from './header';
 import { SubHeader } from './sub-header';
-import { mainNavItems } from '@/lib/data';
-import type { ModulePermission } from '@/lib/types';
-
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const authContext = useContext(InventoryContext);
-  const { user, isSuperAdmin, loading } = authContext || {};
-  
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
+  // 1. CHAME SEMPRE OS HOOKS NA MESMA ORDEM
   useEffect(() => {
-    if (loading) {
-      return; 
-    }
-
-    if (!user && !isAuthPage) {
+    // Se o contexto terminou de carregar e não há utilizador, e não estamos numa página de autenticação, redireciona.
+    if (!authContext?.loading && !authContext?.user && !isAuthPage) {
       router.replace('/login');
     }
-  }, [loading, user, isAuthPage, router]);
+  }, [authContext?.loading, authContext?.user, isAuthPage, router]);
 
-  if (loading) {
-    return (
+
+  // 2. LÓGICA DE RENDERIZAÇÃO CONDICIONAL
+  if (authContext?.loading) {
+     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
@@ -43,9 +38,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   if (isAuthPage) {
     return <>{children}</>;
   }
-  
-  if (!user) {
-    return (
+
+  if (!authContext?.user) {
+     return (
        <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
@@ -54,7 +49,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
       <Header />
@@ -65,3 +60,5 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+    

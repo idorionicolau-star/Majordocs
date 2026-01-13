@@ -13,7 +13,15 @@ import {
 import { usePathname, useRouter } from 'next/navigation';
 import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, getFirebaseAuth } from '@/firebase';
+import {
+  getAuth,
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  User as FirebaseAuthUser,
+} from 'firebase/auth';
 import {
   collection,
   doc,
@@ -37,18 +45,18 @@ type CatalogProduct = Omit<
 >;
 type CatalogCategory = { id: string; name: string };
 
-// Defina o UID do Super Admin aqui. Deixe como string vazia se não houver.
-const SUPER_ADMIN_UID = "COLOQUE_O_SEU_UID_AQUI"; 
-
 interface InventoryContextType {
   // Auth related
   user: Employee | null;
   companyId: string | null;
-  isSuperAdmin: boolean;
   loading: boolean;
-  login: (username: string, pass: string) => Promise<boolean>;
+  login: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
-  registerCompany: (companyName: string, adminUsername: string, adminPass: string) => Promise<boolean>;
+  registerCompany: (companyName: string, adminUsername: string, adminEmail: string, adminPass: string) => Promise<boolean>;
+
+  // Permission helpers
+  canView: (module: ModulePermission) => boolean;
+  canEdit: (module: ModulePermission) => boolean;
 
   // Data related
   products: Product[];
@@ -91,159 +99,154 @@ export const InventoryContext = createContext<InventoryContextType | undefined>(
 );
 
 export function InventoryProvider({ children }: { children: ReactNode }) {
-  // AUTH STATE
   const [user, setUser] = useState<Employee | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname();
-  const isSuperAdmin = user?.id === SUPER_ADMIN_UID;
-
-  // DATA STATE
-  const firestore = useFirestore();
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const auth = getFirebaseAuth();
   
   const [locations, setLocations] = useState<Location[]>([]);
   const [isMultiLocation, setIsMultiLocation] = useState(false);
   const [companyData, setCompanyData] = useState<Company | null>(null);
-  
-  // --- AUTH LOGIC ---
-  
+
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('majorstockx-user');
-      const storedCompanyId = localStorage.getItem('majorstockx-company-id');
-      if (storedUser && storedCompanyId) {
-        setUser(JSON.parse(storedUser));
-        setCompanyId(storedCompanyId);
-      }
-    } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
-    } finally {
-      setAuthLoading(false);
-    }
-  }, []);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // User is signed in, now fetch their profile from Firestore
+        const employeeQuery = query(
+          collection(firestore, "companies"),
+          where("employees", "array-contains", firebaseUser.uid)
+        );
 
-  const login = async (fullUsername: string, pass: string): Promise<boolean> => {
-    setAuthLoading(true);
-    if (!firestore || !fullUsername.includes('@')) {
-      setAuthLoading(false);
-      return false;
-    }
-  
-    const [username, companyDomain] = fullUsername.split('@');
-  
-    try {
-      const companiesRef = collection(firestore, 'companies');
-      const companyQuery = query(companiesRef, where("name", "==", companyDomain));
-      const companySnapshot = await getDocs(companyQuery);
-  
-      if (companySnapshot.empty) {
-        throw new Error(`Empresa "${companyDomain}" não encontrada.`);
-      }
-      
-      const companyDoc = companySnapshot.docs[0];
-      const foundCompanyId = companyDoc.id;
-  
-      const employeesRef = collection(firestore, `companies/${foundCompanyId}/employees`);
-      const userQuery = query(employeesRef, where("username", "==", username));
-      const userSnapshot = await getDocs(userQuery);
-  
-      if (userSnapshot.empty) {
-        throw new Error(`Utilizador "${username}" não encontrado na empresa "${companyDomain}".`);
-      }
-  
-      const userDoc = userSnapshot.docs[0];
-      const userData = userDoc.data() as Employee;
-      
-      const storedPass = userData.password || '';
-      const encodedInputPass = Buffer.from(pass).toString('base64');
-      
-      if (storedPass === encodedInputPass || storedPass === pass) {
-        const permissions = userData.permissions || {};
-        const userToStore: Employee = { 
-            ...userData,
-            id: userDoc.id,
-            permissions: permissions,
-            token: { 
-                companyId: foundCompanyId,
-                role: userData.role,
-                permissions: permissions
-            }
-        };
-        delete userToStore.password;
+        // This is a simplification. A real app might store companyId in a custom claim.
+        // For now, we search for the user across all companies.
+        const allEmployeesRefs = await getDocs(query(collectionGroup(firestore, 'employees')));
+        const userDocSnapshot = allEmployeesRefs.docs.find(doc => doc.id === firebaseUser.uid);
 
-        setUser(userToStore);
-        setCompanyId(foundCompanyId);
-        localStorage.setItem('majorstockx-user', JSON.stringify(userToStore));
-        localStorage.setItem('majorstockx-company-id', foundCompanyId);
-        
-        setAuthLoading(false);
-        return true;
+        if (userDocSnapshot && userDocSnapshot.exists()) {
+          const employeeData = userDocSnapshot.data() as Employee;
+          const userCompanyId = userDocSnapshot.ref.parent.parent?.id;
+
+          if (userCompanyId) {
+             setUser({ ...employeeData, id: userDocSnapshot.id });
+             setCompanyId(userCompanyId);
+          } else {
+            // Data inconsistency
+            setUser(null);
+            setCompanyId(null);
+          }
+        } else {
+          // No profile found, log them out
+          await signOut(auth);
+          setUser(null);
+          setCompanyId(null);
+        }
       } else {
-        throw new Error("Senha incorreta.");
+        // User is signed out
+        setUser(null);
+        setCompanyId(null);
       }
-    } catch (error) {
-      console.error("Login error: ", error);
-      setAuthLoading(false);
-      if (error instanceof Error) {
-        throw error;
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [auth, firestore]);
+  
+
+  const login = async (email: string, pass: string): Promise<boolean> => {
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      return true;
+    } catch (error: any) {
+      console.error("Firebase Auth login error:", error);
+      let message = "Ocorreu um erro ao fazer login.";
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        message = "Email ou senha inválidos.";
       }
+      toast({ variant: 'destructive', title: 'Erro de Login', description: message });
       return false;
     }
   };
-  
-  const registerCompany = async (companyName: string, adminUsername: string, adminPass: string): Promise<boolean> => {
+
+  const registerCompany = async (companyName: string, adminUsername: string, adminEmail: string, adminPass: string): Promise<boolean> => {
     if (!firestore) return false;
   
     const normalizedCompanyName = companyName.toLowerCase().replace(/\s+/g, '');
   
     try {
-      await runTransaction(firestore, async (transaction) => {
-        const companiesRef = collection(firestore, 'companies');
-        const companyQuery = query(companiesRef, where('name', '==', normalizedCompanyName));
-        const existingCompanySnapshot = await getDocs(companyQuery);
-        if (!existingCompanySnapshot.empty) {
-          throw new Error('Uma empresa com este nome já existe.');
-        }
-        
-        const newCompanyRef = doc(companiesRef);
-        transaction.set(newCompanyRef, { name: normalizedCompanyName });
+        // Step 1: Create user in Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPass);
+        const newUserId = userCredential.user.uid;
 
-        const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
-        const newEmployeeRef = doc(employeesCollectionRef);
-        
-        const adminPermissions = allPermissions.reduce((acc, p) => {
-          acc[p.id] = 'write';
-          return acc;
-        }, {} as Record<ModulePermission, PermissionLevel>);
-        
-        transaction.set(newEmployeeRef, {
-          username: adminUsername.split('@')[0],
-          password: Buffer.from(adminPass).toString('base64'),
-          role: 'Admin',
-          companyId: newCompanyRef.id,
-          permissions: adminPermissions
-        });
+        // Step 2: Run a transaction to create company and employee docs in Firestore
+        await runTransaction(firestore, async (transaction) => {
+            const companiesRef = collection(firestore, 'companies');
+            const companyQuery = query(companiesRef, where('name', '==', normalizedCompanyName));
+            const existingCompanySnapshot = await getDocs(companyQuery);
+            if (!existingCompanySnapshot.empty) {
+            throw new Error('Uma empresa com este nome já existe.');
+            }
+            
+            const newCompanyRef = doc(companiesRef);
+            transaction.set(newCompanyRef, { name: normalizedCompanyName });
+
+            const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
+            const newEmployeeRef = doc(employeesCollectionRef, newUserId);
+            
+            const adminPermissions = allPermissions.reduce((acc, p) => {
+            acc[p.id] = 'write';
+            return acc;
+            }, {} as Record<ModulePermission, PermissionLevel>);
+            
+            transaction.set(newEmployeeRef, {
+            username: adminUsername,
+            email: adminEmail, // Storing email for reference
+            role: 'Admin',
+            companyId: newCompanyRef.id,
+            permissions: adminPermissions
+            });
       });
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration error: ', error);
-      if (error instanceof Error) {
-        throw error;
+      let message = 'Ocorreu um erro inesperado durante o registo.';
+       if (error.code === 'auth/email-already-in-use') {
+        message = 'Este endereço de email já está a ser utilizado.';
+      } else if (error.message.includes('empresa com este nome')) {
+        message = error.message;
       }
+      toast({ variant: 'destructive', title: 'Erro no Registo', description: message });
       return false;
     }
   };
 
-  const logout = useCallback(() => {
-    setUser(null);
-    setCompanyId(null);
-    localStorage.removeItem('majorstockx-user');
-    localStorage.removeItem('majorstockx-company-id');
-    router.push('/login');
-    toast({ title: "Sessão terminada", description: "Foi desconectado com sucesso." });
-  }, [router, toast]);
+  const logout = useCallback(async () => {
+    try {
+        await signOut(auth);
+        setUser(null);
+        setCompanyId(null);
+        router.push('/login');
+        toast({ title: "Sessão terminada" });
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Erro ao sair' });
+    }
+  }, [auth, router, toast]);
+
+  const canView = (module: ModulePermission) => {
+    if (!user) return false;
+    if (user.role === 'Admin') return true;
+    const level = user.permissions?.[module];
+    return level === 'read' || level === 'write';
+  };
+
+  const canEdit = (module: ModulePermission) => {
+    if (!user) return false;
+    if (user.role === 'Admin') return true;
+    return user.permissions?.[module] === 'write';
+  };
+
 
   // --- DATA FETCHING LOGIC ---
 
@@ -469,11 +472,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations]);
 
 
-  const isDataLoading = authLoading || productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading;
+  const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading;
 
   const value: InventoryContextType = {
-    user, companyId, isSuperAdmin, loading: isDataLoading,
+    user, companyId, loading: isDataLoading,
     login, logout, registerCompany,
+    canView, canEdit,
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
     locations, isMultiLocation, addProduct, updateProduct, deleteProduct, transferStock,
@@ -486,3 +490,5 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
+
+    

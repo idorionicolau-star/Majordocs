@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useContext } from 'react';
@@ -19,6 +20,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 const registerSchema = z.object({
   companyName: z.string().min(3, 'O nome da empresa deve ter pelo menos 3 caracteres.').refine(s => !s.includes('@'), 'O nome da empresa não pode conter "@".'),
   adminUsername: z.string().min(3, 'O nome de utilizador deve ter pelo menos 3 caracteres.').refine(s => !s.includes('@'), 'O nome de utilizador não pode conter "@".'),
+  adminEmail: z.string().email("O email do administrador não é válido."),
   adminPassword: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.'),
 });
 
@@ -52,36 +54,20 @@ export default function RegisterPage() {
     }
 
     try {
-        const normalizedCompanyName = data.companyName.toLowerCase().replace(/\s+/g, '');
-        const fullAdminUsername = `${data.adminUsername}@${normalizedCompanyName}`;
-        const success = await context.registerCompany(data.companyName, fullAdminUsername, data.adminPassword);
+        const success = await context.registerCompany(data.companyName, data.adminUsername, data.adminEmail, data.adminPassword);
         if (success) {
             toast({
                 title: 'Empresa Registada com Sucesso!',
-                description: `Pode agora fazer login com "${fullAdminUsername}".`,
+                description: `Pode agora fazer login com o email "${data.adminEmail}".`,
             });
             router.push('/login');
-        } else {
-            throw new Error('Não foi possível registar a empresa. O nome da empresa ou utilizador pode já existir.');
         }
     } catch (error: any) {
-        toast({
-            variant: 'destructive',
-            title: 'Erro no Registo',
-            description: error.message || 'Ocorreu um erro inesperado.',
-        });
+       // O toast de erro já é tratado dentro da função registerCompany
     } finally {
         setIsLoading(false);
     }
   };
-
-  const generateLoginPreview = () => {
-    const normalizedCompany = (companyName || '').toLowerCase().replace(/\s+/g, '');
-    if (adminUsername && normalizedCompany) {
-      return `${adminUsername}@${normalizedCompany}`;
-    }
-    return 'seu_user@sua_empresa';
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
@@ -103,10 +89,15 @@ export default function RegisterPage() {
                 <div className="space-y-2">
                     <Label htmlFor="adminUsername">Nome de Utilizador do Administrador</Label>
                     <Input id="adminUsername" {...register('adminUsername')} placeholder="Ex: admin" />
-                    <p className="text-[11px] text-muted-foreground bg-muted p-2 rounded-md">
-                        O seu login será: <span className="font-bold font-mono">{generateLoginPreview()}</span>
-                    </p>
                     {errors.adminUsername && <p className="text-xs text-red-500">{errors.adminUsername.message}</p>}
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="adminEmail">Email do Administrador</Label>
+                    <Input id="adminEmail" {...register('adminEmail')} placeholder="Ex: admin@suaempresa.com" type="email" />
+                    <p className="text-[11px] text-muted-foreground bg-muted p-2 rounded-md">
+                        Este será o seu email para fazer login no sistema.
+                    </p>
+                    {errors.adminEmail && <p className="text-xs text-red-500">{errors.adminEmail.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="adminPassword">Senha do Administrador</Label>
@@ -136,3 +127,5 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+    

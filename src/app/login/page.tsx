@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useContext } from 'react';
@@ -17,7 +18,7 @@ import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const loginSchema = z.object({
-  username: z.string().min(1, 'O nome de utilizador é obrigatório.').includes('@', { message: 'O formato deve ser utilizador@empresa' }),
+  email: z.string().email('O email fornecido não é válido.'),
   password: z.string().min(1, 'A senha é obrigatória.'),
 });
 
@@ -42,27 +43,28 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       if (login) {
-        const success = await login(data.username, data.password);
+        const success = await login(data.email, data.password);
         if (success) {
           toast({
             title: 'Login bem-sucedido!',
             description: 'A redirecionar para o dashboard...',
           });
           router.push('/dashboard');
-        } else {
-          // A função login já lança um erro específico, então este else pode nunca ser alcançado
-          // se a função login for consistente. Mas é um bom fallback.
-          throw new Error('Credenciais inválidas. Verifique o seu nome de utilizador e senha.');
-        }
+        } 
+        // A função login agora lança erros específicos que são apanhados pelo catch.
       } else {
         throw new Error('Serviço de autenticação não disponível.');
       }
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro de Login',
-        description: error.message || 'Ocorreu um erro ao tentar fazer login.',
-      });
+      // O toast de erro já é tratado dentro da função login, 
+      // mas mantemos este catch como um fallback.
+      if (!toast) { // Se o toast não for acionado dentro do login
+          toast({
+            variant: 'destructive',
+            title: 'Erro de Login',
+            description: error.message || 'Ocorreu um erro ao tentar fazer login.',
+          });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -81,9 +83,9 @@ export default function LoginPage() {
         <CardContent>
              <form onSubmit={handleSubmit(handleLogin)} className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="username">Login (utilizador@empresa)</Label>
-                    <Input id="username" {...register('username')} placeholder="utilizador@empresa" />
-                    {errors.username && <p className="text-xs text-red-500">{errors.username.message}</p>}
+                    <Label htmlFor="email">Email de Login</Label>
+                    <Input id="email" {...register('email')} placeholder="ex: admin@suaempresa.com" type="email" />
+                    {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="password">Senha</Label>
@@ -113,3 +115,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
