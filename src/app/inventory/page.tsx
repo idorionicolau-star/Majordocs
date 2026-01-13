@@ -331,7 +331,7 @@ export default function InventoryPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteProduct}>Apagar</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDeleteProduct} variant="destructive">Apagar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -551,3 +551,5 @@ export default function InventoryPage() {
     </>
   );
 }
+
+    
