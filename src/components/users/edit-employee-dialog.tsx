@@ -85,18 +85,20 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
     const currentLevel = currentPermissions[moduleId];
     let newLevel: PermissionLevel;
   
-    if (level === 'read') {
-      newLevel = currentLevel === 'read' || currentLevel === 'write' ? 'none' : 'read';
-    } else { // 'write'
-      newLevel = currentLevel === 'write' ? 'read' : 'write';
-    }
-  
-    if (newLevel === 'write') {
-      form.setValue(`permissions.${moduleId}`, 'write', { shouldDirty: true });
-    } else if (newLevel === 'read') {
-       form.setValue(`permissions.${moduleId}`, 'read', { shouldDirty: true });
-    } else {
-      form.setValue(`permissions.${moduleId}`, 'none', { shouldDirty: true });
+     if (level === 'write') {
+        newLevel = currentLevel === 'write' ? 'read' : 'write';
+        if (newLevel === 'write') {
+            form.setValue(`permissions.${moduleId}`, 'write', { shouldDirty: true });
+        } else {
+             form.setValue(`permissions.${moduleId}`, 'read', { shouldDirty: true });
+        }
+    } else { // 'read'
+        newLevel = currentLevel === 'read' || currentLevel === 'write' ? 'none' : 'read';
+        if (newLevel === 'read') {
+            form.setValue(`permissions.${moduleId}`, 'read', { shouldDirty: true });
+        } else {
+            form.setValue(`permissions.${moduleId}`, 'none', { shouldDirty: true });
+        }
     }
   };
 
@@ -118,9 +120,10 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
       permissions: values.role === 'Admin' ? permissionsForAdmin : values.permissions,
     };
 
-    // Only include password if a new one is provided.
     if (values.password && values.password.length >= 6) {
-      updatedEmployeeData.password = values.password;
+        updatedEmployeeData.password = values.password;
+    } else {
+        updatedEmployeeData.password = employee.password;
     }
     
     onUpdateEmployee({

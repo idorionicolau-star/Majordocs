@@ -78,18 +78,20 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
     const currentLevel = currentPermissions[moduleId];
     let newLevel: PermissionLevel;
 
-    if (level === 'read') {
-      newLevel = currentLevel === 'read' || currentLevel === 'write' ? 'none' : 'read';
-    } else { // 'write'
-      newLevel = currentLevel === 'write' ? 'read' : 'write';
-    }
-
-    if (newLevel === 'write') {
-      form.setValue(`permissions.${moduleId}`, 'write', { shouldDirty: true });
-    } else if (newLevel === 'read') {
-      form.setValue(`permissions.${moduleId}`, 'read', { shouldDirty: true });
-    } else {
-      form.setValue(`permissions.${moduleId}`, 'none', { shouldDirty: true });
+    if (level === 'write') {
+        newLevel = currentLevel === 'write' ? 'read' : 'write';
+        if (newLevel === 'write') {
+            form.setValue(`permissions.${moduleId}`, 'write', { shouldDirty: true });
+        } else {
+             form.setValue(`permissions.${moduleId}`, 'read', { shouldDirty: true });
+        }
+    } else { // 'read'
+        newLevel = currentLevel === 'read' || currentLevel === 'write' ? 'none' : 'read';
+        if (newLevel === 'read') {
+            form.setValue(`permissions.${moduleId}`, 'read', { shouldDirty: true });
+        } else {
+            form.setValue(`permissions.${moduleId}`, 'none', { shouldDirty: true });
+        }
     }
   };
 
