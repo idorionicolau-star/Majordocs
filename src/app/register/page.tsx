@@ -47,7 +47,7 @@ export default function RegisterPage() {
 
   const handleRegister = async (data: RegisterFormValues) => {
     setIsLoading(true);
-    if (!context?.registerCompany) {
+    if (!context?.registerCompany || !context?.login) {
         toast({ variant: 'destructive', title: 'Erro', description: 'Função de registo não disponível.' });
         setIsLoading(false);
         return;
@@ -58,12 +58,19 @@ export default function RegisterPage() {
         if (success) {
             toast({
                 title: 'Empresa Registada com Sucesso!',
-                description: `Pode agora fazer login com o email "${data.adminEmail}".`,
+                description: `A fazer login com a conta "${data.adminEmail}"...`,
             });
-            router.push('/login');
+            // Automatically log in the user after successful registration
+            const loginSuccess = await context.login(data.adminEmail, data.adminPassword);
+            if (loginSuccess) {
+              router.push('/dashboard');
+            } else {
+              // This case is unlikely but handled for completeness
+              router.push('/login');
+            }
         }
     } catch (error: any) {
-       // O toast de erro já é tratado dentro da função registerCompany
+       // The toast for the error is already handled inside the registerCompany function
     } finally {
         setIsLoading(false);
     }
@@ -127,5 +134,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-
-    
