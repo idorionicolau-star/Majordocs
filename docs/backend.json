@@ -1,6 +1,15 @@
 
 {
   "entities": {
+    "User": {
+      "title": "User",
+      "type": "object",
+      "description": "Top-level user object for quick companyId lookup.",
+      "properties": {
+        "companyId": { "type": "string" }
+      },
+      "required": ["companyId"]
+    },
     "Company": {
       "title": "Company",
       "type": "object",
@@ -132,6 +141,13 @@
   },
   "firestore": {
     "structure": [
+       {
+        "path": "/users/{userId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/User" },
+          "description": "Stores a mapping from user ID to company ID for fast lookups."
+        }
+      },
       {
         "path": "/companies/{companyId}",
         "definition": {

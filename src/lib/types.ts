@@ -13,13 +13,10 @@ export type ModulePermission =
   | 'settings'
   | 'companies';
 
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: 'Admin' | 'Employee';
-  companyId: string; // Links user to a company
-};
+// This is the User Map object for quick lookups.
+export type UserMap = {
+  companyId: string;
+}
 
 export type Employee = {
   id:string;

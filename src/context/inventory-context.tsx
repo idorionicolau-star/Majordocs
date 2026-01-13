@@ -125,23 +125,33 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
-        const allEmployeesQuery = query(collectionGroup(firestore, 'employees'));
+        // More scalable approach: Read from the top-level /users collection first
+        const userMapDocRef = doc(firestore, `users/${fbUser.uid}`);
         
         try {
-          const snapshot = await getDocs(allEmployeesQuery);
-          const userDoc = snapshot.docs.find(doc => doc.id === fbUser.uid);
+          const userMapDoc = await getDoc(userMapDocRef);
 
-          if (userDoc) {
-            const employeeData = userDoc.data() as Employee;
-            const userCompanyId = userDoc.ref.parent.parent?.id;
+          if (userMapDoc.exists()) {
+            const userMapData = userMapDoc.data();
+            const userCompanyId = userMapData.companyId;
 
             if (userCompanyId) {
-              setUser({ ...employeeData, id: userDoc.id });
-              setCompanyId(userCompanyId);
-              setNeedsOnboarding(false);
+                // Now fetch the detailed employee profile
+                const employeeDocRef = doc(firestore, `companies/${userCompanyId}/employees/${fbUser.uid}`);
+                const employeeDoc = await getDoc(employeeDocRef);
+
+                if (employeeDoc.exists()) {
+                    const employeeData = employeeDoc.data() as Employee;
+                    setUser({ ...employeeData, id: employeeDoc.id });
+                    setCompanyId(userCompanyId);
+                    setNeedsOnboarding(false);
+                } else {
+                    // Data inconsistency: user map exists but employee profile doesn't
+                     throw new Error("Perfil de funcionário não encontrado.");
+                }
             } else {
-              // Should not happen if data is consistent
-              setUser(null); setCompanyId(null);
+                 // Should not happen if data is consistent
+                throw new Error("ID da empresa não encontrado no perfil do utilizador.");
             }
           } else {
             // New user (likely from Google Sign-In) who needs to complete onboarding
@@ -223,16 +233,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         }
 
         const newCompanyRef = doc(companiesRef);
-        transaction.set(newCompanyRef, { name: companyName });
-
-        const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
-        const newEmployeeRef = doc(employeesCollectionRef, firebaseUser.uid);
         
         const adminPermissions = allPermissions.reduce((acc, p) => {
           acc[p.id] = 'write';
           return acc;
         }, {} as Record<ModulePermission, PermissionLevel>);
         
+        // 1. Create the detailed employee document
+        const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
+        const newEmployeeRef = doc(employeesCollectionRef, firebaseUser.uid);
         transaction.set(newEmployeeRef, {
           username: firebaseUser.displayName || 'Novo Utilizador',
           email: firebaseUser.email || 'sem-email',
@@ -240,6 +249,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           companyId: newCompanyRef.id,
           permissions: adminPermissions,
         });
+
+        // 2. Create the user mapping document in the top-level /users collection
+        const userMapDocRef = doc(firestore, `users/${firebaseUser.uid}`);
+        transaction.set(userMapDocRef, { companyId: newCompanyRef.id });
+        
+        // 3. Create the company document
+        transaction.set(newCompanyRef, { name: companyName, ownerId: firebaseUser.uid });
       });
       setNeedsOnboarding(false); // Onboarding complete
       // Re-fetch will be triggered by onAuthStateChanged finding the new doc
@@ -257,41 +273,45 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!firestore) return false;
   
     try {
-        await createUserWithEmailAndPassword(auth, adminEmail, adminPass);
-        // Login will be handled by onAuthStateChanged, which will then trigger onboarding if needed (though not in this flow)
-        // Let's create the company and user profile directly here
+      // 1. Create the user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPass);
+      const newUserId = userCredential.user.uid;
+      
+      // 2. Run a transaction to create all necessary Firestore documents
+      await runTransaction(firestore, async (transaction) => {
+        const companiesRef = collection(firestore, 'companies');
+        const companyQuery = query(companiesRef, where('name', '==', companyName));
+        const existingCompanySnapshot = await getDocs(companyQuery);
+        if (!existingCompanySnapshot.empty) {
+          throw new Error('Uma empresa com este nome já existe.');
+        }
         
-        const userCredential = await signInWithEmailAndPassword(auth, adminEmail, adminPass);
-        const newUserId = userCredential.user.uid;
-
-        await runTransaction(firestore, async (transaction) => {
-            const companiesRef = collection(firestore, 'companies');
-            const companyQuery = query(companiesRef, where('name', '==', companyName));
-            const existingCompanySnapshot = await getDocs(companyQuery);
-            if (!existingCompanySnapshot.empty) {
-              throw new Error('Uma empresa com este nome já existe.');
-            }
-            
-            const newCompanyRef = doc(companiesRef);
-            transaction.set(newCompanyRef, { name: companyName });
-
-            const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
-            const newEmployeeRef = doc(employeesCollectionRef, newUserId);
-            
-            const adminPermissions = allPermissions.reduce((acc, p) => {
-              acc[p.id] = 'write';
-              return acc;
-            }, {} as Record<ModulePermission, PermissionLevel>);
-            
-            transaction.set(newEmployeeRef, {
-              username: adminUsername,
-              email: adminEmail,
-              role: 'Admin',
-              companyId: newCompanyRef.id,
-              permissions: adminPermissions,
-            });
+        const newCompanyRef = doc(companiesRef);
+        
+        const adminPermissions = allPermissions.reduce((acc, p) => {
+          acc[p.id] = 'write';
+          return acc;
+        }, {} as Record<ModulePermission, PermissionLevel>);
+        
+        // Create the detailed employee document
+        const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
+        const newEmployeeRef = doc(employeesCollectionRef, newUserId);
+        transaction.set(newEmployeeRef, {
+          username: adminUsername,
+          email: adminEmail,
+          role: 'Admin',
+          companyId: newCompanyRef.id,
+          permissions: adminPermissions,
         });
-      // Login will be handled by onAuthStateChanged after creation
+        
+        // Create the user mapping document
+        const userMapDocRef = doc(firestore, `users/${newUserId}`);
+        transaction.set(userMapDocRef, { companyId: newCompanyRef.id });
+
+        // Create the company document
+        transaction.set(newCompanyRef, { name: companyName, ownerId: newUserId });
+      });
+      // onAuthStateChanged will handle login and redirection
       return true;
     } catch (error: any) {
       console.error('Registration error: ', error);

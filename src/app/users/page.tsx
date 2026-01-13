@@ -9,8 +9,8 @@ import { AddEmployeeDialog } from "@/components/users/add-employee-dialog";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Employee, ModulePermission, PermissionLevel } from "@/lib/types";
-import { useFirestore, useCollection, useMemoFirebase, initializeFirebase } from "@/firebase";
-import { collection, addDoc, doc, deleteDoc, getDocs, query, where, updateDoc, setDoc } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, addDoc, doc, deleteDoc, getDocs, query, where, updateDoc, setDoc, runTransaction } from "firebase/firestore";
 import { allPermissions } from "@/lib/data";
 import {
   AlertDialog,
@@ -43,13 +43,11 @@ export default function UsersPage() {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
   const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId' | 'email'> & {email: string}) => {
-    if (!employeesCollectionRef || !companyId || !companyData) return;
+    if (!firestore || !companyId || !companyData) return;
 
-    // Use a company name safe for an email
     const safeCompanyName = (companyData.name || "company").toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9-]/g, '');
     const fullEmail = `${employeeData.email}@${safeCompanyName}.com`;
 
-    // --- Secondary App Strategy ---
     const secondaryAppName = `SecondaryAppForUserCreation-${Date.now()}`;
     const secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
     const secondaryAuth = getAuth(secondaryApp);
@@ -59,25 +57,30 @@ export default function UsersPage() {
       const userCredential = await createUserWithEmailAndPassword(secondaryAuth, fullEmail, employeeData.password!);
       const newUserId = userCredential.user.uid;
 
-      // 2. Prepare Firestore document
-      const employeeDocRef = doc(employeesCollectionRef, newUserId);
-      
-      const permissionsToSet = employeeData.role === 'Admin' 
-        ? allPermissions.reduce((acc, p) => ({...acc, [p.id]: 'write' as PermissionLevel}), {} as Record<ModulePermission, PermissionLevel>) 
-        : employeeData.permissions;
+      // 2. Run transaction to create both employee and user map documents
+       await runTransaction(firestore, async (transaction) => {
+        const permissionsToSet = employeeData.role === 'Admin' 
+            ? allPermissions.reduce((acc, p) => ({...acc, [p.id]: 'write' as PermissionLevel}), {} as Record<ModulePermission, PermissionLevel>) 
+            : employeeData.permissions;
 
-      // The object to save in Firestore. Note: NO password.
-      const employeeForFirestore: Omit<Employee, 'id' | 'password'> = {
-        username: employeeData.username,
-        email: fullEmail,
-        role: employeeData.role,
-        companyId: companyId,
-        permissions: permissionsToSet
-      };
+        // The object to save in the company's employee subcollection. Note: NO password.
+        const employeeForFirestore: Omit<Employee, 'id' | 'password'> = {
+          username: employeeData.username,
+          email: fullEmail,
+          role: employeeData.role,
+          companyId: companyId,
+          permissions: permissionsToSet
+        };
+        
+        // Path to the detailed employee document
+        const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, newUserId);
+        transaction.set(employeeDocRef, employeeForFirestore);
 
-      // 3. Save the employee document to Firestore
-      // We use setDoc because we are defining the ID ourselves using the UID from Auth
-      await setDoc(employeeDocRef, employeeForFirestore);
+        // Path to the user map document
+        const userMapDocRef = doc(firestore, `users/${newUserId}`);
+        transaction.set(userMapDocRef, { companyId: companyId });
+       });
+
 
       toast({
         title: "Funcionário Adicionado",
@@ -98,7 +101,6 @@ export default function UsersPage() {
       });
       console.error("Erro ao adicionar funcionário: ", error);
     } finally {
-        // 4. Clean up the secondary app instance
         await deleteApp(secondaryApp);
     }
   };
@@ -108,8 +110,6 @@ export default function UsersPage() {
     
     const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employee.id);
     
-    // Create a base object with properties that are always updated
-    // We never update password from the client-side after creation for security reasons.
     const { id, companyId: _, password, ...updateData } = employee;
     
     await updateDoc(employeeDocRef, updateData);
@@ -125,6 +125,10 @@ export default function UsersPage() {
       // Deleting the user from Firestore. Deleting from Auth should be done via a Cloud Function for security.
       const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employeeToDelete.id);
       await deleteDoc(employeeDocRef);
+
+      const userMapDocRef = doc(firestore, `users`, employeeToDelete.id);
+      await deleteDoc(userMapDocRef);
+
       toast({
         title: "Funcionário Removido",
         description: `O funcionário "${employeeToDelete.username}" foi removido da base de dados.`,
