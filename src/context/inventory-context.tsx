@@ -190,14 +190,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       await signInWithPopup(auth, provider);
       // onAuthStateChanged will handle the rest, including redirection to dashboard or onboarding
     } catch (error: any) {
-      console.error("Google Sign-In Error:", { code: error.code, message: error.message });
+      console.error("Erro Completo:", error);
       let description = 'Ocorreu um erro inesperado durante o login com o Google.';
       if (error.code === 'auth/popup-closed-by-user') {
         description = 'A janela de login foi fechada antes da conclusão.';
       } else if (error.code === 'auth/operation-not-allowed') {
-        description = 'O login com Google não está ativado no seu projeto Firebase. Por favor, ative-o no Console do Firebase.';
+        description = 'O login com Google não está ativado. Por favor, ative-o no Console do Firebase (Authentication > Sign-in method).';
       } else if (error.code === 'auth/unauthorized-domain') {
-          description = 'Este domínio não está autorizado para operações de login. Por favor, adicione-o à lista de domínios autorizados no Console do Firebase.';
+          description = 'Este domínio não está autorizado. Por favor, adicione-o à lista de domínios autorizados no Console do Firebase (Authentication > Settings).';
       }
       toast({ 
         variant: 'destructive', 
@@ -257,7 +257,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!firestore) return false;
   
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPass);
+        await createUserWithEmailAndPassword(auth, adminEmail, adminPass);
+        // Login will be handled by onAuthStateChanged, which will then trigger onboarding if needed (though not in this flow)
+        // Let's create the company and user profile directly here
+        
+        const userCredential = await signInWithEmailAndPassword(auth, adminEmail, adminPass);
         const newUserId = userCredential.user.uid;
 
         await runTransaction(firestore, async (transaction) => {
@@ -287,7 +291,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
               permissions: adminPermissions,
             });
         });
-      // Login will be handled by onAuthStateChanged
+      // Login will be handled by onAuthStateChanged after creation
       return true;
     } catch (error: any) {
       console.error('Registration error: ', error);
