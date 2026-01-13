@@ -60,7 +60,7 @@ export default function UsersPage() {
         : employeeData.permissions;
 
       // The object to save in Firestore. Note: NO password.
-      const employeeForFirestore: Omit<Employee, 'id' | 'password' | 'token'> = {
+      const employeeForFirestore: Omit<Employee, 'id' | 'password'> = {
         username: employeeData.username,
         email: fullEmail,
         role: employeeData.role,
