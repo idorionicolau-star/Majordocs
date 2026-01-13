@@ -88,8 +88,10 @@ export default function LoginPage() {
                       <Label htmlFor="email">Email de Login</Label>
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger type="button">
-                            <Info className="h-4 w-4 text-muted-foreground" />
+                          <TooltipTrigger asChild>
+                            <button type="button" className="focus:outline-none">
+                              <Info className="h-4 w-4 text-muted-foreground" />
+                            </button>
                           </TooltipTrigger>
                           <TooltipContent side="top" align="end" className="max-w-xs">
                              <p className="text-xs">
