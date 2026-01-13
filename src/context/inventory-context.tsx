@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -23,6 +22,7 @@ import {
   User as FirebaseAuthUser,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
 } from 'firebase/auth';
 import {
   collection,
@@ -193,25 +193,25 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithGoogle = async (): Promise<void> => {
+    if (!auth) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Serviço de autenticação não configurado.' });
+        return;
+    }
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
+    
     try {
-      // The signInWithPopup must be called directly in the event handler (synchronously)
-      // to avoid being blocked by browsers.
-      await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle the rest (redirection to dashboard or onboarding)
+      // Use signInWithRedirect for a more robust flow that avoids popup blockers.
+      // The result of this is handled by the onAuthStateChanged listener.
+      await signInWithRedirect(auth, provider);
     } catch (error: any) {
-      console.error("Erro Completo:", error);
-      let description = 'Ocorreu um erro inesperado durante o login com o Google.';
+      console.error("Erro ao iniciar o redirecionamento do Google:", error);
+       let description = 'Ocorreu um erro inesperado ao tentar iniciar o login com o Google.';
       
-      if (error.code === 'auth/popup-closed-by-user') {
-        description = 'A janela de login foi fechada antes da conclusão.';
-      } else if (error.code === 'auth/operation-not-allowed') {
+      if (error.code === 'auth/operation-not-allowed') {
         description = 'O login com Google não está ativado. Por favor, ative-o no Console do Firebase (Authentication > Sign-in method).';
       } else if (error.code === 'auth/unauthorized-domain') {
           description = 'Este domínio não está autorizado. Por favor, adicione-o à lista de domínios autorizados no Console do Firebase (Authentication > Settings).';
-      } else if (error.code === 'auth/popup-blocked') {
-        description = 'O pop-up de login foi bloqueado pelo seu navegador. Por favor, permita os pop-ups para este site.';
       }
 
       toast({ 
