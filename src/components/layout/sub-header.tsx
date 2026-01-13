@@ -13,20 +13,9 @@ import type { ModulePermission } from "@/lib/types";
 export function SubHeader() {
   const pathname = usePathname();
   const scrollRef = React.useRef<HTMLDivElement>(null);
-  const { user, isSuperAdmin } = useContext(InventoryContext) || {};
+  const { canView } = useContext(InventoryContext) || { canView: () => false };
 
-  const hasPermission = (permissionId: ModulePermission) => {
-    if (!user) return false;
-    if (isSuperAdmin) return true; // Super admin sees all
-    if (user.role === 'Admin') {
-       if (permissionId === 'companies') return false; // Regular admins don't see this
-       return true;
-    }
-    const level = user.permissions[permissionId];
-    return level === 'read' || level === 'write';
-  }
-
-  const navItems = mainNavItems.filter(item => hasPermission(item.id));
+  const navItems = mainNavItems.filter(item => canView(item.id));
 
   React.useEffect(() => {
     const activeLink = document.getElementById(`nav-link-${pathname.replace('/', '')}`);
