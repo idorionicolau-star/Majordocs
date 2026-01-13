@@ -9,7 +9,7 @@ import { AddEmployeeDialog } from "@/components/users/add-employee-dialog";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Employee, ModulePermission, PermissionLevel } from "@/lib/types";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, initializeFirebase } from "@/firebase";
 import { collection, addDoc, doc, deleteDoc, getDocs, query, where, updateDoc, setDoc } from "firebase/firestore";
 import { allPermissions } from "@/lib/data";
 import {
@@ -22,13 +22,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
+import { firebaseConfig } from "@/firebase/config";
+import { initializeApp, deleteApp } from "firebase/app";
 
 
 export default function UsersPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { companyId, user, loading, companyData, auth } = useContext(InventoryContext) || {};
+  const { companyId, user, loading, companyData } = useContext(InventoryContext) || {};
   const isAdmin = user?.role === 'Admin';
 
   const employeesCollectionRef = useMemoFirebase(() => {
@@ -41,15 +43,20 @@ export default function UsersPage() {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
   const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId' | 'email'> & {email: string}) => {
-    if (!employeesCollectionRef || !companyId || !companyData || !auth) return;
+    if (!employeesCollectionRef || !companyId || !companyData) return;
 
     // Use a company name safe for an email
-    const safeCompanyName = companyData.name.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9-]/g, '');
+    const safeCompanyName = (companyData.name || "company").toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9-]/g, '');
     const fullEmail = `${employeeData.email}@${safeCompanyName}.com`;
 
+    // --- Secondary App Strategy ---
+    const secondaryAppName = `SecondaryAppForUserCreation-${Date.now()}`;
+    const secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
+    const secondaryAuth = getAuth(secondaryApp);
+
     try {
-      // 1. Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, fullEmail, employeeData.password!);
+      // 1. Create user in the secondary Firebase Auth instance
+      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, fullEmail, employeeData.password!);
       const newUserId = userCredential.user.uid;
 
       // 2. Prepare Firestore document
@@ -69,6 +76,7 @@ export default function UsersPage() {
       };
 
       // 3. Save the employee document to Firestore
+      // We use setDoc because we are defining the ID ourselves using the UID from Auth
       await setDoc(employeeDocRef, employeeForFirestore);
 
       toast({
@@ -89,6 +97,9 @@ export default function UsersPage() {
         description: message,
       });
       console.error("Erro ao adicionar funcionário: ", error);
+    } finally {
+        // 4. Clean up the secondary app instance
+        await deleteApp(secondaryApp);
     }
   };
 
@@ -98,13 +109,11 @@ export default function UsersPage() {
     const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employee.id);
     
     // Create a base object with properties that are always updated
+    // We never update password from the client-side after creation for security reasons.
     const { id, companyId: _, password, ...updateData } = employee;
     
     await updateDoc(employeeDocRef, updateData);
     
-    // Password update would be handled separately via Admin SDK or dedicated Cloud Function
-    // for security reasons. We don't update password from the client-side after creation.
-
     toast({
       title: "Funcionário Atualizado",
       description: `As informações de "${employee.username}" foram atualizadas.`,
@@ -141,7 +150,7 @@ export default function UsersPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Esta ação irá remover permanentemente o funcionário "{employeeToDelete?.username}".
+                        Esta ação irá remover permanentemente o funcionário "{employeeToDelete?.username}". A conta de autenticação terá de ser removida manualmente na consola Firebase.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
