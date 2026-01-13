@@ -74,25 +74,25 @@ function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLoca
       stock: 0,
       lowStockThreshold: 10,
       criticalStockThreshold: 5,
-      location: locations.length > 0 ? locations[0].id : '',
+      location: "", // Começamos vazio para preencher no useEffect
     },
   });
 
-   useEffect(() => {
-    if (locations.length > 0) {
-      const savedLocation = localStorage.getItem('majorstockx-last-product-location');
-      const defaultLocation = savedLocation && locations.some(l => l.id === savedLocation) ? savedLocation : locations[0].id;
-      if (!form.getValues('location')) {
-         form.setValue('location', defaultLocation);
-      }
-    }
-  }, [locations, form]);
-
+  // FUNÇÃO ÚNICA DE RESET E MEMÓRIA
   useEffect(() => {
     if (open) {
+      // 1. Tentar pegar do localStorage
       const savedLocation = localStorage.getItem('majorstockx-last-product-location');
-      const defaultLocation = savedLocation && locations.some(l => l.id === savedLocation) ? savedLocation : locations.length > 0 ? locations[0].id : '';
       
+      // 2. Validar se a localização salva ainda existe na lista atual
+      const locationExists = locations.some(l => l.id === savedLocation);
+      
+      // 3. Definir a localização final (Salva -> ou a Primeira da lista -> ou Vazio)
+      const finalLocation = (savedLocation && locationExists) 
+        ? savedLocation 
+        : (locations.length > 0 ? locations[0].id : "");
+
+      // 4. Resetar o formulário com os valores padrão + a localização memorizada
       form.reset({
         category: "",
         name: "",
@@ -100,10 +100,11 @@ function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLoca
         stock: 0,
         lowStockThreshold: 10,
         criticalStockThreshold: 5,
-        location: defaultLocation,
+        location: finalLocation,
       });
     }
-  }, [open, form, locations]);
+  }, [open, locations, form]);
+
 
   const handleProductSelect = (productName: string, product?: CatalogProduct) => {
     form.setValue('name', productName);
@@ -117,12 +118,15 @@ function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLoca
 
 
   function onSubmit(values: AddProductFormValues) {
+    // Validação extra para Multi-Localização
     if (isMultiLocation && !values.location) {
       form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
       return;
     }
+
+    // MEMORIZAR: Salva a localização escolhida para a próxima vez
     if (values.location) {
-        localStorage.setItem('majorstockx-last-product-location', values.location);
+      localStorage.setItem('majorstockx-last-product-location', values.location);
     }
 
     const newProduct: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'> = {
@@ -135,7 +139,6 @@ function AddProductDialogContent({ open, onOpenChange, onAddProduct, isMultiLoca
       location: values.location || (locations.length > 0 ? locations[0].id : 'Principal'),
     };
     onAddProduct(newProduct);
-    form.reset();
     onOpenChange(false);
   }
   
