@@ -76,18 +76,17 @@ export default function LoginPage() {
   };
 
   const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
     if (!signInWithGoogle) {
         toast({ variant: 'destructive', title: 'Erro', description: 'Login com Google não configurado.' });
-        setGoogleLoading(false);
         return;
     }
+    setGoogleLoading(true);
     try {
         await signInWithGoogle();
         // The context's onAuthStateChanged will handle redirection
     } catch (error) {
       // Errors are toasted within the signInWithGoogle function in the context
-      console.error("Google Sign-in error caught in page:", error);
+      // No need to console.error here as the context does it.
     } finally {
       setGoogleLoading(false);
     }
@@ -167,3 +166,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

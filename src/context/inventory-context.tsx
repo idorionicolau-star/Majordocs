@@ -196,26 +196,31 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
-      setLoading(true);
+      // The signInWithPopup must be called directly in the event handler (synchronously)
+      // to avoid being blocked by browsers.
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle the rest, including redirection to dashboard or onboarding
+      // onAuthStateChanged will handle the rest (redirection to dashboard or onboarding)
     } catch (error: any) {
       console.error("Erro Completo:", error);
       let description = 'Ocorreu um erro inesperado durante o login com o Google.';
+      
       if (error.code === 'auth/popup-closed-by-user') {
         description = 'A janela de login foi fechada antes da conclusão.';
       } else if (error.code === 'auth/operation-not-allowed') {
         description = 'O login com Google não está ativado. Por favor, ative-o no Console do Firebase (Authentication > Sign-in method).';
       } else if (error.code === 'auth/unauthorized-domain') {
           description = 'Este domínio não está autorizado. Por favor, adicione-o à lista de domínios autorizados no Console do Firebase (Authentication > Settings).';
+      } else if (error.code === 'auth/popup-blocked') {
+        description = 'O pop-up de login foi bloqueado pelo seu navegador. Por favor, permita os pop-ups para este site.';
       }
+
       toast({ 
         variant: 'destructive', 
         title: 'Erro de Login com Google', 
         description: description
       });
-    } finally {
-      setLoading(false);
+      // Re-throw the error so the calling component knows the login failed.
+      throw error;
     }
   };
 
@@ -613,3 +618,5 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
+
+    
