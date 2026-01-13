@@ -89,7 +89,8 @@ export default function LoginPage() {
                      <div className="text-[11px] text-muted-foreground bg-muted p-2 rounded-md flex items-start gap-2">
                         <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
                         <span>
-                            O seu email de login tem o formato de email completo que usou no registo (ex: `utilizador@empresa.com`).
+                            **Admin:** use o email completo do registo (ex: `admin@empresa.com`).<br />
+                            **Funcionário:** use o formato `utilizador@empresa.com`.
                         </span>
                     </div>
                 </div>
