@@ -86,22 +86,6 @@ export default function LoginPage() {
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="email">Email de Login</Label>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button type="button" className="focus:outline-none">
-                              <Info className="h-4 w-4 text-muted-foreground" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" align="end" className="max-w-xs">
-                             <p className="text-xs">
-                                <strong>Admin:</strong> use o email completo do registo (ex: `admin@empresa.com`).
-                                <br />
-                                <strong>Funcionário:</strong> use o formato `utilizador@empresa.com`.
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
                     </div>
                     <Input id="email" {...register('email')} placeholder="ex: admin@suaempresa.com" type="email" />
                     {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
