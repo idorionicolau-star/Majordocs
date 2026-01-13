@@ -10,7 +10,7 @@ import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Employee, ModulePermission, PermissionLevel } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, addDoc, doc, deleteDoc, getDocs, query, where, updateDoc } from "firebase/firestore";
+import { collection, addDoc, doc, deleteDoc, getDocs, query, where, updateDoc, setDoc } from "firebase/firestore";
 import { allPermissions } from "@/lib/data";
 import {
   AlertDialog,
@@ -40,7 +40,7 @@ export default function UsersPage() {
   
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
-  const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId' | 'email'> & {email:string}) => {
+  const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId' | 'email'> & {email: string}) => {
     if (!employeesCollectionRef || !companyId || !companyData || !auth) return;
 
     const fullEmail = `${employeeData.email}@${companyData.name.toLowerCase().replace(/\s+/g, '')}`;
@@ -50,12 +50,17 @@ export default function UsersPage() {
       const newUserId = userCredential.user.uid;
 
       const employeeDocRef = doc(employeesCollectionRef, newUserId);
+      
+      const permissionsToSet = employeeData.role === 'Admin' 
+        ? allPermissions.reduce((acc, p) => ({...acc, [p.id]: 'write' as PermissionLevel}), {} as Record<ModulePermission, PermissionLevel>) 
+        : employeeData.permissions;
+
       await setDoc(employeeDocRef, {
         username: employeeData.username,
         email: fullEmail,
         role: employeeData.role,
         companyId: companyId,
-        permissions: employeeData.role === 'Admin' ? allPermissions.reduce((acc, p) => ({...acc, [p.id]: 'write' as PermissionLevel}), {} as Record<ModulePermission, PermissionLevel>) : employeeData.permissions
+        permissions: permissionsToSet
       });
 
       toast({
