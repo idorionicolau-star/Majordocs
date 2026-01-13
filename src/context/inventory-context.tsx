@@ -36,6 +36,7 @@ import {
   onSnapshot,
   runTransaction,
   getDoc,
+  collectionGroup,
 } from 'firebase/firestore';
 import { allPermissions } from '@/lib/data';
 
@@ -114,12 +115,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // User is signed in, now fetch their profile from Firestore
-        const employeeQuery = query(
-          collection(firestore, "companies"),
-          where("employees", "array-contains", firebaseUser.uid)
-        );
-
         // This is a simplification. A real app might store companyId in a custom claim.
         // For now, we search for the user across all companies.
         const allEmployeesRefs = await getDocs(query(collectionGroup(firestore, 'employees')));
@@ -136,6 +131,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             // Data inconsistency
             setUser(null);
             setCompanyId(null);
+            await signOut(auth);
           }
         } else {
           // No profile found, log them out
@@ -166,7 +162,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         message = "Email ou senha inválidos.";
       }
       toast({ variant: 'destructive', title: 'Erro de Login', description: message });
-      return false;
+      throw error; // Re-throw the error so the UI can know the login failed
     }
   };
 
@@ -190,7 +186,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             }
             
             const newCompanyRef = doc(companiesRef);
-            transaction.set(newCompanyRef, { name: normalizedCompanyName });
+            transaction.set(newCompanyRef, { name: companyName });
 
             const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
             const newEmployeeRef = doc(employeesCollectionRef, newUserId);
@@ -201,11 +197,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             }, {} as Record<ModulePermission, PermissionLevel>);
             
             transaction.set(newEmployeeRef, {
-            username: adminUsername,
-            email: adminEmail, // Storing email for reference
-            role: 'Admin',
-            companyId: newCompanyRef.id,
-            permissions: adminPermissions
+              username: adminUsername,
+              email: adminEmail, // Storing email for reference
+              role: 'Admin',
+              companyId: newCompanyRef.id,
+              permissions: adminPermissions
             });
       });
       return true;
@@ -309,6 +305,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       if (storedLocations) {
         setLocations(JSON.parse(storedLocations));
       }
+    } else {
+        setIsMultiLocation(false);
+        setLocations([]);
     }
   }, [companyId]);
 
@@ -490,5 +489,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
+
+    
 
     
