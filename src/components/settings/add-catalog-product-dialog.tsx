@@ -88,7 +88,7 @@ export function AddCatalogProductDialog({ categories, onAdd }: AddCatalogProduct
         <Tooltip>
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
-              <Button size="icon">
+              <Button size="icon" className="rounded-full h-9 w-9">
                   <Plus className="h-5 w-5" />
                   <span className="sr-only">Adicionar Produto ao Catálogo</span>
               </Button>

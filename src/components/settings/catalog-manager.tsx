@@ -420,10 +420,12 @@ export function CatalogManager() {
                   </Button>
                 )}
               </div>
-               <AddCatalogProductDialog 
-                    categories={sortedCategories.map(c => c.name)}
-                    onAdd={handleAddProduct}
-                />
+              <div className="flex items-center gap-2">
+                 <AddCatalogProductDialog 
+                      categories={sortedCategories.map(c => c.name)}
+                      onAdd={handleAddProduct}
+                  />
+              </div>
             </div>
              <div className="rounded-md border">
               <Table>
