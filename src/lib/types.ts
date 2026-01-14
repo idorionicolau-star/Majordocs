@@ -99,6 +99,7 @@ export type Order = {
   quantity: number;
   unit: 'un' | 'm²' | 'm' | 'cj' | 'outro';
   clientName?: string;
+  deliveryDate?: string;
   location?: string;
   status: 'Pendente' | 'Em produção' | 'Concluída';
   productionStartDate?: string | null;

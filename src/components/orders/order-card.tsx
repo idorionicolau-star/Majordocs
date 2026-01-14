@@ -99,6 +99,12 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, canEdit }
                             <span className="font-semibold">{order.clientName}</span>
                         </div>
                     )}
+                    {order.deliveryDate && (
+                        <div className="flex items-center gap-2">
+                            <Calendar size={14} />
+                            <span className="font-semibold">Entrega: {new Date(order.deliveryDate).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                    )}
                      {estimatedCompletionDate && order.status === 'Em produção' && (
                         <div className="flex items-center gap-2 text-blue-600 font-bold">
                             <TrendingUp size={14} />

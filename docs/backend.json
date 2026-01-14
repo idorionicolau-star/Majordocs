@@ -133,7 +133,7 @@
           }
         }
       },
-      "required": ["productName", "quantity", "unit", "deliveryDate", "status", "quantityProduced"]
+      "required": ["productName", "quantity", "unit", "status", "quantityProduced"]
     },
     "StockMovement": {
       "title": "Stock Movement",
