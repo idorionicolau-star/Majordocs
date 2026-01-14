@@ -53,6 +53,8 @@ interface InventoryContextType {
   login: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
   registerCompany: (companyName: string, adminUsername: string, adminEmail: string, adminPass: string) => Promise<boolean>;
+  profilePicture: string | null;
+  setProfilePicture: (pic: string | null) => void;
 
   // Permission helpers
   canView: (module: ModulePermission) => boolean;
@@ -98,11 +100,14 @@ export const InventoryContext = createContext<InventoryContextType | undefined>(
   undefined
 );
 
+const PROFILE_PIC_STORAGE_KEY = 'majorstockx-profile-pic';
+
 export function InventoryProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Employee | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseAuthUser | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profilePicture, setProfilePictureState] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -112,6 +117,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const locations = useMemo(() => companyData?.locations || [], [companyData]);
   const isMultiLocation = useMemo(() => !!companyData?.isMultiLocation, [companyData]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        const savedPic = localStorage.getItem(PROFILE_PIC_STORAGE_KEY);
+        if (savedPic) {
+            setProfilePictureState(savedPic);
+        }
+    }
+  }, []);
+
+  const setProfilePicture = useCallback((pic: string | null) => {
+    setProfilePictureState(pic);
+    if (typeof window !== 'undefined') {
+        if (pic) {
+            localStorage.setItem(PROFILE_PIC_STORAGE_KEY, pic);
+        } else {
+            localStorage.removeItem(PROFILE_PIC_STORAGE_KEY);
+        }
+    }
+  }, []);
 
 
   useEffect(() => {
@@ -151,6 +176,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setFirebaseUser(null);
         setCompanyId(null);
+        setProfilePicture(null); // Clear profile pic on logout
       }
       setLoading(false);
     });
@@ -473,7 +499,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const value: InventoryContextType = {
     user, firebaseUser, companyId, loading: isDataLoading,
-    login, logout, registerCompany,
+    login, logout, registerCompany, profilePicture, setProfilePicture,
     canView, canEdit,
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],

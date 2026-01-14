@@ -20,7 +20,7 @@ import { InventoryContext } from "@/context/inventory-context"
 import { Skeleton } from "./ui/skeleton";
 
 export function UserNav() {
-  const { user, logout, loading } = useContext(InventoryContext) || { user: null, logout: () => {}, loading: true };
+  const { user, logout, loading, profilePicture } = useContext(InventoryContext) || { user: null, logout: () => {}, loading: true, profilePicture: null };
 
   if (loading) {
     return <Skeleton className="h-10 w-10 rounded-full" />;
@@ -44,7 +44,7 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
-             {/* <AvatarImage src={user.profilePictureUrl} alt={user.username} /> */}
+             {profilePicture ? <AvatarImage src={profilePicture} alt={user.username} /> : null}
              <AvatarFallback className="bg-primary text-primary-foreground font-bold">
                 {getInitials(user.username)}
              </AvatarFallback>

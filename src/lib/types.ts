@@ -24,6 +24,7 @@ export type Employee = {
   role: 'Admin' | 'Employee' | 'Dono';
   companyId: string;
   permissions: Partial<Record<ModulePermission, PermissionLevel>>;
+  profilePictureUrl?: string; // URL for the profile picture
 };
 
 export type Company = {

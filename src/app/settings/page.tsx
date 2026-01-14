@@ -38,17 +38,29 @@ const colorOptions = [
 ];
 
 function ProfileTab() {
-  const { user } = useContext(InventoryContext) || {};
-  const [profilePic, setProfilePic] = useState<string | null>(null);
+  const { user, profilePicture, setProfilePicture } = useContext(InventoryContext) || {};
+  const { toast } = useToast();
+  // Holds the newly selected image before it's saved
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProfilePic(reader.result as string);
+        setSelectedImage(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSavePicture = () => {
+    if (selectedImage && setProfilePicture) {
+        setProfilePicture(selectedImage);
+        toast({
+            title: "Foto de Perfil Atualizada",
+            description: "A sua nova foto de perfil foi guardada.",
+        });
     }
   };
 
@@ -59,6 +71,8 @@ function ProfileTab() {
     }
     return name.substring(0, 2).toUpperCase();
   }
+  
+  const displayImage = selectedImage || profilePicture;
 
   return (
     <Card>
@@ -69,7 +83,7 @@ function ProfileTab() {
       <CardContent className="space-y-6">
         <div className="flex items-center gap-6">
           <Avatar className="h-24 w-24">
-            {profilePic ? <AvatarImage src={profilePic} alt="Foto de Perfil" /> : null}
+            {displayImage ? <AvatarImage src={displayImage} alt="Foto de Perfil" /> : null}
             <AvatarFallback className="text-3xl bg-primary text-primary-foreground">
               {user ? getInitials(user.username) : 'U'}
             </AvatarFallback>
@@ -80,8 +94,13 @@ function ProfileTab() {
             <p className="text-xs text-muted-foreground">Recomendado: 400x400px</p>
           </div>
         </div>
+        <div className="flex justify-end">
+            <Button onClick={handleSavePicture} disabled={!selectedImage}>
+                Salvar foto
+            </Button>
+        </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 pt-6 border-t">
           <div className="space-y-1">
             <Label>Nome de Utilizador</Label>
             <p className="font-semibold">{user?.username}</p>
@@ -159,8 +178,6 @@ export default function SettingsPage() {
       if (hash) {
           setActiveTab(hash);
       }
-
-      const root = document.documentElement;
 
       const storedRadius = localStorage.getItem('majorstockx-border-radius');
       if (storedRadius) {
