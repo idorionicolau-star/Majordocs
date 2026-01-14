@@ -10,7 +10,7 @@ import {
   useMemo,
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel } from '@/lib/types';
+import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase, getFirebaseAuth } from '@/firebase';
 import {
@@ -35,8 +35,10 @@ import {
   onSnapshot,
   runTransaction,
   getDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { allPermissions } from '@/lib/data';
+import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
 
 type CatalogProduct = Omit<
   Product,
@@ -53,8 +55,7 @@ interface InventoryContextType {
   login: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
   registerCompany: (companyName: string, adminUsername: string, adminEmail: string, adminPass: string) => Promise<boolean>;
-  profilePicture: string | null;
-  setProfilePicture: (pic: string | null) => void;
+  updateProfilePicture: (picture: string) => Promise<void>;
 
   // Permission helpers
   canView: (module: ModulePermission) => boolean;
@@ -100,14 +101,11 @@ export const InventoryContext = createContext<InventoryContextType | undefined>(
   undefined
 );
 
-const PROFILE_PIC_STORAGE_KEY = 'majorstockx-profile-pic';
-
 export function InventoryProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Employee | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseAuthUser | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [profilePicture, setProfilePictureState] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -118,71 +116,85 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const locations = useMemo(() => companyData?.locations || [], [companyData]);
   const isMultiLocation = useMemo(() => !!companyData?.isMultiLocation, [companyData]);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-        const savedPic = localStorage.getItem(PROFILE_PIC_STORAGE_KEY);
-        if (savedPic) {
-            setProfilePictureState(savedPic);
-        }
+  const updateProfilePicture = useCallback(async (picture: string) => {
+    if (!firestore || !user || !user.id || !firebaseUser) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Utilizador não autenticado.' });
+        return;
     }
-  }, []);
+    const storage = getStorage();
+    const storageRef = ref(storage, `profilePictures/${firebaseUser.uid}.jpg`);
+    
+    toast({ title: 'A carregar...', description: 'A sua nova foto de perfil está a ser guardada.' });
 
-  const setProfilePicture = useCallback((pic: string | null) => {
-    setProfilePictureState(pic);
-    if (typeof window !== 'undefined') {
-        if (pic) {
-            localStorage.setItem(PROFILE_PIC_STORAGE_KEY, pic);
-        } else {
-            localStorage.removeItem(PROFILE_PIC_STORAGE_KEY);
-        }
+    try {
+        const base64String = picture.split(',')[1];
+        const snapshot = await uploadString(storageRef, base64String, 'base64', {
+            contentType: 'image/jpeg'
+        });
+        const downloadURL = await getDownloadURL(snapshot.ref);
+
+        const userDocRef = doc(firestore, `companies/${user.companyId}/employees`, user.id);
+        await updateDoc(userDocRef, { profilePictureUrl: downloadURL });
+        
+        toast({ title: 'Sucesso!', description: 'A sua foto de perfil foi atualizada.' });
+    } catch(error) {
+        console.error("Error updating profile picture: ", error);
+        toast({ variant: 'destructive', title: 'Erro de Upload', description: 'Não foi possível guardar a sua foto.' });
     }
-  }, []);
-
+  }, [firestore, user, firebaseUser, toast]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      setFirebaseUser(fbUser);
+    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
+        setFirebaseUser(fbUser);
         const userMapDocRef = doc(firestore, `users/${fbUser.uid}`);
         try {
           const userMapDoc = await getDoc(userMapDocRef);
-
           if (userMapDoc.exists()) {
             const userCompanyId = userMapDoc.data().companyId;
             setCompanyId(userCompanyId);
-
-            const employeeDocRef = doc(firestore, `companies/${userCompanyId}/employees/${fbUser.uid}`);
-            const employeeDoc = await getDoc(employeeDocRef);
-            
-            if (employeeDoc.exists()) {
-              const employeeData = employeeDoc.data() as Employee;
-              setUser({ ...employeeData, id: employeeDoc.id });
-            } else {
-              throw new Error("Perfil de funcionário não encontrado na empresa associada.");
-            }
           } else {
-             console.error("User map does not exist for authenticated user.");
-             setUser(null);
-             setCompanyId(null);
-             logout(); 
+            throw new Error("Mapeamento de utilizador não encontrado.");
           }
         } catch (error) {
-          console.error("Error fetching user profile:", error);
-          setUser(null);
-          setCompanyId(null);
-          toast({ variant: 'destructive', title: 'Erro de Perfil', description: 'Não foi possível carregar os seus dados.' });
+          console.error("Error fetching user map:", error);
+          logout();
         }
       } else {
         setUser(null);
         setFirebaseUser(null);
         setCompanyId(null);
-        setProfilePicture(null); // Clear profile pic on logout
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [auth, firestore, toast]);
+    return () => unsubscribeAuth();
+  }, [auth, firestore]);
+
+  useEffect(() => {
+    let unsubscribeEmployee: () => void = () => {};
+
+    if (firebaseUser && companyId) {
+      const employeeDocRef = doc(firestore, `companies/${companyId}/employees/${firebaseUser.uid}`);
+      unsubscribeEmployee = onSnapshot(employeeDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          setUser({ id: docSnap.id, ...docSnap.data() } as Employee);
+        } else {
+          console.error("Perfil de funcionário não encontrado na empresa.");
+          logout();
+        }
+        setLoading(false);
+      }, (error) => {
+        console.error("Error subscribing to employee data:", error);
+        logout();
+        setLoading(false);
+      });
+    } else if (!firebaseUser) {
+       setLoading(false);
+    }
+    
+    return () => unsubscribeEmployee();
+  }, [firebaseUser, companyId, firestore]);
   
 
   const login = async (email: string, pass: string): Promise<boolean> => {
@@ -373,47 +385,88 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       deleteDoc(docRef);
     }, [productsCollectionRef]);
 
-  const transferStock = useCallback(async (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => {
-      if (!firestore || !companyId) return;
-      const fromProduct = products.find(p => p.name === productName && p.location === fromLocationId);
-      if (!fromProduct || !fromProduct.id) {
+ const transferStock = useCallback(async (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => {
+    if (!firestore || !companyId || !user) return;
+
+    const fromProduct = products.find(p => p.name === productName && p.location === fromLocationId);
+    if (!fromProduct || !fromProduct.id) {
         toast({ variant: 'destructive', title: 'Erro', description: 'Produto de origem não encontrado.' });
         return;
-      }
-      if (fromProduct.stock < quantity) {
-        toast({ variant: 'destructive', title: 'Stock Insuficiente' });
+    }
+    if (fromProduct.stock - fromProduct.reservedStock < quantity) {
+        toast({ variant: 'destructive', title: 'Stock Insuficiente', description: `Disponível: ${fromProduct.stock - fromProduct.reservedStock}`});
         return;
-      }
-      const toProduct = products.find(p => p.name === productName && p.location === toLocationId);
-      const batch = writeBatch(firestore);
-      const productsRef = collection(firestore, `companies/${companyId}/products`);
-      const fromDocRef = doc(productsRef, fromProduct.id);
-      batch.update(fromDocRef, { stock: fromProduct.stock - quantity });
-      if (toProduct && toProduct.id) {
-        const toDocRef = doc(productsRef, toProduct.id);
-        batch.update(toDocRef, { stock: toProduct.stock + quantity });
-      } else {
-        const { id, instanceId, ...restOfProduct } = fromProduct;
-        const newDocRef = doc(productsRef);
-        batch.set(newDocRef, { ...restOfProduct, location: toLocationId, stock: quantity, reservedStock: 0, lastUpdated: new Date().toISOString().split('T')[0] });
-      }
-      try {
-        await batch.commit();
+    }
+
+    const toProduct = products.find(p => p.name === productName && p.location === toLocationId);
+    
+    try {
+        await runTransaction(firestore, async (transaction) => {
+            const productsRef = collection(firestore, `companies/${companyId}/products`);
+            const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+
+            // 1. Update source product
+            const fromDocRef = doc(productsRef, fromProduct.id!);
+            transaction.update(fromDocRef, { stock: fromProduct.stock - quantity });
+
+            // 2. Update or create destination product
+            if (toProduct && toProduct.id) {
+                const toDocRef = doc(productsRef, toProduct.id);
+                transaction.update(toDocRef, { stock: toProduct.stock + quantity });
+            } else {
+                const { id, instanceId, ...restOfProduct } = fromProduct;
+                const newDocRef = doc(productsRef); // Auto-generate ID
+                transaction.set(newDocRef, { ...restOfProduct, location: toLocationId, stock: quantity, reservedStock: 0, lastUpdated: new Date().toISOString().split('T')[0] });
+            }
+
+            // 3. Create stock movement record
+            const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+                productId: fromProduct.id!, // or a more stable catalog ID if you have one
+                productName,
+                type: 'TRANSFER',
+                quantity,
+                fromLocationId,
+                toLocationId,
+                reason: `Transferência manual`,
+                userId: user.id,
+                userName: user.username,
+            };
+            transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+        });
+
         toast({ title: 'Transferência Concluída' });
-      } catch (error) {
+    } catch (error) {
         console.error('Error transferring stock:', error);
-        toast({ variant: 'destructive', title: 'Erro na Transferência' });
-      }
-    }, [firestore, companyId, products, toast]);
+        toast({ variant: 'destructive', title: 'Erro na Transferência', description: (error as Error).message });
+    }
+}, [firestore, companyId, products, toast, user]);
 
   const updateProductStock = useCallback(async (productName: string, quantity: number, locationId?: string) => {
-      if (!firestore || !companyId) return;
+      if (!firestore || !companyId || !user) return;
       const targetLocation = locationId || (isMultiLocation && locations.length > 0 ? locations[0].id : 'Principal');
       const catalogProduct = catalogProductsData?.find(p => p.name === productName);
       const existingInstance = products.find(p => p.name === productName && p.location === targetLocation);
+      
+      const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+
       if (existingInstance && existingInstance.id) {
         const docRef = doc(firestore, `companies/${companyId}/products`, existingInstance.id);
-        updateDoc(docRef, { stock: existingInstance.stock + quantity });
+        const batch = writeBatch(firestore);
+        batch.update(docRef, { stock: existingInstance.stock + quantity });
+        
+        const movement: Omit<StockMovement, 'id'|'timestamp'> = {
+            productId: existingInstance.id,
+            productName: productName,
+            type: 'IN',
+            quantity: quantity,
+            toLocationId: targetLocation,
+            reason: 'Produção',
+            userId: user.id,
+            userName: user.username,
+        };
+        batch.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+        await batch.commit();
+
       } else {
         if (!catalogProduct) {
            toast({ variant: 'destructive', title: 'Produto Base Não Encontrado', description: `Adicione "${productName}" ao catálogo primeiro.` });
@@ -421,9 +474,25 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         }
         const { id, ...restOfCatalogProduct } = catalogProduct;
         const productsRef = collection(firestore, `companies/${companyId}/products`);
-        addDoc(productsRef, { ...restOfCatalogProduct, stock: quantity, reservedStock: 0, location: targetLocation, lastUpdated: new Date().toISOString().split('T')[0] });
+        
+        const batch = writeBatch(firestore);
+        const newProductRef = doc(productsRef);
+        batch.set(newProductRef, { ...restOfCatalogProduct, stock: quantity, reservedStock: 0, location: targetLocation, lastUpdated: new Date().toISOString().split('T')[0] });
+
+        const movement: Omit<StockMovement, 'id'|'timestamp'> = {
+            productId: newProductRef.id,
+            productName: productName,
+            type: 'IN',
+            quantity: quantity,
+            toLocationId: targetLocation,
+            reason: 'Produção',
+            userId: user.id,
+            userName: user.username,
+        };
+        batch.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+        await batch.commit();
       }
-    }, [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast]);
+    }, [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast, user]);
 
   const updateCompany = useCallback(async (details: Partial<Company>) => {
       if(companyDocRef) {
@@ -465,7 +534,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations]);
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
-     if (!firestore || !companyId || !productsCollectionRef) throw new Error("Firestore não está pronto.");
+     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
 
     const productQuery = query(
         productsCollectionRef,
@@ -473,6 +542,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         where("location", "==", sale.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
     );
     const saleRef = doc(firestore, `companies/${companyId}/sales`, sale.id);
+    const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
     await runTransaction(firestore, async (transaction) => {
         const productSnapshot = await getDocs(productQuery);
@@ -491,15 +561,27 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
         transaction.update(productDoc.ref, { stock: newStock, reservedStock: newReservedStock });
         transaction.update(saleRef, { status: 'Levantado' });
+
+        const movement: Omit<StockMovement, 'id'|'timestamp'> = {
+            productId: productDoc.id,
+            productName: sale.productName,
+            type: 'OUT',
+            quantity: -sale.quantity, // Negative for stock out
+            fromLocationId: productData.location,
+            reason: `Venda #${sale.guideNumber}`,
+            userId: user.id,
+            userName: user.username,
+        };
+        transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
     });
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user]);
 
 
   const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading;
 
   const value: InventoryContextType = {
     user, firebaseUser, companyId, loading: isDataLoading,
-    login, logout, registerCompany, profilePicture, setProfilePicture,
+    login, logout, registerCompany, updateProfilePicture,
     canView, canEdit,
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
