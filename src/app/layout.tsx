@@ -10,6 +10,7 @@ import { ClientLayout } from '@/components/layout/client-layout';
 
 // Using Inter font for a modern, clean look
 import { Inter, Space_Grotesk } from 'next/font/google'
+import { useEffect } from 'react';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -41,9 +42,7 @@ export default function RootLayout({
         <link rel="icon" href="/logo.svg" type="image/svg+xml" />
       </head>
       <body className="font-body antialiased">
-        <ThemeProvider
-          storageKey="majorstockx-theme"
-        >
+        <ThemeProvider>
           <FirebaseProvider>
             <InventoryProvider>
               <ClientLayout>
