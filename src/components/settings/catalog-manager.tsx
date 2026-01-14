@@ -1,10 +1,10 @@
 
 "use client";
 
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlusCircle, Trash2, Edit, Download } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Download, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
@@ -52,6 +52,7 @@ export function CatalogManager() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showDeleteSelectedProductsConfirm, setShowDeleteSelectedProductsConfirm] = useState(false);
   const [showDeleteSelectedCategoriesConfirm, setShowDeleteSelectedCategoriesConfirm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
 
   const catalogProductsCollectionRef = useMemoFirebase(() => {
@@ -196,16 +197,32 @@ export function CatalogManager() {
     toast({ title: 'A atualizar produto...' });
     try {
         const productDocRef = doc(firestore, `companies/${companyId}/catalogProducts`, updatedProduct.id);
-        await updateDoc(productDocRef, updatedProduct as any);
+        const { id, ...dataToUpdate } = updatedProduct;
+        await updateDoc(productDocRef, dataToUpdate);
         toast({ title: "Produto do Catálogo Atualizado" });
     } catch(e) {
         toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar o produto.' });
     }
   };
   
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    const sorted = [...products].sort((a,b) => a.name.localeCompare(b.name));
+    if (!searchQuery) return sorted;
+    return sorted.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.category.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [products, searchQuery]);
+
+  const filteredCategories = useMemo(() => {
+    if (!categories) return [];
+    const sorted = [...categories].sort((a,b) => a.name.localeCompare(b.name));
+    if (!searchQuery) return sorted;
+    return sorted.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [categories, searchQuery]);
+  
+  
   const handleToggleSelectAllProducts = (checked: boolean) => {
     if (checked) {
-      setSelectedProducts(sortedProducts.map(p => p.id));
+      setSelectedProducts(filteredProducts.map(p => p.id));
     } else {
       setSelectedProducts([]);
     }
@@ -240,7 +257,7 @@ export function CatalogManager() {
   
   const handleToggleSelectAllCategories = (checked: boolean) => {
     if (checked) {
-      setSelectedCategories(sortedCategories.map(c => c.id));
+      setSelectedCategories(filteredCategories.map(c => c.id));
     } else {
       setSelectedCategories([]);
     }
@@ -257,7 +274,7 @@ export function CatalogManager() {
   const handleDeleteSelectedCategories = async () => {
     if (!firestore || !companyId || selectedCategories.length === 0) return;
 
-    const categoriesToDelete = sortedCategories.filter(c => selectedCategories.includes(c.id));
+    const categoriesToDelete = filteredCategories.filter(c => selectedCategories.includes(c.id));
     const usedCategories = categoriesToDelete.filter(c => products?.some(p => p.category === c.name));
 
     if (usedCategories.length > 0) {
@@ -286,8 +303,8 @@ export function CatalogManager() {
     setShowDeleteSelectedCategoriesConfirm(false);
   };
 
-  const sortedCategories = categories ? [...categories].sort((a, b) => a.name.localeCompare(b.name)) : [];
-  const sortedProducts = products ? [...products].sort((a,b) => a.name.localeCompare(b.name)) : [];
+  const isAllProductsSelected = filteredProducts.length > 0 && selectedProducts.length === filteredProducts.length;
+  const isAllCategoriesSelected = filteredCategories.length > 0 && selectedCategories.length === filteredCategories.length;
 
   return (
     <>
@@ -408,6 +425,16 @@ export function CatalogManager() {
           <TabsTrigger value="import">Importar</TabsTrigger>
         </TabsList>
         
+        <div className="relative mt-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Pesquisar no catálogo..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        
         <TabsContent value="products" className="mt-4">
            <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -422,7 +449,7 @@ export function CatalogManager() {
               </div>
               <div className="flex items-center gap-2">
                  <AddCatalogProductDialog 
-                      categories={sortedCategories.map(c => c.name)}
+                      categories={categories?.map(c => c.name) || []}
                       onAdd={handleAddProduct}
                   />
               </div>
@@ -433,7 +460,7 @@ export function CatalogManager() {
                   <TableRow>
                     <TableHead className="w-[50px] px-4">
                        <Checkbox
-                        checked={sortedProducts.length > 0 && selectedProducts.length === sortedProducts.length}
+                        checked={isAllProductsSelected}
                         onCheckedChange={(checked) => handleToggleSelectAllProducts(!!checked)}
                         aria-label="Selecionar tudo"
                       />
@@ -451,7 +478,7 @@ export function CatalogManager() {
                            <Skeleton className="h-6 w-full" />
                         </TableCell>
                     </TableRow>
-                  ) : sortedProducts && sortedProducts.length > 0 ? sortedProducts.map(product => (
+                  ) : filteredProducts && filteredProducts.length > 0 ? filteredProducts.map(product => (
                     <TableRow key={product.id} data-state={selectedProducts.includes(product.id) && "selected"}>
                        <TableCell className="px-4">
                         <Checkbox
@@ -466,7 +493,7 @@ export function CatalogManager() {
                        <TableCell className="text-right flex items-center justify-end gap-2">
                          <EditCatalogProductDialog 
                             product={product} 
-                            categories={sortedCategories.map(c => c.name)}
+                            categories={categories?.map(c => c.name) || []}
                             onUpdate={handleUpdateProduct}
                          />
                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setProductToDelete(product)}>
@@ -510,7 +537,7 @@ export function CatalogManager() {
                     <TableRow>
                         <TableHead className="w-[50px] px-4">
                             <Checkbox
-                                checked={sortedCategories.length > 0 && selectedCategories.length === sortedCategories.length}
+                                checked={isAllCategoriesSelected}
                                 onCheckedChange={(checked) => handleToggleSelectAllCategories(!!checked)}
                                 aria-label="Selecionar todas as categorias"
                             />
@@ -526,7 +553,7 @@ export function CatalogManager() {
                            <Skeleton className="h-6 w-1/2 mx-auto" />
                         </TableCell>
                     </TableRow>
-                 ) : sortedCategories.length > 0 ? sortedCategories.map(category => (
+                 ) : filteredCategories.length > 0 ? filteredCategories.map(category => (
                   <TableRow key={category.id} data-state={selectedCategories.includes(category.id) && "selected"}>
                     <TableCell className="px-4">
                        <Checkbox
@@ -564,3 +591,5 @@ export function CatalogManager() {
     </>
   );
 }
+
+    
