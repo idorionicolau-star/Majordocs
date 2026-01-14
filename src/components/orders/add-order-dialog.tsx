@@ -34,6 +34,7 @@ import type { Product, Order, Location } from '@/lib/types';
 import { InventoryContext } from '@/context/inventory-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { ScrollArea } from '../ui/scroll-area';
+import { format } from 'date-fns';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -42,7 +43,7 @@ const formSchema = z.object({
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']),
   clientName: z.string().optional(),
-  deliveryDate: z.string().nonempty({ message: "A data de entrega é obrigatória." }),
+  deliveryDate: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "A data de entrega é obrigatória." }),
   location: z.string().optional(),
 });
 
@@ -65,7 +66,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
       quantity: 1,
       unit: 'un',
       clientName: "",
-      deliveryDate: "",
+      deliveryDate: format(new Date(), 'yyyy-MM-dd'),
       location: "",
     },
   });
@@ -82,7 +83,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
         quantity: 1,
         unit: 'un',
         clientName: "",
-        deliveryDate: "",
+        deliveryDate: format(new Date(), 'yyyy-MM-dd'),
         location: finalLocation,
       });
     }
