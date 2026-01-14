@@ -7,9 +7,10 @@ import React, { useState, useEffect, useContext } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
 import { Header } from './header';
 import { SubHeader } from './sub-header';
-import { motion, AnimatePresence, PanInfo } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { mainNavItems } from '@/lib/data';
 import type { ModulePermission } from '@/lib/types';
+import { GestureNavigation } from './gesture-navigation';
 
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -19,8 +20,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isAuthPage = pathname === '/login' || pathname === '/register';
   const { canView } = useContext(InventoryContext) || { canView: () => false };
   
-  const [navDirection, setNavDirection] = useState(0);
-
   useEffect(() => {
     if (authContext?.loading) {
       return; 
@@ -42,37 +41,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const availableNavItems = mainNavItems.filter(item => canView(item.id as ModulePermission));
   const currentIndex = availableNavItems.findIndex(item => pathname.startsWith(item.href));
 
-  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const swipeThreshold = 50;
-    const offset = info.offset.x;
-
-    if (offset > swipeThreshold && currentIndex > 0) {
-      // Swipe Right
-      setNavDirection(-1);
-      const prevPage = availableNavItems[currentIndex - 1];
-      router.push(prevPage.href);
-    } else if (offset < -swipeThreshold && currentIndex < availableNavItems.length - 1) {
-      // Swipe Left
-      setNavDirection(1);
-      const nextPage = availableNavItems[currentIndex + 1];
-      router.push(nextPage.href);
-    }
-  };
-
-  const variants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? '100%' : '-100%',
-      opacity: 0,
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-    },
-    exit: (direction: number) => ({
-      x: direction < 0 ? '100%' : '-100%',
-      opacity: 0,
-    }),
-  };
+  const prevRoute = currentIndex > 0 ? availableNavItems[currentIndex - 1]?.href : undefined;
+  const nextRoute = currentIndex < availableNavItems.length - 1 ? availableNavItems[currentIndex + 1]?.href : undefined;
 
 
   if (authContext?.loading || (!authContext?.firebaseUser && !isAuthPage)) {
@@ -87,7 +57,19 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   }
   
   if (isAuthPage) {
-    return <>{children}</>;
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={pathname}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+         {children}
+        </motion.div>
+      </AnimatePresence>
+    );
   }
   
   return (
@@ -95,25 +77,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       <Header />
       <SubHeader />
       <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-hidden relative">
-         <AnimatePresence initial={false} custom={navDirection} mode="wait">
-           <motion.div
-              key={pathname}
-              custom={navDirection}
-              variants={variants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{
-                x: { type: 'spring', stiffness: 300, damping: 30 },
-                opacity: { duration: 0.2 },
-              }}
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              onDragEnd={handleDragEnd}
-              className="w-full h-full"
-            >
+         <AnimatePresence mode="wait">
+            <GestureNavigation key={pathname} prevRoute={prevRoute} nextRoute={nextRoute}>
               {children}
-            </motion.div>
+            </GestureNavigation>
         </AnimatePresence>
       </main>
     </div>
