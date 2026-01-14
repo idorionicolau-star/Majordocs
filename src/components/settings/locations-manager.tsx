@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -23,16 +23,19 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 
 export function LocationsManager() {
-  const { isMultiLocation, locations, setLocations, setIsMultiLocation } = useContext(InventoryContext) || { isMultiLocation: false, locations: [], setLocations: () => {}, setIsMultiLocation: () => {} };
+  const { companyData, updateCompany } = useContext(InventoryContext) || {};
   const { toast } = useToast();
+
+  const isMultiLocation = companyData?.isMultiLocation || false;
+  const locations = companyData?.locations || [];
 
   const [newLocationName, setNewLocationName] = useState('');
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [locationToDelete, setLocationToDelete] = useState<Location | null>(null);
 
   const handleToggleMultiLocation = (checked: boolean) => {
-    if (setIsMultiLocation) {
-      setIsMultiLocation(checked);
+    if (updateCompany) {
+      updateCompany({ isMultiLocation: checked });
       toast({
         title: `Multi-Localização ${checked ? 'Ativado' : 'Desativado'}`,
         description: checked ? 'Pode agora gerir o stock em várias localizações.' : 'Todo o stock será gerido num único local.',
@@ -50,9 +53,10 @@ export function LocationsManager() {
       return;
     }
 
-    if (setLocations) {
+    if (updateCompany) {
       const newLocation = { id: uuidv4(), name: newLocationName.trim() };
-      setLocations(prev => [...(prev || []), newLocation]);
+      const updatedLocations = [...locations, newLocation];
+      updateCompany({ locations: updatedLocations });
       setNewLocationName('');
       toast({ title: 'Localização Adicionada' });
     }
@@ -65,8 +69,9 @@ export function LocationsManager() {
         return;
     }
 
-    if (setLocations) {
-        setLocations(prev => prev?.map(l => l.id === editingLocation.id ? { ...l, name: newLocationName.trim() } : l));
+    if (updateCompany) {
+        const updatedLocations = locations.map(l => l.id === editingLocation.id ? { ...l, name: newLocationName.trim() } : l);
+        updateCompany({ locations: updatedLocations });
         setEditingLocation(null);
         setNewLocationName('');
         toast({ title: 'Localização Atualizada' });
@@ -74,9 +79,10 @@ export function LocationsManager() {
   };
   
   const confirmDeleteLocation = () => {
-    if (locationToDelete && setLocations) {
+    if (locationToDelete && updateCompany) {
         // Here you might add a check if the location is being used by any products
-        setLocations(prev => prev?.filter(l => l.id !== locationToDelete.id));
+        const updatedLocations = locations.filter(l => l.id !== locationToDelete.id);
+        updateCompany({ locations: updatedLocations });
         setLocationToDelete(null);
         toast({ title: 'Localização Removida' });
     }

@@ -34,6 +34,8 @@ export type Company = {
     address?: string;
     taxId?: string;
     email?: string;
+    isMultiLocation?: boolean;
+    locations?: Location[];
 };
 
 export type Location = {
