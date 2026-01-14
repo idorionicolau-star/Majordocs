@@ -29,7 +29,7 @@
       "properties": {
         "username": { "type": "string" },
         "password": { "type": "string", "description": "This should be a hashed password in a real application." },
-        "role": { "type": "string", "enum": ["Admin", "Employee"] },
+        "role": { "type": "string", "enum": ["Admin", "Employee", "Dono"] },
         "companyId": { "type": "string" }
       },
       "required": ["username", "password", "role", "companyId"]
@@ -134,6 +134,42 @@
         }
       },
       "required": ["productName", "quantity", "unit", "deliveryDate", "status", "quantityProduced"]
+    },
+    "StockAdjustment": {
+      "title": "Stock Adjustment",
+      "type": "object",
+      "description": "Represents a manual adjustment to inventory stock, creating an audit trail.",
+      "properties": {
+        "date": { "type": "string", "format": "date-time" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "locationId": { "type": "string" },
+        "quantityChanged": { "type": "number", "description": "The change in quantity. Can be positive or negative." },
+        "previousStock": { "type": "number" },
+        "newStock": { "type": "number" },
+        "reason": { "type": "string", "enum": ["Auditoria", "Quebra", "Devolução", "Correção"] },
+        "notes": { "type": "string" },
+        "adjustedBy": { "type": "string" }
+      },
+      "required": ["date", "productId", "productName", "locationId", "quantityChanged", "previousStock", "newStock", "reason", "adjustedBy"]
+    },
+    "StockTransfer": {
+      "title": "Stock Transfer",
+      "type": "object",
+      "description": "Represents the movement of stock between two locations.",
+      "properties": {
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "fromLocationId": { "type": "string" },
+        "toLocationId": { "type": "string" },
+        "quantity": { "type": "number" },
+        "initiatedBy": { "type": "string" },
+        "initiatedDate": { "type": "string", "format": "date-time" },
+        "completedBy": { "type": "string" },
+        "completedDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Em Trânsito", "Concluída", "Cancelada"] }
+      },
+      "required": ["productId", "productName", "fromLocationId", "toLocationId", "quantity", "initiatedBy", "initiatedDate", "status"]
     }
   },
   "auth": {
@@ -202,6 +238,20 @@
         "definition": {
           "schema": { "$ref": "#/entities/Order" },
           "description": "Stores production orders for a company."
+        }
+      },
+      {
+        "path": "/companies/{companyId}/stockAdjustments/{adjustmentId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/StockAdjustment" },
+          "description": "Stores a log of all manual stock adjustments for audit purposes."
+        }
+      },
+      {
+        "path": "/companies/{companyId}/stockTransfers/{transferId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/StockTransfer" },
+          "description": "Stores records of stock movements between locations."
         }
       }
     ]
