@@ -25,7 +25,8 @@ export function UserNav() {
     return null;
   }
 
-  const getInitials = (name: string) => {
+  const getInitials = (name?: string) => {
+    if (!name) return 'U';
     const names = name.split(' ');
     if (names.length > 1) {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
@@ -38,7 +39,7 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
-             {/* Add AvatarImage logic here if you store profile pics */}
+             {/* <AvatarImage src={user.profilePictureUrl} alt={user.username} /> */}
              <AvatarFallback className="bg-primary text-primary-foreground font-bold">
                 {getInitials(user.username)}
              </AvatarFallback>
