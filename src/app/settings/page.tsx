@@ -346,42 +346,6 @@ export default function SettingsPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="border-width">Largura da Borda do Card</Label>
-                    <p className="text-sm text-muted-foreground">Ajuste a espessura da borda dos cards.</p>
-                    <div className="flex items-center gap-4">
-                      <Slider
-                        id="border-width"
-                        min={0}
-                        max={4}
-                        step={0.1}
-                        value={[borderWidth]}
-                        onValueChange={handleBorderWidthChange}
-                        className="w-[calc(100%-4rem)]"
-                      />
-                      <span className="w-12 text-right font-mono text-sm text-muted-foreground">
-                        {borderWidth.toFixed(1)}px
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="border-color">Cor da Borda do Card</Label>
-                    <p className="text-sm text-muted-foreground">Selecione a cor da borda para os cards.</p>
-                    <div className="flex items-center gap-2 pt-2">
-                      {colorOptions.map(color => (
-                        <button
-                          key={color.name}
-                          onClick={() => handleBorderColorChange(color.value)}
-                          className={cn(
-                            "h-8 w-8 rounded-full border-2 transition-all",
-                            borderColor === color.value ? 'border-ring' : 'border-transparent',
-                            color.className
-                          )}
-                          title={color.name}
-                        />
-                      ))}
-                    </div>
-                  </div>
                 </CardContent>
             </Card>
           </TabsContent>
