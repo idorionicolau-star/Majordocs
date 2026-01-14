@@ -17,18 +17,23 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { InventoryContext } from "@/context/inventory-context"
+import { Skeleton } from "./ui/skeleton";
 
 export function UserNav() {
-  const { user, logout } = useContext(InventoryContext) || {};
+  const { user, logout, loading } = useContext(InventoryContext) || { user: null, logout: () => {}, loading: true };
+
+  if (loading) {
+    return <Skeleton className="h-10 w-10 rounded-full" />;
+  }
 
   if (!user) {
     return null;
   }
 
   const getInitials = (name?: string) => {
-    if (!name) return 'U';
-    const names = name.split(' ');
-    if (names.length > 1) {
+    if (!name || typeof name !== 'string') return 'U';
+    const names = name.trim().split(' ');
+    if (names.length > 1 && names[0] && names[names.length - 1]) {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
