@@ -3,7 +3,7 @@
 
 import { motion, useAnimation, useMotionValue, useTransform } from "framer-motion";
 import { useDrag } from "@use-gesture/react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 interface GestureNavigationProps {
@@ -14,6 +14,7 @@ interface GestureNavigationProps {
 
 export function GestureNavigation({ children, prevRoute, nextRoute }: GestureNavigationProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const x = useMotionValue(0);
   const controls = useAnimation();
   const input = [-window.innerWidth, 0, window.innerWidth];
@@ -66,8 +67,6 @@ export function GestureNavigation({ children, prevRoute, nextRoute }: GestureNav
     x.set(0);
     controls.set({ x: 0 });
   }, [pathname, controls, x]);
-
-  const pathname = useRouter();
 
   return (
     <motion.div
