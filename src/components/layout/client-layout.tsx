@@ -20,7 +20,6 @@ const FAB_CONFIG = {
   '/sales': { label: 'Nova Venda', href: '/sales?action=add', permission: 'sales' },
   '/production': { label: 'Nova Produção', href: '/production?action=add', permission: 'production' },
   '/orders': { label: 'Nova Encomenda', href: '/orders?action=add', permission: 'orders' },
-  '/users': { label: 'Novo Funcionário', href: '/users?action=add', permission: 'users' },
 };
 
 
