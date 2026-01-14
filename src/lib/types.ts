@@ -104,18 +104,26 @@ export type Order = {
   productionLogs: ProductionLog[];
 };
 
-export type StockMovement = {
-  id: string;
-  productId: string;
-  type: 'ENTRADA' | 'SAIDA' | 'TRANSFERENCIA' | 'AJUSTE';
-  quantity: number; // Positive for entries, negative for exits
-  fromLocation?: string | null;
-  toLocation?: string | null;
-  reason: string; // e.g., 'Venda #123', 'Quebra', 'Auditoria Mensal'
-  userId: string;
-  timestamp: string; // Should be Firestore ServerTimestamp, but string for client-side
-};
+export type MovementType = 'IN' | 'OUT' | 'TRANSFER' | 'ADJUSTMENT';
 
+export interface StockMovement {
+  id?: string;
+  productId: string;
+  productName: string; // Denormalized name for easier log reading
+  type: MovementType;
+  quantity: number; // e.g., +10 for IN, -5 for OUT
+  fromLocationId?: string; // Used in TRANSFER and OUT
+  toLocationId?: string;   // Used in TRANSFER and IN
+  reason: string;          // e.g., "Venda #102", "Auditoria", "Dano", "Transferência"
+  userId: string;          // Who performed the action
+  userName: string;        // Denormalized name for quick log reading
+  timestamp: any;          // Firestore serverTimestamp
+  
+  // For Audits
+  isAudit?: boolean;
+  systemCountBefore?: number; // What the system thought it had before adjustment
+  physicalCount?: number;     // What the user actually counted
+}
 
 export type Notification = {
   id: string;
