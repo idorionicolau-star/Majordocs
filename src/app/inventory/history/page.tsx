@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useContext } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
-import { useCollection, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { StockMovement, Location } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,13 +17,14 @@ type FilterType = 'all' | 'deficits' | 'transfers';
 
 export default function InventoryHistoryPage() {
   const { companyId, loading, locations } = useContext(InventoryContext) || { companyId: null, loading: true, locations: [] };
+  const firestore = useFirestore();
   const [filter, setFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const stockMovementsRef = useMemoFirebase(() => {
-    if (!companyId) return null;
-    return collection(companyId, `companies/${companyId}/stockMovements`);
-  }, [companyId]);
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `companies/${companyId}/stockMovements`);
+  }, [firestore, companyId]);
 
   const { data: movements, isLoading } = useCollection<StockMovement>(stockMovementsRef);
 
