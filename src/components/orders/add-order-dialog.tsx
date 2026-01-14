@@ -34,11 +34,6 @@ import type { Product, Order, Location } from '@/lib/types';
 import { InventoryContext } from '@/context/inventory-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { ScrollArea } from '../ui/scroll-area';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { CalendarIcon } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Calendar } from '../ui/calendar';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -47,7 +42,7 @@ const formSchema = z.object({
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']),
   clientName: z.string().optional(),
-  deliveryDate: z.date().optional(),
+  deliveryDate: z.string().optional(),
   location: z.string().optional(),
 });
 
@@ -70,7 +65,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
       quantity: 1,
       unit: 'un',
       clientName: "",
-      deliveryDate: undefined,
+      deliveryDate: "",
       location: "",
     },
   });
@@ -87,7 +82,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
         quantity: 1,
         unit: 'un',
         clientName: "",
-        deliveryDate: undefined,
+        deliveryDate: "",
         location: finalLocation,
       });
     }
@@ -109,7 +104,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
       quantity: values.quantity,
       unit: values.unit,
       clientName: values.clientName,
-      deliveryDate: values.deliveryDate?.toISOString(),
+      deliveryDate: values.deliveryDate ? new Date(values.deliveryDate).toISOString() : undefined,
       location: values.location
     };
     onAddOrder(newOrder);
@@ -225,39 +220,11 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
                 control={form.control}
                 name="deliveryDate"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Data de Entrega (Opcional)</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Escolha uma data</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date < new Date(new Date().setHours(0,0,0,0))
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
