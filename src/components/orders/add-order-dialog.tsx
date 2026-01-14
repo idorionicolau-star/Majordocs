@@ -43,7 +43,6 @@ const formSchema = z.object({
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']),
   clientName: z.string().optional(),
-  deliveryDate: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "A data de entrega é obrigatória." }),
   location: z.string().optional(),
 });
 
@@ -66,7 +65,6 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
       quantity: 1,
       unit: 'un',
       clientName: "",
-      deliveryDate: format(new Date(), 'yyyy-MM-dd'),
       location: "",
     },
   });
@@ -83,7 +81,6 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
         quantity: 1,
         unit: 'un',
         clientName: "",
-        deliveryDate: format(new Date(), 'yyyy-MM-dd'),
         location: finalLocation,
       });
     }
@@ -105,7 +102,6 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
       quantity: values.quantity,
       unit: values.unit,
       clientName: values.clientName,
-      deliveryDate: new Date(values.deliveryDate).toISOString(),
       location: values.location
     };
     onAddOrder(newOrder);
@@ -213,19 +209,6 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
                   <FormItem>
                     <FormLabel>Cliente (Opcional)</FormLabel>
                     <FormControl><Input placeholder="Nome do cliente" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="deliveryDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data de Entrega</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
