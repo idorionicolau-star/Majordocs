@@ -554,7 +554,6 @@ export default function InventoryPage() {
         open={isAddDialogOpen}
         onOpenChange={setAddDialogOpen}
         onAddProduct={handleAddProduct}
-        triggerType="fab"
       />}
     </>
   );

@@ -2,7 +2,7 @@
 
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import React, { useState, useEffect, useContext } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
 import { Header } from './header';
@@ -11,6 +11,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { mainNavItems } from '@/lib/data';
 import type { ModulePermission } from '@/lib/types';
 import { GestureNavigation } from './gesture-navigation';
+import { Button } from '../ui/button';
+import Link from 'next/link';
+
+
+const FAB_CONFIG = {
+  '/inventory': { label: 'Novo Produto', href: '/inventory?action=add', permission: 'inventory' },
+  '/sales': { label: 'Nova Venda', href: '/sales?action=add', permission: 'sales' },
+  '/production': { label: 'Nova Produção', href: '/production?action=add', permission: 'production' },
+  '/orders': { label: 'Nova Encomenda', href: '/orders?action=add', permission: 'orders' },
+  '/users': { label: 'Novo Funcionário', href: '/users?action=add', permission: 'users' },
+};
 
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -18,7 +29,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const authContext = useContext(InventoryContext);
   const isAuthPage = pathname === '/login' || pathname === '/register';
-  const { canView } = useContext(InventoryContext) || { canView: () => false };
+  const { canView, canEdit } = useContext(InventoryContext) || { canView: () => false, canEdit: () => false };
   
   useEffect(() => {
     if (authContext?.loading) {
@@ -43,6 +54,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   const prevRoute = currentIndex > 0 ? availableNavItems[currentIndex - 1]?.href : undefined;
   const nextRoute = currentIndex < availableNavItems.length - 1 ? availableNavItems[currentIndex + 1]?.href : undefined;
+
+  const fabConfig = FAB_CONFIG[pathname as keyof typeof FAB_CONFIG];
+  const showFab = fabConfig && canEdit(fabConfig.permission as ModulePermission);
 
 
   if (authContext?.loading || (!authContext?.firebaseUser && !isAuthPage)) {
@@ -77,12 +91,27 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       <Header />
       <SubHeader />
       <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-hidden relative">
-         <AnimatePresence mode="wait">
-            <GestureNavigation key={pathname} prevRoute={prevRoute} nextRoute={nextRoute}>
-              {children}
-            </GestureNavigation>
-        </AnimatePresence>
+         <GestureNavigation key={pathname} prevRoute={prevRoute} nextRoute={nextRoute}>
+            {children}
+         </GestureNavigation>
       </main>
+       <AnimatePresence>
+        {showFab && (
+          <motion.div
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 100 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+            className="fixed bottom-6 right-4 sm:right-6 z-50"
+          >
+            <Button asChild size="lg" className="rounded-full shadow-2xl h-14">
+              <Link href={fabConfig.href} scroll={false}>
+                {fabConfig.label}
+              </Link>
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

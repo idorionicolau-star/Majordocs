@@ -273,7 +273,6 @@ export default function ProductionPage() {
         open={isAddDialogOpen}
         onOpenChange={setAddDialogOpen}
         onAddProduction={handleAddProduction} 
-        triggerType="fab" 
       />}
     </div>
     </>

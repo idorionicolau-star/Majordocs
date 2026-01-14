@@ -214,7 +214,6 @@ export default function OrdersPage() {
         open={isAddDialogOpen}
         onOpenChange={setAddDialogOpen}
         onAddOrder={handleAddOrder}
-        triggerType="fab"
       />}
     </>
   );

@@ -303,7 +303,6 @@ export default function SalesPage() {
         open={isAddDialogOpen}
         onOpenChange={setAddDialogOpen}
         onAddSale={handleAddSale}
-        triggerType="fab"
       />}
     </div>
   );
