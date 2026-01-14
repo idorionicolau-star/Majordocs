@@ -46,7 +46,7 @@ export function ThemeProvider({
 
   React.useEffect(() => {
     const root = window.document.documentElement
-    root.classList.remove("light", "dark", ...THEMES)
+    root.classList.remove("light", "dark", ...THEMES.map(t => `theme-${t}`))
 
     if (mode === "system") {
       const systemMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
