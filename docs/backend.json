@@ -135,41 +135,21 @@
       },
       "required": ["productName", "quantity", "unit", "deliveryDate", "status", "quantityProduced"]
     },
-    "StockAdjustment": {
-      "title": "Stock Adjustment",
+    "StockMovement": {
+      "title": "Stock Movement",
       "type": "object",
-      "description": "Represents a manual adjustment to inventory stock, creating an audit trail.",
+      "description": "Represents a single, immutable movement of stock in the inventory ledger.",
       "properties": {
-        "date": { "type": "string", "format": "date-time" },
-        "productId": { "type": "string" },
-        "productName": { "type": "string" },
-        "locationId": { "type": "string" },
-        "quantityChanged": { "type": "number", "description": "The change in quantity. Can be positive or negative." },
-        "previousStock": { "type": "number" },
-        "newStock": { "type": "number" },
-        "reason": { "type": "string", "enum": ["Auditoria", "Quebra", "Devolução", "Correção"] },
-        "notes": { "type": "string" },
-        "adjustedBy": { "type": "string" }
+        "productId": { "type": "string", "description": "Reference to the product." },
+        "type": { "type": "string", "enum": ["ENTRADA", "SAIDA", "TRANSFERENCIA", "AJUSTE"], "description": "The type of movement." },
+        "quantity": { "type": "number", "description": "The amount of stock moved. Can be positive (for entries) or negative (for exits)." },
+        "fromLocation": { "type": "string", "description": "The ID of the source location (null for new entries)." },
+        "toLocation": { "type": "string", "description": "The ID of the destination location (null for sales or discards)." },
+        "reason": { "type": "string", "description": "Context for the movement, e.g., 'Venda #123', 'Quebra na prateleira', 'Auditoria Mensal'." },
+        "userId": { "type": "string", "description": "The ID of the user who initiated the movement." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Server timestamp of when the movement occurred." }
       },
-      "required": ["date", "productId", "productName", "locationId", "quantityChanged", "previousStock", "newStock", "reason", "adjustedBy"]
-    },
-    "StockTransfer": {
-      "title": "Stock Transfer",
-      "type": "object",
-      "description": "Represents the movement of stock between two locations.",
-      "properties": {
-        "productId": { "type": "string" },
-        "productName": { "type": "string" },
-        "fromLocationId": { "type": "string" },
-        "toLocationId": { "type": "string" },
-        "quantity": { "type": "number" },
-        "initiatedBy": { "type": "string" },
-        "initiatedDate": { "type": "string", "format": "date-time" },
-        "completedBy": { "type": "string" },
-        "completedDate": { "type": "string", "format": "date-time" },
-        "status": { "type": "string", "enum": ["Em Trânsito", "Concluída", "Cancelada"] }
-      },
-      "required": ["productId", "productName", "fromLocationId", "toLocationId", "quantity", "initiatedBy", "initiatedDate", "status"]
+      "required": ["productId", "type", "quantity", "reason", "userId", "timestamp"]
     }
   },
   "auth": {
@@ -241,17 +221,10 @@
         }
       },
       {
-        "path": "/companies/{companyId}/stockAdjustments/{adjustmentId}",
+        "path": "/companies/{companyId}/stockMovements/{movementId}",
         "definition": {
-          "schema": { "$ref": "#/entities/StockAdjustment" },
-          "description": "Stores a log of all manual stock adjustments for audit purposes."
-        }
-      },
-      {
-        "path": "/companies/{companyId}/stockTransfers/{transferId}",
-        "definition": {
-          "schema": { "$ref": "#/entities/StockTransfer" },
-          "description": "Stores records of stock movements between locations."
+          "schema": { "$ref": "#/entities/StockMovement" },
+          "description": "Stores the immutable ledger of all stock movements for complete auditability."
         }
       }
     ]

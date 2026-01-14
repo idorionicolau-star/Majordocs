@@ -104,6 +104,18 @@ export type Order = {
   productionLogs: ProductionLog[];
 };
 
+export type StockMovement = {
+  id: string;
+  productId: string;
+  type: 'ENTRADA' | 'SAIDA' | 'TRANSFERENCIA' | 'AJUSTE';
+  quantity: number; // Positive for entries, negative for exits
+  fromLocation?: string | null;
+  toLocation?: string | null;
+  reason: string; // e.g., 'Venda #123', 'Quebra', 'Auditoria Mensal'
+  userId: string;
+  timestamp: string; // Should be Firestore ServerTimestamp, but string for client-side
+};
+
 
 export type Notification = {
   id: string;
