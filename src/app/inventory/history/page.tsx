@@ -10,15 +10,12 @@ import type { StockMovement } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, orderBy, Timestamp } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
-import { DateRangePicker } from "@/components/inventory/history/date-range-picker";
-import type { DateRange } from "react-day-picker";
 
 export default function InventoryHistoryPage() {
   const { companyId, locations, loading: contextLoading } = useContext(InventoryContext) || {};
   const firestore = useFirestore();
 
   const [searchFilter, setSearchFilter] = useState("");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const stockMovementsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
@@ -39,18 +36,6 @@ export default function InventoryHistoryPage() {
     if (!movements) return [];
     let result = movements;
 
-    if (dateRange?.from && dateRange?.to) {
-        // Set 'to' to the end of the day
-        const toDate = new Date(dateRange.to);
-        toDate.setHours(23, 59, 59, 999);
-
-        result = result.filter(m => {
-            if (!m.timestamp) return false;
-            const moveDate = (m.timestamp as Timestamp).toDate();
-            return moveDate >= dateRange.from! && moveDate <= toDate;
-        });
-    }
-
     if (searchFilter) {
       const lowerCaseFilter = searchFilter.toLowerCase();
       result = result.filter(m => 
@@ -66,7 +51,7 @@ export default function InventoryHistoryPage() {
         const dateB = b.timestamp ? (b.timestamp as Timestamp).toMillis() : 0;
         return dateB - dateA;
     });
-  }, [movements, searchFilter, dateRange]);
+  }, [movements, searchFilter]);
 
   const isLoading = contextLoading || movementsLoading;
 
@@ -97,7 +82,6 @@ export default function InventoryHistoryPage() {
             onChange={(e) => setSearchFilter(e.target.value)}
             className="h-12 text-sm"
         />
-        <DateRangePicker onDateChange={setDateRange} />
       </div>
 
       <HistoryDataTable 
