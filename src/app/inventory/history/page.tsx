@@ -11,9 +11,9 @@ import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, orderBy, Timestamp } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
-import { startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { startOfDay, endOfDay, isWithinInterval, format } from 'date-fns';
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Printer } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,9 +24,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { formatCurrency } from "@/lib/utils";
 
 export default function InventoryHistoryPage() {
-  const { companyId, locations, loading: contextLoading, user, clearStockMovements } = useContext(InventoryContext) || {};
+  const { companyId, locations, loading: contextLoading, user, clearStockMovements, companyData } = useContext(InventoryContext) || {};
   const firestore = useFirestore();
   const isAdmin = user?.role === 'Admin';
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -86,6 +87,89 @@ export default function InventoryHistoryPage() {
     setShowClearConfirm(false);
   };
 
+  const handlePrint = () => {
+    const printWindow = window.open('', '', 'height=800,width=800');
+    if (printWindow) {
+        printWindow.document.write('<!DOCTYPE html><html><head><title>Relatório de Movimentos de Stock</title>');
+        printWindow.document.write(`
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+        `);
+        printWindow.document.write(`
+            <style>
+                body { font-family: 'PT Sans', sans-serif; line-height: 1.6; color: #333; margin: 2rem; }
+                .container { max-width: 1000px; margin: auto; padding: 2rem; border: 1px solid #eee; border-radius: 8px; }
+                .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 1rem; margin-bottom: 2rem; }
+                .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: #3498db; margin: 0; }
+                .logo { display: flex; flex-direction: column; align-items: flex-start; }
+                .logo span { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: bold; color: #3498db; }
+                table { width: 100%; border-collapse: collapse; margin-top: 2rem; font-size: 10px; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #f9fafb; font-family: 'Space Grotesk', sans-serif; }
+                .footer { text-align: center; margin-top: 3rem; font-size: 0.8rem; color: #999; }
+                @page { size: A4 landscape; margin: 0.5in; }
+                @media print {
+                  body { margin: 0; -webkit-print-color-adjust: exact; }
+                  .no-print { display: none; }
+                  .container { border: none; box-shadow: none; }
+                }
+            </style>
+        `);
+        printWindow.document.write('</head><body><div class="container">');
+        printWindow.document.write(`
+            <div class="header">
+                 <div class="logo">
+                    <span>${companyData?.name || 'MajorStockX'}</span>
+                </div>
+                <h1>Relatório de Movimentos</h1>
+            </div>
+            <h2>Período: ${selectedDate ? format(selectedDate, 'dd/MM/yyyy') : 'Todos os movimentos'}</h2>
+        `);
+
+        printWindow.document.write('<table><thead><tr><th>Data e Hora</th><th>Tipo</th><th>Produto</th><th>Qtd.</th><th>Localização</th><th>Motivo</th><th>Utilizador</th></tr></thead><tbody>');
+        
+        filteredMovements.forEach(movement => {
+            const timestamp = movement.timestamp as Timestamp;
+            const date = timestamp ? format(timestamp.toDate(), "dd/MM/yyyy HH:mm:ss") : 'N/A';
+            const locationFrom = movement.fromLocationId ? (locationMap.get(movement.fromLocationId) || 'N/A') : 'N/A';
+            const locationTo = movement.toLocationId ? (locationMap.get(movement.toLocationId) || 'N/A') : 'N/A';
+            let locationText = '';
+            if (movement.type === 'TRANSFER') {
+                locationText = `${locationFrom} → ${locationTo}`;
+            } else if (movement.type === 'IN') {
+                locationText = locationTo;
+            } else if (movement.type === 'OUT') {
+                locationText = locationFrom;
+            }
+
+            printWindow.document.write(`
+                <tr>
+                    <td>${date}</td>
+                    <td>${movement.type}</td>
+                    <td>${movement.productName}</td>
+                    <td>${movement.quantity > 0 ? '+' : ''}${movement.quantity}</td>
+                    <td>${locationText}</td>
+                    <td>${movement.reason}</td>
+                    <td>${movement.userName}</td>
+                </tr>
+            `);
+        });
+
+        printWindow.document.write('</tbody></table>');
+        
+        printWindow.document.write(`<div class="footer"><p>${companyData?.name || 'MajorStockX'} &copy; ' + new Date().getFullYear() + '</p></div>`);
+        printWindow.document.write('</div></body></html>');
+        printWindow.document.close();
+        
+        setTimeout(() => {
+          printWindow.focus();
+          printWindow.print();
+        }, 500);
+    }
+  };
+
+
   const isLoading = contextLoading || movementsLoading;
 
   if (isLoading) {
@@ -125,12 +209,18 @@ export default function InventoryHistoryPage() {
               Audite todas as entradas, saídas e transferências de stock.
             </p>
           </div>
+          <div className="flex items-center gap-2">
+            <Button onClick={handlePrint} variant="outline" className="h-12">
+              <Printer className="mr-2 h-4 w-4" />
+              Baixar PDF
+            </Button>
            {isAdmin && (
-              <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
+              <Button variant="destructive" onClick={() => setShowClearConfirm(true)} className="h-12">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Limpar Histórico
               </Button>
             )}
+          </div>
         </div>
         <div className="flex flex-col md:flex-row gap-2">
           <Input
