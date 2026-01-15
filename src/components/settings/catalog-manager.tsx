@@ -479,7 +479,7 @@ export function CatalogManager() {
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setNewCategoryName('')}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleEditCategory}>Salvar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -532,7 +532,7 @@ export function CatalogManager() {
            <div className="space-y-4">
             <div className="flex justify-between items-center">
               <div className='flex items-center gap-4'>
-                 <p className="text-sm text-muted-foreground">Gerencie os produtos base do seu catálogo.</p>
+                 <p className="text-sm text-muted-foreground">A gerir {products?.length || 0} produtos base do catálogo.</p>
                   {selectedProducts.length > 0 && (
                   <Button variant="destructive" size="sm" onClick={() => setShowDeleteSelectedProductsConfirm(true)}>
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -615,7 +615,7 @@ export function CatalogManager() {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
                <div className="flex items-center gap-4">
-                <p className="text-sm text-muted-foreground">Gerencie as categorias de produtos.</p>
+                <p className="text-sm text-muted-foreground">A gerir {categories?.length || 0} categorias de produtos.</p>
                  {selectedCategories.length > 0 && (
                   <Button variant="destructive" size="sm" onClick={() => setShowDeleteSelectedCategoriesConfirm(true)}>
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -688,5 +688,3 @@ export function CatalogManager() {
     </>
   );
 }
-
-    
