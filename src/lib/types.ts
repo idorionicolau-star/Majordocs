@@ -58,7 +58,6 @@ export type Product = {
   criticalStockThreshold: number;
   lastUpdated: string;
   location?: string;
-  subType?: string;
   unit?: string;
 };
 

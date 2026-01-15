@@ -57,10 +57,6 @@ function ProfileTab() {
   const handleSavePicture = () => {
     if (selectedImage && setProfilePicture) {
         setProfilePicture(selectedImage);
-        toast({
-            title: "Foto de Perfil Atualizada",
-            description: "A sua nova foto de perfil foi guardada.",
-        });
     }
   };
 
