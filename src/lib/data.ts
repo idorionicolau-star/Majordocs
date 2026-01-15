@@ -9,16 +9,16 @@ import {
   ClipboardList,
   BarChart3,
   Users,
-  History,
+  Calendar,
 } from 'lucide-react';
 
 export const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', id: 'dashboard', icon: LayoutDashboard },
   { title: 'Inventário', href: '/inventory', id: 'inventory', icon: Box },
-  { title: 'Histórico', href: '/inventory/history', id: 'inventory', icon: History, isSubItem: true },
   { title: 'Vendas', href: '/sales', id: 'sales', icon: ShoppingCart },
   { title: 'Produção', href: '/production', id: 'production', icon: Hammer },
   { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList },
+  { title: 'Calendário', href: '/calendar', id: 'calendar', icon: Calendar },
   { title: 'Relatórios', href: '/reports', id: 'reports', icon: BarChart3 },
   { title: 'Funcionários', href: '/users', id: 'users', icon: Users, adminOnly: true },
   { title: 'Ajustes', href: '/settings', id: 'settings', icon: Settings },
@@ -30,6 +30,7 @@ export const allPermissions: Readonly<{ id: ModulePermission; label: string; adm
   { id: "sales", label: "Vendas", adminOnly: false },
   { id: "production", label: "Produção", adminOnly: false },
   { id: "orders", label: "Encomendas", adminOnly: false },
+  { id: "calendar", label: "Calendário", adminOnly: false },
   { id: "reports", label: "Relatórios", adminOnly: false },
   { id: "users", label: "Funcionários", adminOnly: true },
   { id: "settings", label: "Ajustes", adminOnly: false },

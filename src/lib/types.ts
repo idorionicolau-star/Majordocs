@@ -8,6 +8,7 @@ export type ModulePermission =
   | 'sales'
   | 'production'
   | 'orders'
+  | 'calendar'
   | 'reports'
   | 'users'
   | 'settings';
