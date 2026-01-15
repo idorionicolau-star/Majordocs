@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatCurrency } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 
 export default function InventoryHistoryPage() {
   const { companyId, locations, loading: contextLoading, user, clearStockMovements, companyData } = useContext(InventoryContext) || {};
@@ -214,12 +215,6 @@ export default function InventoryHistoryPage() {
               <Printer className="mr-2 h-4 w-4" />
               Baixar PDF
             </Button>
-           {isAdmin && (
-              <Button variant="destructive" onClick={() => setShowClearConfirm(true)} className="h-12">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Limpar Histórico
-              </Button>
-            )}
           </div>
         </div>
         <div className="flex flex-col md:flex-row gap-2">
@@ -236,6 +231,21 @@ export default function InventoryHistoryPage() {
           columns={columns({ locationMap })}
           data={filteredMovements}
         />
+        
+        {isAdmin && (
+            <Card className="mt-8">
+                <div className="p-6 flex flex-col items-center text-center">
+                    <h3 className="font-semibold mb-2">Zona de Administrador</h3>
+                    <p className="text-sm text-muted-foreground mb-4 max-w-md">
+                        Esta ação é irreversível e irá apagar permanentemente **todo** o histórico de movimentos de stock.
+                    </p>
+                    <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Limpar Histórico
+                    </Button>
+                </div>
+            </Card>
+        )}
       </div>
     </>
   );

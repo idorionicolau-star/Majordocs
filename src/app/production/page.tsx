@@ -32,6 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
 import { isSameDay } from "date-fns";
+import { Card } from "../ui/card";
 
 export default function ProductionPage() {
   const inventoryContext = useContext(InventoryContext);
@@ -200,12 +201,6 @@ export default function ProductionPage() {
                       }
                 </div>
             </div>
-             {isAdmin && (
-                <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Limpar Produção
-                </Button>
-            )}
         </div>
 
         <div className="py-4 space-y-4">
@@ -226,7 +221,7 @@ export default function ProductionPage() {
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button variant={view === 'list' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('list')} className="h-12 w-12">
+                                <Button variant={view === 'list' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('list')} className="h-12 w-12 hidden md:flex">
                                     <List className="h-5 w-5"/>
                                 </Button>
                             </TooltipTrigger>
@@ -234,7 +229,7 @@ export default function ProductionPage() {
                         </Tooltip>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('grid')} className="h-12 w-12">
+                                <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('grid')} className="h-12 w-12 hidden md:flex">
                                     <LayoutGrid className="h-5 w-5"/>
                                 </Button>
                             </TooltipTrigger>
@@ -321,6 +316,24 @@ export default function ProductionPage() {
             ))}
         </div>
       )}
+
+        {isAdmin && (
+          <Card className="mt-8">
+            <div className="p-6 flex flex-col items-center text-center">
+              <h3 className="font-semibold mb-2">Zona de Administrador</h3>
+              <p className="text-sm text-muted-foreground mb-4 max-w-md">
+                Esta ação é irreversível e irá apagar permanentemente **toda** a produção registada.
+              </p>
+              <Button
+                variant="destructive"
+                onClick={() => setShowClearConfirm(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Limpar Produção
+              </Button>
+            </div>
+          </Card>
+        )}
 
       {canEditProduction && <AddProductionDialog 
         open={isAddDialogOpen}

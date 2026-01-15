@@ -28,6 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Card } from "../ui/card";
 
 export default function OrdersPage() {
   const searchParams = useSearchParams();
@@ -200,12 +201,6 @@ export default function OrdersPage() {
                       }
                   </div>
               </div>
-                {isAdmin && (
-                <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Limpar Encomendas
-                </Button>
-                )}
           </div>
           
           <div className="py-4 space-y-4">
@@ -252,6 +247,21 @@ export default function OrdersPage() {
                 </div>
             )}
         </div>
+
+        {isAdmin && (
+          <Card className="mt-8">
+            <div className="p-6 flex flex-col items-center text-center">
+              <h3 className="font-semibold mb-2">Zona de Administrador</h3>
+              <p className="text-sm text-muted-foreground mb-4 max-w-md">
+                Esta ação é irreversível e irá apagar permanentemente **todas** as encomendas.
+              </p>
+              <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Limpar Encomendas
+              </Button>
+            </div>
+          </Card>
+        )}
 
       </div>
       {canEditOrders && <AddOrderDialog

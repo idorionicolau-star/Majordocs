@@ -181,12 +181,6 @@ export default function ReportsPage() {
                   <Printer className="mr-2 h-4 w-4" />
                   Imprimir Relatório
               </Button>
-              {isAdmin && (
-                <Button variant="destructive" onClick={() => setShowClearConfirm(true)} className="h-12">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Limpar Vendas
-                </Button>
-              )}
           </div>
         </div>
         
@@ -237,6 +231,21 @@ export default function ReportsPage() {
             </Table>
           </CardContent>
         </Card>
+        
+        {isAdmin && (
+            <Card className="mt-8">
+                <div className="p-6 flex flex-col items-center text-center">
+                <h3 className="font-semibold mb-2">Zona de Administrador</h3>
+                <p className="text-sm text-muted-foreground mb-4 max-w-md">
+                    Esta ação é irreversível e irá apagar permanentemente **todas** as vendas registadas.
+                </p>
+                <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Limpar Vendas
+                </Button>
+                </div>
+            </Card>
+        )}
       </div>
     </>
   );

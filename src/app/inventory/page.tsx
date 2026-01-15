@@ -42,6 +42,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { DatePicker } from "@/components/ui/date-picker";
 import { isSameDay } from "date-fns";
+import { Card } from "../ui/card";
 
 export default function InventoryPage() {
   const inventoryContext = useContext(InventoryContext);
@@ -278,6 +279,7 @@ export default function InventoryPage() {
       printWindow.document.close();
       
       setTimeout(() => {
+        printWindow.focus();
         printWindow.print();
       }, 500);
     }
@@ -399,7 +401,7 @@ export default function InventoryPage() {
                    <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant={view === 'list' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('list')} className="h-12 w-12">
+                            <Button variant={view === 'list' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('list')} className="h-12 w-12 hidden md:flex">
                                 <List className="h-5 w-5"/>
                             </Button>
                         </TooltipTrigger>
@@ -407,7 +409,7 @@ export default function InventoryPage() {
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('grid')} className="h-12 w-12">
+                            <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('grid')} className="h-12 w-12 hidden md:flex">
                                 <LayoutGrid className="h-5 w-5"/>
                             </Button>
                         </TooltipTrigger>
@@ -545,23 +547,6 @@ export default function InventoryPage() {
                                 <p>Imprimir Formulário de Contagem</p>
                             </TooltipContent>
                         </Tooltip>
-                         {isAdmin && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="destructive"
-                                size="icon"
-                                onClick={() => setShowClearConfirm(true)}
-                                className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0"
-                              >
-                                <Trash2 className="h-5 w-5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Limpar Todo o Inventário</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
                     </TooltipProvider>
                 </div>
             </div>
@@ -603,6 +588,24 @@ export default function InventoryPage() {
               {canEditInventory && <p className="text-sm">Comece por adicionar um novo produto.</p>}
             </div>
           )
+        )}
+
+        {isAdmin && (
+          <Card className="mt-8">
+            <div className="p-6 flex flex-col items-center text-center">
+              <h3 className="font-semibold mb-2">Zona de Administrador</h3>
+              <p className="text-sm text-muted-foreground mb-4 max-w-md">
+                Esta ação é irreversível e irá apagar permanentemente **todos** os produtos do seu inventário.
+              </p>
+              <Button
+                variant="destructive"
+                onClick={() => setShowClearConfirm(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Limpar Todo o Inventário
+              </Button>
+            </div>
+          </Card>
         )}
       </div>
       {canEditInventory && <AddProductDialog 
