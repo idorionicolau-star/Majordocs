@@ -7,7 +7,7 @@ import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -448,18 +448,6 @@ export default function InventoryPage() {
                             </TooltipTrigger>
                             <TooltipContent>
                                 <p>Imprimir Formulário de Contagem</p>
-                            </TooltipContent>
-                        </Tooltip>
-                         <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button asChild variant="outline" size="icon" className="shadow-lg h-12 w-12 rounded-2xl">
-                                    <Link href="/inventory/history">
-                                        <History className="h-5 w-5" />
-                                    </Link>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Histórico de Movimentos</p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
