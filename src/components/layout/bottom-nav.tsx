@@ -40,7 +40,7 @@ export function BottomNav() {
             )
           })}
         </div>
-        <ScrollBar orientation="horizontal" className="h-0.5" />
+        <ScrollBar orientation="horizontal" className="hidden" />
       </ScrollArea>
     </nav>
   );
