@@ -1,4 +1,5 @@
 
+
 export type PermissionLevel = 'none' | 'read' | 'write';
 
 export type ModulePermission = 
@@ -138,10 +139,11 @@ export type Notification = {
 export type NavItem = {
   title: string;
   href: string;
-  id: ModulePermission;
+  id: ModulePermission | string; // Allow string for sub-routes like history
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
   adminOnly?: boolean;
+  isSubItem?: boolean;
 };
 
 export type InitialCatalog = {
