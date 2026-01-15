@@ -40,6 +40,8 @@ import { Checkbox } from '../ui/checkbox';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'> & { id: string };
 type CatalogCategory = { id: string; name: string };
+type ProductImportData = Omit<CatalogProduct, 'id'>;
+
 
 export function CatalogManager() {
   const { toast } = useToast();
@@ -205,6 +207,56 @@ export function CatalogManager() {
     }
   };
   
+  const handleBulkImport = async (importedProducts: ProductImportData[]) => {
+    if (!firestore || !companyId || !catalogProductsCollectionRef || !catalogCategoriesCollectionRef) return;
+    
+    toast({ title: `A importar ${importedProducts.length} produtos...`, description: "Isto pode demorar um momento." });
+
+    try {
+        const batch = writeBatch(firestore);
+        const existingCategories = new Set(categories?.map(c => c.name.toLowerCase()));
+        const newCategories = new Set<string>();
+
+        // Find new categories to create
+        importedProducts.forEach(p => {
+            const catLower = p.category.toLowerCase();
+            if (!existingCategories.has(catLower)) {
+                newCategories.add(p.category);
+            }
+        });
+
+        // Add new categories to the batch
+        newCategories.forEach(catName => {
+            const newCatRef = doc(catalogCategoriesCollectionRef);
+            batch.set(newCatRef, { name: catName });
+        });
+
+        // Upsert products
+        for (const productData of importedProducts) {
+            const q = query(catalogProductsCollectionRef, where("name", "==", productData.name));
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) {
+                // Product does not exist, create it
+                const newProdRef = doc(catalogProductsCollectionRef);
+                batch.set(newProdRef, productData);
+            } else {
+                // Product exists, update it
+                const existingDocRef = querySnapshot.docs[0].ref;
+                batch.update(existingDocRef, productData);
+            }
+        }
+        
+        await batch.commit();
+        toast({ title: "Importação Concluída", description: `${importedProducts.length} produtos e ${newCategories.size} novas categorias foram importados/atualizados.` });
+
+    } catch (e) {
+        console.error("Bulk import error: ", e);
+        toast({ variant: 'destructive', title: 'Erro na Importação', description: 'Ocorreu um erro ao guardar os dados.' });
+    }
+  };
+
+
   const filteredProducts = useMemo(() => {
     if (!products) return [];
     const sorted = [...products].sort((a,b) => a.name.localeCompare(b.name));
@@ -629,12 +681,10 @@ export function CatalogManager() {
         </TabsContent>
         
         <TabsContent value="import" className="mt-4">
-            <DataImporter />
+            <DataImporter onImport={handleBulkImport} />
         </TabsContent>
 
       </Tabs>
     </>
   );
 }
-
-    

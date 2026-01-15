@@ -9,67 +9,92 @@ import { UploadCloud, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
+import type { Product } from '@/lib/types';
+import Papa from 'papaparse';
 
-// This component is now part of CatalogManager and can be removed in the future.
-// For now, it remains to avoid breaking imports if it were used elsewhere.
+type ProductImportData = Omit<Product, 'id' | 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
-export function DataImporter() {
+interface DataImporterProps {
+  onImport: (products: ProductImportData[]) => void;
+}
+
+
+export function DataImporter({ onImport }: DataImporterProps) {
   const [textData, setTextData] = useState('');
-  const [fileName, setFileName] = useState('');
+  const [file, setFile] = useState<File | null>(null);
   const { toast } = useToast();
 
-  const handleImportText = () => {
-    if (!textData.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'Nenhum dado para importar',
-        description: 'Por favor, cole os dados do seu catálogo na área de texto.',
-      });
+  const processData = (data: string) => {
+    if (!data.trim()) {
+      toast({ variant: 'destructive', title: 'Nenhum dado para importar' });
       return;
     }
-    // Lógica de processamento do texto aqui
-    console.log('Importing from text:', textData);
-    toast({
-      title: 'Importação Iniciada',
-      description: 'O seu catálogo de produtos está a ser processado.',
+
+    Papa.parse<any>(data, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        if (results.errors.length > 0) {
+          console.error("CSV Parsing errors: ", results.errors);
+          toast({ variant: 'destructive', title: 'Erro ao Ler CSV', description: 'Verifique o formato do seu ficheiro ou dados.' });
+          return;
+        }
+
+        const requiredHeaders = ["Nome", "Categoria", "Preço", "Alerta Baixo", "Alerta Crítico"];
+        const headers = results.meta.fields || [];
+        const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+
+        if (missingHeaders.length > 0) {
+            toast({ variant: 'destructive', title: 'Cabeçalhos em Falta', description: `Faltam as seguintes colunas: ${missingHeaders.join(', ')}` });
+            return;
+        }
+
+        const productsToImport: ProductImportData[] = results.data.map(row => ({
+          name: row["Nome"],
+          category: row["Categoria"],
+          price: parseFloat(row["Preço"] || 0),
+          lowStockThreshold: parseInt(row["Alerta Baixo"] || '10', 10),
+          criticalStockThreshold: parseInt(row["Alerta Crítico"] || '5', 10),
+        }));
+
+        onImport(productsToImport);
+        setTextData('');
+        setFile(null);
+      }
     });
+  };
+
+  const handleImportText = () => {
+    processData(textData);
   };
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      setFileName(file.name);
-      
-      // Lógica de leitura do ficheiro aqui
-      // Por exemplo, usando FileReader para ler como texto
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result;
-        console.log('File content:', content);
-      };
-      reader.readAsText(file);
+      const selectedFile = event.target.files[0];
+      setFile(selectedFile);
     }
   };
 
   const handleImportFile = () => {
-    if (!fileName) {
-       toast({
-        variant: 'destructive',
-        title: 'Nenhum ficheiro selecionado',
-        description: 'Por favor, selecione um ficheiro para carregar.',
-      });
-      return;
+    if (!file) {
+       toast({ variant: 'destructive', title: 'Nenhum ficheiro selecionado' });
+       return;
     }
-     toast({
-      title: 'Carregamento Iniciado',
-      description: `O ficheiro "${fileName}" está a ser processado.`,
-    });
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      processData(content);
+    };
+    reader.onerror = () => {
+        toast({ variant: 'destructive', title: 'Erro de Leitura', description: 'Não foi possível ler o ficheiro.' });
+    }
+    reader.readAsText(file);
   }
 
   return (
     <div className="space-y-4">
        <p className="text-sm text-muted-foreground">
-        Selecione um método para carregar o seu catálogo de produtos. Pode colar uma lista (CSV, TSV) ou carregar um ficheiro (Excel, CSV).
+        Selecione um método para carregar o seu catálogo de produtos. O formato esperado é CSV com os cabeçalhos: `Nome`, `Categoria`, `Preço`, `Alerta Baixo`, `Alerta Crítico`.
       </p>
       <Tabs defaultValue="paste">
         <TabsList className="grid w-full grid-cols-2">
@@ -85,7 +110,7 @@ export function DataImporter() {
         <TabsContent value="paste" className="mt-4">
           <div className="space-y-3">
             <Textarea
-              placeholder="Cole aqui os dados do seu catálogo. Ex: Nome,Categoria,Preço,Stock..."
+              placeholder="Cole aqui os dados do seu catálogo em formato CSV..."
               className="min-h-[200px]"
               value={textData}
               onChange={(e) => setTextData(e.target.value)}
@@ -97,9 +122,9 @@ export function DataImporter() {
            <div className="space-y-3">
             <div className="grid w-full max-w-sm items-center gap-1.5">
               <Label htmlFor="catalog-file">Ficheiro do Catálogo</Label>
-              <Input id="catalog-file" type="file" accept=".csv, .xlsx, .xls" onChange={handleFileChange} />
+              <Input id="catalog-file" type="file" accept=".csv" onChange={handleFileChange} />
             </div>
-            {fileName && <p className="text-sm text-muted-foreground">Ficheiro selecionado: <strong>{fileName}</strong></p>}
+            {file && <p className="text-sm text-muted-foreground">Ficheiro selecionado: <strong>{file.name}</strong></p>}
             <Button onClick={handleImportFile} className="w-full">Importar Catálogo de Ficheiro</Button>
           </div>
         </TabsContent>
@@ -107,5 +132,3 @@ export function DataImporter() {
     </div>
   );
 }
-
-    
