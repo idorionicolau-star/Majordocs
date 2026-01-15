@@ -5,8 +5,7 @@ import { useState, useMemo, useContext } from 'react';
 import { format, startOfDay, isSameDay } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Calendar, Printer, DollarSign, Hash, Box } from 'lucide-react';
+import { Printer, DollarSign, Hash, Box } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { Sale } from '@/lib/types';
 import {
@@ -19,13 +18,15 @@ import {
 } from "@/components/ui/table"
 import { InventoryContext } from '@/context/inventory-context';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DatePicker } from '@/components/ui/date-picker';
 
 export default function ReportsPage() {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const inventoryContext = useContext(InventoryContext);
   const { sales, companyData, loading } = inventoryContext || { sales: [], companyData: null, loading: true };
 
   const salesForDate = useMemo(() => {
+    if (!selectedDate) return [];
     return sales.filter(sale => isSameDay(new Date(sale.date), selectedDate));
   }, [selectedDate, sales]);
 
@@ -44,6 +45,7 @@ export default function ReportsPage() {
   }, [salesForDate]);
 
   const handlePrint = () => {
+    if (!selectedDate) return;
     const printWindow = window.open('', '', 'height=800,width=800');
     if (printWindow) {
         printWindow.document.write('<!DOCTYPE html><html><head><title>Relatório de Vendas</title>');
@@ -137,13 +139,8 @@ export default function ReportsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-            <Input
-                type="date"
-                value={format(selectedDate, 'yyyy-MM-dd')}
-                onChange={(e) => setSelectedDate(startOfDay(new Date(e.target.value)))}
-                className="w-auto h-12"
-            />
-            <Button onClick={handlePrint} variant="outline" className="h-12">
+            <DatePicker date={selectedDate} setDate={setSelectedDate} />
+            <Button onClick={handlePrint} variant="outline" className="h-12" disabled={!selectedDate}>
                 <Printer className="mr-2 h-4 w-4" />
                 Imprimir Relatório
             </Button>
@@ -161,7 +158,7 @@ export default function ReportsPage() {
         <CardHeader>
           <CardTitle>Detalhes das Vendas do Dia</CardTitle>
           <CardDescription>
-            Todas as vendas registadas em {format(selectedDate, 'dd/MM/yyyy')}.
+            {selectedDate ? `Todas as vendas registadas em ${format(selectedDate, 'dd/MM/yyyy')}.` : "Nenhuma data selecionada."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -218,3 +215,6 @@ const StatCard = ({ icon: Icon, title, value }: StatCardProps) => (
         </CardContent>
     </Card>
 );
+
+
+    
