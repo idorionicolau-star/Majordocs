@@ -1,3 +1,4 @@
+
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import { formatCurrency } from '@/lib/utils';
