@@ -190,7 +190,7 @@ export default function ProductionPage() {
             </div>
             
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t pt-4">
-                <div className="flex items-center gap-2">
+                <div className="hidden md:flex items-center gap-2">
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
