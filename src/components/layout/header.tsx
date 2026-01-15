@@ -1,11 +1,9 @@
-
 "use client";
 
 import Link from "next/link";
 import Image from "next/image";
 import { ConnectionStatus } from "@/components/connection-status"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
-import { ThemeSwitcher } from "@/components/theme-switcher";
 import { UserNav } from "@/components/user-nav";
 
 export function Header() {
@@ -23,7 +21,6 @@ export function Header() {
             <ConnectionStatus />
           </div>
           <NotificationsDropdown />
-          <ThemeSwitcher />
           <UserNav />
         </div>
     </header>
