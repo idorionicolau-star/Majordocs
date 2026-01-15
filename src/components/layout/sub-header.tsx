@@ -15,10 +15,15 @@ export function SubHeader() {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const { canView } = useContext(InventoryContext) || { canView: () => false };
 
-  const navItems = mainNavItems.filter(item => canView(item.id as ModulePermission));
+  const navItems = mainNavItems.filter(item => {
+    if (item.isSubItem) return false; // Don't show sub-items directly in the main nav bar
+    return canView(item.id as ModulePermission);
+  });
+  
+  const inventorySubNavItems = mainNavItems.filter(item => item.isSubItem && item.id === 'inventory');
 
   React.useEffect(() => {
-    const activeLink = document.getElementById(`nav-link-${pathname.replace('/', '')}`);
+    const activeLink = document.getElementById(`nav-link-${pathname.split('/').slice(1).join('-')}`);
     if (activeLink && scrollRef.current) {
       const scrollArea = scrollRef.current;
       const linkRect = activeLink.getBoundingClientRect();
@@ -32,6 +37,65 @@ export function SubHeader() {
       });
     }
   }, [pathname]);
+  
+  const renderNavItem = (item: (typeof mainNavItems)[0]) => {
+     const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+     const id = `nav-link-${item.href.replace('/', '-')}`;
+
+     const isInventoryActive = pathname.startsWith('/inventory');
+
+     if (item.href === '/inventory') {
+         return (
+            <div key={item.href} className="flex items-center">
+                 <Link
+                    href={item.href}
+                    id={id}
+                    scroll={false}
+                    className={cn(
+                        "flex items-center justify-center rounded-t-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-muted/50",
+                        isActive && !pathname.includes('/history') ? "text-primary border-b-2 border-primary" : "text-muted-foreground"
+                    )}
+                    >
+                    {item.title}
+                </Link>
+                {isInventoryActive && inventorySubNavItems.map(subItem => {
+                    const isSubItemActive = pathname.startsWith(subItem.href);
+                    return (
+                         <Link
+                            key={subItem.href}
+                            id={`nav-link-${subItem.href.split('/').slice(1).join('-')}`}
+                            href={subItem.href}
+                            scroll={false}
+                            className={cn(
+                                "flex items-center justify-center rounded-t-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-muted/50",
+                                isSubItemActive ? "text-primary border-b-2 border-primary" : "text-muted-foreground"
+                            )}
+                            >
+                            {subItem.title}
+                        </Link>
+                    )
+                })}
+            </div>
+         )
+     }
+
+      return (
+        <Link
+            key={item.href}
+            id={id}
+            href={item.href}
+            scroll={false}
+            className={cn(
+                "flex items-center justify-center rounded-t-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-muted/50",
+                isActive
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground"
+            )}
+            >
+            {item.title}
+        </Link>
+      )
+  }
 
   return (
     <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-16 sm:top-20 z-20">
@@ -40,26 +104,7 @@ export function SubHeader() {
           "flex w-max md:w-full md:justify-center mx-auto",
           "animate-peek md:animate-none"
         )}>
-          {navItems.map((item) => {
-            const isActive = pathname.startsWith(item.href);
-
-            return (
-              <Link
-                key={item.href}
-                id={`nav-link-${item.href.replace('/', '')}`}
-                href={item.href}
-                scroll={false}
-                className={cn(
-                  "flex items-center justify-center rounded-t-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-muted/50",
-                  isActive
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground"
-                )}
-              >
-                {item.title}
-              </Link>
-            )
-          })}
+          {navItems.map(renderNavItem)}
         </nav>
         <ScrollBar orientation="horizontal" className="h-0.5 md:hidden" />
       </ScrollArea>
