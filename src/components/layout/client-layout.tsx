@@ -10,7 +10,6 @@ import { SubHeader } from './sub-header';
 import { motion, AnimatePresence } from 'framer-motion';
 import { mainNavItems } from '@/lib/data';
 import type { ModulePermission } from '@/lib/types';
-import { GestureNavigation } from './gesture-navigation';
 import { Button } from '../ui/button';
 import Link from 'next/link';
 import { BottomNav } from './bottom-nav';
@@ -50,11 +49,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
 
   const availableNavItems = mainNavItems.filter(item => canView(item.id as ModulePermission));
-  const currentIndex = availableNavItems.findIndex(item => pathname.startsWith(item.href));
-
-  const prevRoute = currentIndex > 0 ? availableNavItems[currentIndex - 1]?.href : undefined;
-  const nextRoute = currentIndex < availableNavItems.length - 1 ? availableNavItems[currentIndex + 1]?.href : undefined;
-
+  
   const fabConfig = FAB_CONFIG[pathname as keyof typeof FAB_CONFIG];
   const showFab = fabConfig && canEdit(fabConfig.permission as ModulePermission);
 
@@ -91,9 +86,17 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       <Header />
       <SubHeader />
       <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-hidden relative main-content">
-         <GestureNavigation key={pathname} prevRoute={prevRoute} nextRoute={nextRoute}>
-            {children}
-         </GestureNavigation>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+          >
+             {children}
+          </motion.div>
+        </AnimatePresence>
       </main>
       <BottomNav />
        <AnimatePresence>
