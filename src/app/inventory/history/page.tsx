@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { startOfDay, endOfDay, isWithinInterval, format } from 'date-fns';
 import { Button } from "@/components/ui/button";
-import { Trash2, Printer } from "lucide-react";
+import { Trash2, Printer, Download } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,12 +26,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { formatCurrency } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 
 export default function InventoryHistoryPage() {
   const { companyId, locations, loading: contextLoading, user, clearStockMovements, companyData } = useContext(InventoryContext) || {};
   const firestore = useFirestore();
   const isAdmin = user?.role === 'Admin';
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const { toast } = useToast();
 
 
   const [searchFilter, setSearchFilter] = useState("");
@@ -170,6 +172,15 @@ export default function InventoryHistoryPage() {
     }
   };
 
+  const handleDownloadPdf = () => {
+    toast({
+      title: "Como Guardar o Relatório em PDF",
+      description: "Na janela de impressão que vai abrir, por favor mude o destino para 'Guardar como PDF' para descarregar o ficheiro.",
+      duration: 8000,
+    });
+    handlePrint();
+  };
+
 
   const isLoading = contextLoading || movementsLoading;
 
@@ -211,9 +222,13 @@ export default function InventoryHistoryPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button onClick={handleDownloadPdf} variant="outline" className="h-12">
+              <Download className="mr-2 h-4 w-4" />
+              Baixar PDF
+            </Button>
             <Button onClick={handlePrint} variant="outline" className="h-12">
               <Printer className="mr-2 h-4 w-4" />
-              Baixar PDF
+              Imprimir
             </Button>
           </div>
         </div>
@@ -250,3 +265,5 @@ export default function InventoryHistoryPage() {
     </>
   );
 }
+
+    
