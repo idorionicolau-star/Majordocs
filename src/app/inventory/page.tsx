@@ -617,7 +617,7 @@ export default function InventoryPage() {
             />
             <Button
                 onClick={() => setAddDialogOpen(true)}
-                className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg z-20"
+                className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
                 size="icon"
             >
                 <Plus className="h-6 w-6" />
