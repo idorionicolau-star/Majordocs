@@ -402,32 +402,35 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [companyDocRef]);
 
-  const triggerEmailAlert = useCallback(async (product: Product, type: 'CRITICAL') => {
+  const triggerEmailAlert = useCallback(async (payload: any) => {
     const targetEmail = companyData?.notificationEmail;
     if (!targetEmail) {
         console.warn("E-mail de notificação não configurado. Alerta não enviado.");
         return;
     }
     
-    addNotification({
-        type: 'stock',
-        message: `Stock crítico para ${product.name}! Quantidade: ${product.stock}`,
-        href: '/inventory'
-    });
+    let subject = '';
+    if (payload.type === 'CRITICAL') {
+        subject = `🚨 ALERTA: ${payload.productName} com stock baixo!`;
+        addNotification({
+            type: 'stock',
+            message: `Stock crítico para ${payload.productName}! Quantidade: ${payload.quantity}`,
+            href: '/inventory'
+        });
+    } else if (payload.type === 'SALE') {
+        subject = `✅ Nova Venda: ${payload.productName}`;
+        addNotification({
+            type: 'sale',
+            message: `Nova venda de ${payload.productName} registada.`,
+            href: '/sales',
+        });
+    }
 
     try {
         const response = await fetch('/api/email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-              to: targetEmail,
-              subject: `🚨 ALERTA: ${product.name} com stock baixo!`,
-              productName: product.name,
-              quantity: product.stock,
-              location: locations.find(l => l.id === product.location)?.name || 'Principal',
-              type: type,
-              threshold: product.criticalStockThreshold,
-          }),
+          body: JSON.stringify({ to: targetEmail, subject, ...payload }),
         });
 
         if (!response.ok) {
@@ -436,28 +439,34 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         }
 
         toast({
-            title: "Alerta de Stock Enviado",
-            description: `Um e-mail de alerta para ${product.name} foi enviado.`,
+            title: "Notificação Enviada",
+            description: `Um e-mail sobre "${subject}" foi enviado com sucesso.`,
         });
 
-    } catch (error) {
-        console.error("Falha ao enviar e-mail de alerta:", error);
+    } catch (error: any) {
+        console.error("Falha ao enviar e-mail de notificação:", error);
         toast({
             variant: "destructive",
             title: "Erro de Notificação",
-            description: `Não foi possível enviar o e-mail de alerta. ${error.message}`
+            description: `Não foi possível enviar o e-mail. ${error.message}`
         });
     }
-  }, [companyData?.notificationEmail, locations, toast, addNotification]);
+  }, [companyData?.notificationEmail, addNotification, toast]);
 
   const checkStockAndNotify = useCallback(async (product: Product) => {
     const targetEmail = companyData?.notificationEmail;
     if (!targetEmail) return;
 
     if (product.stock <= (product.criticalStockThreshold || 0)) {
-        await triggerEmailAlert(product, 'CRITICAL');
+        await triggerEmailAlert({
+            type: 'CRITICAL',
+            productName: product.name,
+            quantity: product.stock,
+            location: locations.find(l => l.id === product.location)?.name || 'Principal',
+            threshold: product.criticalStockThreshold,
+        });
     }
-  }, [companyData, triggerEmailAlert]);
+  }, [companyData, locations, triggerEmailAlert]);
 
  const addProduct = useCallback(
     (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => {
@@ -678,12 +687,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         transaction.update(productDoc.ref, { reservedStock: newReservedStock });
         transaction.set(newSaleRef, { ...newSaleData, guideNumber });
     });
-     addNotification({
-        type: 'sale',
-        message: `Nova venda de ${newSaleData.productName} registada.`,
-        href: '/sales',
+
+    await triggerEmailAlert({
+        type: 'SALE',
+        ...newSaleData,
+        guideNumber,
+        location: locations.find(l => l.id === newSaleData.location)?.name || 'Principal',
     });
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, addNotification]);
+    
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, addNotification, triggerEmailAlert, locations]);
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
      if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
