@@ -65,7 +65,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
       quantity: 1,
       unit: 'un',
       clientName: "",
-      deliveryDate: "",
+      deliveryDate: new Date().toISOString().split('T')[0],
       location: "",
     },
   });
@@ -82,7 +82,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
         quantity: 1,
         unit: 'un',
         clientName: "",
-        deliveryDate: "",
+        deliveryDate: new Date().toISOString().split('T')[0],
         location: finalLocation,
       });
     }
