@@ -374,49 +374,55 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [companyDocRef]);
 
   const triggerEmailAlert = useCallback(async (product: Product, type: 'CRITICAL') => {
-    if (!companyData?.notificationEmail) {
-        console.warn("Email de notificação não configurado.");
+    const targetEmail = companyData?.notificationEmail;
+    if (!targetEmail) {
+        console.warn("E-mail de notificação não configurado. Alerta não enviado.");
         return;
     }
 
     try {
-        await fetch('/api/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            to: companyData.notificationEmail,
-            subject: `🚨 ALERTA: ${product.name} com stock baixo!`,
-            productName: product.name,
-            quantity: product.stock,
-            location: locations.find(l => l.id === product.location)?.name || 'Principal',
-            type: type,
-            threshold: product.criticalStockThreshold,
-        }),
+        const response = await fetch('/api/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+              to: targetEmail,
+              subject: `🚨 ALERTA: ${product.name} com stock baixo!`,
+              productName: product.name,
+              quantity: product.stock,
+              location: locations.find(l => l.id === product.location)?.name || 'Principal',
+              type: type,
+              threshold: product.criticalStockThreshold,
+          }),
         });
+
+        if (!response.ok) {
+            const errorBody = await response.json();
+            throw new Error(errorBody.error || 'Erro desconhecido da API');
+        }
+
+        toast({
+            title: "Alerta de Stock Enviado",
+            description: `Um e-mail de alerta para ${product.name} foi enviado.`,
+        });
+
     } catch (error) {
         console.error("Falha ao enviar e-mail de alerta:", error);
         toast({
             variant: "destructive",
             title: "Erro de Notificação",
-            description: "Não foi possível enviar o e-mail de alerta de stock."
+            description: `Não foi possível enviar o e-mail de alerta. ${error.message}`
         });
     }
   }, [companyData?.notificationEmail, locations, toast]);
 
-  const checkStockAndSendAlerts = useCallback(async (productId: string, updatedStock: number) => {
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
+  const checkStockAndNotify = useCallback(async (product: Product) => {
+    const targetEmail = companyData?.notificationEmail;
+    if (!targetEmail) return;
 
-    // Create a temporary updated product object to check against thresholds
-    const updatedProduct = { ...product, stock: updatedStock };
-
-    const wasAboveThreshold = product.stock > product.criticalStockThreshold;
-    const isBelowThreshold = updatedStock <= product.criticalStockThreshold;
-
-    if (wasAboveThreshold && isBelowThreshold) {
-      await triggerEmailAlert(updatedProduct, 'CRITICAL');
+    if (product.stock <= (product.criticalStockThreshold || 0)) {
+        await triggerEmailAlert(product, 'CRITICAL');
     }
-  }, [products, triggerEmailAlert]);
+  }, [companyData, triggerEmailAlert]);
 
  const addProduct = useCallback(
     (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => {
@@ -437,10 +443,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const docRef = doc(productsCollectionRef, instanceId);
       await updateDoc(docRef, { ...updatedData, lastUpdated: new Date().toISOString().split('T')[0] });
 
-      if (updatedData.stock !== undefined) {
-        await checkStockAndSendAlerts(instanceId, updatedData.stock);
+      const fullProduct = products.find(p => p.id === instanceId);
+      if(fullProduct) {
+          const productForNotification = { ...fullProduct, ...updatedData };
+          await checkStockAndNotify(productForNotification);
       }
-    }, [productsCollectionRef, checkStockAndSendAlerts]);
+    }, [productsCollectionRef, products, checkStockAndNotify]);
 
   const deleteProduct = useCallback((instanceId: string) => {
        if (!productsCollectionRef || !instanceId) return;
@@ -495,7 +503,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             const newFromStock = fromProduct.stock - quantity;
             transaction.update(fromDocRef, { stock: newFromStock });
             
-            checkStockAndSendAlerts(fromProduct.id!, newFromStock);
+            checkStockAndNotify({ ...fromProduct, stock: newFromStock });
 
             // 2. Update or create destination product
             if (toProduct && toProduct.id) {
@@ -527,7 +535,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         console.error('Error transferring stock:', error);
         toast({ variant: 'destructive', title: 'Erro na Transferência', description: (error as Error).message });
     }
-}, [firestore, companyId, products, toast, user, checkStockAndSendAlerts]);
+}, [firestore, companyId, products, toast, user, checkStockAndNotify]);
 
   const updateProductStock = useCallback(async (productName: string, quantity: number, locationId?: string) => {
       if (!firestore || !companyId || !user) return;
@@ -543,7 +551,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         const newStock = existingInstance.stock + quantity;
         batch.update(docRef, { stock: newStock });
         
-        checkStockAndSendAlerts(existingInstance.id, newStock);
+        checkStockAndNotify({ ...existingInstance, stock: newStock });
         
         const movement: Omit<StockMovement, 'id'|'timestamp'> = {
             productId: existingInstance.id,
@@ -570,7 +578,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         const newProductRef = doc(productsRef);
         batch.set(newProductRef, { ...restOfCatalogProduct, stock: quantity, reservedStock: 0, location: targetLocation, lastUpdated: new Date().toISOString().split('T')[0] });
         
-        checkStockAndSendAlerts(newProductRef.id, quantity);
+        checkStockAndNotify({ ...catalogProduct, id: newProductRef.id, stock: quantity } as Product);
 
         const movement: Omit<StockMovement, 'id'|'timestamp'> = {
             productId: newProductRef.id,
@@ -585,7 +593,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         batch.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
         await batch.commit();
       }
-    }, [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast, user, checkStockAndSendAlerts]);
+    }, [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast, user, checkStockAndNotify]);
 
   const updateCompany = useCallback(async (details: Partial<Company>) => {
       if(companyDocRef) {
@@ -655,7 +663,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         transaction.update(productDoc.ref, { stock: newStock, reservedStock: newReservedStock });
         transaction.update(saleRef, { status: 'Levantado' });
 
-        checkStockAndSendAlerts(productDoc.id, newStock);
+        checkStockAndNotify({ ...productData, stock: newStock });
 
         const movement: Omit<StockMovement, 'id'|'timestamp'> = {
             productId: productDoc.id,
@@ -669,7 +677,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         };
         transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
     });
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user, checkStockAndSendAlerts]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user, checkStockAndNotify]);
 
   const deleteSale = useCallback(async (saleId: string) => {
     if (!salesCollectionRef) return;
