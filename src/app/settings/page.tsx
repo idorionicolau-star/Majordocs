@@ -319,7 +319,6 @@ export default function SettingsPage() {
                   <TabsTrigger value="company" id="tab-trigger-company"><Building className="mr-2 h-4 w-4" />Empresa</TabsTrigger>
                   <TabsTrigger value="locations" id="tab-trigger-locations"><MapPin className="mr-2 h-4 w-4" />Localizações</TabsTrigger>
                   <TabsTrigger value="catalog" id="tab-trigger-catalog"><Book className="mr-2 h-4 w-4" />Catálogo</TabsTrigger>
-                  <TabsTrigger value="developer" id="tab-trigger-developer"><Code className="mr-2 h-4 w-4" />Developer</TabsTrigger>
                 </>
               )}
             </TabsList>
@@ -426,27 +425,6 @@ export default function SettingsPage() {
                   <CardContent>
                     <CatalogManager />
                   </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="developer">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Ferramentas de Programador</CardTitle>
-                        <CardDescription>Ações avançadas para gerir o estado da aplicação.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div>
-                            <h3 className="font-semibold">Limpar Coleção de Produtos</h3>
-                            <p className="text-sm text-muted-foreground mt-1">
-                            Esta ação irá apagar todos os documentos da coleção de produtos no Firestore. Utilize esta opção se quiser limpar o inventário e recomeçar.
-                            </p>
-                        </div>
-                        <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Limpar Produtos do Firestore
-                        </Button>
-                    </CardContent>
                 </Card>
               </TabsContent>
             </>
