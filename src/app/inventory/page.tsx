@@ -7,7 +7,7 @@ import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle, Plus } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -382,12 +382,6 @@ export default function InventoryPage() {
                       }
                   </div>
               </div>
-              {canEditInventory && (
-                <Button onClick={() => setAddDialogOpen(true)}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Adicionar Produto
-                </Button>
-              )}
           </div>
           <div className="py-4 space-y-4">
              <div className="flex flex-col sm:flex-row items-center gap-2">
@@ -614,13 +608,23 @@ export default function InventoryPage() {
           </Card>
         )}
       </div>
-      {canEditInventory && <AddProductDialog 
-        open={isAddDialogOpen}
-        onOpenChange={setAddDialogOpen}
-        onAddProduct={handleAddProduct}
-      />}
+      {canEditInventory && (
+        <>
+            <AddProductDialog 
+                open={isAddDialogOpen}
+                onOpenChange={setAddDialogOpen}
+                onAddProduct={handleAddProduct}
+            />
+            <Button
+                onClick={() => setAddDialogOpen(true)}
+                className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg z-20"
+                size="icon"
+            >
+                <Plus className="h-6 w-6" />
+                <span className="sr-only">Adicionar Produto</span>
+            </Button>
+        </>
+      )}
     </>
   );
 }
-
-    
