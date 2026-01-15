@@ -40,6 +40,8 @@ import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { DatePicker } from "@/components/ui/date-picker";
+import { isSameDay } from "date-fns";
 
 export default function InventoryPage() {
   const inventoryContext = useContext(InventoryContext);
@@ -47,6 +49,7 @@ export default function InventoryPage() {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [nameFilter, setNameFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  const [dateFilter, setDateFilter] = useState<Date | undefined>();
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
@@ -296,9 +299,13 @@ export default function InventoryPage() {
     if (categoryFilter.length > 0) {
       result = result.filter(p => categoryFilter.includes(p.category));
     }
+
+    if (dateFilter) {
+      result = result.filter(p => isSameDay(new Date(p.lastUpdated), dateFilter));
+    }
     
     return result;
-  }, [products, selectedLocation, nameFilter, categoryFilter]);
+  }, [products, selectedLocation, nameFilter, categoryFilter, dateFilter]);
   
     if (inventoryLoading) {
     return (
@@ -355,6 +362,7 @@ export default function InventoryPage() {
                   onChange={(event) => setNameFilter(event.target.value)}
                   className="w-full md:max-w-sm shadow-lg h-12 text-sm"
                 />
+                <DatePicker date={dateFilter} setDate={setDateFilter} />
                 <div className="flex items-center gap-2">
                     <TooltipProvider>
                        {isMultiLocation && canEditInventory && (
