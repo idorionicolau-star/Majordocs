@@ -32,7 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
 import { isSameDay } from "date-fns";
-import { Card } from "../ui/card";
+import { Card } from "@/components/ui/card";
 
 export default function ProductionPage() {
   const inventoryContext = useContext(InventoryContext);
@@ -344,3 +344,5 @@ export default function ProductionPage() {
     </>
   );
 }
+
+    

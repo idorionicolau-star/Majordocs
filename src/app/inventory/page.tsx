@@ -42,7 +42,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { DatePicker } from "@/components/ui/date-picker";
 import { isSameDay } from "date-fns";
-import { Card } from "../ui/card";
+import { Card } from "@/components/ui/card";
 
 export default function InventoryPage() {
   const inventoryContext = useContext(InventoryContext);
@@ -616,3 +616,5 @@ export default function InventoryPage() {
     </>
   );
 }
+
+    

@@ -33,7 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Card } from "../ui/card";
+import { Card } from "@/components/ui/card";
 
 export default function SalesPage() {
   const searchParams = useSearchParams();
@@ -399,3 +399,5 @@ export default function SalesPage() {
     </>
   );
 }
+
+    
