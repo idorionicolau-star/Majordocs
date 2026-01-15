@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Building, Book, Palette, User as UserIcon, MapPin, Code, Trash2 } from "lucide-react";
+import { Building, Book, Palette, User as UserIcon, MapPin, Code, Trash2, Mail } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { LocationsManager } from "@/components/settings/locations-manager";
 import { Button } from "@/components/ui/button";
@@ -129,7 +129,8 @@ export default function SettingsPage() {
     email: '',
     phone: '',
     address: '',
-    taxId: ''
+    taxId: '',
+    notificationEmail: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -163,7 +164,8 @@ export default function SettingsPage() {
         email: companyData.email || '',
         phone: companyData.phone || '',
         address: companyData.address || '',
-        taxId: companyData.taxId || ''
+        taxId: companyData.taxId || '',
+        notificationEmail: companyData.notificationEmail || ''
       });
     }
   }, [companyData]);
@@ -394,6 +396,20 @@ export default function SettingsPage() {
                                 <Input id="address" value={companyDetails.address} onChange={handleDetailChange} />
                             </div>
                           </div>
+
+                           <div className="space-y-4 pt-6 border-t">
+                                <div className="space-y-2">
+                                    <Label htmlFor="notificationEmail" className="flex items-center gap-2 font-semibold text-base">
+                                        <Mail className="h-5 w-5 text-primary"/>
+                                        Email para Notificações
+                                    </Label>
+                                    <p className="text-sm text-muted-foreground">
+                                        Introduza um e-mail para receber alertas automáticos de stock crítico e outros relatórios importantes.
+                                    </p>
+                                    <Input id="notificationEmail" type="email" value={companyDetails.notificationEmail} onChange={handleDetailChange} placeholder="ex: gerente@suaempresa.com"/>
+                                </div>
+                          </div>
+
                           <div className="flex justify-end">
                             <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting ? 'A guardar...' : 'Salvar Alterações'}
