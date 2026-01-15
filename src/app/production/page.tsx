@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from "react";
@@ -187,7 +186,56 @@ export default function ProductionPage() {
                 />
                 <div className="flex w-full sm:w-auto items-center gap-2">
                   <DatePicker date={dateFilter} setDate={setDateFilter} />
-                  {isMultiLocation && canViewProduction && (
+                </div>
+            </div>
+            
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t pt-4">
+                <div className="flex items-center gap-2">
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant={view === 'list' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('list')} className="h-12 w-12">
+                                    <List className="h-5 w-5"/>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Vista de Lista</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('grid')} className="h-12 w-12">
+                                    <LayoutGrid className="h-5 w-5"/>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Vista de Grelha</p></TooltipContent>
+                        </Tooltip>
+                        {view === 'grid' && (
+                            <div className="hidden md:flex">
+                                <DropdownMenu>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="outline" className="h-12 w-28 gap-2">
+                                                    <span>{gridCols} Colunas</span>
+                                                    <ChevronDown className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent><p>Número de colunas</p></TooltipContent>
+                                    </Tooltip>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuRadioGroup value={gridCols} onValueChange={(value) => handleSetGridCols(value as '3' | '4' | '5')}>
+                                            <DropdownMenuRadioItem value="3">3 Colunas</DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="4">4 Colunas</DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="5">5 Colunas</DropdownMenuRadioItem>
+                                        </DropdownMenuRadioGroup>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        )}
+                    </TooltipProvider>
+                </div>
+                <div className="flex items-center gap-2">
+                    {isMultiLocation && canViewProduction && (
                       <DropdownMenu>
                         <TooltipProvider>
                           <Tooltip>
@@ -216,51 +264,6 @@ export default function ProductionPage() {
                       </DropdownMenu>
                     )}
                 </div>
-            </div>
-            
-            <div className="flex items-center justify-center gap-2 border-t pt-4">
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant={view === 'list' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('list')} className="h-12 w-12">
-                                <List className="h-5 w-5"/>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Vista de Lista</p></TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('grid')} className="h-12 w-12">
-                                <LayoutGrid className="h-5 w-5"/>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Vista de Grelha</p></TooltipContent>
-                    </Tooltip>
-                    {view === 'grid' && (
-                        <div className="hidden md:flex">
-                            <DropdownMenu>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" className="h-12 w-28 gap-2">
-                                                <span>{gridCols} Colunas</span>
-                                                <ChevronDown className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>Número de colunas</p></TooltipContent>
-                                </Tooltip>
-                                <DropdownMenuContent>
-                                    <DropdownMenuRadioGroup value={gridCols} onValueChange={(value) => handleSetGridCols(value as '3' | '4' | '5')}>
-                                        <DropdownMenuRadioItem value="3">3 Colunas</DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="4">4 Colunas</DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="5">5 Colunas</DropdownMenuRadioItem>
-                                    </DropdownMenuRadioGroup>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                    )}
-                </TooltipProvider>
             </div>
         </div>
 
