@@ -41,7 +41,7 @@ export default function OrdersPage() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { orders, companyId, loading: inventoryLoading, updateProductStock, user, canEdit, deleteOrder, clearOrders } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null, canEdit: () => false, deleteOrder: () => {}, clearOrders: async () => {} };
+  const { orders, companyId, loading: inventoryLoading, updateProductStock, user, canEdit, deleteOrder, clearOrders, addNotification } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null, canEdit: () => false, deleteOrder: () => {}, clearOrders: async () => {}, addNotification: () => {} };
 
   const canEditOrders = canEdit('orders');
   const isAdmin = user?.role === 'Admin';
@@ -67,7 +67,15 @@ export default function OrdersPage() {
     };
     
     const ordersCollectionRef = collection(firestore, `companies/${companyId}/orders`);
-    addDoc(ordersCollectionRef, order);
+    addDoc(ordersCollectionRef, order).then(docRef => {
+        if(addNotification) {
+            addNotification({
+                type: 'order',
+                message: `Nova encomenda para ${order.productName} registada.`,
+                href: `/orders?id=${docRef.id}`,
+            });
+        }
+    });
 
     toast({
         title: "Encomenda Registrada",

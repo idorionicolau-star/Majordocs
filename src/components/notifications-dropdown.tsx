@@ -116,4 +116,3 @@ export function NotificationsDropdown() {
 
   return <NotificationsDropdownContent />;
 }
-

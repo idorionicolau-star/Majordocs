@@ -130,11 +130,13 @@ export interface StockMovement {
   physicalCount?: number;     // What the user actually counted
 }
 
-export type Notification = {
+export type AppNotification = {
   id: string;
   message: string;
   date: string;
   read: boolean;
+  type: 'stock' | 'sale' | 'production' | 'order';
+  href?: string;
 };
 
 export type NavItem = {

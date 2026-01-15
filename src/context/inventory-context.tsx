@@ -10,7 +10,7 @@ import {
   useMemo,
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement } from '@/lib/types';
+import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase, getFirebaseAuth } from '@/firebase';
 import {
@@ -73,6 +73,7 @@ interface InventoryContextType {
   locations: Location[];
   isMultiLocation: boolean;
   companyData: Company | null;
+  notifications: AppNotification[];
 
   // Functions
   addProduct: (
@@ -105,6 +106,9 @@ interface InventoryContextType {
   clearProductions: () => Promise<void>;
   clearOrders: () => Promise<void>;
   clearStockMovements: () => Promise<void>;
+  markNotificationAsRead: (id: string) => void;
+  markAllAsRead: () => void;
+  clearNotifications: () => void;
 }
 
 export const InventoryContext = createContext<InventoryContextType | undefined>(
@@ -117,6 +121,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -126,6 +131,30 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const locations = useMemo(() => companyData?.locations || [], [companyData]);
   const isMultiLocation = useMemo(() => !!companyData?.isMultiLocation, [companyData]);
+
+  const addNotification = useCallback((notification: Omit<AppNotification, 'id' | 'date' | 'read'>) => {
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        date: new Date().toISOString(),
+        read: false,
+        ...notification,
+      },
+      ...prev
+    ].slice(0, 50)); // Keep last 50 notifications
+  }, []);
+
+  const markNotificationAsRead = useCallback((id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  }, []);
+
+  const markAllAsRead = useCallback(() => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  }, []);
+
+  const clearNotifications = useCallback(() => {
+    setNotifications([]);
+  }, []);
 
   const handleSetProfilePicture = useCallback(async (pictureUrl: string) => {
     if (!firestore || !user || !user.id ) {
@@ -379,6 +408,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         console.warn("E-mail de notificação não configurado. Alerta não enviado.");
         return;
     }
+    
+    addNotification({
+        type: 'stock',
+        message: `Stock crítico para ${product.name}! Quantidade: ${product.stock}`,
+        href: '/inventory'
+    });
 
     try {
         const response = await fetch('/api/email', {
@@ -413,7 +448,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             description: `Não foi possível enviar o e-mail de alerta. ${error.message}`
         });
     }
-  }, [companyData?.notificationEmail, locations, toast]);
+  }, [companyData?.notificationEmail, locations, toast, addNotification]);
 
   const checkStockAndNotify = useCallback(async (product: Product) => {
     const targetEmail = companyData?.notificationEmail;
@@ -434,8 +469,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         reservedStock: 0,
       };
       addDoc(productsCollectionRef, newProduct);
+      addNotification({
+          type: 'production',
+          message: `Novo produto adicionado: ${newProduct.name}`,
+          href: '/inventory',
+      });
     },
-    [productsCollectionRef]
+    [productsCollectionRef, addNotification]
   );
   
   const updateProduct = useCallback(async (instanceId: string, updatedData: Partial<Product>) => {
@@ -446,7 +486,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const fullProduct = products.find(p => p.id === instanceId);
       if(fullProduct) {
           const productForNotification = { ...fullProduct, ...updatedData };
-          await checkStockAndNotify(productForNotification);
+          checkStockAndNotify(productForNotification);
       }
     }, [productsCollectionRef, products, checkStockAndNotify]);
 
@@ -593,7 +633,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         batch.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
         await batch.commit();
       }
-    }, [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast, user, checkStockAndNotify]);
+
+      addNotification({
+          type: 'production',
+          message: `${quantity} unidades de ${productName} foram produzidas.`,
+          href: '/production',
+      });
+    }, [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast, user, checkStockAndNotify, addNotification]);
 
   const updateCompany = useCallback(async (details: Partial<Company>) => {
       if(companyDocRef) {
@@ -632,7 +678,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         transaction.update(productDoc.ref, { reservedStock: newReservedStock });
         transaction.set(newSaleRef, { ...newSaleData, guideNumber });
     });
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations]);
+     addNotification({
+        type: 'sale',
+        message: `Nova venda de ${newSaleData.productName} registada.`,
+        href: '/sales',
+    });
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, addNotification]);
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
      if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
@@ -706,10 +757,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     canView, canEdit,
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
-    locations, isMultiLocation, addProduct, updateProduct, deleteProduct, clearProductsCollection,
+    locations, isMultiLocation, notifications,
+    addProduct, updateProduct, deleteProduct, clearProductsCollection,
     transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup,
     deleteSale, deleteProduction, deleteOrder,
     clearSales, clearProductions, clearOrders, clearStockMovements,
+    markNotificationAsRead, markAllAsRead, clearNotifications,
   };
 
   return (
