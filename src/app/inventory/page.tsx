@@ -7,7 +7,7 @@ import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2 } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -54,6 +54,7 @@ export default function InventoryPage() {
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const { toast } = useToast();
 
   const { 
@@ -67,10 +68,14 @@ export default function InventoryPage() {
     loading: inventoryLoading,
     canEdit,
     canView,
-  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, canEdit: () => false, canView: () => false };
+    user,
+    clearProductsCollection,
+  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, canEdit: () => false, canView: () => false, user: null, clearProductsCollection: async () => {} };
   
   const canEditInventory = canEdit('inventory');
   const canViewInventory = canView('inventory');
+  const isAdmin = user?.role === 'Admin';
+
 
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditInventory) {
@@ -271,7 +276,6 @@ export default function InventoryPage() {
       
       printWindow.document.write('</div></body></html>');
       printWindow.document.close();
-      printWindow.focus();
       
       setTimeout(() => {
         printWindow.print();
@@ -306,6 +310,13 @@ export default function InventoryPage() {
     return result;
   }, [products, selectedLocation, nameFilter, categoryFilter, dateFilter]);
   
+  const handleClearInventory = async () => {
+    if (clearProductsCollection) {
+      await clearProductsCollection();
+    }
+    setShowClearConfirm(false);
+  };
+  
     if (inventoryLoading) {
     return (
       <div className="space-y-4">
@@ -334,6 +345,23 @@ export default function InventoryPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeleteProduct} variant="destructive">Apagar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+       <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é irreversível e irá apagar permanentemente **todos** os produtos do seu inventário.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearInventory} variant="destructive">
+              Sim, apagar tudo
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -517,6 +545,23 @@ export default function InventoryPage() {
                                 <p>Imprimir Formulário de Contagem</p>
                             </TooltipContent>
                         </Tooltip>
+                         {isAdmin && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                onClick={() => setShowClearConfirm(true)}
+                                className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0"
+                              >
+                                <Trash2 className="h-5 w-5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Limpar Todo o Inventário</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                     </TooltipProvider>
                 </div>
             </div>

@@ -7,7 +7,7 @@ import { ProductionDataTable } from "@/components/production/data-table";
 import { AddProductionDialog } from "@/components/production/add-production-dialog";
 import type { Production, Location, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronDown, Lock, MapPin } from "lucide-react";
+import { List, LayoutGrid, ChevronDown, Lock, MapPin, Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -46,11 +46,13 @@ export default function ProductionPage() {
   const [productionToTransfer, setProductionToTransfer] = useState<Production | null>(null);
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [locationFilter, setLocationFilter] = useState<string>('all');
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const { productions, companyId, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation, deleteProduction } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false, deleteProduction: () => {} };
+  const { productions, companyId, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation, deleteProduction, clearProductions } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false, deleteProduction: () => {}, clearProductions: async () => {} };
 
   const canEditProduction = canEdit('production');
   const canViewProduction = canView('production');
+  const isAdmin = user?.role === 'Admin';
   
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditProduction) {
@@ -128,6 +130,13 @@ export default function ProductionPage() {
     }
     return result;
   }, [productions, nameFilter, locationFilter, isMultiLocation, dateFilter]);
+  
+  const handleClear = async () => {
+    if (clearProductions) {
+      await clearProductions();
+    }
+    setShowClearConfirm(false);
+  };
 
   if (inventoryLoading) {
     return (
@@ -160,6 +169,23 @@ export default function ProductionPage() {
       </AlertDialogContent>
     </AlertDialog>
 
+    <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é irreversível e irá apagar permanentemente **toda** a produção registada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClear} variant="destructive">
+              Sim, apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
@@ -174,6 +200,12 @@ export default function ProductionPage() {
                       }
                 </div>
             </div>
+             {isAdmin && (
+                <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Limpar Produção
+                </Button>
+            )}
         </div>
 
         <div className="py-4 space-y-4">

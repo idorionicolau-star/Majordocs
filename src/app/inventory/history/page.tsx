@@ -12,10 +12,25 @@ import { collection, query, orderBy, Timestamp } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function InventoryHistoryPage() {
-  const { companyId, locations, loading: contextLoading } = useContext(InventoryContext) || {};
+  const { companyId, locations, loading: contextLoading, user, clearStockMovements } = useContext(InventoryContext) || {};
   const firestore = useFirestore();
+  const isAdmin = user?.role === 'Admin';
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
 
   const [searchFilter, setSearchFilter] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -63,6 +78,13 @@ export default function InventoryHistoryPage() {
         return dateB - dateA;
     });
   }, [movements, searchFilter, selectedDate]);
+  
+  const handleClearHistory = async () => {
+    if (clearStockMovements) {
+      await clearStockMovements();
+    }
+    setShowClearConfirm(false);
+  };
 
   const isLoading = contextLoading || movementsLoading;
 
@@ -77,29 +99,54 @@ export default function InventoryHistoryPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-headline font-bold">Histórico de Movimentos</h1>
-          <p className="text-sm font-medium text-slate-500 mt-1">
-            Audite todas as entradas, saídas e transferências de stock.
-          </p>
-        </div>
-      </div>
-      <div className="flex flex-col md:flex-row gap-2">
-         <Input
-            placeholder="Pesquisar por produto, utilizador, motivo..."
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
-            className="h-12 text-sm"
-        />
-        <DatePicker date={selectedDate} setDate={setSelectedDate} />
-      </div>
+    <>
+       <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é irreversível e irá apagar permanentemente **todo** o histórico de movimentos de stock.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearHistory} variant="destructive">
+              Sim, apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      <HistoryDataTable 
-        columns={columns({ locationMap })}
-        data={filteredMovements}
-      />
-    </div>
+      <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-headline font-bold">Histórico de Movimentos</h1>
+            <p className="text-sm font-medium text-slate-500 mt-1">
+              Audite todas as entradas, saídas e transferências de stock.
+            </p>
+          </div>
+           {isAdmin && (
+              <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Limpar Histórico
+              </Button>
+            )}
+        </div>
+        <div className="flex flex-col md:flex-row gap-2">
+          <Input
+              placeholder="Pesquisar por produto, utilizador, motivo..."
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              className="h-12 text-sm"
+          />
+          <DatePicker date={selectedDate} setDate={setSelectedDate} />
+        </div>
+
+        <HistoryDataTable 
+          columns={columns({ locationMap })}
+          data={filteredMovements}
+        />
+      </div>
+    </>
   );
 }

@@ -5,7 +5,7 @@ import { useState, useMemo, useContext } from 'react';
 import { format, startOfDay, isSameDay } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Printer, DollarSign, Hash, Box } from 'lucide-react';
+import { Printer, DollarSign, Hash, Box, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { Sale } from '@/lib/types';
 import {
@@ -19,11 +19,24 @@ import {
 import { InventoryContext } from '@/context/inventory-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DatePicker } from '@/components/ui/date-picker';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function ReportsPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const inventoryContext = useContext(InventoryContext);
-  const { sales, companyData, loading } = inventoryContext || { sales: [], companyData: null, loading: true };
+  const { sales, companyData, loading, user, clearSales } = inventoryContext || { sales: [], companyData: null, loading: true, user: null, clearSales: async () => {} };
+  const isAdmin = user?.role === 'Admin';
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
 
   const salesForDate = useMemo(() => {
     if (!selectedDate) return [];
@@ -43,6 +56,13 @@ export default function ReportsPage() {
       uniqueProducts,
     };
   }, [salesForDate]);
+  
+  const handleClearSales = async () => {
+    if (clearSales) {
+      await clearSales();
+    }
+    setShowClearConfirm(false);
+  };
 
   const handlePrint = () => {
     if (!selectedDate) return;
@@ -108,7 +128,6 @@ export default function ReportsPage() {
         setTimeout(() => {
           printWindow.focus();
           printWindow.print();
-          printWindow.close();
         }, 500);
     }
   };
@@ -130,71 +149,96 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-headline font-bold">Relatórios de Vendas</h1>
-          <p className="text-muted-foreground">
-            Selecione uma data para visualizar o relatório de vendas.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-            <DatePicker date={selectedDate} setDate={setSelectedDate} />
-            <Button onClick={handlePrint} variant="outline" className="h-12" disabled={!selectedDate}>
-                <Printer className="mr-2 h-4 w-4" />
-                Imprimir Relatório
-            </Button>
-        </div>
-      </div>
-      
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard icon={Hash} title="Total de Vendas" value={reportSummary.totalSales} />
-          <StatCard icon={DollarSign} title="Valor Total" value={formatCurrency(reportSummary.totalValue)} />
-          <StatCard icon={Box} title="Total de Itens" value={reportSummary.totalItems} />
-          <StatCard icon={Box} title="Produtos Distintos" value={reportSummary.uniqueProducts} />
-      </div>
+    <>
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é irreversível e irá apagar permanentemente **todas** as vendas registadas. Esta ação também irá limpar os dados desta página de relatórios.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearSales} variant="destructive">
+              Sim, apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Detalhes das Vendas do Dia</CardTitle>
-          <CardDescription>
-            {selectedDate ? `Todas as vendas registadas em ${format(selectedDate, 'dd/MM/yyyy')}.` : "Nenhuma data selecionada."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Guia N.º</TableHead>
-                <TableHead>Produto</TableHead>
-                <TableHead className="text-right">Quantidade</TableHead>
-                <TableHead className="text-right">Valor Total</TableHead>
-                <TableHead>Vendedor</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {salesForDate.length > 0 ? (
-                salesForDate.map((sale: Sale) => (
-                  <TableRow key={sale.id}>
-                    <TableCell className="font-medium">{sale.guideNumber}</TableCell>
-                    <TableCell>{sale.productName}</TableCell>
-                    <TableCell className="text-right">{sale.quantity}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(sale.totalValue)}</TableCell>
-                    <TableCell>{sale.soldBy}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
-                    Nenhuma venda encontrada para esta data.
-                  </TableCell>
-                </TableRow>
+      <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-headline font-bold">Relatórios de Vendas</h1>
+            <p className="text-muted-foreground">
+              Selecione uma data para visualizar o relatório de vendas.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+              <DatePicker date={selectedDate} setDate={setSelectedDate} />
+              <Button onClick={handlePrint} variant="outline" className="h-12" disabled={!selectedDate}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Imprimir Relatório
+              </Button>
+              {isAdmin && (
+                <Button variant="destructive" onClick={() => setShowClearConfirm(true)} className="h-12">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Limpar Vendas
+                </Button>
               )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+          </div>
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard icon={Hash} title="Total de Vendas" value={reportSummary.totalSales} />
+            <StatCard icon={DollarSign} title="Valor Total" value={formatCurrency(reportSummary.totalValue)} />
+            <StatCard icon={Box} title="Total de Itens" value={reportSummary.totalItems} />
+            <StatCard icon={Box} title="Produtos Distintos" value={reportSummary.uniqueProducts} />
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Detalhes das Vendas do Dia</CardTitle>
+            <CardDescription>
+              {selectedDate ? `Todas as vendas registadas em ${format(selectedDate, 'dd/MM/yyyy')}.` : "Nenhuma data selecionada."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Guia N.º</TableHead>
+                  <TableHead>Produto</TableHead>
+                  <TableHead className="text-right">Quantidade</TableHead>
+                  <TableHead className="text-right">Valor Total</TableHead>
+                  <TableHead>Vendedor</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {salesForDate.length > 0 ? (
+                  salesForDate.map((sale: Sale) => (
+                    <TableRow key={sale.id}>
+                      <TableCell className="font-medium">{sale.guideNumber}</TableCell>
+                      <TableCell>{sale.productName}</TableCell>
+                      <TableCell className="text-right">{sale.quantity}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(sale.totalValue)}</TableCell>
+                      <TableCell>{sale.soldBy}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      Nenhuma venda encontrada para esta data.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }
 

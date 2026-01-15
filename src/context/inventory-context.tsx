@@ -100,6 +100,10 @@ interface InventoryContextType {
   deleteSale: (saleId: string) => void;
   deleteProduction: (productionId: string) => void;
   deleteOrder: (orderId: string) => void;
+  clearSales: () => Promise<void>;
+  clearProductions: () => Promise<void>;
+  clearOrders: () => Promise<void>;
+  clearStockMovements: () => Promise<void>;
 }
 
 export const InventoryContext = createContext<InventoryContextType | undefined>(
@@ -320,6 +324,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!firestore || !companyId) return null;
     return collection(firestore, `companies/${companyId}/orders`);
   }, [firestore, companyId]);
+
+  const stockMovementsCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `companies/${companyId}/stockMovements`);
+  }, [firestore, companyId]);
   
   const catalogProductsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
@@ -390,18 +399,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       deleteDoc(docRef);
     }, [productsCollectionRef]);
     
-  const clearProductsCollection = useCallback(async () => {
-    if (!productsCollectionRef) {
-      toast({ variant: "destructive", title: "Erro", description: "A referência da coleção de produtos não está disponível." });
+  const clearCollection = useCallback(async (collectionRef: CollectionReference | null, toastTitle: string) => {
+    if (!collectionRef) {
+      toast({ variant: "destructive", title: "Erro", description: "Referência da coleção não disponível." });
       return;
     }
-    const querySnapshot = await getDocs(productsCollectionRef);
+    toast({ title: "A limpar...", description: `A apagar todos os registos de ${toastTitle}.` });
+    const querySnapshot = await getDocs(collectionRef);
     const batch = writeBatch(firestore);
     querySnapshot.forEach((doc) => {
       batch.delete(doc.ref);
     });
     await batch.commit();
-  }, [productsCollectionRef, firestore, toast]);
+    toast({ title: "Sucesso!", description: `Todos os registos de ${toastTitle} foram apagados.` });
+  }, [firestore, toast]);
+    
+  const clearProductsCollection = useCallback(() => clearCollection(productsCollectionRef, "Inventário"), [clearCollection, productsCollectionRef]);
+  const clearSales = useCallback(() => clearCollection(salesCollectionRef, "Vendas"), [clearCollection, salesCollectionRef]);
+  const clearProductions = useCallback(() => clearCollection(productionsCollectionRef, "Produção"), [clearCollection, productionsCollectionRef]);
+  const clearOrders = useCallback(() => clearCollection(ordersCollectionRef, "Encomendas"), [clearCollection, ordersCollectionRef]);
+  const clearStockMovements = useCallback(() => clearCollection(stockMovementsCollectionRef, "Histórico de Movimentos"), [clearCollection, stockMovementsCollectionRef]);
 
 
  const transferStock = useCallback(async (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => {
@@ -625,6 +642,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     locations, isMultiLocation, addProduct, updateProduct, deleteProduct, clearProductsCollection,
     transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup,
     deleteSale, deleteProduction, deleteOrder,
+    clearSales, clearProductions, clearOrders, clearStockMovements,
   };
 
   return (

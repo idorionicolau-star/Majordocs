@@ -5,7 +5,7 @@ import { useState, useMemo, useContext, useEffect } from "react";
 import { useSearchParams } from 'next/navigation';
 import type { Order, Product, ProductionLog, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Filter, List, LayoutGrid, ChevronDown, Lock } from "lucide-react";
+import { Filter, List, LayoutGrid, ChevronDown, Lock, Trash2 } from "lucide-react";
 import { AddOrderDialog } from "@/components/orders/add-order-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -18,6 +18,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useFirestore } from "@/firebase";
 import { collection, addDoc, doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function OrdersPage() {
   const searchParams = useSearchParams();
@@ -25,13 +35,16 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [view, setView] = useState<'list' | 'grid'>('grid'); // 'list' view to be implemented
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { orders, companyId, loading: inventoryLoading, updateProductStock, user, canEdit, deleteOrder } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null, canEdit: () => false, deleteOrder: () => {} };
+  const { orders, companyId, loading: inventoryLoading, updateProductStock, user, canEdit, deleteOrder, clearOrders } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null, canEdit: () => false, deleteOrder: () => {}, clearOrders: async () => {} };
 
   const canEditOrders = canEdit('orders');
+  const isAdmin = user?.role === 'Admin';
+
 
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditOrders) {
@@ -132,6 +145,13 @@ export default function OrdersPage() {
     }
     return result;
   }, [orders, nameFilter, statusFilter]);
+  
+  const handleClear = async () => {
+    if (clearOrders) {
+      await clearOrders();
+    }
+    setShowClearConfirm(false);
+  };
 
   if (inventoryLoading) {
     return (
@@ -149,6 +169,23 @@ export default function OrdersPage() {
 
   return (
     <>
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é irreversível e irá apagar permanentemente **todas** as encomendas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClear} variant="destructive">
+              Sim, apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex flex-col gap-6 pb-20">
           <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
               <div>
@@ -163,6 +200,12 @@ export default function OrdersPage() {
                       }
                   </div>
               </div>
+                {isAdmin && (
+                <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Limpar Encomendas
+                </Button>
+                )}
           </div>
           
           <div className="py-4 space-y-4">

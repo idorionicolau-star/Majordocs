@@ -9,7 +9,7 @@ import { SalesDataTable } from "@/components/sales/data-table";
 import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronDown, Filter, Lock, MapPin } from "lucide-react";
+import { List, LayoutGrid, ChevronDown, Filter, Lock, MapPin, Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,16 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
 import { isSameDay } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function SalesPage() {
   const searchParams = useSearchParams();
@@ -33,6 +43,7 @@ export default function SalesPage() {
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [locationFilter, setLocationFilter] = useState<string>('all');
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
@@ -49,6 +60,7 @@ export default function SalesPage() {
     canView,
     locations,
     isMultiLocation,
+    clearSales,
   } = inventoryContext || { 
     sales: [], 
     loading: true, 
@@ -61,10 +73,12 @@ export default function SalesPage() {
     canView: () => false,
     locations: [],
     isMultiLocation: false,
+    clearSales: async () => {},
   };
 
   const canEditSales = canEdit('sales');
   const canViewSales = canView('sales');
+  const isAdmin = user?.role === 'Admin';
   
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditSales) {
@@ -155,6 +169,13 @@ export default function SalesPage() {
     }
     return result;
   }, [sales, nameFilter, statusFilter, isMultiLocation, locationFilter, dateFilter]);
+  
+  const handleClearSales = async () => {
+    if (clearSales) {
+      await clearSales();
+    }
+    setShowClearConfirm(false);
+  };
 
   if (inventoryLoading) {
     return (
@@ -171,171 +192,196 @@ export default function SalesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <h1 className="text-2xl md:text-3xl font-headline font-bold">Vendas</h1>
-                 <div className="text-muted-foreground mt-1">
-                    Visualize e registre as vendas de produtos.
-                     {!canEditSales && 
-                        <Badge variant="outline" className="ml-2 border-amber-500/50 text-amber-600 bg-amber-50 dark:bg-amber-900/20">
-                          <Lock className="mr-1 h-3 w-3" />
-                          Modo de Visualização
-                        </Badge>
-                      }
-                </div>
-            </div>
-        </div>
+    <>
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é irreversível e irá apagar permanentemente **todas** as vendas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearSales} variant="destructive">
+              Sim, apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-        <div className="py-4 space-y-4">
-             <div className="flex flex-col sm:flex-row items-center gap-2">
-                <Input
-                  placeholder="Filtrar por produto ou guia..."
-                  value={nameFilter}
-                  onChange={(event) => setNameFilter(event.target.value)}
-                  className="w-full sm:max-w-xs shadow-sm h-12 text-sm"
-                />
-                <div className="flex w-full sm:w-auto items-center gap-2">
-                    <DatePicker date={dateFilter} setDate={setDateFilter} />
-                </div>
-            </div>
-            
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t pt-4">
-                 <div className="hidden md:flex items-center gap-2">
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant={view === 'list' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('list')} className="h-12 w-12">
-                                    <List className="h-5 w-5"/>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Vista de Lista</p></TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('grid')} className="h-12 w-12">
-                                    <LayoutGrid className="h-5 w-5"/>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Vista de Grelha</p></TooltipContent>
-                        </Tooltip>
-                        {view === 'grid' && (
-                            <div className="hidden md:flex">
-                                <DropdownMenu>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="outline" className="h-12 w-28 gap-2">
-                                                    <span>{gridCols} Colunas</span>
-                                                    <ChevronDown className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                        </TooltipTrigger>
-                                        <TooltipContent><p>Número de colunas</p></TooltipContent>
-                                    </Tooltip>
-                                    <DropdownMenuContent>
-                                        <DropdownMenuRadioGroup value={gridCols} onValueChange={(value) => handleSetGridCols(value as '3' | '4' | '5')}>
-                                            <DropdownMenuRadioItem value="3">3 Colunas</DropdownMenuRadioItem>
-                                            <DropdownMenuRadioItem value="4">4 Colunas</DropdownMenuRadioItem>
-                                            <DropdownMenuRadioItem value="5">5 Colunas</DropdownMenuRadioItem>
-                                        </DropdownMenuRadioGroup>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                        )}
-                    </TooltipProvider>
-                </div>
-                <div className="flex items-center gap-2">
-                    <DropdownMenu>
-                       <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="shadow-sm h-12 w-12 flex-shrink-0" size="icon">
-                                    <Filter className="h-5 w-5" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                           </TooltipTrigger>
-                           <TooltipContent>
-                              <p>Filtrar por Status</p>
-                           </TooltipContent>
+      <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                  <h1 className="text-2xl md:text-3xl font-headline font-bold">Vendas</h1>
+                  <div className="text-muted-foreground mt-1">
+                      Visualize e registre as vendas de produtos.
+                      {!canEditSales && 
+                          <Badge variant="outline" className="ml-2 border-amber-500/50 text-amber-600 bg-amber-50 dark:bg-amber-900/20">
+                            <Lock className="mr-1 h-3 w-3" />
+                            Modo de Visualização
+                          </Badge>
+                        }
+                  </div>
+              </div>
+               {isAdmin && (
+                <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Limpar Vendas
+                </Button>
+            )}
+          </div>
+
+          <div className="py-4 space-y-4">
+              <div className="flex flex-col sm:flex-row items-center gap-2">
+                  <Input
+                    placeholder="Filtrar por produto ou guia..."
+                    value={nameFilter}
+                    onChange={(event) => setNameFilter(event.target.value)}
+                    className="w-full sm:max-w-xs shadow-sm h-12 text-sm"
+                  />
+                  <div className="flex w-full sm:w-auto items-center gap-2">
+                      <DatePicker date={dateFilter} setDate={setDateFilter} />
+                  </div>
+              </div>
+              
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t pt-4">
+                  <div className="hidden md:flex items-center gap-2">
+                      <TooltipProvider>
+                          <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <Button variant={view === 'list' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('list')} className="h-12 w-12">
+                                      <List className="h-5 w-5"/>
+                                  </Button>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Vista de Lista</p></TooltipContent>
                           </Tooltip>
-                        </TooltipProvider>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Filtrar por Status</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuCheckboxItem checked={statusFilter === 'all'} onCheckedChange={() => setStatusFilter('all')}>Todos</DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem checked={statusFilter === 'Pago'} onCheckedChange={() => setStatusFilter('Pago')}>Pagas não levantadas</DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem checked={statusFilter === 'Levantado'} onCheckedChange={() => setStatusFilter('Levantado')}>Levantadas</DropdownMenuCheckboxItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    {isMultiLocation && canViewSales && (
-                        <DropdownMenu>
-                          <TooltipProvider>
-                           <Tooltip>
+                          <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('grid')} className="h-12 w-12">
+                                      <LayoutGrid className="h-5 w-5"/>
+                                  </Button>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Vista de Grelha</p></TooltipContent>
+                          </Tooltip>
+                          {view === 'grid' && (
+                              <div className="hidden md:flex">
+                                  <DropdownMenu>
+                                      <Tooltip>
+                                          <TooltipTrigger asChild>
+                                              <DropdownMenuTrigger asChild>
+                                                  <Button variant="outline" className="h-12 w-28 gap-2">
+                                                      <span>{gridCols} Colunas</span>
+                                                      <ChevronDown className="h-4 w-4" />
+                                                  </Button>
+                                              </DropdownMenuTrigger>
+                                          </TooltipTrigger>
+                                          <TooltipContent><p>Número de colunas</p></TooltipContent>
+                                      </Tooltip>
+                                      <DropdownMenuContent>
+                                          <DropdownMenuRadioGroup value={gridCols} onValueChange={(value) => handleSetGridCols(value as '3' | '4' | '5')}>
+                                              <DropdownMenuRadioItem value="3">3 Colunas</DropdownMenuRadioItem>
+                                              <DropdownMenuRadioItem value="4">4 Colunas</DropdownMenuRadioItem>
+                                              <DropdownMenuRadioItem value="5">5 Colunas</DropdownMenuRadioItem>
+                                          </DropdownMenuRadioGroup>
+                                      </DropdownMenuContent>
+                                  </DropdownMenu>
+                              </div>
+                          )}
+                      </TooltipProvider>
+                  </div>
+                  <div className="flex items-center gap-2">
+                      <DropdownMenu>
+                        <TooltipProvider>
+                          <Tooltip>
                             <TooltipTrigger asChild>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="h-12 w-12 flex-shrink-0" size="icon">
-                                  <MapPin className="mr-2 h-4 w-4" />
-                                </Button>
+                                  <Button variant="outline" className="shadow-sm h-12 w-12 flex-shrink-0" size="icon">
+                                      <Filter className="h-5 w-5" />
+                                  </Button>
                               </DropdownMenuTrigger>
-                             </TooltipTrigger>
-                             <TooltipContent>
-                                <p>Filtrar por Localização</p>
-                             </TooltipContent>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Filtrar por Status</p>
+                            </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                           <DropdownMenuContent align="end">
-                            <ScrollArea className="h-48">
-                              <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
+                              <DropdownMenuLabel>Filtrar por Status</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <DropdownMenuCheckboxItem checked={locationFilter === 'all'} onCheckedChange={() => setLocationFilter('all')}>Todas</DropdownMenuCheckboxItem>
-                              {locations.map(loc => (
-                                <DropdownMenuCheckboxItem key={loc.id} checked={locationFilter === loc.id} onCheckedChange={() => setLocationFilter(loc.id)}>{loc.name}</DropdownMenuCheckboxItem>
-                              ))}
-                            </ScrollArea>
+                              <DropdownMenuCheckboxItem checked={statusFilter === 'all'} onCheckedChange={() => setStatusFilter('all')}>Todos</DropdownMenuCheckboxItem>
+                              <DropdownMenuCheckboxItem checked={statusFilter === 'Pago'} onCheckedChange={() => setStatusFilter('Pago')}>Pagas não levantadas</DropdownMenuCheckboxItem>
+                              <DropdownMenuCheckboxItem checked={statusFilter === 'Levantado'} onCheckedChange={() => setStatusFilter('Levantado')}>Levantadas</DropdownMenuCheckboxItem>
                           </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                </div>
-            </div>
-        </div>
+                      </DropdownMenu>
+                      {isMultiLocation && canViewSales && (
+                          <DropdownMenu>
+                            <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" className="h-12 w-12 flex-shrink-0" size="icon">
+                                    <MapPin className="mr-2 h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                  <p>Filtrar por Localização</p>
+                              </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <DropdownMenuContent align="end">
+                              <ScrollArea className="h-48">
+                                <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuCheckboxItem checked={locationFilter === 'all'} onCheckedChange={() => setLocationFilter('all')}>Todas</DropdownMenuCheckboxItem>
+                                {locations.map(loc => (
+                                  <DropdownMenuCheckboxItem key={loc.id} checked={locationFilter === loc.id} onCheckedChange={() => setLocationFilter(loc.id)}>{loc.name}</DropdownMenuCheckboxItem>
+                                ))}
+                              </ScrollArea>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                  </div>
+              </div>
+          </div>
 
-      {view === 'list' ? (
-        <SalesDataTable 
-          columns={columns({
-              onUpdateSale: handleUpdateSale,
-              onConfirmPickup: handleConfirmPickup,
-              canEdit: canEditSales
-          })} 
-          data={filteredSales} 
-        />
-      ) : (
-        <div className={cn(
-            "grid gap-2 sm:gap-4",
-            gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
-            gridCols === '4' && "grid-cols-2 sm:grid-cols-3 md:grid-cols-4",
-            gridCols === '5' && "grid-cols-3 sm:grid-cols-4 md:grid-cols-5",
-        )}>
-            {filteredSales.map(sale => (
-                <SaleCard 
-                    key={sale.id}
-                    sale={sale}
-                    onUpdateSale={handleUpdateSale}
-                    onConfirmPickup={handleConfirmPickup}
-                    onDeleteSale={deleteSale}
-                    viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
-                    canEdit={canEditSales}
-                    locationName={locations.find(l => l.id === sale.location)?.name}
-                />
-            ))}
-        </div>
-      )}
-       {canEditSales && <AddSaleDialog
-        open={isAddDialogOpen}
-        onOpenChange={setAddDialogOpen}
-        onAddSale={handleAddSale}
-      />}
-    </div>
+        {view === 'list' ? (
+          <SalesDataTable 
+            columns={columns({
+                onUpdateSale: handleUpdateSale,
+                onConfirmPickup: handleConfirmPickup,
+                canEdit: canEditSales
+            })} 
+            data={filteredSales} 
+          />
+        ) : (
+          <div className={cn(
+              "grid gap-2 sm:gap-4",
+              gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
+              gridCols === '4' && "grid-cols-2 sm:grid-cols-3 md:grid-cols-4",
+              gridCols === '5' && "grid-cols-3 sm:grid-cols-4 md:grid-cols-5",
+          )}>
+              {filteredSales.map(sale => (
+                  <SaleCard 
+                      key={sale.id}
+                      sale={sale}
+                      onUpdateSale={handleUpdateSale}
+                      onConfirmPickup={handleConfirmPickup}
+                      onDeleteSale={deleteSale}
+                      viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
+                      canEdit={canEditSales}
+                      locationName={locations.find(l => l.id === sale.location)?.name}
+                  />
+              ))}
+          </div>
+        )}
+        {canEditSales && <AddSaleDialog
+          open={isAddDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          onAddSale={handleAddSale}
+        />}
+      </div>
+    </>
   );
 }
