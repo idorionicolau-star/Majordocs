@@ -275,7 +275,7 @@ export default function InventoryPage() {
       
       setTimeout(() => {
         printWindow.print();
-        printWindow.close();
+        // printWindow.close(); // This line can cause errors and is often not needed.
       }, 500);
     }
   };
@@ -355,15 +355,15 @@ export default function InventoryPage() {
               </div>
           </div>
           <div className="py-4 space-y-4">
-            <div className="flex flex-col sm:flex-row items-center gap-2">
+             <div className="flex flex-col sm:flex-row items-center gap-2">
                 <Input
                   placeholder="Filtrar por nome..."
                   value={nameFilter}
                   onChange={(event) => setNameFilter(event.target.value)}
-                  className="w-full md:max-w-sm shadow-lg h-12 text-sm"
+                  className="w-full sm:max-w-xs shadow-sm h-12 text-sm"
                 />
-                <DatePicker date={dateFilter} setDate={setDateFilter} />
-                <div className="flex items-center gap-2">
+                 <div className="flex w-full sm:w-auto items-center gap-2">
+                    <DatePicker date={dateFilter} setDate={setDateFilter} />
                     <TooltipProvider>
                        {isMultiLocation && canEditInventory && (
                           <TransferStockDialog
@@ -375,7 +375,7 @@ export default function InventoryPage() {
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" size="icon" className="shadow-lg h-12 w-12 rounded-2xl">
+                                            <Button variant="outline" size="icon" className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0">
                                                 <MapPin className="h-5 w-5" />
                                             </Button>
                                         </DropdownMenuTrigger>
@@ -411,7 +411,7 @@ export default function InventoryPage() {
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="icon" className="shadow-lg relative h-12 w-12 rounded-2xl">
+                                    <Button variant="outline" size="icon" className="shadow-sm relative h-12 w-12 rounded-2xl flex-shrink-0">
                                         <ListFilter className="h-5 w-5" />
                                         {categoryFilter.length > 0 && (
                                             <span className="absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs px-1">
@@ -450,7 +450,7 @@ export default function InventoryPage() {
                       </DropdownMenu>
                       <Tooltip>
                           <TooltipTrigger asChild>
-                              <Button variant="outline" size="icon" asChild className="shadow-lg h-12 w-12 rounded-2xl">
+                              <Button variant="outline" size="icon" asChild className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0">
                                   <Link href="/inventory/history"><History className="h-5 w-5" /></Link>
                               </Button>
                           </TooltipTrigger>
@@ -460,7 +460,7 @@ export default function InventoryPage() {
                       </Tooltip>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button variant="outline" size="icon" onClick={handlePrintCountForm} className="shadow-lg h-12 w-12 rounded-2xl">
+                                <Button variant="outline" size="icon" onClick={handlePrintCountForm} className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0">
                                     <FileText className="h-5 w-5" />
                                 </Button>
                             </TooltipTrigger>

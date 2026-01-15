@@ -186,49 +186,67 @@ export default function SalesPage() {
         </div>
 
         <div className="py-4 space-y-4">
-            <div className="flex flex-col sm:flex-row items-center gap-2">
+             <div className="flex flex-col sm:flex-row items-center gap-2">
                 <Input
                   placeholder="Filtrar por produto ou guia..."
                   value={nameFilter}
                   onChange={(event) => setNameFilter(event.target.value)}
-                  className="w-full md:max-w-sm shadow-lg h-12 text-sm"
+                  className="w-full sm:max-w-xs shadow-sm h-12 text-sm"
                 />
-                <DatePicker date={dateFilter} setDate={setDateFilter} />
-                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="shadow-lg h-12 w-full sm:w-auto">
-                            <Filter className="mr-2 h-4 w-4" />
-                            {statusFilter === 'all' ? 'Todos os Status' : statusFilter}
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Filtrar por Status</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuCheckboxItem checked={statusFilter === 'all'} onCheckedChange={() => setStatusFilter('all')}>Todos</DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem checked={statusFilter === 'Pago'} onCheckedChange={() => setStatusFilter('Pago')}>Pagas não levantadas</DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem checked={statusFilter === 'Levantado'} onCheckedChange={() => setStatusFilter('Levantado')}>Levantadas</DropdownMenuCheckboxItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-                {isMultiLocation && canViewSales && (
+                <div className="flex w-full sm:w-auto items-center gap-2">
+                    <DatePicker date={dateFilter} setDate={setDateFilter} />
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="h-12 w-full sm:w-auto shadow-lg">
-                          <MapPin className="mr-2 h-4 w-4" />
-                          {locationFilter === 'all' ? 'Todas as Localizações' : locations.find(l => l.id === locationFilter)?.name}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <ScrollArea className="h-48">
-                          <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuCheckboxItem checked={locationFilter === 'all'} onCheckedChange={() => setLocationFilter('all')}>Todas</DropdownMenuCheckboxItem>
-                          {locations.map(loc => (
-                            <DropdownMenuCheckboxItem key={loc.id} checked={locationFilter === loc.id} onCheckedChange={() => setLocationFilter(loc.id)}>{loc.name}</DropdownMenuCheckboxItem>
-                          ))}
-                        </ScrollArea>
-                      </DropdownMenuContent>
+                       <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="shadow-sm h-12 w-12 flex-shrink-0" size="icon">
+                                    <Filter className="h-5 w-5" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                           </TooltipTrigger>
+                           <TooltipContent>
+                              <p>Filtrar por Status</p>
+                           </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Filtrar por Status</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuCheckboxItem checked={statusFilter === 'all'} onCheckedChange={() => setStatusFilter('all')}>Todos</DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem checked={statusFilter === 'Pago'} onCheckedChange={() => setStatusFilter('Pago')}>Pagas não levantadas</DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem checked={statusFilter === 'Levantado'} onCheckedChange={() => setStatusFilter('Levantado')}>Levantadas</DropdownMenuCheckboxItem>
+                        </DropdownMenuContent>
                     </DropdownMenu>
-                  )}
+                    {isMultiLocation && canViewSales && (
+                        <DropdownMenu>
+                          <TooltipProvider>
+                           <Tooltip>
+                            <TooltipTrigger asChild>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="h-12 w-12 flex-shrink-0" size="icon">
+                                  <MapPin className="mr-2 h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                             </TooltipTrigger>
+                             <TooltipContent>
+                                <p>Filtrar por Localização</p>
+                             </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <DropdownMenuContent align="end">
+                            <ScrollArea className="h-48">
+                              <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuCheckboxItem checked={locationFilter === 'all'} onCheckedChange={() => setLocationFilter('all')}>Todas</DropdownMenuCheckboxItem>
+                              {locations.map(loc => (
+                                <DropdownMenuCheckboxItem key={loc.id} checked={locationFilter === loc.id} onCheckedChange={() => setLocationFilter(loc.id)}>{loc.name}</DropdownMenuCheckboxItem>
+                              ))}
+                            </ScrollArea>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                </div>
             </div>
             
             <div className="flex items-center justify-center gap-2 border-t pt-4">
