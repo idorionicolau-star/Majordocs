@@ -8,7 +8,7 @@ import { ptBR } from 'date-fns/locale';
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
+import { UniversalCalendar } from "@/components/ui/universal-calendar"
 import {
   Popover,
   PopoverContent,
@@ -21,9 +21,10 @@ interface DatePickerProps {
 }
 
 export function DatePicker({ date, setDate }: DatePickerProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
 
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           variant={"outline"}
@@ -37,12 +38,13 @@ export function DatePicker({ date, setDate }: DatePickerProps) {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={setDate}
-          initialFocus
-          locale={ptBR}
+        <UniversalCalendar
+          selectedDate={date}
+          onDateSelect={(newDate) => {
+            setDate(newDate);
+            setIsOpen(false);
+          }}
+          onClose={() => setIsOpen(false)}
         />
       </PopoverContent>
     </Popover>
