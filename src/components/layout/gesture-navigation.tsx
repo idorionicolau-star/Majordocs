@@ -41,6 +41,9 @@ export function GestureNavigation({ children, prevRoute, nextRoute }: GestureNav
   }, { 
     axis: 'x',
     filterTaps: true, 
+    // Add a delay to distinguish between a tap and a drag gesture.
+    // This prevents the drag from interfering with fast clicks on child elements.
+    delay: 200, 
     // Prevent gesture if there's no route in that direction
     bounds: { 
       left: nextRoute ? -Infinity : 0, 
