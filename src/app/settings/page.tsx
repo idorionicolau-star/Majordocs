@@ -7,8 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Building, Book, Palette, User as UserIcon, MapPin, Code, Trash2, Mail } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import { ChevronDown, Building, Book, Palette, User as UserIcon, MapPin, Code, Trash2, Mail } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { LocationsManager } from "@/components/settings/locations-manager";
 import { Button } from "@/components/ui/button";
@@ -72,7 +77,7 @@ function ProfileTab() {
   const displayImage = selectedImage || profilePicture;
 
   return (
-    <Card>
+    <Card className="glass-card">
       <CardHeader>
         <CardTitle>Perfil de Utilizador</CardTitle>
         <CardDescription>Visualize e gira as suas informações pessoais.</CardDescription>
@@ -361,7 +366,7 @@ export default function SettingsPage() {
           </TabsContent>
           
           <TabsContent value="appearance">
-             <Card>
+             <Card className="glass-card">
                 <CardHeader>
                   <CardTitle>Aparência</CardTitle>
                   <CardDescription>Personalize a aparência da aplicação.</CardDescription>
@@ -396,7 +401,7 @@ export default function SettingsPage() {
           {hasPermission('settings') && (
             <>
               <TabsContent value="company">
-                <Card>
+                <Card className="glass-card">
                   <CardHeader>
                     <CardTitle>Detalhes da Empresa</CardTitle>
                     <CardDescription>Visualize e edite os dados da sua empresa.</CardDescription>
@@ -431,7 +436,7 @@ export default function SettingsPage() {
                                   <Mail className="h-5 w-5 text-primary"/>
                                   Notificações por E-mail
                               </Label>
-                              <div className="grid gap-4 rounded-lg border p-4">
+                              <div className="grid gap-4 rounded-2xl border p-4">
                                   <div className="space-y-2">
                                       <Label htmlFor="notificationSettings.email">E-mail de Destino</Label>
                                       <p className="text-sm text-muted-foreground">
@@ -472,7 +477,7 @@ export default function SettingsPage() {
               </TabsContent>
               
               <TabsContent value="locations">
-                <Card>
+                <Card className="glass-card">
                   <CardHeader>
                     <CardTitle>Gestão de Localizações</CardTitle>
                     <CardDescription>Ative e gerencie múltiplas localizações para o seu negócio.</CardDescription>
@@ -484,7 +489,7 @@ export default function SettingsPage() {
               </TabsContent>
 
               <TabsContent value="catalog">
-                <Card>
+                <Card className="glass-card">
                   <CardHeader>
                     <CardTitle>Gestor de Catálogo</CardTitle>
                     <CardDescription>Gerencie os produtos, categorias e importe dados.</CardDescription>

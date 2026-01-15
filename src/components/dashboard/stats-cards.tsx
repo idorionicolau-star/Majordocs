@@ -19,9 +19,9 @@ export function StatsCards() {
     if (loading) {
         return (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Skeleton className="h-[100px] w-full rounded-2xl" />
-                <Skeleton className="h-[100px] w-full rounded-2xl" />
-                <Skeleton className="h-[100px] w-full rounded-2xl" />
+                <Skeleton className="h-[100px] w-full" />
+                <Skeleton className="h-[100px] w-full" />
+                <Skeleton className="h-[100px] w-full" />
             </div>
         );
     }
@@ -95,8 +95,8 @@ export function StatsCards() {
         if (stat.restricted && !isAuthorized) {
              return (
                  <div key={stat.title}>
-                    <Card className="glass-card relative flex items-center justify-center gap-4 p-4 rounded-2xl shadow-sm h-full text-center">
-                        <div className="absolute inset-0 bg-background z-10 rounded-2xl flex items-center justify-center">
+                    <Card className="glass-card relative flex items-center justify-center gap-4 p-4 h-full text-center">
+                        <div className="absolute inset-0 bg-background z-10 flex items-center justify-center">
                             <div className="flex flex-col items-center gap-2 text-muted-foreground font-bold">
                                 <Lock className="h-6 w-6"/>
                                 <span>Acesso Restrito</span>
@@ -127,7 +127,7 @@ export function StatsCards() {
         
         return (
             <Link href={stat.href} key={stat.title}>
-                <Card className="glass-card relative flex items-center gap-4 p-4 rounded-2xl shadow-sm hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group h-full">
+                <Card className="glass-card relative flex items-center gap-4 p-4 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group h-full">
                     <stat.icon 
                         strokeWidth={2.5} 
                         className={cn(
