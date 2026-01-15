@@ -7,7 +7,7 @@ import { ProductionDataTable } from "@/components/production/data-table";
 import { AddProductionDialog } from "@/components/production/add-production-dialog";
 import type { Production, Location, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronDown, Lock, MapPin, Trash2 } from "lucide-react";
+import { List, LayoutGrid, ChevronDown, Lock, MapPin, Trash2, PlusCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -201,6 +201,12 @@ export default function ProductionPage() {
                       }
                 </div>
             </div>
+            {canEditProduction && (
+              <Button onClick={() => setAddDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Adicionar Produção
+              </Button>
+            )}
         </div>
 
         <div className="py-4 space-y-4">

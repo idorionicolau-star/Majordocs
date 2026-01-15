@@ -9,7 +9,7 @@ import { SalesDataTable } from "@/components/sales/data-table";
 import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronDown, Filter, Lock, MapPin, Trash2 } from "lucide-react";
+import { List, LayoutGrid, ChevronDown, Filter, Lock, MapPin, Trash2, PlusCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -225,6 +225,12 @@ export default function SalesPage() {
                         }
                   </div>
               </div>
+              {canEditSales && (
+                <Button onClick={() => setAddDialogOpen(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Adicionar Venda
+                </Button>
+              )}
           </div>
 
           <div className="py-4 space-y-4">

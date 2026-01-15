@@ -15,20 +15,12 @@ import Link from 'next/link';
 import { BottomNav } from './bottom-nav';
 
 
-const FAB_CONFIG = {
-  '/inventory': { label: 'Novo Produto', href: '/inventory?action=add', permission: 'inventory' },
-  '/sales': { label: 'Nova Venda', href: '/sales?action=add', permission: 'sales' },
-  '/production': { label: 'Nova Produção', href: '/production?action=add', permission: 'production' },
-  '/orders': { label: 'Nova Encomenda', href: '/orders?action=add', permission: 'orders' },
-};
-
-
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const authContext = useContext(InventoryContext);
   const isAuthPage = pathname === '/login' || pathname === '/register';
-  const { canView, canEdit } = useContext(InventoryContext) || { canView: () => false, canEdit: () => false };
+  const { canView } = useContext(InventoryContext) || { canView: () => false };
   
   useEffect(() => {
     if (authContext?.loading) {
@@ -50,10 +42,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   const availableNavItems = mainNavItems.filter(item => canView(item.id as ModulePermission));
   
-  const fabConfig = FAB_CONFIG[pathname as keyof typeof FAB_CONFIG];
-  const showFab = fabConfig && canEdit(fabConfig.permission as ModulePermission);
-
-
   if (authContext?.loading || (!authContext?.firebaseUser && !isAuthPage)) {
      return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -99,23 +87,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         </AnimatePresence>
       </main>
       <BottomNav />
-       <AnimatePresence>
-        {showFab && (
-          <motion.div
-            initial={{ opacity: 0, y: 100 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 100 }}
-            transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-            className="fixed bottom-24 right-4 sm:right-6 z-50 md:hidden"
-          >
-            <Button asChild size="lg" className="rounded-full shadow-2xl h-14">
-              <Link href={fabConfig.href} scroll={false}>
-                {fabConfig.label}
-              </Link>
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

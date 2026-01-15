@@ -5,7 +5,7 @@ import { useState, useMemo, useContext, useEffect } from "react";
 import { useSearchParams } from 'next/navigation';
 import type { Order, Product, ProductionLog, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Filter, List, LayoutGrid, ChevronDown, Lock, Trash2 } from "lucide-react";
+import { Filter, List, LayoutGrid, ChevronDown, Lock, Trash2, PlusCircle } from "lucide-react";
 import { AddOrderDialog } from "@/components/orders/add-order-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -201,6 +201,12 @@ export default function OrdersPage() {
                       }
                   </div>
               </div>
+              {canEditOrders && (
+                <Button onClick={() => setAddDialogOpen(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Adicionar Encomenda
+                </Button>
+              )}
           </div>
           
           <div className="py-4 space-y-4">

@@ -7,7 +7,7 @@ import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2 } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -382,6 +382,12 @@ export default function InventoryPage() {
                       }
                   </div>
               </div>
+              {canEditInventory && (
+                <Button onClick={() => setAddDialogOpen(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Adicionar Produto
+                </Button>
+              )}
           </div>
           <div className="py-4 space-y-4">
              <div className="flex flex-col sm:flex-row items-center gap-2">
