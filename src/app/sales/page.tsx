@@ -21,11 +21,14 @@ import { doc, updateDoc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { DatePicker } from "@/components/ui/date-picker";
+import { isSameDay } from "date-fns";
 
 export default function SalesPage() {
   const searchParams = useSearchParams();
   const [nameFilter, setNameFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<Date | undefined>();
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
@@ -145,8 +148,11 @@ export default function SalesPage() {
     if (isMultiLocation && locationFilter !== 'all') {
       result = result.filter(s => s.location === locationFilter);
     }
+    if (dateFilter) {
+      result = result.filter(s => isSameDay(new Date(s.date), dateFilter));
+    }
     return result;
-  }, [sales, nameFilter, statusFilter, isMultiLocation, locationFilter]);
+  }, [sales, nameFilter, statusFilter, isMultiLocation, locationFilter, dateFilter]);
 
   if (inventoryLoading) {
     return (
@@ -187,6 +193,7 @@ export default function SalesPage() {
                   onChange={(event) => setNameFilter(event.target.value)}
                   className="w-full md:max-w-sm shadow-lg h-12 text-sm"
                 />
+                <DatePicker date={dateFilter} setDate={setDateFilter} />
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="shadow-lg h-12 w-full sm:w-auto">
