@@ -31,6 +31,8 @@ import { useFirestore } from "@/firebase";
 import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { DatePicker } from "@/components/ui/date-picker";
+import { isSameDay } from "date-fns";
 
 export default function ProductionPage() {
   const inventoryContext = useContext(InventoryContext);
@@ -39,6 +41,7 @@ export default function ProductionPage() {
   const firestore = useFirestore();
 
   const [nameFilter, setNameFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState<Date | undefined>();
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('4');
   const [productionToTransfer, setProductionToTransfer] = useState<Production | null>(null);
@@ -121,8 +124,11 @@ export default function ProductionPage() {
     if (isMultiLocation && locationFilter !== 'all') {
       result = result.filter(p => p.location === locationFilter);
     }
+    if (dateFilter) {
+      result = result.filter(p => isSameDay(new Date(p.date), dateFilter));
+    }
     return result;
-  }, [productions, nameFilter, locationFilter, isMultiLocation]);
+  }, [productions, nameFilter, locationFilter, isMultiLocation, dateFilter]);
 
   if (inventoryLoading) {
     return (
@@ -179,6 +185,7 @@ export default function ProductionPage() {
                   onChange={(event) => setNameFilter(event.target.value)}
                   className="w-full md:max-w-sm shadow-lg h-12 text-sm"
                 />
+                <DatePicker date={dateFilter} setDate={setDateFilter} />
                  {isMultiLocation && canViewProduction && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
