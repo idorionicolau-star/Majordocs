@@ -22,7 +22,9 @@ export default function InventoryHistoryPage() {
 
   const stockMovementsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
-    return query(collection(firestore, `companies/${companyId}/stockMovements`), orderBy("timestamp", "desc"));
+    // Removed orderBy from here to avoid needing a composite index for now.
+    // Sorting will be handled client-side.
+    return collection(firestore, `companies/${companyId}/stockMovements`);
   }, [firestore, companyId]);
 
   const { data: movements, isLoading: movementsLoading } = useCollection<StockMovement>(stockMovementsCollectionRef);
@@ -53,11 +55,12 @@ export default function InventoryHistoryPage() {
       const lowerCaseFilter = searchFilter.toLowerCase();
       result = result.filter(m => 
         m.productName.toLowerCase().includes(lowerCaseFilter) ||
-        m.userName.toLowerCase().includes(lowerCaseFilter) ||
+        (m.userName && m.userName.toLowerCase().includes(lowerCaseFilter)) ||
         m.reason.toLowerCase().includes(lowerCaseFilter)
       );
     }
     
+    // Sort client-side
     return result.sort((a, b) => {
         const dateA = a.timestamp ? (a.timestamp as Timestamp).toMillis() : 0;
         const dateB = b.timestamp ? (b.timestamp as Timestamp).toMillis() : 0;
@@ -104,4 +107,3 @@ export default function InventoryHistoryPage() {
     </div>
   );
 }
-
