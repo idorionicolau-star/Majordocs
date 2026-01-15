@@ -1,4 +1,5 @@
 
+
 {
   "entities": {
     "User": {
@@ -10,6 +11,24 @@
       },
       "required": ["companyId"]
     },
+    "NotificationSettings": {
+      "title": "NotificationSettings",
+      "type": "object",
+      "description": "Configurações de notificação por e-mail.",
+      "properties": {
+        "email": {
+            "type": "string",
+            "format": "email"
+        },
+        "onSale": {
+            "type": "boolean"
+        },
+        "onCriticalStock": {
+            "type": "boolean"
+        }
+      },
+      "required": ["email", "onSale", "onCriticalStock"]
+    },
     "Company": {
       "title": "Company",
       "type": "object",
@@ -19,10 +38,8 @@
           "type": "string",
           "description": "The name of the company."
         },
-        "notificationEmail": {
-          "type": "string",
-          "format": "email",
-          "description": "The email address to receive stock alerts and reports."
+        "notificationSettings": {
+           "$ref": "#/entities/NotificationSettings"
         }
       },
       "required": ["name"]

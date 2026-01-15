@@ -28,6 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
 
 
 const colorOptions = [
@@ -130,7 +131,11 @@ export default function SettingsPage() {
     phone: '',
     address: '',
     taxId: '',
-    notificationEmail: ''
+    notificationSettings: {
+      email: '',
+      onSale: false,
+      onCriticalStock: false,
+    }
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -165,7 +170,11 @@ export default function SettingsPage() {
         phone: companyData.phone || '',
         address: companyData.address || '',
         taxId: companyData.taxId || '',
-        notificationEmail: companyData.notificationEmail || ''
+        notificationSettings: {
+          email: companyData.notificationSettings?.email || '',
+          onSale: companyData.notificationSettings?.onSale || false,
+          onCriticalStock: companyData.notificationSettings?.onCriticalStock || false,
+        }
       });
     }
   }, [companyData]);
@@ -268,8 +277,28 @@ export default function SettingsPage() {
 
   const handleDetailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    setCompanyDetails(prev => ({...prev, [id]: value }));
+    if (id === 'notificationSettings.email') {
+        setCompanyDetails(prev => ({
+            ...prev,
+            notificationSettings: {
+                ...prev.notificationSettings,
+                email: value,
+            }
+        }));
+    } else {
+        setCompanyDetails(prev => ({...prev, [id]: value }));
+    }
   }
+
+  const handleSwitchChange = (id: 'onSale' | 'onCriticalStock', checked: boolean) => {
+    setCompanyDetails(prev => ({
+        ...prev,
+        notificationSettings: {
+            ...prev.notificationSettings,
+            [id]: checked,
+        }
+    }));
+  };
 
   const handleClearProducts = async () => {
     if (clearProductsCollection) {
@@ -397,17 +426,39 @@ export default function SettingsPage() {
                             </div>
                           </div>
 
-                           <div className="space-y-4 pt-6 border-t">
-                                <div className="space-y-2">
-                                    <Label htmlFor="notificationEmail" className="flex items-center gap-2 font-semibold text-base">
-                                        <Mail className="h-5 w-5 text-primary"/>
-                                        Email para Notificações
-                                    </Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        Introduza um e-mail para receber alertas automáticos de stock crítico e outros relatórios importantes.
-                                    </p>
-                                    <Input id="notificationEmail" type="email" value={companyDetails.notificationEmail} onChange={handleDetailChange} placeholder="ex: gerente@suaempresa.com"/>
-                                </div>
+                          <div className="space-y-4 pt-6 border-t">
+                              <Label className="flex items-center gap-2 font-semibold text-base">
+                                  <Mail className="h-5 w-5 text-primary"/>
+                                  Notificações por E-mail
+                              </Label>
+                              <div className="grid gap-4 rounded-lg border p-4">
+                                  <div className="space-y-2">
+                                      <Label htmlFor="notificationSettings.email">E-mail de Destino</Label>
+                                      <p className="text-sm text-muted-foreground">
+                                          O e-mail para receber todos os alertas ativados.
+                                      </p>
+                                      <Input id="notificationSettings.email" type="email" value={companyDetails.notificationSettings.email} onChange={handleDetailChange} placeholder="ex: gerente@suaempresa.com"/>
+                                  </div>
+                                  <div className="space-y-3 pt-4">
+                                      <h4 className="font-medium text-sm">Ativar alertas para:</h4>
+                                      <div className="flex items-center justify-between rounded-md border p-3 bg-background/50">
+                                          <Label htmlFor="onCriticalStock" className="cursor-pointer">Stock Crítico</Label>
+                                          <Switch
+                                              id="onCriticalStock"
+                                              checked={companyDetails.notificationSettings.onCriticalStock}
+                                              onCheckedChange={(checked) => handleSwitchChange('onCriticalStock', checked)}
+                                          />
+                                      </div>
+                                      <div className="flex items-center justify-between rounded-md border p-3 bg-background/50">
+                                          <Label htmlFor="onSale" className="cursor-pointer">Novas Vendas</Label>
+                                          <Switch
+                                              id="onSale"
+                                              checked={companyDetails.notificationSettings.onSale}
+                                              onCheckedChange={(checked) => handleSwitchChange('onSale', checked)}
+                                          />
+                                      </div>
+                                  </div>
+                              </div>
                           </div>
 
                           <div className="flex justify-end">

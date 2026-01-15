@@ -29,6 +29,12 @@ export type Employee = {
   profilePictureUrl?: string; // URL for the profile picture
 };
 
+export type NotificationSettings = {
+  email: string;
+  onSale: boolean;
+  onCriticalStock: boolean;
+};
+
 export type Company = {
     id: string;
     name: string;
@@ -37,7 +43,7 @@ export type Company = {
     address?: string;
     taxId?: string;
     email?: string;
-    notificationEmail?: string;
+    notificationSettings?: NotificationSettings;
     isMultiLocation?: boolean;
     locations?: Location[];
 };

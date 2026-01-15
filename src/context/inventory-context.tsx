@@ -406,53 +406,62 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [companyDocRef]);
 
   const triggerEmailAlert = useCallback(async (payload: any) => {
-    const targetEmail = companyData?.notificationEmail;
+    const settings = companyData?.notificationSettings;
+    const targetEmail = settings?.email;
+
     if (!targetEmail) {
-        console.warn("E-mail de notificação não configurado. Alerta não enviado.");
-        return;
+      console.warn("E-mail de notificação não configurado. Alerta não enviado.");
+      return;
     }
-    
+
+    let shouldSend = false;
     let subject = '';
-    if (payload.type === 'CRITICAL') {
-        subject = `🚨 ALERTA: ${payload.productName} com stock baixo!`;
-        addNotification({
-            type: 'stock',
-            message: `Stock crítico para ${payload.productName}! Quantidade: ${payload.quantity}`,
-            href: '/inventory'
-        });
-    } else if (payload.type === 'SALE') {
-        subject = `✅ Nova Venda: ${payload.productName}`;
-        addNotification({
-            type: 'sale',
-            message: `Nova venda de ${payload.productName} registada.`,
-            href: '/sales',
-        });
+
+    if (payload.type === 'CRITICAL' && settings.onCriticalStock) {
+      shouldSend = true;
+      subject = `🚨 ALERTA: ${payload.productName} com stock baixo!`;
+      addNotification({
+        type: 'stock',
+        message: `Stock crítico para ${payload.productName}! Quantidade: ${payload.quantity}`,
+        href: '/inventory',
+      });
+    } else if (payload.type === 'SALE' && settings.onSale) {
+      shouldSend = true;
+      subject = `✅ Nova Venda: ${payload.productName}`;
+      addNotification({
+        type: 'sale',
+        message: `Nova venda de ${payload.productName} registada.`,
+        href: '/sales',
+      });
+    }
+
+    if (!shouldSend) {
+      return; // Do not send if the specific notification type is disabled
     }
 
     try {
-        const response = await fetch('/api/email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: targetEmail, subject, ...payload }),
-        });
+      const response = await fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: targetEmail, subject, ...payload }),
+      });
 
-        if (!response.ok) {
-            const errorBody = await response.json();
-            throw new Error(errorBody.error || 'Erro desconhecido da API');
-        }
-
+      if (!response.ok) {
+        const errorBody = await response.json();
+        throw new Error(errorBody.error || 'Erro desconhecido da API');
+      }
     } catch (error: any) {
-        console.error("Falha ao enviar e-mail de notificação:", error);
-        toast({
-            variant: "destructive",
-            title: "Erro de Notificação",
-            description: `Não foi possível enviar o e-mail. ${error.message}`
-        });
+      console.error("Falha ao enviar e-mail de notificação:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro de Notificação",
+        description: `Não foi possível enviar o e-mail. ${error.message}`,
+      });
     }
-  }, [companyData?.notificationEmail, addNotification, toast]);
+  }, [companyData, addNotification, toast]);
 
  const checkStockAndNotify = useCallback(async (product: Product) => {
-    if (!companyData?.notificationEmail) return;
+    if (!companyData?.notificationSettings?.email) return;
 
     // Use available stock for a more accurate check
     const availableStock = product.stock - (product.reservedStock || 0);
