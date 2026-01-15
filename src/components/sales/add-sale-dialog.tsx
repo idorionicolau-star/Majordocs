@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -96,6 +96,20 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
   const watchedQuantity = useWatch({ control: form.control, name: 'quantity' });
   const watchedUnitPrice = useWatch({ control: form.control, name: 'unitPrice' });
   const watchedLocation = useWatch({ control: form.control, name: 'location' });
+  
+  const productsInStock = useMemo(() => {
+    if (!products || !catalogProducts) return [];
+
+    const productsForLocation = isMultiLocation && watchedLocation
+        ? products.filter(p => p.location === watchedLocation)
+        : products;
+    
+    const inStock = productsForLocation.filter(p => (p.stock - p.reservedStock) > 0);
+
+    const inStockNames = [...new Set(inStock.map(p => p.name))];
+    
+    return catalogProducts.filter(p => inStockNames.includes(p.name));
+  }, [products, catalogProducts, watchedLocation, isMultiLocation]);
 
 
   const selectedProductInstance = products?.find(p => p.name === watchedProductName && p.location === watchedLocation);
@@ -183,7 +197,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                     <FormLabel>Produto</FormLabel>
                     <FormControl>
                       <CatalogProductSelector
-                          products={catalogProducts || []}
+                          products={productsInStock}
                           categories={catalogCategories || []}
                           selectedValue={field.value}
                           onValueChange={handleProductSelect}

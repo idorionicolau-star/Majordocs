@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -47,7 +47,7 @@ interface EditSaleDialogProps {
 
 function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditSaleDialogProps) {
   const inventoryContext = useContext(InventoryContext);
-  const { catalogProducts, catalogCategories } = inventoryContext || {};
+  const { products, catalogProducts, catalogCategories, isMultiLocation } = inventoryContext || { products: [], catalogProducts: [], catalogCategories: [], isMultiLocation: false };
 
   const form = useForm<EditSaleFormValues>({
     resolver: zodResolver(formSchema),
@@ -57,6 +57,24 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
       unitPrice: sale.unitPrice,
     },
   });
+  
+  const productsInStock = useMemo(() => {
+    if (!products || !catalogProducts) return [];
+
+    const productsForLocation = isMultiLocation && sale.location
+      ? products.filter(p => p.location === sale.location)
+      : products;
+
+    // Allow the current product to be in the list even if out of stock, so user can edit other fields.
+    const inStockOrCurrent = productsForLocation.filter(p => 
+      ((p.stock - p.reservedStock) > 0) || (p.name === sale.productName)
+    );
+
+    const availableProductNames = [...new Set(inStockOrCurrent.map(p => p.name))];
+    
+    return catalogProducts.filter(p => availableProductNames.includes(p.name));
+  }, [products, catalogProducts, isMultiLocation, sale.location, sale.productName]);
+
 
   const watchedProductName = useWatch({ control: form.control, name: 'productName' });
   const watchedQuantity = useWatch({ control: form.control, name: 'quantity' });
@@ -97,7 +115,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
                   <FormItem>
                     <FormLabel>Produto</FormLabel>
                     <CatalogProductSelector
-                      products={catalogProducts || []}
+                      products={productsInStock}
                       categories={catalogCategories || []}
                       selectedValue={field.value}
                       onValueChange={handleProductSelect}
