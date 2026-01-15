@@ -41,7 +41,7 @@ export default function OrdersPage() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { orders, companyId, loading: inventoryLoading, updateProductStock, user, canEdit, deleteOrder, clearOrders, addNotification } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null, canEdit: () => false, deleteOrder: () => {}, clearOrders: async () => {}, addNotification: () => {} };
+  const { orders, companyId, loading: inventoryLoading, updateProductStock, user, canEdit, deleteOrder, clearOrders, addNotification, addProductionLog } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null, canEdit: () => false, deleteOrder: () => {}, clearOrders: async () => {}, addNotification: () => {}, addProductionLog: () => {} };
 
   const canEditOrders = canEdit('orders');
   const isAdmin = user?.role === 'Admin';
@@ -98,10 +98,10 @@ export default function OrdersPage() {
         updateDoc(orderDocRef, update);
 
         if (newStatus === 'Concluída' && orderToUpdate) {
-            updateProductStock(orderToUpdate.productName, orderToUpdate.quantityProduced);
+            // Note: Stock is now updated via transferring production records, not here.
             toast({
                 title: "Encomenda Concluída",
-                description: `A produção de ${orderToUpdate.quantity} ${orderToUpdate.unit} de "${orderToUpdate.productName}" foi concluída. O stock foi atualizado.`
+                description: `A produção de ${orderToUpdate.quantity} ${orderToUpdate.unit} de "${orderToUpdate.productName}" foi concluída. Transfira os registos de produção para atualizar o stock.`
             });
         } else {
             toast({
@@ -109,34 +109,6 @@ export default function OrdersPage() {
                 description: `A encomenda está agora "${newStatus}".`
             });
         }
-    }
-  };
-
-  const handleAddProductionLog = (orderId: string, logData: { quantity: number; notes?: string }) => {
-    if (!firestore || !companyId || !user) return;
-    
-    let orderToUpdate = orders.find(o => o.id === orderId);
-
-    if (orderToUpdate) {
-        const newLog: ProductionLog = {
-          id: `log-${Date.now()}`,
-          date: new Date().toISOString(),
-          quantity: logData.quantity,
-          notes: logData.notes,
-          registeredBy: user.username || 'Desconhecido',
-        };
-        const newQuantityProduced = orderToUpdate.quantityProduced + logData.quantity;
-        
-        const orderDocRef = doc(firestore, `companies/${companyId}/orders`, orderId);
-        updateDoc(orderDocRef, {
-            quantityProduced: newQuantityProduced,
-            productionLogs: arrayUnion(newLog)
-        });
-
-        toast({
-          title: "Registo de Produção Adicionado",
-          description: `${logData.quantity} unidades de "${orderToUpdate?.productName}" foram registadas.`,
-        });
     }
   };
 
@@ -244,7 +216,7 @@ export default function OrdersPage() {
                     key={order.id}
                     order={order}
                     onUpdateStatus={handleUpdateOrderStatus}
-                    onAddProductionLog={handleAddProductionLog}
+                    onAddProductionLog={addProductionLog}
                     onDeleteOrder={deleteOrder}
                     canEdit={canEditOrders}
                 />

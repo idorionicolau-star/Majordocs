@@ -100,6 +100,7 @@ interface InventoryContextType {
   addSale: (newSaleData: Omit<Sale, 'id' | 'guideNumber'>) => Promise<void>;
   confirmSalePickup: (sale: Sale) => void;
   deleteSale: (saleId: string) => void;
+  addProductionLog: (orderId: string, logData: { quantity: number; notes?: string; }) => void;
   deleteProduction: (productionId: string) => void;
   deleteOrder: (orderId: string) => void;
   clearSales: () => Promise<void>;
@@ -109,6 +110,7 @@ interface InventoryContextType {
   markNotificationAsRead: (id: string) => void;
   markAllAsRead: () => void;
   clearNotifications: () => void;
+  addNotification: (notification: Omit<AppNotification, 'id' | 'date' | 'read'>) => void;
 }
 
 export const InventoryContext = createContext<InventoryContextType | undefined>(
@@ -438,11 +440,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             throw new Error(errorBody.error || 'Erro desconhecido da API');
         }
 
-        toast({
-            title: "Notificação Enviada",
-            description: `Um e-mail sobre "${subject}" foi enviado com sucesso.`,
-        });
-
     } catch (error: any) {
         console.error("Falha ao enviar e-mail de notificação:", error);
         toast({
@@ -453,15 +450,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [companyData?.notificationEmail, addNotification, toast]);
 
-  const checkStockAndNotify = useCallback(async (product: Product) => {
-    const targetEmail = companyData?.notificationEmail;
-    if (!targetEmail) return;
+ const checkStockAndNotify = useCallback(async (product: Product) => {
+    if (!companyData?.notificationEmail) return;
 
-    if (product.stock <= (product.criticalStockThreshold || 0)) {
+    // Use available stock for a more accurate check
+    const availableStock = product.stock - (product.reservedStock || 0);
+
+    if (availableStock <= (product.criticalStockThreshold || 0)) {
         await triggerEmailAlert({
             type: 'CRITICAL',
             productName: product.name,
-            quantity: product.stock,
+            quantity: availableStock, // Send the available quantity
             location: locations.find(l => l.id === product.location)?.name || 'Principal',
             threshold: product.criticalStockThreshold,
         });
@@ -742,6 +741,64 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     });
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user, checkStockAndNotify]);
 
+  const addProductionLog = useCallback((orderId: string, logData: { quantity: number; notes?: string }) => {
+    if (!firestore || !companyId || !user || !ordersData) return;
+    
+    const orderToUpdate = ordersData.find(o => o.id === orderId);
+
+    if (orderToUpdate) {
+        const orderDocRef = doc(firestore, `companies/${companyId}/orders`, orderId);
+        const productionsRef = collection(firestore, `companies/${companyId}/productions`);
+
+        const batch = writeBatch(firestore);
+
+        // 1. Update Order
+        const newLog: ProductionLog = {
+          id: `log-${Date.now()}`,
+          date: new Date().toISOString(),
+          quantity: logData.quantity,
+          notes: logData.notes,
+          registeredBy: user.username || 'Desconhecido',
+        };
+        const newQuantityProduced = orderToUpdate.quantityProduced + logData.quantity;
+        
+        batch.update(orderDocRef, {
+            quantityProduced: newQuantityProduced,
+            productionLogs: arrayUnion(newLog)
+        });
+
+        // 2. Create Production record
+        const newProduction: Omit<Production, 'id'> = {
+          date: new Date().toISOString().split('T')[0],
+          productName: orderToUpdate.productName,
+          quantity: logData.quantity,
+          location: orderToUpdate.location,
+          registeredBy: user.username || 'Desconhecido',
+          status: 'Concluído'
+        };
+        batch.set(doc(productionsRef), newProduction);
+        
+        batch.commit().then(() => {
+            toast({
+              title: "Registo de Produção Adicionado",
+              description: `${logData.quantity} unidades de "${orderToUpdate?.productName}" foram registadas.`,
+            });
+            addNotification({
+              type: 'production',
+              message: `Produção de ${orderToUpdate.productName} atualizada.`,
+              href: `/orders?id=${orderId}`
+            })
+        }).catch(error => {
+            console.error("Error adding production log: ", error);
+            toast({
+              variant: "destructive",
+              title: "Erro ao Registar",
+              description: "Não foi possível guardar o registo de produção.",
+            });
+        });
+    }
+  }, [firestore, companyId, user, ordersData, toast, addNotification]);
+
   const deleteSale = useCallback(async (saleId: string) => {
     if (!salesCollectionRef) return;
     await deleteDoc(doc(salesCollectionRef, saleId));
@@ -771,10 +828,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
     locations, isMultiLocation, notifications,
     addProduct, updateProduct, deleteProduct, clearProductsCollection,
-    transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup,
+    transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
     deleteSale, deleteProduction, deleteOrder,
     clearSales, clearProductions, clearOrders, clearStockMovements,
-    markNotificationAsRead, markAllAsRead, clearNotifications,
+    markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
   };
 
   return (
