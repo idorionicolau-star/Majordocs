@@ -10,17 +10,18 @@ import type { StockMovement } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, orderBy, Timestamp } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
+import { startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 
 export default function InventoryHistoryPage() {
   const { companyId, locations, loading: contextLoading } = useContext(InventoryContext) || {};
   const firestore = useFirestore();
 
   const [searchFilter, setSearchFilter] = useState("");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   const stockMovementsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
-    // Removed orderBy from here to avoid needing a composite index for now.
-    // Sorting will be handled client-side.
     return collection(firestore, `companies/${companyId}/stockMovements`);
   }, [firestore, companyId]);
 
@@ -35,6 +36,16 @@ export default function InventoryHistoryPage() {
   const filteredMovements = useMemo(() => {
     if (!movements) return [];
     let result = movements;
+
+    if (selectedDate) {
+        const start = startOfDay(selectedDate);
+        const end = endOfDay(selectedDate);
+        result = result.filter(m => {
+            if (!m.timestamp) return false;
+            const moveDate = (m.timestamp as Timestamp).toDate();
+            return isWithinInterval(moveDate, { start, end });
+        });
+    }
 
     if (searchFilter) {
       const lowerCaseFilter = searchFilter.toLowerCase();
@@ -51,7 +62,7 @@ export default function InventoryHistoryPage() {
         const dateB = b.timestamp ? (b.timestamp as Timestamp).toMillis() : 0;
         return dateB - dateA;
     });
-  }, [movements, searchFilter]);
+  }, [movements, searchFilter, selectedDate]);
 
   const isLoading = contextLoading || movementsLoading;
 
@@ -82,6 +93,7 @@ export default function InventoryHistoryPage() {
             onChange={(e) => setSearchFilter(e.target.value)}
             className="h-12 text-sm"
         />
+        <DatePicker date={selectedDate} setDate={setSelectedDate} />
       </div>
 
       <HistoryDataTable 
