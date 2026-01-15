@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 const colorOptions = [
@@ -507,3 +508,5 @@ export default function SettingsPage() {
     </>
   );
 }
+
+    
