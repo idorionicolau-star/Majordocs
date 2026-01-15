@@ -36,6 +36,7 @@ import {
   runTransaction,
   getDoc,
   serverTimestamp,
+  arrayUnion,
   type CollectionReference,
 } from 'firebase/firestore';
 import { allPermissions } from '@/lib/data';
