@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from "next/link";
@@ -9,6 +8,7 @@ import { mainNavItems } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import type { ModulePermission } from "@/lib/types";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -21,24 +21,27 @@ export function BottomNav() {
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-20 bg-background/95 backdrop-blur-lg border-t">
-      <div className="grid h-full grid-cols-5 mx-auto">
-        {navItems.slice(0, 5).map(item => {
-          const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-          return (
-            <Link 
-              key={item.href} 
-              href={item.href} 
-              className={cn(
-                "inline-flex flex-col items-center justify-center font-medium px-1 hover:bg-muted group transition-colors",
-                isActive ? "text-primary" : "text-muted-foreground"
-              )}
-            >
-              <item.icon className={cn("h-6 w-6 mb-1 transition-transform", isActive ? "scale-110" : "scale-100")} />
-              <span className="text-[10px] font-bold">{item.title}</span>
-            </Link>
-          )
-        })}
-      </div>
+      <ScrollArea className="h-full w-full whitespace-nowrap">
+        <div className="flex w-max h-full mx-auto animate-peek md:animate-none">
+          {navItems.map(item => {
+            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "inline-flex flex-col items-center justify-center font-medium w-20 hover:bg-muted group transition-colors",
+                  isActive ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                <item.icon className={cn("h-6 w-6 mb-1 transition-transform", isActive ? "scale-110" : "scale-100")} />
+                <span className="text-[10px] font-bold">{item.title}</span>
+              </Link>
+            )
+          })}
+        </div>
+        <ScrollBar orientation="horizontal" className="h-0.5" />
+      </ScrollArea>
     </nav>
   );
 }
