@@ -52,9 +52,7 @@ interface EditEmployeeDialogProps {
   onUpdateEmployee: (employee: Employee) => void;
 }
 
-export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeDialogProps) {
-  const [open, setOpen] = useState(false);
-  
+function EditEmployeeDialogContent({ employee, onUpdateEmployee, setOpen }: EditEmployeeDialogProps & { setOpen: (open: boolean) => void }) {
   const form = useForm<EditEmployeeFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -65,17 +63,6 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
   });
   
   const role = form.watch('role');
-
-  useEffect(() => {
-    if (open) {
-      const initialPermissions = { ...allPermissions.reduce((acc, p) => ({ ...acc, [p.id]: 'none' }), {}), ...employee.permissions };
-      form.reset({
-        username: employee.username,
-        role: employee.role,
-        permissions: initialPermissions,
-      });
-    }
-  }, [open, employee, form]);
 
   const handlePermissionChange = (moduleId: ModulePermission, level: 'read' | 'write') => {
     const currentPermissions = form.getValues('permissions');
@@ -128,12 +115,6 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Edit className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Editar Funcionário</DialogTitle>
@@ -253,6 +234,26 @@ export function EditEmployeeDialog({ employee, onUpdateEmployee }: EditEmployeeD
           </Form>
         </ScrollArea>
       </DialogContent>
+  );
+}
+
+export function EditEmployeeDialog(props: EditEmployeeDialogProps) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (open) {
+      const initialPermissions = { ...allPermissions.reduce((acc, p) => ({ ...acc, [p.id]: 'none' }), {}), ...props.employee.permissions };
+    }
+  }, [open, props.employee]);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Edit className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      {open && <EditEmployeeDialogContent {...props} setOpen={setOpen} />}
     </Dialog>
   );
 }
+

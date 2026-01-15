@@ -29,11 +29,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Product } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { ScrollArea } from '../ui/scroll-area';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -46,36 +47,22 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
-
 interface AddCatalogProductDialogProps {
     categories: string[];
     onAdd: (product: Omit<CatalogProduct, 'id'>) => void;
 }
 
-export function AddCatalogProductDialog({ categories, onAdd }: AddCatalogProductDialogProps) {
-  const [open, setOpen] = useState(false);
+function AddCatalogProductDialogContent({ categories, onAdd, setOpen }: AddCatalogProductDialogProps & { setOpen: (open: boolean) => void }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-        name: '',
-        category: categories[0] || '',
-        price: 0,
-        lowStockThreshold: 10,
-        criticalStockThreshold: 5,
+      name: '',
+      category: categories[0] || '',
+      price: 0,
+      lowStockThreshold: 10,
+      criticalStockThreshold: 5,
     },
   });
-
-  useEffect(() => {
-    if (open) {
-      form.reset({
-        name: '',
-        category: categories[0] || '',
-        price: 0,
-        lowStockThreshold: 10,
-        criticalStockThreshold: 5,
-      });
-    }
-  }, [open, categories, form]);
 
   function onSubmit(values: FormValues) {
     onAdd(values);
@@ -83,22 +70,6 @@ export function AddCatalogProductDialog({ categories, onAdd }: AddCatalogProduct
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <Button size="icon" className="rounded-full h-9 w-9">
-                  <Plus className="h-5 w-5" />
-                  <span className="sr-only">Adicionar Produto ao Catálogo</span>
-              </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Adicionar Produto ao Catálogo</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Adicionar Produto ao Catálogo</DialogTitle>
@@ -106,8 +77,9 @@ export function AddCatalogProductDialog({ categories, onAdd }: AddCatalogProduct
             Crie um novo produto base que poderá ser usado no inventário.
           </DialogDescription>
         </DialogHeader>
+        <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
             <FormField
                 control={form.control}
                 name="category"
@@ -190,7 +162,33 @@ export function AddCatalogProductDialog({ categories, onAdd }: AddCatalogProduct
             </DialogFooter>
           </form>
         </Form>
+        </ScrollArea>
       </DialogContent>
-    </Dialog>
   );
+}
+
+
+export function AddCatalogProductDialog(props: AddCatalogProductDialogProps) {
+  const [open, setOpen] = useState(false);
+  
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button size="icon" className="rounded-full h-9 w-9">
+                  <Plus className="h-5 w-5" />
+                  <span className="sr-only">Adicionar Produto ao Catálogo</span>
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Adicionar Produto ao Catálogo</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      {open && <AddCatalogProductDialogContent {...props} setOpen={setOpen} />}
+    </Dialog>
+  )
 }

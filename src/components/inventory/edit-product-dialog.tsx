@@ -46,8 +46,7 @@ interface EditProductDialogProps {
     trigger: 'icon' | 'button' | 'card-button';
 }
 
-function EditProductDialogContent({ product, onProductUpdate, trigger }: EditProductDialogProps) {
-  const [open, setOpen] = useState(false);
+function EditProductDialogContent({ product, onProductUpdate, setOpen }: Omit<EditProductDialogProps, 'trigger'> & { setOpen: (open: boolean) => void }) {
   const form = useForm<EditProductFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -60,19 +59,6 @@ function EditProductDialogContent({ product, onProductUpdate, trigger }: EditPro
     },
   });
 
-  useEffect(() => {
-    if (open) {
-      form.reset({
-        name: product.name,
-        category: product.category,
-        price: product.price,
-        stock: product.stock,
-        lowStockThreshold: product.lowStockThreshold,
-        criticalStockThreshold: product.criticalStockThreshold,
-      });
-    }
-  }, [open, product, form]);
-
   function onSubmit(values: EditProductFormValues) {
     onProductUpdate({
         ...product,
@@ -81,56 +67,7 @@ function EditProductDialogContent({ product, onProductUpdate, trigger }: EditPro
     setOpen(false);
   }
 
-  const TriggerComponent = () => {
-    if (trigger === 'icon') {
-      return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="p-3 h-auto w-auto text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all">
-                      <Edit2 className="h-4 w-4" />
-                      <span className="sr-only">Editar</span>
-                  </Button>
-              </DialogTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Editar Produto</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
-    if (trigger === 'card-button') {
-        return (
-             <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <DialogTrigger asChild>
-                            <Button variant="outline" size="icon" className="flex-1 h-8 sm:h-9">
-                                <Edit2 className="h-4 w-4" />
-                            </Button>
-                        </DialogTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Editar Produto</p></TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-        )
-    }
-    return (
-      <DialogTrigger asChild>
-          <Button variant="outline" className="w-full">
-              <Edit2 className="mr-2 h-4 w-4" />
-              Editar
-          </Button>
-      </DialogTrigger>
-    )
-  }
-
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-     <TriggerComponent />
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Editar Produto</DialogTitle>
@@ -231,22 +168,64 @@ function EditProductDialogContent({ product, onProductUpdate, trigger }: EditPro
           </Form>
         </ScrollArea>
       </DialogContent>
-    </Dialog>
   );
 }
 
 
-export function EditProductDialog(props: EditProductDialogProps) {
-    const [isClient, setIsClient] = useState(false);
+export function EditProductDialog({ product, onProductUpdate, trigger }: EditProductDialogProps) {
+    const [open, setOpen] = useState(false);
 
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
+    const TriggerComponent = () => {
+      if (trigger === 'icon') {
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="p-3 h-auto w-auto text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all">
+                        <Edit2 className="h-4 w-4" />
+                        <span className="sr-only">Editar</span>
+                    </Button>
+                </DialogTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Editar Produto</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      }
+      if (trigger === 'card-button') {
+          return (
+               <TooltipProvider>
+                  <Tooltip>
+                      <TooltipTrigger asChild>
+                          <DialogTrigger asChild>
+                              <Button variant="outline" size="icon" className="flex-1 h-8 sm:h-9">
+                                  <Edit2 className="h-4 w-4" />
+                              </Button>
+                          </DialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Editar Produto</p></TooltipContent>
+                  </Tooltip>
+              </TooltipProvider>
+          )
+      }
+      return (
+        <DialogTrigger asChild>
+            <Button variant="outline" className="w-full">
+                <Edit2 className="mr-2 h-4 w-4" />
+                Editar
+            </Button>
+        </DialogTrigger>
+      )
+    }
 
-    return isClient ? <EditProductDialogContent {...props} /> : (
-        <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
-            <Edit2 className="h-4 w-4" />
-            <span className="sr-only">Editar</span>
-        </Button>
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <TriggerComponent />
+            {open && <EditProductDialogContent product={product} onProductUpdate={onProductUpdate} setOpen={setOpen} />}
+        </Dialog>
     );
 }
+

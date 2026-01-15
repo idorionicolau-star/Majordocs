@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useContext } from 'react';
 import {
+  Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -16,13 +17,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useForm, useWatch } from "react-hook-form";
@@ -48,10 +42,10 @@ interface EditSaleDialogProps {
     sale: Sale;
     onUpdateSale: (sale: Sale) => void;
     onOpenChange: (open: boolean) => void;
-    open?: boolean;
+    open: boolean;
 }
 
-export function EditSaleDialog({ sale, onUpdateSale, onOpenChange, open }: EditSaleDialogProps) {
+function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditSaleDialogProps) {
   const inventoryContext = useContext(InventoryContext);
   const { catalogProducts, catalogCategories } = inventoryContext || {};
 
@@ -63,20 +57,10 @@ export function EditSaleDialog({ sale, onUpdateSale, onOpenChange, open }: EditS
       unitPrice: sale.unitPrice,
     },
   });
-  
+
   const watchedProductName = useWatch({ control: form.control, name: 'productName' });
   const watchedQuantity = useWatch({ control: form.control, name: 'quantity' });
   const watchedUnitPrice = useWatch({ control: form.control, name: 'unitPrice' });
-
-  useEffect(() => {
-    if (open) {
-      form.reset({
-        productName: sale.productName,
-        quantity: sale.quantity,
-        unitPrice: sale.unitPrice,
-      });
-    }
-  }, [open, sale, form]);
 
   const handleProductSelect = (productName: string, product?: CatalogProduct) => {
     form.setValue('productName', productName);
@@ -112,7 +96,7 @@ export function EditSaleDialog({ sale, onUpdateSale, onOpenChange, open }: EditS
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Produto</FormLabel>
-                    <CatalogProductSelector 
+                    <CatalogProductSelector
                       products={catalogProducts || []}
                       categories={catalogCategories || []}
                       selectedValue={field.value}
@@ -150,7 +134,7 @@ export function EditSaleDialog({ sale, onUpdateSale, onOpenChange, open }: EditS
                       )}
                   />
               </div>
-              
+
               <div className="rounded-lg bg-muted p-4 text-right">
                   <p className="text-sm font-medium text-muted-foreground">Novo Valor Total</p>
                   <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
@@ -165,4 +149,13 @@ export function EditSaleDialog({ sale, onUpdateSale, onOpenChange, open }: EditS
         </ScrollArea>
       </DialogContent>
   );
+}
+
+
+export function EditSaleDialog(props: EditSaleDialogProps) {
+  return (
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      {props.open && <EditSaleDialogContent {...props} />}
+    </Dialog>
+  )
 }

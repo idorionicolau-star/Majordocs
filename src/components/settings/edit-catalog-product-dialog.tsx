@@ -33,6 +33,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Product } from '@/lib/types';
+import { ScrollArea } from '../ui/scroll-area';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -50,18 +51,11 @@ interface EditCatalogProductDialogProps {
     onUpdate: (product: Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>) => void;
 }
 
-export function EditCatalogProductDialog({ product, categories, onUpdate }: EditCatalogProductDialogProps) {
-  const [open, setOpen] = useState(false);
+function EditCatalogProductDialogContent({ product, categories, onUpdate, setOpen }: EditCatalogProductDialogProps & { setOpen: (open: boolean) => void; }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: product,
   });
-
-  useEffect(() => {
-    if (open) {
-      form.reset(product);
-    }
-  }, [open, product, form]);
 
   function onSubmit(values: FormValues) {
     onUpdate({
@@ -72,12 +66,6 @@ export function EditCatalogProductDialog({ product, categories, onUpdate }: Edit
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Edit className="h-4 w-4 text-muted-foreground" />
-        </Button>
-      </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Editar Produto do Catálogo</DialogTitle>
@@ -85,8 +73,9 @@ export function EditCatalogProductDialog({ product, categories, onUpdate }: Edit
             Altere os detalhes base deste produto.
           </DialogDescription>
         </DialogHeader>
+        <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
             <FormField
                 control={form.control}
                 name="category"
@@ -169,7 +158,21 @@ export function EditCatalogProductDialog({ product, categories, onUpdate }: Edit
             </DialogFooter>
           </form>
         </Form>
+        </ScrollArea>
       </DialogContent>
+  )
+}
+
+export function EditCatalogProductDialog(props: EditCatalogProductDialogProps) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Edit className="h-4 w-4 text-muted-foreground" />
+        </Button>
+      </DialogTrigger>
+      {open && <EditCatalogProductDialogContent {...props} setOpen={setOpen} />}
     </Dialog>
   );
 }

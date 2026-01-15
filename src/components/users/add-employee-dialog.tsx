@@ -54,9 +54,7 @@ interface AddEmployeeDialogProps {
   onAddEmployee: (employee: Omit<Employee, 'id' | 'companyId' | 'email'> & {email: string}) => void;
 }
 
-export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
-  const [open, setOpen] = useState(false);
-  
+function AddEmployeeDialogContent({ onAddEmployee, setOpen }: AddEmployeeDialogProps & { setOpen: (open: boolean) => void }) {
   const defaultPermissions = allPermissions.reduce((acc, perm) => {
     acc[perm.id] = (['dashboard'].includes(perm.id)) ? 'read' : 'none';
     return acc;
@@ -129,16 +127,9 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
     });
     setOpen(false);
   }
-
+  
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Adicionar Funcionário
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+    <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Adicionar Novo Funcionário</DialogTitle>
           <DialogDescription>
@@ -280,6 +271,21 @@ export function AddEmployeeDialog({ onAddEmployee }: AddEmployeeDialogProps) {
           </Form>
         </ScrollArea>
       </DialogContent>
+  );
+}
+
+
+export function AddEmployeeDialog(props: AddEmployeeDialogProps) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Adicionar Funcionário
+        </Button>
+      </DialogTrigger>
+      {open && <AddEmployeeDialogContent {...props} setOpen={setOpen} />}
     </Dialog>
   );
 }
