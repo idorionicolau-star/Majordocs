@@ -5,30 +5,75 @@ import type { Sale } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
-import { Calendar, User, CheckCircle, PackageCheck, MapPin } from "lucide-react";
+import { Calendar, User, CheckCircle, PackageCheck, MapPin, Trash2 } from "lucide-react";
 import { SaleActions } from "./columns";
+import { Button } from "../ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 interface SaleCardProps {
     sale: Sale;
     onUpdateSale: (sale: Sale) => void;
     onConfirmPickup: (sale: Sale) => void;
+    onDeleteSale: (saleId: string) => void;
     viewMode?: 'normal' | 'condensed';
     canEdit: boolean;
     locationName?: string;
 }
 
-export function SaleCard({ sale, onUpdateSale, onConfirmPickup, viewMode = 'normal', canEdit, locationName }: SaleCardProps) {
+export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, viewMode = 'normal', canEdit, locationName }: SaleCardProps) {
     const isCondensed = viewMode === 'condensed';
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const actionsProps = {
         row: { original: sale },
         options: { onUpdateSale, onConfirmPickup, canEdit },
     };
+    
+    const handleDelete = () => {
+        onDeleteSale(sale.id);
+        setShowDeleteConfirm(false);
+    }
 
     return (
+        <>
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Apagar Venda?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Tem a certeza que quer apagar permanentemente a venda #{sale.guideNumber}? Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} variant="destructive">
+                        Apagar
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
         <Card className="glass-card flex flex-col h-full group p-2 sm:p-4">
             <CardHeader className="p-1 sm:p-2">
-                <CardTitle className="text-xs font-bold truncate leading-tight">{sale.productName}</CardTitle>
+                <div className="flex justify-between items-start">
+                    <CardTitle className="text-xs font-bold truncate leading-tight">{sale.productName}</CardTitle>
+                    {canEdit && (
+                         <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={() => setShowDeleteConfirm(true)}>
+                            <Trash2 className="h-3 w-3" />
+                         </Button>
+                    )}
+                </div>
                 <CardDescription className={cn("text-[10px]", isCondensed && "hidden")}>{sale.guideNumber}</CardDescription>
             </CardHeader>
             <CardContent className="flex-grow space-y-2 p-1 sm:p-2">
@@ -68,5 +113,6 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, viewMode = 'norm
                 <SaleActions {...actionsProps} />
             </CardFooter>}
         </Card>
+        </>
     );
 }

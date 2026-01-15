@@ -4,24 +4,61 @@
 import type { Production } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Calendar, User, Hammer, Package, CheckCircle, MapPin } from "lucide-react";
+import { Calendar, User, Hammer, Package, CheckCircle, MapPin, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 
 interface ProductionCardProps {
     production: Production;
     onTransfer: (production: Production) => void;
+    onDelete: (productionId: string) => void;
     viewMode?: 'normal' | 'condensed';
     canEdit: boolean;
     locationName?: string;
 }
 
-export function ProductionCard({ production, onTransfer, viewMode = 'normal', canEdit, locationName }: ProductionCardProps) {
+export function ProductionCard({ production, onTransfer, onDelete, viewMode = 'normal', canEdit, locationName }: ProductionCardProps) {
     const isCondensed = viewMode === 'condensed';
     const isTransferred = production.status === 'Transferido';
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    
+    const handleDelete = () => {
+        onDelete(production.id);
+        setShowDeleteConfirm(false);
+    };
 
     return (
+        <>
+         <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Apagar Registo de Produção?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Tem a certeza que quer apagar permanentemente este registo de produção? Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} variant="destructive">
+                        Apagar
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
         <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 relative">
             {isTransferred && (
                 <div className="absolute inset-0 bg-background/50 backdrop-blur-[2px] z-10 rounded-xl flex items-center justify-center">
@@ -32,12 +69,19 @@ export function ProductionCard({ production, onTransfer, viewMode = 'normal', ca
                 </div>
             )}
             <CardHeader className="p-1 sm:p-2">
-                 <div className="flex items-start gap-2">
-                    <Hammer className="h-5 w-5 text-primary mt-0.5"/>
-                    <div>
-                        <CardTitle className="text-xs font-bold leading-tight">{production.productName}</CardTitle>
-                        <CardDescription className={cn("text-[10px]", isCondensed && "hidden")}>ID: {production.id}</CardDescription>
+                 <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-2">
+                        <Hammer className="h-5 w-5 text-primary mt-0.5"/>
+                        <div>
+                            <CardTitle className="text-xs font-bold leading-tight">{production.productName}</CardTitle>
+                            <CardDescription className={cn("text-[10px]", isCondensed && "hidden")}>ID: {production.id.slice(-6)}</CardDescription>
+                        </div>
                     </div>
+                    {canEdit && (
+                         <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={() => setShowDeleteConfirm(true)}>
+                            <Trash2 className="h-3 w-3" />
+                         </Button>
+                    )}
                  </div>
             </CardHeader>
             <CardContent className="flex-grow space-y-2 p-1 sm:p-2">
@@ -84,5 +128,6 @@ export function ProductionCard({ production, onTransfer, viewMode = 'normal', ca
                )}
             </CardFooter>}
         </Card>
+        </>
     );
 }

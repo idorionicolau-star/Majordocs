@@ -29,7 +29,7 @@ export default function OrdersPage() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { orders, companyId, loading: inventoryLoading, updateProductStock, user, canEdit } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null, canEdit: () => false };
+  const { orders, companyId, loading: inventoryLoading, updateProductStock, user, canEdit, deleteOrder } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null, canEdit: () => false, deleteOrder: () => {} };
 
   const canEditOrders = canEdit('orders');
 
@@ -199,6 +199,7 @@ export default function OrdersPage() {
                     order={order}
                     onUpdateStatus={handleUpdateOrderStatus}
                     onAddProductionLog={handleAddProductionLog}
+                    onDeleteOrder={deleteOrder}
                     canEdit={canEditOrders}
                 />
             ))}

@@ -42,6 +42,7 @@ export default function SalesPage() {
     loading: inventoryLoading, 
     addSale,
     confirmSalePickup,
+    deleteSale,
     user,
     companyId,
     canEdit,
@@ -53,6 +54,7 @@ export default function SalesPage() {
     loading: true, 
     addSale: async () => {},
     confirmSalePickup: () => {},
+    deleteSale: () => {},
     user: null,
     companyId: null,
     canEdit: () => false,
@@ -321,6 +323,7 @@ export default function SalesPage() {
                     sale={sale}
                     onUpdateSale={handleUpdateSale}
                     onConfirmPickup={handleConfirmPickup}
+                    onDeleteSale={deleteSale}
                     viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
                     canEdit={canEditSales}
                     locationName={locations.find(l => l.id === sale.location)?.name}

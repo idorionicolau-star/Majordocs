@@ -97,6 +97,9 @@ interface InventoryContextType {
   updateCompany: (details: Partial<Company>) => Promise<void>;
   addSale: (newSaleData: Omit<Sale, 'id' | 'guideNumber'>) => Promise<void>;
   confirmSalePickup: (sale: Sale) => void;
+  deleteSale: (saleId: string) => void;
+  deleteProduction: (productionId: string) => void;
+  deleteOrder: (orderId: string) => void;
 }
 
 export const InventoryContext = createContext<InventoryContextType | undefined>(
@@ -592,6 +595,24 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     });
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user]);
 
+  const deleteSale = useCallback(async (saleId: string) => {
+    if (!salesCollectionRef) return;
+    await deleteDoc(doc(salesCollectionRef, saleId));
+    toast({ title: 'Venda Apagada' });
+  }, [salesCollectionRef, toast]);
+
+  const deleteProduction = useCallback(async (productionId: string) => {
+    if (!productionsCollectionRef) return;
+    await deleteDoc(doc(productionsCollectionRef, productionId));
+    toast({ title: 'Registo de Produção Apagado' });
+  }, [productionsCollectionRef, toast]);
+
+  const deleteOrder = useCallback(async (orderId: string) => {
+    if (!ordersCollectionRef) return;
+    await deleteDoc(doc(ordersCollectionRef, orderId));
+    toast({ title: 'Encomenda Apagada' });
+  }, [ordersCollectionRef, toast]);
+
 
   const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading;
 
@@ -603,6 +624,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
     locations, isMultiLocation, addProduct, updateProduct, deleteProduct, clearProductsCollection,
     transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup,
+    deleteSale, deleteProduction, deleteOrder,
   };
 
   return (

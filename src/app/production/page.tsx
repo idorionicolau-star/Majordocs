@@ -47,7 +47,7 @@ export default function ProductionPage() {
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [locationFilter, setLocationFilter] = useState<string>('all');
 
-  const { productions, companyId, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false };
+  const { productions, companyId, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation, deleteProduction } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false, deleteProduction: () => {} };
 
   const canEditProduction = canEdit('production');
   const canViewProduction = canView('production');
@@ -281,6 +281,7 @@ export default function ProductionPage() {
                     key={production.id}
                     production={production}
                     onTransfer={() => setProductionToTransfer(production)}
+                    onDelete={deleteProduction}
                     viewMode={gridCols === '5' ? 'condensed' : 'normal'}
                     canEdit={canEditProduction}
                     locationName={locations.find(l => l.id === production.location)?.name}

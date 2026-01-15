@@ -4,17 +4,30 @@
 import type { Order } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, ClipboardList, Play, Check, CircleHelp, PlusCircle, TrendingUp } from "lucide-react";
+import { Calendar, User, ClipboardList, Play, Check, CircleHelp, PlusCircle, TrendingUp, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { AddProductionLogDialog } from "./add-production-log-dialog";
 import { differenceInDays, addDays } from 'date-fns';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 
 interface OrderCardProps {
     order: Order;
     onUpdateStatus: (orderId: string, newStatus: 'Pendente' | 'Em produção' | 'Concluída') => void;
     onAddProductionLog: (orderId: string, logData: { quantity: number; notes?: string; }) => void;
+    onDeleteOrder: (orderId: string) => void;
     canEdit: boolean;
 }
 
@@ -33,10 +46,11 @@ const statusConfig = {
     }
 };
 
-export function OrderCard({ order, onUpdateStatus, onAddProductionLog, canEdit }: OrderCardProps) {
+export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteOrder, canEdit }: OrderCardProps) {
     const { icon: StatusIcon, color: statusColor } = statusConfig[order.status];
     const progress = order.quantity > 0 ? (order.quantityProduced / order.quantity) * 100 : 0;
     const remainingQuantity = order.quantity - order.quantityProduced;
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     
     const calculateEstimatedCompletionDate = () => {
         if (!order.productionStartDate || order.quantityProduced <= 0) {
@@ -58,11 +72,33 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, canEdit }
 
         return estimatedDate;
     };
+    
+    const handleDelete = () => {
+        onDeleteOrder(order.id);
+        setShowDeleteConfirm(false);
+    }
 
     const estimatedCompletionDate = calculateEstimatedCompletionDate();
 
 
     return (
+        <>
+         <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Apagar Encomenda?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Tem a certeza que quer apagar permanentemente a encomenda de {order.productName}? Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} variant="destructive">
+                        Apagar
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
         <Card className="glass-card flex flex-col h-full group p-4">
             <CardHeader className="p-2">
                  <div className="flex items-start justify-between">
@@ -73,8 +109,15 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, canEdit }
                         </CardTitle>
                         <CardDescription className="text-xs pt-1">Encomenda #{order.id.slice(-6).toUpperCase()}</CardDescription>
                     </div>
-                     <div className={cn("inline-flex items-center gap-2 text-xs font-bold", statusColor)}>
-                        <span>{order.status}</span>
+                     <div className="flex items-center gap-1">
+                        <div className={cn("inline-flex items-center gap-2 text-xs font-bold", statusColor)}>
+                            <span>{order.status}</span>
+                        </div>
+                         {canEdit && (
+                             <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={() => setShowDeleteConfirm(true)}>
+                                <Trash2 className="h-3 w-3" />
+                             </Button>
+                        )}
                     </div>
                  </div>
             </CardHeader>
@@ -134,5 +177,6 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, canEdit }
                 )}
             </CardFooter>}
         </Card>
+        </>
     );
 }
