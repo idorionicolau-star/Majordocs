@@ -80,7 +80,7 @@ export const columns = ({ locationMap }: ColumnsOptions): ColumnDef<StockMovemen
             return (
                 <div className={cn(
                     "font-bold flex items-center gap-2",
-                    isDeficit ? "text-red-600" : (quantity > 0 ? "text-green-600" : "text-gray-500")
+                    isDeficit ? "text-red-600" : (type === 'IN' ? "text-green-600" : (type === 'OUT' ? "text-red-600" : "text-gray-500"))
                 )}>
                    {isDeficit && <AlertTriangle className="h-4 w-4" />}
                    <span>{quantity > 0 ? `+${quantity}` : quantity}</span>

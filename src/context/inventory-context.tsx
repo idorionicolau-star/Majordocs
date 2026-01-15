@@ -460,7 +460,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             type: 'IN',
             quantity: quantity,
             toLocationId: targetLocation,
-            reason: 'Produção',
+            reason: `Produção de Lote: ${quantity} unidades`,
             userId: user.id,
             userName: user.username,
         };
@@ -485,7 +485,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             type: 'IN',
             quantity: quantity,
             toLocationId: targetLocation,
-            reason: 'Produção',
+            reason: `Produção de Lote: ${quantity} unidades`,
             userId: user.id,
             userName: user.username,
         };
