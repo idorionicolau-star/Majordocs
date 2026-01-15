@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from "next/link";
@@ -98,11 +99,10 @@ export function SubHeader() {
   }
 
   return (
-    <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-16 sm:top-20 z-20">
+    <div className="hidden md:block border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-16 sm:top-20 z-20">
       <ScrollArea className="w-full whitespace-nowrap" ref={scrollRef}>
         <nav className={cn(
           "flex w-max md:w-full md:justify-center mx-auto",
-          "animate-peek md:animate-none"
         )}>
           {navItems.map(renderNavItem)}
         </nav>

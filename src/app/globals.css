@@ -348,3 +348,9 @@
      animation: fade-in 0.5s ease-out, slide-in-from-bottom-4 0.5s ease-out;
   }
 }
+
+@layer utilities {
+    .main-content {
+        @apply pb-24 md:pb-0;
+    }
+}

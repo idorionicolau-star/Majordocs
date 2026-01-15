@@ -13,6 +13,7 @@ import type { ModulePermission } from '@/lib/types';
 import { GestureNavigation } from './gesture-navigation';
 import { Button } from '../ui/button';
 import Link from 'next/link';
+import { BottomNav } from './bottom-nav';
 
 
 const FAB_CONFIG = {
@@ -89,11 +90,12 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
       <Header />
       <SubHeader />
-      <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-hidden relative">
+      <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-hidden relative main-content">
          <GestureNavigation key={pathname} prevRoute={prevRoute} nextRoute={nextRoute}>
             {children}
          </GestureNavigation>
       </main>
+      <BottomNav />
        <AnimatePresence>
         {showFab && (
           <motion.div
@@ -101,7 +103,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
             transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-            className="fixed bottom-6 right-4 sm:right-6 z-50"
+            className="fixed bottom-24 right-4 sm:right-6 z-50 md:hidden"
           >
             <Button asChild size="lg" className="rounded-full shadow-2xl h-14">
               <Link href={fabConfig.href} scroll={false}>
