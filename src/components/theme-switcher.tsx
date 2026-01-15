@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 const themes = [
-  { name: "slate", color: "bg-slate-500" },
+  { name: "blue", color: "bg-blue-500" },
   { name: "stone", color: "bg-stone-500" },
   { name: "sky", color: "bg-sky-500" },
   { name: "emerald", color: "bg-emerald-500" },

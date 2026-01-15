@@ -3,7 +3,7 @@
 
 import * as React from "react"
 
-const THEMES = ["slate", "stone", "sky", "emerald", "orange", "violet"];
+const THEMES = ["blue", "stone", "sky", "emerald", "orange", "violet"];
 
 type ThemeProviderState = {
   theme: string
@@ -14,7 +14,7 @@ type ThemeProviderState = {
 }
 
 const initialState: ThemeProviderState = {
-  theme: "slate",
+  theme: "blue",
   setTheme: () => null,
   mode: "system",
   setMode: () => null,
@@ -25,7 +25,7 @@ const ThemeProviderContext = React.createContext<ThemeProviderState>(initialStat
 
 export function ThemeProvider({
   children,
-  defaultTheme = "slate",
+  defaultTheme = "blue",
   defaultMode = "system",
   storageKeyTheme = "majorstockx-theme",
   storageKeyMode = "majorstockx-mode",
