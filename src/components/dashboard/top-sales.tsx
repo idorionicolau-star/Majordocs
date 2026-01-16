@@ -65,7 +65,7 @@ export function TopSales() {
     return Object.entries(productStats)
       .map(([name, stats]) => ({ name, ...stats }))
       .sort((a, b) => b.quantity - a.quantity) // Sort by quantity sold
-      .slice(0, 5); // Get top 5
+      .slice(0, 3); // Get top 3
 
   }, [sales, period]);
 
@@ -75,7 +75,7 @@ export function TopSales() {
         <div>
           <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2">
             <Trophy />
-            Produtos Mais Vendidos
+            Top 3 Produtos Mais Vendidos
           </CardTitle>
           <CardDescription>
             Os campeões de vendas no período selecionado.
@@ -94,8 +94,8 @@ export function TopSales() {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {[...Array(5)].map((_, i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => (
               <div key={i} className="p-4 rounded-xl bg-muted/50 space-y-2">
                   <Skeleton className="h-8 w-8 rounded-full mx-auto" />
                   <Skeleton className="h-4 w-full" />
@@ -105,7 +105,7 @@ export function TopSales() {
             ))}
           </div>
         ) : topProducts.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {topProducts.map((product, index) => (
               <div key={product.name} className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted/50 text-center">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background font-bold text-primary mb-2">
