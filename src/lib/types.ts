@@ -163,3 +163,8 @@ export type InitialCatalog = {
     [subType: string]: string[];
   };
 };
+
+export type DashboardStats = {
+  topSellingProduct: { name: string; quantity: number };
+  highestInventoryProduct: { name: string; stock: number };
+};

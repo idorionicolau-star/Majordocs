@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -10,7 +11,7 @@ import {
   useMemo,
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification } from '@/lib/types';
+import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification, DashboardStats } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase, getFirebaseAuth } from '@/firebase';
 import {
@@ -78,6 +79,7 @@ interface InventoryContextType {
   companyData: Company | null;
   notifications: AppNotification[];
   monthlySalesChartData: { name: string; vendas: number }[];
+  dashboardStats: DashboardStats;
 
 
   // Functions
@@ -439,6 +441,42 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     setMonthlySalesChartData(chartData);
 
   }, [salesData]);
+
+  const dashboardStats = useMemo(() => {
+    // Top Selling Product (monthly)
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    const monthlySales = salesData?.filter(sale => {
+        const saleDate = new Date(sale.date);
+        return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
+    }) || [];
+
+    let topSellingProduct = { name: 'N/A', quantity: 0 };
+    if (monthlySales.length > 0) {
+        const productQuantities = monthlySales.reduce((acc, sale) => {
+            acc[sale.productName] = (acc[sale.productName] || 0) + sale.quantity;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const topProductEntry = Object.entries(productQuantities).reduce((best, current) => {
+            return current[1] > best[1] ? current : best;
+        }, ['', 0]);
+        if(topProductEntry[0]){
+             topSellingProduct = { name: topProductEntry[0], quantity: topProductEntry[1] };
+        }
+    }
+
+    // Highest Inventory Product
+    let highestInventoryProduct = { name: 'N/A', stock: 0 };
+    if (products && products.length > 0) {
+        highestInventoryProduct = products.reduce((max, p) => (p.stock > max.stock ? p : max), products[0]);
+    }
+
+    return { topSellingProduct, highestInventoryProduct };
+  }, [salesData, products]);
+
 
   const triggerEmailAlert = useCallback(async (payload: any) => {
     const settings = companyData?.notificationSettings;
@@ -871,7 +909,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     canView, canEdit,
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
-    locations, isMultiLocation, notifications, monthlySalesChartData,
+    locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
     addProduct, updateProduct, deleteProduct, clearProductsCollection,
     transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
     deleteSale, deleteProduction, deleteOrder,
