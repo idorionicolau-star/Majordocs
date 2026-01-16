@@ -38,7 +38,7 @@ export function SalesActivity() {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="p-4 rounded-xl bg-muted/50 space-y-2">
                   <Skeleton className="h-10 w-10 rounded-full mx-auto" />
@@ -49,7 +49,7 @@ export function SalesActivity() {
             ))}
           </div>
         ) : recentSales.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {recentSales.map((sale: Sale) => (
               <div key={sale.id} className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted/50 text-center">
                   <Avatar className="h-10 w-10 mb-2">
