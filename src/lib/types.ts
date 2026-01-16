@@ -169,3 +169,10 @@ export type DashboardStats = {
   topSellingProduct: { name: string; quantity: number };
   highestInventoryProduct: { name: string; stock: number };
 };
+
+export interface ModelInfo {
+  name: string;
+  displayName: string;
+  description: string;
+  version: string;
+}
