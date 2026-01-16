@@ -33,6 +33,12 @@ const MonthlySalesChart = dynamic(() => import("@/components/dashboard/monthly-s
   loading: () => <Skeleton className="h-[438px] w-full" />,
 });
 
+const AIReport = dynamic(() => import("@/components/dashboard/ai-report").then(mod => mod.AIReport), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[250px] w-full" />,
+});
+
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user, canView, canEdit } = useContext(InventoryContext) || { user: null, canView: () => false, canEdit: () => false };
@@ -70,13 +76,12 @@ export default function DashboardPage() {
         </ScrollArea>
       </div>
       <StatsCards />
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3">
-          <MonthlySalesChart />
-        </div>
-        <div className="lg:col-span-2">
-          <StockChart />
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AIReport />
+        <StockChart />
+      </div>
+      <div className="grid grid-cols-1 gap-6">
+        <MonthlySalesChart />
       </div>
     </div>
   );
