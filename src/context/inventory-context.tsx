@@ -186,6 +186,61 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [firestore, user, toast]);
 
+  const triggerEmailAlert = useCallback(async (payload: any) => {
+    const settings = companyData?.notificationSettings;
+    const targetEmail = settings?.email;
+
+    if (!targetEmail || targetEmail.trim() === '') {
+      console.warn("E-mail de notificação não configurado. Alerta não enviado.");
+      return;
+    }
+
+    let shouldSend = false;
+    let subject = '';
+
+    if (payload.type === 'CRITICAL' && settings.onCriticalStock) {
+      shouldSend = true;
+      subject = `🚨 ALERTA: ${payload.productName} com stock baixo!`;
+      addNotification({
+        type: 'stock',
+        message: `Stock crítico para ${payload.productName}! Quantidade: ${payload.quantity}`,
+        href: '/inventory',
+      });
+    } else if (payload.type === 'SALE' && settings.onSale) {
+      shouldSend = true;
+      subject = `✅ Nova Venda: ${payload.productName}`;
+      addNotification({
+        type: 'sale',
+        message: `Nova venda de ${payload.productName} registada.`,
+        href: '/sales',
+      });
+    }
+
+    if (!shouldSend) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: targetEmail, subject, ...payload }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json();
+        throw new Error(errorBody.error || 'Erro desconhecido da API');
+      }
+    } catch (error: any) {
+      console.error("Falha ao enviar e-mail de notificação:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro de Notificação",
+        description: `Não foi possível enviar o e-mail. ${error.message}`,
+      });
+    }
+  }, [companyData, addNotification, toast]);
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
@@ -302,6 +357,21 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       await batch.commit();
 
+      try {
+        await fetch('/api/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: adminEmail,
+            subject: '🎉 Bem-vindo ao MajorStockX!',
+            type: 'WELCOME',
+            companyName: companyName,
+          }),
+        });
+      } catch (emailError) {
+        console.warn("Falha ao enviar e-mail de boas-vindas, mas o registo foi bem-sucedido:", emailError);
+      }
+
       return true;
     } catch (error: any) {
       console.error('Registration error: ', error);
@@ -339,7 +409,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const canEdit = (module: ModulePermission) => {
     if (!user) return false;
     if (user.role === 'Admin') return true;
-    // Dono (Owner) role has read-only access
     if (user.role === 'Dono') return false;
     return user.permissions?.[module] === 'write';
   };
@@ -443,7 +512,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [salesData]);
 
   const dashboardStats = useMemo(() => {
-    // Top Selling Product (monthly)
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
@@ -468,7 +536,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         }
     }
 
-    // Highest Inventory Product
     let highestInventoryProduct = { name: 'N/A', stock: 0 };
     if (products && products.length > 0) {
         highestInventoryProduct = products.reduce((max, p) => (p.stock > max.stock ? p : max), products[0]);
@@ -478,77 +545,32 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [salesData, products]);
 
 
-  const triggerEmailAlert = useCallback(async (payload: any) => {
+  const checkStockAndNotify = useCallback(async (product: Product) => {
     const settings = companyData?.notificationSettings;
-    const targetEmail = settings?.email;
-
-    if (!targetEmail) {
-      console.warn("E-mail de notificação não configurado. Alerta não enviado.");
-      return;
-    }
-
-    let shouldSend = false;
-    let subject = '';
-
-    if (payload.type === 'CRITICAL' && settings.onCriticalStock) {
-      shouldSend = true;
-      subject = `🚨 ALERTA: ${payload.productName} com stock baixo!`;
-      addNotification({
-        type: 'stock',
-        message: `Stock crítico para ${payload.productName}! Quantidade: ${payload.quantity}`,
-        href: '/inventory',
-      });
-    } else if (payload.type === 'SALE' && settings.onSale) {
-      shouldSend = true;
-      subject = `✅ Nova Venda: ${payload.productName}`;
-      addNotification({
-        type: 'sale',
-        message: `Nova venda de ${payload.productName} registada.`,
-        href: '/sales',
-      });
-    }
-
-    if (!shouldSend) {
-      return; // Do not send if the specific notification type is disabled
-    }
-
-    try {
-      const response = await fetch('/api/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: targetEmail, subject, ...payload }),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.json();
-        throw new Error(errorBody.error || 'Erro desconhecido da API');
-      }
-    } catch (error: any) {
-      console.error("Falha ao enviar e-mail de notificação:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro de Notificação",
-        description: `Não foi possível enviar o e-mail. ${error.message}`,
-      });
-    }
-  }, [companyData, addNotification, toast]);
-
- const checkStockAndNotify = useCallback(async (product: Product) => {
-    if (!companyData?.notificationSettings?.email) return;
-
-    // Use available stock for a more accurate check
     const availableStock = product.stock - (product.reservedStock || 0);
 
-    if (availableStock <= (product.criticalStockThreshold || 0)) {
-        await triggerEmailAlert({
-            type: 'CRITICAL',
-            productName: product.name,
-            quantity: availableStock, // Send the available quantity
-            location: locations.find(l => l.id === product.location)?.name || 'Principal',
-            threshold: product.criticalStockThreshold,
-        });
+    const isCritical = availableStock <= (product.criticalStockThreshold || 0);
+    if (!isCritical || !settings?.onCriticalStock) {
+        return;
     }
-  }, [companyData, locations, triggerEmailAlert]);
+
+    if (!settings.email || settings.email.trim() === '') {
+        toast({
+            variant: "destructive",
+            title: "E-mail de Notificação em Falta",
+            description: `O produto ${product.name} está com stock crítico, mas não há um e-mail de notificação configurado nos Ajustes.`,
+        });
+        return;
+    }
+    
+    await triggerEmailAlert({
+        type: 'CRITICAL',
+        productName: product.name,
+        quantity: availableStock,
+        location: locations.find(l => l.id === product.location)?.name || 'Principal',
+        threshold: product.criticalStockThreshold,
+    });
+}, [companyData, locations, triggerEmailAlert, toast]);
 
  const addProduct = useCallback(
     (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => {
@@ -629,26 +651,23 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             const productsRef = collection(firestore, `companies/${companyId}/products`);
             const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
-            // 1. Update source product
             const fromDocRef = doc(productsRef, fromProduct.id!);
             const newFromStock = fromProduct.stock - quantity;
             transaction.update(fromDocRef, { stock: newFromStock });
             
             checkStockAndNotify({ ...fromProduct, stock: newFromStock });
 
-            // 2. Update or create destination product
             if (toProduct && toProduct.id) {
                 const toDocRef = doc(productsRef, toProduct.id);
                 transaction.update(toDocRef, { stock: toProduct.stock + quantity });
             } else {
                 const { id, instanceId, ...restOfProduct } = fromProduct;
-                const newDocRef = doc(productsRef); // Auto-generate ID
+                const newDocRef = doc(productsRef);
                 transaction.set(newDocRef, { ...restOfProduct, location: toLocationId, stock: quantity, reservedStock: 0, lastUpdated: new Date().toISOString().split('T')[0] });
             }
 
-            // 3. Create stock movement record
             const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
-                productId: fromProduct.id!, // or a more stable catalog ID if you have one
+                productId: fromProduct.id!,
                 productName,
                 type: 'TRANSFER',
                 quantity,
@@ -741,6 +760,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const addSale = useCallback(async (newSaleData: Omit<Sale, 'id' | 'guideNumber'>) => {
     if (!firestore || !companyId || !productsCollectionRef) throw new Error("Firestore não está pronto.");
 
+    const settings = companyData?.notificationSettings;
+    if (settings?.onSale && (!settings.email || settings.email.trim() === '')) {
+      toast({
+        variant: "destructive",
+        title: "E-mail de Notificação em Falta",
+        description: "Ativou as notificações de venda, mas não configurou um e-mail de destino nos Ajustes.",
+      });
+    }
+
     const productQuery = query(
         productsCollectionRef,
         where("name", "==", newSaleData.productName),
@@ -777,7 +805,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         location: locations.find(l => l.id === newSaleData.location)?.name || 'Principal',
     });
     
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, addNotification, triggerEmailAlert, locations]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, addNotification, triggerEmailAlert, companyData, toast]);
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
      if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
@@ -835,7 +863,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
         const batch = writeBatch(firestore);
 
-        // 1. Update Order
         const newLog: ProductionLog = {
           id: `log-${Date.now()}`,
           date: new Date().toISOString(),
@@ -850,7 +877,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             productionLogs: arrayUnion(newLog)
         });
 
-        // 2. Create Production record
         const newProduction: Omit<Production, 'id'> = {
           date: new Date().toISOString().split('T')[0],
           productName: orderToUpdate.productName,
