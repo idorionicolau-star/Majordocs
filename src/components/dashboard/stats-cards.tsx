@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useContext } from "react";
 import { Card } from "@/components/ui/card";
-import { Box, DollarSign, AlertTriangle, Package, ShoppingCart, Lock } from "lucide-react";
+import { DollarSign, AlertTriangle, ShoppingCart, Lock } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
@@ -24,7 +25,6 @@ export function StatsCards() {
         );
     }
 
-    const totalItemsInStock = products.reduce((sum, p) => sum + p.stock, 0);
     const lowStockProducts = products.filter(p => p.stock < p.lowStockThreshold);
     const lowStockCount = lowStockProducts.length;
     const lowStockPercentage = products.length > 0 ? (lowStockCount / products.length) * 100 : 0;
@@ -73,7 +73,7 @@ export function StatsCards() {
         if (stat.restricted && !isAuthorized) {
              return (
                  <div key={stat.title}>
-                    <Card className="glass-card relative flex items-center justify-center gap-4 p-4 h-full text-center">
+                    <Card className="glass-card relative flex items-center justify-center gap-4 p-4 h-full text-center shadow-xl">
                         <div className="absolute inset-0 bg-background z-10 flex items-center justify-center">
                             <div className="flex flex-col items-center gap-2 text-muted-foreground font-bold">
                                 <Lock className="h-6 w-6"/>
@@ -105,7 +105,7 @@ export function StatsCards() {
         
         return (
             <Link href={stat.href} key={stat.title}>
-                <Card className="glass-card relative flex items-center gap-4 p-4 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group h-full">
+                <Card className="glass-card relative flex items-center gap-4 p-4 shadow-xl transition-all duration-300 group h-full">
                     <stat.icon 
                         strokeWidth={2.5} 
                         className={cn(
