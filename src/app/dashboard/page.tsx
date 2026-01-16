@@ -47,11 +47,11 @@ export default function DashboardPage() {
         </ScrollArea>
       </div>
 
+      <StatsCards />
+
       <TopSales />
 
       <SalesActivity />
-
-      <StatsCards />
 
       {canView('settings') && (
         <Card className="glass-card shadow-sm">
