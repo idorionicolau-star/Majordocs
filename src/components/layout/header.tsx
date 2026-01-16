@@ -8,7 +8,7 @@ import { UserNav } from "@/components/user-nav";
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-30 flex h-16 sm:h-20 items-center gap-4 border-b border-red-600 px-4 sm:px-6 bg-red-500 text-white">
+    <header className="sticky top-0 z-30 flex h-16 sm:h-20 items-center gap-4 border-b border-sky-500 px-4 sm:px-6 bg-sky-400 text-white">
         <div className="flex items-center gap-3">
             <Link href="/dashboard" className="flex items-center gap-2.5 font-semibold">
                 <Image src="/logo.svg" alt="MajorStockX Logo" width={28} height={28} className="invert" />
