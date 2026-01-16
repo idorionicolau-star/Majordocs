@@ -97,7 +97,7 @@ export function StatsCards() {
                             </div>
                         </div>
                         <div className="flex-grow flex items-center justify-center">
-                            <h3 className="font-body text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">{stat.value}</h3>
+                            <h3 className="font-body text-2xl font-bold text-slate-900 dark:text-white truncate" title={String(stat.value)}>{stat.value}</h3>
                         </div>
                         <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
                     </Card>
@@ -116,7 +116,7 @@ export function StatsCards() {
                         </div>
                     </div>
                     <div className="flex-grow flex items-center justify-center">
-                        <h3 className="font-body text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white truncate" title={String(stat.value)}>{stat.value}</h3>
+                        <h3 className="font-body text-2xl font-bold text-slate-900 dark:text-white truncate" title={String(stat.value)}>{stat.value}</h3>
                     </div>
                     <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
                 </Card>
@@ -126,4 +126,5 @@ export function StatsCards() {
     </div>
   );
 }
+
 
