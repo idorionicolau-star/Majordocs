@@ -99,7 +99,7 @@
   }
 
   .theme-sky {
-    --background: 210 20% 98%;
+    --background: 200 50% 98%;
     --foreground: 200 15% 15%;
     --card: 0 0% 100%;
     --card-foreground: 200 15% 15%;
@@ -107,16 +107,16 @@
     --popover-foreground: 200 15% 15%;
     --primary: 200 98% 39%;
     --primary-foreground: 200 10% 98%;
-    --secondary: 200 15% 92%;
+    --secondary: 200 50% 94%;
     --secondary-foreground: 200 15% 15%;
-    --muted: 200 15% 88%;
+    --muted: 200 40% 90%;
     --muted-foreground: 200 10% 45%;
     --accent: 200 98% 95%;
     --accent-foreground: 200 15% 15%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 200 10% 98%;
-    --border: 200 15% 85%;
-    --input: 200 15% 85%;
+    --border: 200 30% 88%;
+    --input: 200 30% 88%;
     --ring: 200 98% 39%;
   }
 
