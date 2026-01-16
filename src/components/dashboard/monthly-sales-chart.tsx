@@ -21,7 +21,7 @@ export function MonthlySalesChart() {
 
   if (loading) {
     return (
-      <Card className="glass-card">
+      <Card className="glass-card shadow-xl">
         <CardHeader>
           <Skeleton className="h-8 w-2/3" />
           <Skeleton className="h-4 w-1/2" />
@@ -34,7 +34,7 @@ export function MonthlySalesChart() {
   }
 
   return (
-    <Card className="glass-card">
+    <Card className="glass-card shadow-xl">
       <CardHeader>
         <CardTitle>Vendas Mensais (Últimos 6 Meses)</CardTitle>
         <CardDescription>Um resumo da sua receita de vendas ao longo do tempo.</CardDescription>

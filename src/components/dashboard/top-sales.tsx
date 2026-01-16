@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useContext } from "react";
@@ -73,7 +74,7 @@ export function TopSales() {
   }, [sales, period]);
 
   return (
-    <Card className="glass-card shadow-sm">
+    <Card className="glass-card shadow-xl">
       <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2">

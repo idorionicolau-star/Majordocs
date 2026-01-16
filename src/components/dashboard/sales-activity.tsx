@@ -28,7 +28,7 @@ export function SalesActivity() {
     .slice(0, 5);
 
   return (
-    <Card className="glass-card shadow-sm">
+    <Card className="glass-card shadow-xl">
       <CardHeader>
         <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2">
             <Activity />
@@ -38,37 +38,28 @@ export function SalesActivity() {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="flex-1 space-y-1">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-                <Skeleton className="h-6 w-1/4" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="p-4 rounded-xl bg-muted/50 space-y-2">
+                  <Skeleton className="h-10 w-10 rounded-full mx-auto" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-6 w-3/4 mx-auto" />
+                  <Skeleton className="h-4 w-1/2 mx-auto" />
               </div>
             ))}
           </div>
         ) : recentSales.length > 0 ? (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {recentSales.map((sale: Sale) => (
-              <div key={sale.id} className="flex items-center gap-4">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-primary/20 text-primary font-bold">
-                    {getInitials(sale.soldBy)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">{sale.productName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Vendido por <span className="font-medium">{sale.soldBy}</span>
-                  </p>
-                </div>
-                <div className="text-right">
-                    <p className="text-sm font-bold">{formatCurrency(sale.totalValue)}</p>
-                    <p className="text-xs text-muted-foreground">{sale.quantity} un.</p>
-                </div>
+              <div key={sale.id} className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted/50 text-center">
+                  <Avatar className="h-10 w-10 mb-2">
+                    <AvatarFallback className="bg-primary/20 text-primary font-bold">
+                      {getInitials(sale.soldBy)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <p className="text-sm font-semibold truncate w-full" title={sale.productName}>{sale.productName}</p>
+                  <p className="text-sm font-bold">{formatCurrency(sale.totalValue)}</p>
+                  <p className="text-xs text-muted-foreground">{sale.quantity} un. por {sale.soldBy}</p>
               </div>
             ))}
           </div>
