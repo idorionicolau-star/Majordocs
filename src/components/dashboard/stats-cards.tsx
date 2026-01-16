@@ -36,25 +36,25 @@ export function StatsCards() {
           title: "Vendas (Mês)",
           value: formatCurrency(dashboardStats.monthlySalesValue),
           icon: DollarSign,
-          color: "text-chart-1",
+          gradient: "from-chart-1 to-blue-400",
         },
         {
           title: "Ticket Médio",
           value: formatCurrency(dashboardStats.averageTicket),
           icon: TrendingUp,
-          color: "text-chart-2",
+          gradient: "from-chart-2 to-green-400",
         },
         {
           title: "Valor do Inventário",
           value: formatCurrency(dashboardStats.totalInventoryValue),
           icon: Archive,
-          color: "text-chart-3",
+          gradient: "from-chart-3 to-red-400",
         },
         {
           title: "Itens em Estoque",
           value: dashboardStats.totalItemsInStock.toLocaleString('pt-BR'),
           icon: Hash,
-          color: "text-chart-4",
+          gradient: "from-chart-4 to-orange-400",
         },
       ];
 
@@ -67,7 +67,7 @@ export function StatsCards() {
                   <stat.icon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                  <div className={cn("text-2xl font-bold", stat.color)}>{stat.value}</div>
+                  <div className={cn("text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-br", stat.gradient)}>{stat.value}</div>
               </CardContent>
           </Card>
       ))}
