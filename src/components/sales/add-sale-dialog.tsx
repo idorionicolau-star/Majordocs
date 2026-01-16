@@ -70,8 +70,6 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
     resolver: zodResolver(formSchema),
     defaultValues: {
       productName: "",
-      quantity: 1,
-      unitPrice: 0,
       location: "",
     },
   });
@@ -85,8 +83,6 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
 
       form.reset({
         productName: "",
-        quantity: 1,
-        unitPrice: 0,
         location: finalLocation,
       });
     }
@@ -244,7 +240,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                           {selectedProductInstance && <p className="text-xs text-muted-foreground">Disponível: {availableStock}</p>}
                       </div>
                       <FormControl>
-                          <Input type="number" min="1" {...field} />
+                          <Input type="number" min="1" {...field} placeholder="0" />
                       </FormControl>
                       <FormMessage />
                       </FormItem>
@@ -257,7 +253,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                           <FormItem>
                           <FormLabel>Preço Unitário</FormLabel>
                           <FormControl>
-                              <Input type="number" step="0.01" {...field} />
+                              <Input type="number" step="0.01" {...field} placeholder="0.00" />
                           </FormControl>
                           <FormMessage />
                           </FormItem>

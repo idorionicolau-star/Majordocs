@@ -62,7 +62,6 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
     resolver: zodResolver(formSchema),
     defaultValues: {
       productName: "",
-      quantity: 1,
       location: "",
     },
   });
@@ -76,7 +75,6 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
       
       form.reset({
         productName: "",
-        quantity: 1,
         location: finalLocation,
       });
     }
@@ -143,7 +141,7 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
                   <FormItem>
                     <FormLabel>Quantidade Produzida</FormLabel>
                     <FormControl>
-                      <Input type="number" min="1" {...field} />
+                      <Input type="number" min="1" {...field} placeholder="0" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

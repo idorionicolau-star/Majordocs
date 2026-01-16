@@ -47,7 +47,6 @@ export function AddProductionLogDialog({ order, onAddLog }: AddProductionLogDial
   const form = useForm<AddLogFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      quantity: 0,
       notes: "",
     },
   });
@@ -90,7 +89,7 @@ export function AddProductionLogDialog({ order, onAddLog }: AddProductionLogDial
                     <p className='text-xs text-muted-foreground'>Faltam: {remainingQuantity}</p>
                   </div>
                   <FormControl>
-                    <Input type="number" min="1" max={remainingQuantity} {...field} />
+                    <Input type="number" min="1" max={remainingQuantity} {...field} placeholder="0" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

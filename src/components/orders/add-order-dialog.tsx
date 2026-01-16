@@ -70,7 +70,6 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
     resolver: zodResolver(formSchema),
     defaultValues: {
       productName: "",
-      quantity: 1,
       unit: 'un',
       clientName: "",
       deliveryDate: new Date(),
@@ -87,7 +86,6 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
         
       form.reset({
         productName: "",
-        quantity: 1,
         unit: 'un',
         clientName: "",
         deliveryDate: new Date(),
@@ -159,7 +157,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Quantidade</FormLabel>
-                      <FormControl><Input type="number" min="1" {...field} /></FormControl>
+                      <FormControl><Input type="number" min="1" {...field} placeholder="0" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
