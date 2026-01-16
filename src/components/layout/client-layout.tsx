@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import React, { useState, useEffect, useContext } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
 import { Header } from './header';
-import { SubHeader } from './sub-header';
 import { motion, AnimatePresence } from 'framer-motion';
 import { mainNavItems } from '@/lib/data';
 import type { ModulePermission } from '@/lib/types';
@@ -72,7 +71,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
       <Header />
-      <SubHeader />
       <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-hidden relative main-content">
         <AnimatePresence mode="wait">
           <motion.div
