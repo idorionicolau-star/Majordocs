@@ -253,25 +253,25 @@
   }
 
   .dark.theme-violet {
-    --background: 245 100% 4%;
+    --background: 260 40% 5%;
     --foreground: 260 10% 85%;
-    --card: 260 15% 12%;
+    --card: 260 30% 10%;
     --card-foreground: 260 10% 85%;
-    --popover: 260 15% 9%;
+    --popover: 260 30% 7%;
     --popover-foreground: 260 10% 85%;
-    --primary: 256 90% 66%;
+    --primary: 260 90% 68%;
     --primary-foreground: 260 15% 10%;
-    --secondary: 260 15% 15%;
+    --secondary: 260 25% 12%;
     --secondary-foreground: 260 10% 85%;
-    --muted: 260 15% 18%;
+    --muted: 260 20% 15%;
     --muted-foreground: 260 10% 50%;
-    --accent: 256 90% 15%;
+    --accent: 260 90% 20%;
     --accent-foreground: 260 10% 95%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 260 10% 85%;
-    --border: 260 15% 20%;
-    --input: 260 15% 20%;
-    --ring: 256 90% 66%;
+    --border: 260 20% 18%;
+    --input: 260 20% 18%;
+    --ring: 260 90% 68%;
   }
 
 }
@@ -336,5 +336,3 @@
         @apply pb-24 md:pb-0;
     }
 }
-
-    
