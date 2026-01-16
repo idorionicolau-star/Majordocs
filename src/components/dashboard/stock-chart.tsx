@@ -45,11 +45,11 @@ export function StockChart() {
   if (loading) {
       return (
         <Card className="glass-card overflow-hidden shadow-sm">
-             <CardHeader className="p-6 md:p-8">
+             <CardHeader>
                 <Skeleton className="h-8 w-2/3" />
                 <Skeleton className="h-4 w-1/2" />
             </CardHeader>
-            <CardContent className="flex items-center justify-center p-6 md:p-8 md:pt-0">
+            <CardContent className="flex items-center justify-center pt-4 sm:pt-6">
                 <Skeleton className="aspect-square h-[250px] w-[250px] rounded-full" />
             </CardContent>
         </Card>
@@ -59,11 +59,11 @@ export function StockChart() {
 
   return (
     <Card className="glass-card overflow-hidden shadow-sm">
-      <CardHeader className="p-6 md:p-8">
+      <CardHeader>
         <CardTitle className="text-xl md:text-2xl">Estoque por Categoria</CardTitle>
         <CardDescription>Distribuição do total de itens em estoque</CardDescription>
       </CardHeader>
-      <CardContent className="p-0 md:p-6 md:pt-0">
+      <CardContent className="p-0 sm:p-6 sm:pt-0">
         {chartData.length > 0 ? (
             <ChartContainer
             config={chartConfig}
