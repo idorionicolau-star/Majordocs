@@ -1,18 +1,19 @@
 
+export const dynamic = 'force-dynamic';
+
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import { formatCurrency } from '@/lib/utils';
 
-if (!process.env.RESEND_API_KEY) {
-  console.warn("RESEND_API_KEY is not set. Email notifications will fail. Please add it to your .env.local file.");
-}
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function POST(req: Request) {
-  if (!process.env.RESEND_API_KEY) {
-    return NextResponse.json({ error: 'RESEND_API_KEY is not configured on the server.' }, { status: 500 });
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    console.error("Erro: RESEND_API_KEY não configurada no servidor.");
+    return NextResponse.json({ error: "O serviço de e-mail não está configurado no servidor." }, { status: 500 });
   }
+
+  const resend = new Resend(apiKey);
 
   try {
     const body = await req.json();
@@ -72,6 +73,26 @@ export async function POST(req: Request) {
                 <p style="margin: 4px 0; font-size: 16px;"><strong>Valor Total:</strong> <span style="font-weight: bold;">${formatCurrency(totalValue)}</span></p>
                 <p style="margin: 4px 0; font-size: 16px;"><strong>Localização:</strong> ${location}</p>
                 <p style="margin: 4px 0; font-size: 16px;"><strong>Vendedor:</strong> ${soldBy}</p>
+              </div>
+              <p style="font-size: 14px; color: #64748b;">Este é um e-mail automático enviado pelo seu Sistema de Gestão de Inventário, MajorStockX.</p>
+            </div>
+            ${footerHtml}
+        `;
+    } else if (type === 'WELCOME') {
+        const { companyName } = body;
+        const color = '#10b981'; // Emerald
+        const accentColor = '#ecfdf5';
+        htmlContent = `
+            ${headerHtml}
+            <div style="padding: 24px;">
+              <h2 style="color: ${color}; font-size: 22px; margin-top: 0;">
+                🎉 Bem-vindo ao MajorStockX!
+              </h2>
+              <p>Olá,</p>
+              <p>A sua conta para a empresa <strong>${companyName}</strong> foi criada com sucesso. Estamos entusiasmados por tê-lo a bordo.</p>
+              <div style="background-color: ${accentColor}; border: 1px solid ${color}; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 4px 0; font-size: 16px;">Pode agora aceder ao seu dashboard para começar a gerir o seu inventário, vendas e produção.</p>
+                <a href="${req.headers.get('origin')}/dashboard" style="display: inline-block; background-color: ${color}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin-top: 16px; font-weight: bold;">Aceder ao Dashboard</a>
               </div>
               <p style="font-size: 14px; color: #64748b;">Este é um e-mail automático enviado pelo seu Sistema de Gestão de Inventário, MajorStockX.</p>
             </div>
