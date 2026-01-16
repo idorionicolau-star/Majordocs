@@ -56,6 +56,9 @@ export function CatalogManager() {
   const [showDeleteSelectedCategoriesConfirm, setShowDeleteSelectedCategoriesConfirm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [currentProductPage, setCurrentProductPage] = useState(1);
+  const [currentCategoryPage, setCurrentCategoryPage] = useState(1);
+  const itemsPerPage = 5;
 
   const catalogProductsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
@@ -83,6 +86,11 @@ export function CatalogManager() {
   useEffect(() => {
     setSelectedCategories([]);
   }, [categories]);
+
+  useEffect(() => {
+    setCurrentProductPage(1);
+    setCurrentCategoryPage(1);
+  }, [searchQuery]);
 
 
   if (!inventoryContext) {
@@ -264,12 +272,25 @@ export function CatalogManager() {
     return sorted.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.category.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [products, searchQuery]);
 
+  const totalProductPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentProductPage - 1) * itemsPerPage;
+    return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredProducts, currentProductPage]);
+
+
   const filteredCategories = useMemo(() => {
     if (!categories) return [];
     const sorted = [...categories].sort((a,b) => a.name.localeCompare(b.name));
     if (!searchQuery) return sorted;
     return sorted.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [categories, searchQuery]);
+  
+  const totalCategoryPages = Math.ceil(filteredCategories.length / itemsPerPage);
+  const paginatedCategories = useMemo(() => {
+    const startIndex = (currentCategoryPage - 1) * itemsPerPage;
+    return filteredCategories.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredCategories, currentCategoryPage]);
   
   
   const handleToggleSelectAllProducts = (checked: boolean) => {
@@ -575,7 +596,7 @@ export function CatalogManager() {
                            <Skeleton className="h-6 w-full" />
                         </TableCell>
                     </TableRow>
-                  ) : filteredProducts && filteredProducts.length > 0 ? filteredProducts.map(product => (
+                  ) : paginatedProducts && paginatedProducts.length > 0 ? paginatedProducts.map(product => (
                     <TableRow key={product.id} data-state={selectedProducts.includes(product.id) && "selected"}>
                        <TableCell className="px-4">
                         <Checkbox
@@ -607,6 +628,33 @@ export function CatalogManager() {
                   )}
                 </TableBody>
               </Table>
+            </div>
+             <div className="flex items-center justify-between pt-4">
+                <div className="text-sm text-muted-foreground">
+                  {selectedProducts.length} de{" "}
+                  {filteredProducts.length} produto(s) selecionados.
+                </div>
+                <div className="flex items-center space-x-2">
+                    <span className="text-sm text-muted-foreground">
+                        Página {currentProductPage} de {totalProductPages}
+                    </span>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentProductPage(p => p - 1)}
+                        disabled={currentProductPage === 1}
+                    >
+                        Anterior
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentProductPage(p => p + 1)}
+                        disabled={currentProductPage >= totalProductPages}
+                    >
+                        Próximo
+                    </Button>
+                </div>
             </div>
           </div>
         </TabsContent>
@@ -650,7 +698,7 @@ export function CatalogManager() {
                            <Skeleton className="h-6 w-1/2 mx-auto" />
                         </TableCell>
                     </TableRow>
-                 ) : filteredCategories.length > 0 ? filteredCategories.map(category => (
+                 ) : paginatedCategories.length > 0 ? paginatedCategories.map(category => (
                   <TableRow key={category.id} data-state={selectedCategories.includes(category.id) && "selected"}>
                     <TableCell className="px-4">
                        <Checkbox
@@ -676,6 +724,33 @@ export function CatalogManager() {
                 )}
               </TableBody>
               </Table>
+            </div>
+             <div className="flex items-center justify-between pt-4">
+                <div className="text-sm text-muted-foreground">
+                  {selectedCategories.length} de{" "}
+                  {filteredCategories.length} categoria(s) selecionadas.
+                </div>
+                <div className="flex items-center space-x-2">
+                    <span className="text-sm text-muted-foreground">
+                        Página {currentCategoryPage} de {totalCategoryPages}
+                    </span>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentCategoryPage(p => p - 1)}
+                        disabled={currentCategoryPage === 1}
+                    >
+                        Anterior
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentCategoryPage(p => p + 1)}
+                        disabled={currentCategoryPage >= totalCategoryPages}
+                    >
+                        Próximo
+                    </Button>
+                </div>
             </div>
           </div>
         </TabsContent>
