@@ -30,7 +30,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -446,7 +446,13 @@ export default function InventoryPage() {
                 </TooltipProvider>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <ScrollArea 
+                  className="w-full md:w-auto pb-2"
+                  onTouchStart={e => e.stopPropagation()}
+                  onTouchMove={e => e.stopPropagation()}
+                  onTouchEnd={e => e.stopPropagation()}
+                >
+                  <div className="flex items-center gap-2">
                      <TooltipProvider>
                        {isMultiLocation && canEditInventory && (
                           <TransferStockDialog
@@ -552,7 +558,9 @@ export default function InventoryPage() {
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
-                </div>
+                  </div>
+                   <ScrollBar orientation="horizontal" className="md:hidden" />
+                </ScrollArea>
             </div>
         </div>
 
@@ -632,3 +640,6 @@ export default function InventoryPage() {
     </>
   );
 }
+
+
+    

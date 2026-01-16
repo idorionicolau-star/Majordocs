@@ -29,7 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useFirestore } from "@/firebase";
 import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
 import { isSameDay } from "date-fns";
 import { Card } from "@/components/ui/card";
@@ -261,36 +261,44 @@ export default function ProductionPage() {
                         )}
                     </TooltipProvider>
                 </div>
-                <div className="flex items-center gap-2">
-                    {isMultiLocation && canViewProduction && (
-                      <DropdownMenu>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="h-12 w-12 flex-shrink-0" size="icon">
-                                  <MapPin className="h-5 w-5" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Filtrar por Localização</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <DropdownMenuContent align="end">
-                          <ScrollArea className="h-48">
-                            <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuCheckboxItem checked={locationFilter === 'all'} onCheckedChange={() => setLocationFilter('all')}>Todas</DropdownMenuCheckboxItem>
-                            {locations.map(loc => (
-                              <DropdownMenuCheckboxItem key={loc.id} checked={locationFilter === loc.id} onCheckedChange={() => setLocationFilter(loc.id)}>{loc.name}</DropdownMenuCheckboxItem>
-                            ))}
-                          </ScrollArea>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                </div>
+                 <ScrollArea 
+                    className="w-full md:w-auto pb-2"
+                    onTouchStart={e => e.stopPropagation()}
+                    onTouchMove={e => e.stopPropagation()}
+                    onTouchEnd={e => e.stopPropagation()}
+                  >
+                    <div className="flex items-center gap-2">
+                        {isMultiLocation && canViewProduction && (
+                          <DropdownMenu>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" className="h-12 w-12 flex-shrink-0" size="icon">
+                                      <MapPin className="h-5 w-5" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Filtrar por Localização</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <DropdownMenuContent align="end">
+                              <ScrollArea className="h-48">
+                                <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuCheckboxItem checked={locationFilter === 'all'} onCheckedChange={() => setLocationFilter('all')}>Todas</DropdownMenuCheckboxItem>
+                                {locations.map(loc => (
+                                  <DropdownMenuCheckboxItem key={loc.id} checked={locationFilter === loc.id} onCheckedChange={() => setLocationFilter(loc.id)}>{loc.name}</DropdownMenuCheckboxItem>
+                                ))}
+                              </ScrollArea>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                    </div>
+                     <ScrollBar orientation="horizontal" className="md:hidden" />
+                </ScrollArea>
             </div>
         </div>
 
@@ -356,3 +364,5 @@ export default function ProductionPage() {
     </>
   );
 }
+
+    
