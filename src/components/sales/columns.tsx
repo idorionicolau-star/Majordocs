@@ -139,7 +139,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
               <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-[hsl(var(--chart-2))]" onClick={() => options.onConfirmPickup(sale)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-500" onClick={() => options.onConfirmPickup(sale)}>
                             <CheckCircle className="h-4 w-4" />
                             <span className="sr-only">Confirmar Levantamento</span>
                         </Button>
@@ -225,8 +225,8 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
             return (
                 <div className={cn("inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold",
                     status === 'Levantado' 
-                        ? 'bg-[hsl(var(--chart-2))]/10 text-[hsl(var(--chart-2))]' 
-                        : 'bg-primary/10 text-primary'
+                        ? 'bg-emerald-100 text-emerald-800' 
+                        : 'bg-blue-100 text-blue-800'
                 )}>
                     {status === 'Levantado' ? <CheckCircle className="h-3 w-3" /> : <PackageCheck className="h-3 w-3" />}
                     {status}

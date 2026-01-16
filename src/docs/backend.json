@@ -10,6 +10,24 @@
       },
       "required": ["companyId"]
     },
+    "NotificationSettings": {
+      "title": "NotificationSettings",
+      "type": "object",
+      "description": "Configurações de notificação por e-mail.",
+      "properties": {
+        "email": {
+            "type": "string",
+            "format": "email"
+        },
+        "onSale": {
+            "type": "boolean"
+        },
+        "onCriticalStock": {
+            "type": "boolean"
+        }
+      },
+      "required": ["email", "onSale", "onCriticalStock"]
+    },
     "Company": {
       "title": "Company",
       "type": "object",
@@ -18,6 +36,9 @@
         "name": {
           "type": "string",
           "description": "The name of the company."
+        },
+        "notificationSettings": {
+           "$ref": "#/entities/NotificationSettings"
         }
       },
       "required": ["name"]
@@ -85,13 +106,16 @@
         "productName": { "type": "string" },
         "quantity": { "type": "number" },
         "unitPrice": { "type": "number" },
+        "subtotal": { "type": "number" },
+        "discount": { "type": "number" },
+        "vat": { "type": "number" },
         "totalValue": { "type": "number" },
         "soldBy": { "type": "string" },
         "guideNumber": { "type": "string" },
         "location": { "type": "string" },
         "status": { "type": "string", "enum": ["Pago", "Levantado"] }
       },
-      "required": ["date", "productId", "productName", "quantity", "totalValue", "soldBy", "guideNumber", "status"]
+      "required": ["date", "productId", "productName", "quantity", "unitPrice", "subtotal", "totalValue", "soldBy", "guideNumber", "status"]
     },
     "Production": {
       "title": "Production",
@@ -116,6 +140,7 @@
         "quantity": { "type": "number" },
         "unit": { "type": "string" },
         "clientName": { "type": "string" },
+        "deliveryDate": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["Pendente", "Em produção", "Concluída"] },
         "productionStartDate": { "type": "string", "format": "date-time" },
         "quantityProduced": { "type": "number" },
