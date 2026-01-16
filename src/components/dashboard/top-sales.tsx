@@ -99,7 +99,7 @@ export function TopSales() {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="p-4 rounded-xl bg-muted/50 space-y-2">
                   <Skeleton className="h-8 w-8 rounded-full mx-auto" />
@@ -110,7 +110,7 @@ export function TopSales() {
             ))}
           </div>
         ) : topProducts.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {topProducts.map((product, index) => (
               <div key={product.name} className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted/50 text-center">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background font-bold text-primary mb-2">
