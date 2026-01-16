@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useContext } from "react";
@@ -19,8 +18,8 @@ export function StatsCards() {
     if (loading) {
         return (
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-                <Skeleton className="h-[100px] w-full" />
-                <Skeleton className="h-[100px] w-full" />
+                <Skeleton className="h-28 w-full" />
+                <Skeleton className="h-28 w-full" />
             </div>
         );
     }
@@ -73,7 +72,7 @@ export function StatsCards() {
         if (stat.restricted && !isAuthorized) {
              return (
                  <div key={stat.title}>
-                    <Card className="glass-card relative flex items-center justify-center gap-4 p-4 h-full text-center shadow-xl">
+                    <Card className="glass-card relative flex items-center justify-center gap-4 p-4 h-28 text-center shadow-xl">
                         <div className="absolute inset-0 bg-background z-10 flex items-center justify-center">
                             <div className="flex flex-col items-center gap-2 text-muted-foreground font-bold">
                                 <Lock className="h-6 w-6"/>
@@ -105,7 +104,7 @@ export function StatsCards() {
         
         return (
             <Link href={stat.href} key={stat.title}>
-                <Card className="glass-card relative flex items-center gap-4 p-4 shadow-xl transition-all duration-300 group h-full">
+                <Card className="glass-card relative flex items-center gap-4 p-4 shadow-xl transition-all duration-300 group h-28">
                     <stat.icon 
                         strokeWidth={2.5} 
                         className={cn(
