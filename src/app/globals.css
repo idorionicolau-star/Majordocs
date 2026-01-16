@@ -11,19 +11,19 @@
     --card-foreground: 260 15% 15%;
     --popover: 260 15% 100%;
     --popover-foreground: 260 15% 15%;
-    --primary: 256 90% 66%;
+    --primary: 258 83% 65%;
     --primary-foreground: 260 15% 98%;
     --secondary: 260 20% 94%;
     --secondary-foreground: 260 15% 15%;
     --muted: 260 20% 90%;
     --muted-foreground: 260 10% 45%;
-    --accent: 256 90% 95%;
+    --accent: 258 83% 95%;
     --accent-foreground: 260 15% 15%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 260 15% 98%;
     --border: 260 20% 87%;
     --input: 260 20% 87%;
-    --ring: 256 90% 66%;
+    --ring: 258 83% 65%;
     --radius: 0.8rem;
     --chart-1: 220 90% 60%;
     --chart-2: 150 80% 45%;
@@ -33,37 +33,37 @@
   }
 
   .dark {
-    --background: 260 40% 5%;
+    --background: 260 40% 4%;
     --foreground: 260 10% 85%;
-    --card: 260 30% 10%;
+    --card: 260 30% 8%;
     --card-foreground: 260 10% 85%;
     --popover: 260 30% 7%;
     --popover-foreground: 260 10% 85%;
-    --primary: 260 90% 68%;
+    --primary: 258 75% 60%;
     --primary-foreground: 260 15% 10%;
     --secondary: 260 25% 12%;
     --secondary-foreground: 260 10% 85%;
     --muted: 260 20% 15%;
     --muted-foreground: 260 10% 50%;
-    --accent: 260 90% 20%;
+    --accent: 258 75% 15%;
     --accent-foreground: 260 10% 95%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 260 10% 85%;
     --border: 260 20% 18%;
     --input: 260 20% 18%;
-    --ring: 260 90% 68%;
+    --ring: 258 75% 60%;
   }
 }
 
 @layer base {
   html {
-    @apply text-[80%];
+    @apply text-[78%];
   }
   * {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground text-sm sm:text-base;
+    @apply bg-background text-foreground text-base;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
