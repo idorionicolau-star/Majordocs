@@ -9,10 +9,12 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "@/components/ui/command"
 import { mainNavItems } from "@/lib/data"
 import { InventoryContext } from "@/context/inventory-context"
-import type { ModulePermission } from "@/lib/types"
+import type { ModulePermission, Product } from "@/lib/types"
+import { Box } from "lucide-react"
 
 interface CommandMenuProps {
   open: boolean
@@ -21,7 +23,7 @@ interface CommandMenuProps {
 
 export function CommandMenu({ open, setOpen }: CommandMenuProps) {
   const router = useRouter()
-  const { canView } = React.useContext(InventoryContext) || { canView: () => false };
+  const { canView, products } = React.useContext(InventoryContext) || { canView: () => false, products: [] };
 
   const navItems = mainNavItems.filter(item => {
     if (item.isSubItem) return false;
@@ -32,10 +34,22 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
     setOpen(false)
     command()
   }, [setOpen])
+  
+  const uniqueProducts = React.useMemo(() => {
+      if (!products) return [];
+      const seen = new Set<string>();
+      return products.filter(p => {
+          if (seen.has(p.name)) {
+              return false;
+          }
+          seen.add(p.name);
+          return true;
+      });
+  }, [products]);
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Pesquise ou navegue..." />
+      <CommandInput placeholder="Pesquisar por páginas ou produtos..." />
       <CommandList>
         <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
         <CommandGroup heading="Navegação">
@@ -52,6 +66,23 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
             </CommandItem>
           ))}
         </CommandGroup>
+        {uniqueProducts.length > 0 && <CommandSeparator />}
+        {uniqueProducts.length > 0 && (
+            <CommandGroup heading="Produtos do Inventário">
+                {uniqueProducts.map((product: Product) => (
+                    <CommandItem
+                        key={product.instanceId}
+                        value={product.name}
+                        onSelect={() => {
+                            runCommand(() => router.push(`/inventory?filter=${encodeURIComponent(product.name)}`))
+                        }}
+                    >
+                        <Box className="mr-2 h-4 w-4" />
+                        <span>{product.name}</span>
+                    </CommandItem>
+                ))}
+            </CommandGroup>
+        )}
       </CommandList>
     </CommandDialog>
   )

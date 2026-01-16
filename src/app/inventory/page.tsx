@@ -82,6 +82,10 @@ export default function InventoryPage() {
     if (searchParams.get('action') === 'add' && canEditInventory) {
       setAddDialogOpen(true);
     }
+    const productFilter = searchParams.get('filter');
+    if (productFilter) {
+      setNameFilter(decodeURIComponent(productFilter));
+    }
   }, [searchParams, canEditInventory]);
 
   useEffect(() => {
