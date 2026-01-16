@@ -232,11 +232,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         throw new Error(errorBody.error || 'Erro desconhecido da API');
       }
     } catch (error: any) {
-      console.error("Falha ao enviar e-mail de notificação:", error);
+      console.warn("Falha ao enviar e-mail de notificação:", error.message);
       toast({
         variant: "destructive",
-        title: "Erro de Notificação",
-        description: `Não foi possível enviar o e-mail. ${error.message}`,
+        title: "Falha na Notificação por E-mail",
+        description: error.message,
+        duration: 8000,
       });
     }
   }, [companyData, addNotification, toast]);

@@ -9,8 +9,8 @@ export async function POST(req: Request) {
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
-    console.error("Erro: RESEND_API_KEY não configurada no servidor.");
-    return NextResponse.json({ error: "O serviço de e-mail não está configurado no servidor." }, { status: 500 });
+    console.warn("AVISO: A RESEND_API_KEY não está configurada no ficheiro .env. O envio de e-mails está desativado.");
+    return NextResponse.json({ error: "O serviço de e-mail não está configurado no servidor. Adicione a RESEND_API_KEY ao seu ficheiro .env para o ativar." }, { status: 500 });
   }
 
   const resend = new Resend(apiKey);
