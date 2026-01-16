@@ -16,13 +16,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { InventoryContext } from "@/context/inventory-context";
-import { subDays, startOfMonth, startOfToday } from 'date-fns';
+import { subDays, startOfMonth, startOfToday, startOfYear } from 'date-fns';
 import { Trophy } from 'lucide-react';
 import { formatCurrency } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 import type { Sale } from "@/lib/types";
 
-type Period = '7d' | '30d' | 'month';
+type Period = '7d' | '30d' | 'month' | 'year';
 
 export function TopSales() {
   const { sales, loading } = useContext(InventoryContext) || { sales: [], loading: true };
@@ -43,6 +43,9 @@ export function TopSales() {
         break;
       case 'month':
         startDate = startOfMonth(now);
+        break;
+      case 'year':
+        startDate = startOfYear(now);
         break;
       default:
         startDate = subDays(now, 7);
@@ -89,6 +92,7 @@ export function TopSales() {
             <SelectItem value="7d">Últimos 7 dias</SelectItem>
             <SelectItem value="30d">Últimos 30 dias</SelectItem>
             <SelectItem value="month">Este Mês</SelectItem>
+            <SelectItem value="year">Este Ano</SelectItem>
           </SelectContent>
         </Select>
       </CardHeader>
