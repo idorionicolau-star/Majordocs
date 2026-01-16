@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Production } from "@/lib/types";
@@ -59,7 +58,7 @@ export function ProductionCard({ production, onTransfer, onDelete, viewMode = 'n
             </AlertDialogContent>
         </AlertDialog>
 
-        <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 relative">
+        <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 relative shadow-xl">
             {isTransferred && (
                 <div className="absolute inset-0 bg-background/50 backdrop-blur-[2px] z-10 rounded-xl flex items-center justify-center">
                     <div className="flex items-center gap-2 text-[hsl(var(--chart-2))] bg-[hsl(var(--chart-2))]/10 px-4 py-2 rounded-full border border-[hsl(var(--chart-2))]/20">

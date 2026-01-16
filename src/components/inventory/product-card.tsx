@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Product } from "@/lib/types";
@@ -33,7 +32,7 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
     const availableStock = product.stock - product.reservedStock;
 
     return (
-        <Card className="glass-card flex flex-col h-full group p-2 sm:p-4">
+        <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 shadow-xl">
             <CardHeader className="p-1 sm:p-2">
                 <CardTitle className="text-xs font-bold truncate leading-tight">{product.name}</CardTitle>
                 <CardDescription className={cn("text-[10px]", isCondensed && "hidden")}>{product.category}</CardDescription>

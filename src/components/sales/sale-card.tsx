@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Sale } from "@/lib/types";
@@ -64,7 +63,7 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, vi
             </AlertDialogContent>
         </AlertDialog>
 
-        <Card className="glass-card flex flex-col h-full group p-2 sm:p-4">
+        <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 shadow-xl">
             <CardHeader className="p-1 sm:p-2">
                 <div className="flex justify-between items-start">
                     <CardTitle className="text-xs font-bold truncate leading-tight">{sale.productName}</CardTitle>
