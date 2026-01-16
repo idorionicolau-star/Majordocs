@@ -100,11 +100,11 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, vi
                     </div>
                  </div>
 
-                <div className={`mt-2 flex justify-center items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                    sale.status === 'Levantado' 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' 
-                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
-                }`}>
+                <div className={cn("mt-2 flex justify-center items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold",
+                     sale.status === 'Levantado' 
+                        ? 'bg-[hsl(var(--chart-2))]/10 text-[hsl(var(--chart-2))]' 
+                        : 'bg-primary/10 text-primary'
+                )}>
                     {sale.status === 'Levantado' ? <CheckCircle className="h-3 w-3" /> : <PackageCheck className="h-3 w-3" />}
                     <span>{sale.status}</span>
                 </div>

@@ -15,6 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { InventoryContext } from "@/context/inventory-context"
+import { cn } from "@/lib/utils"
 
 
 interface ColumnsOptions {
@@ -138,7 +139,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
               <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={() => options.onConfirmPickup(sale)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-[hsl(var(--chart-2))]" onClick={() => options.onConfirmPickup(sale)}>
                             <CheckCircle className="h-4 w-4" />
                             <span className="sr-only">Confirmar Levantamento</span>
                         </Button>
@@ -222,11 +223,11 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
         cell: ({ row }) => {
             const status = row.original.status;
             return (
-                <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                <div className={cn("inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold",
                     status === 'Levantado' 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' 
-                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
-                }`}>
+                        ? 'bg-[hsl(var(--chart-2))]/10 text-[hsl(var(--chart-2))]' 
+                        : 'bg-primary/10 text-primary'
+                )}>
                     {status === 'Levantado' ? <CheckCircle className="h-3 w-3" /> : <PackageCheck className="h-3 w-3" />}
                     {status}
                 </div>

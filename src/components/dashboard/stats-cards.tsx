@@ -48,7 +48,8 @@ export function StatsCards() {
       title: "Produtos em Estoque",
       value: products.length,
       icon: Box,
-      color: "blue",
+      iconClass: "text-primary",
+      contextClass: "text-primary bg-primary/10",
       contextLabel: "Total de Itens",
       contextValue: totalItemsInStock,
       contextIcon: Package,
@@ -58,7 +59,8 @@ export function StatsCards() {
       title: "Vendas (Mês)",
       value: formatCurrency(totalSalesValue),
       icon: DollarSign,
-      color: "sky",
+      iconClass: "text-[hsl(var(--chart-2))]",
+      contextClass: "text-[hsl(var(--chart-2))] bg-[hsl(var(--chart-2))]/10",
       contextLabel: "Nº de Vendas",
       contextValue: totalSalesCount,
       contextIcon: ShoppingCart,
@@ -69,25 +71,14 @@ export function StatsCards() {
       title: "Estoque Baixo",
       value: lowStockCount,
       icon: AlertTriangle,
-      color: "amber",
+      iconClass: "text-[hsl(var(--chart-4))]",
+      contextClass: "text-[hsl(var(--chart-4))] bg-[hsl(var(--chart-4))]/10",
       contextLabel: `dos produtos`,
       contextValue: `${lowStockPercentage.toFixed(0)}%`,
       contextIcon: AlertTriangle,
       href: "/inventory"
     },
   ];
-
-  const colorClasses = {
-      blue: 'text-blue-500',
-      sky: 'text-sky-500',
-      amber: 'text-amber-500',
-  }
-  
-  const contextColors = {
-      blue: 'text-blue-600 bg-blue-50 dark:bg-blue-500/10',
-      sky: 'text-sky-600 bg-sky-50 dark:bg-sky-500/10',
-      amber: 'text-amber-600 bg-amber-50 dark:bg-amber-500/10',
-  }
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -107,7 +98,7 @@ export function StatsCards() {
                             className={cn(
                             "h-8 w-8 flex-shrink-0",
                             `var(--stats-icon-size, h-8 w-8)`,
-                            colorClasses[stat.color as keyof typeof colorClasses]
+                            stat.iconClass
                             )}
                             style={{
                                 height: `var(--stats-icon-size, 32px)`,
@@ -134,7 +125,7 @@ export function StatsCards() {
                         "h-8 w-8 flex-shrink-0",
                         "transition-transform group-hover:scale-110",
                         `var(--stats-icon-size, h-8 w-8)`,
-                        colorClasses[stat.color as keyof typeof colorClasses]
+                        stat.iconClass
                         )}
                         style={{
                             height: `var(--stats-icon-size, 32px)`,
@@ -149,7 +140,7 @@ export function StatsCards() {
                     </div>
                     <div className={cn(
                         "absolute top-4 right-4 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold", 
-                        contextColors[stat.color as keyof typeof contextColors]
+                        stat.contextClass
                     )}>
                         {stat.contextIcon && <stat.contextIcon size={12} strokeWidth={3}/>}
                         <span>{stat.contextValue}</span>

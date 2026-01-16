@@ -62,7 +62,7 @@ export function ProductionCard({ production, onTransfer, onDelete, viewMode = 'n
         <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 relative">
             {isTransferred && (
                 <div className="absolute inset-0 bg-background/50 backdrop-blur-[2px] z-10 rounded-xl flex items-center justify-center">
-                    <div className="flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-500/10 px-4 py-2 rounded-full border border-green-200 dark:border-green-500/20">
+                    <div className="flex items-center gap-2 text-[hsl(var(--chart-2))] bg-[hsl(var(--chart-2))]/10 px-4 py-2 rounded-full border border-[hsl(var(--chart-2))]/20">
                         <CheckCircle className="h-5 w-5" />
                         <span className="font-bold text-sm">Transferido</span>
                     </div>

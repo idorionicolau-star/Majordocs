@@ -33,15 +33,15 @@ interface OrderCardProps {
 
 const statusConfig = {
     'Pendente': {
-        color: 'text-yellow-600',
+        color: 'text-[hsl(var(--chart-4))]',
         icon: CircleHelp,
     },
     'Em produção': {
-        color: 'text-blue-600',
+        color: 'text-primary',
         icon: Play,
     },
     'Concluída': {
-        color: 'text-green-600',
+        color: 'text-[hsl(var(--chart-2))]',
         icon: Check,
     }
 };
@@ -149,7 +149,7 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
                         </div>
                     )}
                      {estimatedCompletionDate && order.status === 'Em produção' && (
-                        <div className="flex items-center gap-2 text-blue-600 font-bold">
+                        <div className="flex items-center gap-2 text-primary font-bold">
                             <TrendingUp size={14} />
                             <span>Previsão: {estimatedCompletionDate.toLocaleDateString('pt-BR')}</span>
                         </div>

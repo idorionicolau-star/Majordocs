@@ -8,6 +8,7 @@ import { EditProductDialog } from "./edit-product-dialog"
 import { Button } from "../ui/button";
 import { Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface ColumnsOptions {
   onAttemptDelete: (product: Product) => void;
@@ -41,8 +42,8 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
       cell: ({ row }) => (
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
-              <span className="text-sm font-[800] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">{row.original.name}</span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">ID: {row.original.id?.toUpperCase().substring(0, 6)}</span>
+              <span className="text-sm font-[800] text-foreground group-hover:text-primary transition-colors">{row.original.name}</span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">ID: {row.original.id?.toUpperCase().substring(0, 6)}</span>
           </div>
         </div>
       ),
@@ -51,7 +52,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
       accessorKey: "category",
       header: "Categoria",
       cell: ({ row }) => (
-        <span className="text-[10px] font-black px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+        <span className="text-[10px] font-black px-3 py-1.5 rounded-full bg-muted text-muted-foreground uppercase tracking-wider">
           {row.original.category}
         </span>
       ),
@@ -86,7 +87,11 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
         const availableStock = row.original.stock - row.original.reservedStock;
         return (
           <div className="text-center">
-            <span className={`text-base font-black ${status === 'crítico' || status === 'sem-estoque' ? 'text-rose-500' : status === 'baixo' ? 'text-amber-500' : 'text-slate-900 dark:text-white'}`}>
+            <span className={cn("text-base font-black",
+                status === 'crítico' || status === 'sem-estoque' ? 'text-destructive' :
+                status === 'baixo' ? 'text-[hsl(var(--chart-4))]' :
+                'text-foreground'
+            )}>
               {availableStock}
             </span>
           </div>
@@ -100,7 +105,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
         const reserved = row.original.reservedStock;
         return (
           <div className="text-center">
-            <span className="text-base font-black text-blue-500">
+            <span className="text-base font-black text-primary">
               {reserved > 0 ? reserved : '-'}
             </span>
           </div>
@@ -113,16 +118,16 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
       cell: ({ row }) => {
         const status = getStockStatus(row.original);
         if (status === 'crítico' || status === 'sem-estoque') {
-            return <div className="inline-flex items-center gap-2 text-rose-600 bg-rose-50 dark:bg-rose-500/10 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-rose-100 dark:border-rose-500/20">
+            return <div className="inline-flex items-center gap-2 text-destructive bg-destructive/10 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-destructive/20">
                 <AlertCircle size={14} strokeWidth={3} /> {status === 'sem-estoque' ? 'Esgotado' : 'Crítico'}
             </div>
         }
         if (status === 'baixo') {
-             return <div className="inline-flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-100 dark:border-amber-500/20">
+             return <div className="inline-flex items-center gap-2 text-[hsl(var(--chart-4))] bg-[hsl(var(--chart-4))]/10 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[hsl(var(--chart-4))]/20">
                 <AlertCircle size={14} strokeWidth={3} /> Baixo
             </div>
         }
-        return <div className="inline-flex items-center gap-2 text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 dark:border-emerald-500/20">
+        return <div className="inline-flex items-center gap-2 text-[hsl(var(--chart-2))] bg-[hsl(var(--chart-2))]/10 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[hsl(var(--chart-2))]/20">
             Estável
         </div>
       }
@@ -147,7 +152,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="p-3 h-auto w-auto text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all"
+                      className="p-3 h-auto w-auto text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
                       onClick={() => options.onAttemptDelete(product)}
                     >
                       <Trash2 className="h-4 w-4" />

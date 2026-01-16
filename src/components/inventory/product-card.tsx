@@ -23,10 +23,10 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
     const status = getStockStatus(product);
     
     const statusInfo = {
-        ok: "text-emerald-500",
-        baixo: "text-amber-500",
-        crítico: "text-rose-500",
-        'sem-estoque': "text-rose-600",
+        ok: "text-[hsl(var(--chart-2))]",
+        baixo: "text-[hsl(var(--chart-4))]",
+        crítico: "text-destructive",
+        'sem-estoque': "text-destructive",
     }
 
     const isCondensed = viewMode === 'condensed';
@@ -47,7 +47,7 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                     <span className="text-[10px] sm:text-xs font-bold text-muted-foreground">/un.</span>
                 </div>
                 {product.reservedStock > 0 && (
-                  <div className="flex items-center justify-center gap-1.5 text-xs text-blue-500 font-semibold">
+                  <div className="flex items-center justify-center gap-1.5 text-xs text-primary font-semibold">
                     <PackageCheck className="h-3 w-3" />
                     <span>{product.reservedStock} Reservado(s)</span>
                   </div>
@@ -58,8 +58,8 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                  {status !== 'ok' && !isCondensed && (
                     <div className={cn(
                         "inline-flex items-center justify-center w-full gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border",
-                        status === 'baixo' && 'text-amber-600 bg-amber-50 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20',
-                        (status === 'crítico' || status === 'sem-estoque') && 'text-rose-600 bg-rose-50 dark:bg-rose-500/10 border-rose-100 dark:border-rose-500/20'
+                        status === 'baixo' && 'text-[hsl(var(--chart-4))] bg-[hsl(var(--chart-4))]/10 border-[hsl(var(--chart-4))]/20',
+                        (status === 'crítico' || status === 'sem-estoque') && 'text-destructive bg-destructive/10 border-destructive/20'
                     )}>
                         <AlertCircle size={12} strokeWidth={3} />
                         {status === 'sem-estoque' ? 'Esgotado' : status === 'crítico' ? 'Crítico' : 'Baixo'}

@@ -90,9 +90,9 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
             return (
                  <span className={cn(
                     "text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-wider",
-                    role === 'Admin' && 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300',
-                    role === 'Dono' && 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
-                    role === 'Employee' && 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                    role === 'Admin' && 'bg-[hsl(var(--chart-4))]/20 text-[hsl(var(--chart-4))]',
+                    role === 'Dono' && 'bg-[hsl(var(--chart-5))]/20 text-[hsl(var(--chart-5))]',
+                    role === 'Employee' && 'bg-muted text-muted-foreground'
                  )}>
                     {role}
                 </span>
@@ -129,8 +129,8 @@ export const columns = (options: ColumnsOptions): ColumnDef<Employee>[] => {
                         <span key={label} className={cn(
                             "flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full",
                              level === 'write'
-                                ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                                ? 'bg-primary/10 text-primary'
+                                : 'bg-muted text-muted-foreground'
                         )}>
                             {level === 'write' ? <Pencil className="h-2.5 w-2.5" /> : <Eye className="h-2.5 w-2.5" />}
                             {label}
