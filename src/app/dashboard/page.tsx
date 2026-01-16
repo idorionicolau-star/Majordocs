@@ -1,3 +1,4 @@
+
 "use client";
 
 import { StatsCards } from "@/components/dashboard/stats-cards";
@@ -8,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Box, ShoppingCart, Hammer, ClipboardList, Book } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { InventoryContext } from "@/context/inventory-context";
+import { CatalogManager } from "@/components/settings/catalog-manager";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function DashboardPage() {
   const { canView, canEdit } = useContext(InventoryContext) || { canView: () => false, canEdit: () => false };
@@ -37,14 +40,25 @@ export default function DashboardPage() {
               {canEdit('orders') && <Button asChild variant="outline">
                   <Link href="/orders?action=add"><ClipboardList className="mr-2 h-4 w-4" />+ Encomenda</Link>
                 </Button>}
-              {canView('settings') && <Button asChild variant="outline">
-                  <Link href="/settings#catalog"><Book className="mr-2 h-4 w-4" />Catálogo</Link>
-                </Button>}
           </div>
           <ScrollBar orientation="horizontal" className="md:hidden" />
         </ScrollArea>
       </div>
       <StatsCards />
+
+      {canView('settings') && (
+        <Card className="glass-card shadow-sm">
+          <CardHeader className="p-6 sm:p-8">
+              <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2"><Book /> Gestor de Catálogo</CardTitle>
+              <CardDescription>
+                  Gerencie os produtos, categorias e importe dados em massa.
+              </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 sm:p-8 pt-0">
+              <CatalogManager />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
