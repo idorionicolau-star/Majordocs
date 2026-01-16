@@ -1,4 +1,5 @@
 
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -54,12 +55,18 @@ service cloud.firestore {
       }
       
       let userCompanyId = getUserCompanyId(request.auth.uid);
+      let userRole = getUserEmployeeData(request.auth.uid).role;
       
       // O Admin da empresa tem acesso de escrita a todos os módulos da sua empresa.
-      if (isAdminOf(userCompanyId)) {
+      if (userRole == 'Admin') {
         // Apenas Super Admin pode listar/ver todas as empresas.
         if (module == 'companies') return false;
         return true;
+      }
+
+      // O Dono tem acesso de leitura a todos os módulos.
+      if (userRole == 'Dono') {
+        return level == 'read';
       }
       
       // Para funcionários normais, verifica as permissões granulares no objeto 'permissions'.
@@ -120,6 +127,13 @@ service cloud.firestore {
         allow get, list: if can('inventory', 'read');
         allow create, update, delete: if can('inventory', 'write');
       }
+
+      match /stockMovements/{movementId} {
+        allow get, list: if can('inventory', 'read');
+        allow create: if can('inventory', 'write');
+        // Nenhum update/delete em movimentos de stock para garantir imutabilidade
+        allow update, delete: if false; 
+      }
       
       match /sales/{saleId} {
         allow get, list: if can('sales', 'read');
@@ -140,6 +154,11 @@ service cloud.firestore {
         // Relatórios são tipicamente apenas de leitura para a maioria dos papéis.
         allow get, list: if can('reports', 'read');
         allow create, update, delete: if can('reports', 'write');
+      }
+
+      match /analysis/{analysisId} {
+        allow get, list: if can('analysis', 'read');
+        allow create, update, delete: if can('analysis', 'write');
       }
     }
   }
