@@ -7,6 +7,7 @@ import { DollarSign, TrendingUp, Archive, Hash } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 export function StatsCards() {
     const { dashboardStats, loading } = useContext(InventoryContext) || { 
@@ -35,21 +36,25 @@ export function StatsCards() {
           title: "Vendas (Mês)",
           value: formatCurrency(dashboardStats.monthlySalesValue),
           icon: DollarSign,
+          color: "text-chart-1",
         },
         {
           title: "Ticket Médio",
           value: formatCurrency(dashboardStats.averageTicket),
           icon: TrendingUp,
+          color: "text-chart-2",
         },
         {
           title: "Valor do Inventário",
           value: formatCurrency(dashboardStats.totalInventoryValue),
           icon: Archive,
+          color: "text-chart-3",
         },
         {
           title: "Itens em Estoque",
           value: dashboardStats.totalItemsInStock.toLocaleString('pt-BR'),
           icon: Hash,
+          color: "text-chart-4",
         },
       ];
 
@@ -62,7 +67,7 @@ export function StatsCards() {
                   <stat.icon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <div className={cn("text-2xl font-bold", stat.color)}>{stat.value}</div>
               </CardContent>
           </Card>
       ))}
