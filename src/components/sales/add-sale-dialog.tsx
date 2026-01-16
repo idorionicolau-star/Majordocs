@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from 'react';
@@ -37,6 +36,7 @@ import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { InventoryContext } from '@/context/inventory-context';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -45,7 +45,8 @@ const formSchema = z.object({
   quantity: z.coerce.number().min(1, "A quantidade deve ser pelo menos 1.").optional(),
   unitPrice: z.coerce.number().min(0, "O preço não pode ser negativo.").optional(),
   location: z.string().optional(),
-  discount: z.coerce.number().min(0, "O desconto não pode ser negativo.").optional(),
+  discountType: z.enum(['fixed', 'percentage']).default('fixed'),
+  discountValue: z.coerce.number().min(0, "O desconto não pode ser negativo.").optional(),
   vatPercentage: z.coerce.number().min(0, "O IVA deve ser um valor positivo.").max(100).optional(),
 });
 
@@ -74,7 +75,8 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
     defaultValues: {
       productName: "",
       location: "",
-      discount: 0,
+      discountType: 'fixed',
+      discountValue: 0,
       vatPercentage: 17, // Default VAT
     },
   });
@@ -91,7 +93,8 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
         quantity: undefined,
         unitPrice: undefined,
         location: finalLocation,
-        discount: 0,
+        discountType: 'fixed',
+        discountValue: 0,
         vatPercentage: 17,
       });
     }
@@ -101,12 +104,21 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
   const watchedQuantity = useWatch({ control: form.control, name: 'quantity' });
   const watchedUnitPrice = useWatch({ control: form.control, name: 'unitPrice' });
   const watchedLocation = useWatch({ control: form.control, name: 'location' });
-  const watchedDiscount = useWatch({ control: form.control, name: 'discount' });
+  const watchedDiscountType = useWatch({ control: form.control, name: 'discountType' });
+  const watchedDiscountValue = useWatch({ control: form.control, name: 'discountValue' });
   const watchedVatPercentage = useWatch({ control: form.control, name: 'vatPercentage' });
 
   const subtotal = (watchedUnitPrice || 0) * (watchedQuantity || 0);
-  const discount = watchedDiscount || 0;
-  const totalAfterDiscount = subtotal > discount ? subtotal - discount : 0;
+
+  const discountAmount = useMemo(() => {
+    const value = watchedDiscountValue || 0;
+    if (watchedDiscountType === 'percentage') {
+        return subtotal * (value / 100);
+    }
+    return value; // fixed
+  }, [watchedDiscountType, watchedDiscountValue, subtotal]);
+
+  const totalAfterDiscount = subtotal > discountAmount ? subtotal - discountAmount : 0;
   const vatPercentage = watchedVatPercentage || 0;
   const vatAmount = totalAfterDiscount * (vatPercentage / 100);
   const totalValue = totalAfterDiscount + vatAmount;
@@ -187,7 +199,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
       quantity: values.quantity,
       unitPrice: values.unitPrice,
       subtotal: subtotal,
-      discount: discount,
+      discount: discountAmount,
       vat: vatAmount,
       totalValue: totalValue,
       soldBy: user.username,
@@ -293,11 +305,41 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
 
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
+                    control={form.control}
+                    name="discountType"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel>Tipo de Desconto</FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex items-center space-x-4"
+                          >
+                            <FormItem className="flex items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="fixed" id="d-fixed" />
+                              </FormControl>
+                              <FormLabel htmlFor="d-fixed" className="font-normal">Valor Fixo</FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="percentage" id="d-percentage" />
+                              </FormControl>
+                              <FormLabel htmlFor="d-percentage" className="font-normal">Percentagem</FormLabel>
+                            </FormItem>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
                   control={form.control}
-                  name="discount"
+                  name="discountValue"
                   render={({ field }) => (
                       <FormItem>
-                      <FormLabel>Desconto (Valor Fixo)</FormLabel>
+                      <FormLabel>Valor do Desconto</FormLabel>
                       <FormControl>
                           <Input type="number" min="0" {...field} placeholder="0.00" />
                       </FormControl>
@@ -305,7 +347,10 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                       </FormItem>
                   )}
                   />
-                  <FormField
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div></div>
+                 <FormField
                       control={form.control}
                       name="vatPercentage"
                       render={({ field }) => (
@@ -325,10 +370,10 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                       <span className='text-muted-foreground'>Subtotal</span>
                       <span className='font-medium'>{formatCurrency(subtotal)}</span>
                   </div>
-                  {discount > 0 && (
+                  {discountAmount > 0 && (
                      <div className='flex justify-between items-center text-sm'>
                         <span className='text-muted-foreground'>Desconto</span>
-                        <span className='font-medium text-red-500'>- {formatCurrency(discount)}</span>
+                        <span className='font-medium text-red-500'>- {formatCurrency(discountAmount)}</span>
                     </div>
                   )}
                    <div className='flex justify-between items-center text-sm'>
@@ -353,3 +398,4 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
     </Dialog>
   );
 }
+    
