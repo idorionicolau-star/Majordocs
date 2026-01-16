@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useContext } from "react";
@@ -18,8 +17,7 @@ export function StatsCards() {
 
     if (loading) {
         return (
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                <Skeleton className="h-[100px] w-full" />
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                 <Skeleton className="h-[100px] w-full" />
                 <Skeleton className="h-[100px] w-full" />
             </div>
@@ -44,17 +42,6 @@ export function StatsCards() {
     const totalSalesCount = monthlySales.length;
 
   const stats = [
-    {
-      title: "Produtos em Estoque",
-      value: products.length,
-      icon: Box,
-      iconClass: "text-primary",
-      contextClass: "text-primary bg-primary/10",
-      contextLabel: "Total de Itens",
-      contextValue: totalItemsInStock,
-      contextIcon: Package,
-      href: "/inventory"
-    },
     {
       title: "Vendas (Mês)",
       value: formatCurrency(totalSalesValue),
@@ -81,7 +68,7 @@ export function StatsCards() {
   ];
 
   return (
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
       {stats.map((stat) => {
         if (stat.restricted && !isAuthorized) {
              return (
