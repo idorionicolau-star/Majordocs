@@ -3,7 +3,7 @@
 
 import { useContext } from "react";
 import { Card } from "@/components/ui/card";
-import { DollarSign, AlertTriangle, ShoppingCart, Lock } from "lucide-react";
+import { DollarSign, AlertTriangle, ShoppingCart, Lock, ClipboardList } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
@@ -12,13 +12,14 @@ import Link from "next/link";
 
 export function StatsCards() {
     const inventoryContext = useContext(InventoryContext);
-    const { products, sales, loading, user } = inventoryContext || { products: [], sales: [], loading: true, user: null };
+    const { products, sales, orders, loading, user } = inventoryContext || { products: [], sales: [], orders: [], loading: true, user: null };
 
     const isAuthorized = user?.role === 'Admin' || user?.role === 'Dono';
 
     if (loading) {
         return (
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+                <Skeleton className="h-28 w-full" />
                 <Skeleton className="h-28 w-full" />
                 <Skeleton className="h-28 w-full" />
             </div>
@@ -40,6 +41,9 @@ export function StatsCards() {
     
     const totalSalesValue = monthlySales.reduce((sum, sale) => sum + sale.totalValue, 0);
     const totalSalesCount = monthlySales.length;
+    
+    const pendingOrdersCount = orders.filter(o => o.status === 'Pendente').length;
+    const totalOrdersCount = orders.length;
 
   const stats = [
     {
@@ -65,10 +69,22 @@ export function StatsCards() {
       contextIcon: AlertTriangle,
       href: "/inventory"
     },
+    {
+      title: "Encomendas Pendentes",
+      value: pendingOrdersCount,
+      icon: ClipboardList,
+      iconClass: "text-[hsl(var(--chart-5))]",
+      contextClass: "text-[hsl(var(--chart-5))] bg-[hsl(var(--chart-5))]/10",
+      contextLabel: "Total",
+      contextValue: totalOrdersCount,
+      contextIcon: ClipboardList,
+      href: "/orders",
+      restricted: true,
+    },
   ];
 
   return (
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
       {stats.map((stat) => {
         if (stat.restricted && !isAuthorized) {
              return (
@@ -110,3 +126,4 @@ export function StatsCards() {
     </div>
   );
 }
+
