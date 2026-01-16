@@ -6,7 +6,7 @@ import { useContext } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Box, ShoppingCart, Hammer, ClipboardList } from "lucide-react";
+import { Box, ShoppingCart, Hammer } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { InventoryContext } from "@/context/inventory-context";
 import { TopSales } from "@/components/dashboard/top-sales";
@@ -48,9 +48,6 @@ export default function DashboardPage() {
               </Button>}
               {canEdit('production') && <Button asChild variant="outline" size="sm">
                   <Link href="/production?action=add"><Hammer className="mr-2 h-4 w-4 text-[hsl(var(--chart-3))]" />+ Produção</Link>
-                </Button>}
-              {canEdit('orders') && <Button asChild variant="outline" size="sm">
-                  <Link href="/orders?action=add"><ClipboardList className="mr-2 h-4 w-4 text-[hsl(var(--chart-4))]" />+ Encomenda</Link>
                 </Button>}
           </div>
           <ScrollBar orientation="horizontal" className="md:hidden" />
