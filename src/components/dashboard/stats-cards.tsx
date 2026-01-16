@@ -69,7 +69,7 @@ export function StatsCards() {
           <Link href={stat.href} key={stat.title} className="group">
             <Card className="transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                    <CardTitle className="text-sm font-semibold">{stat.title}</CardTitle>
                     <stat.icon className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
