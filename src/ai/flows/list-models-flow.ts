@@ -31,14 +31,10 @@ const listModelsFlow = ai.defineFlow(
     outputSchema: ListModelsOutputSchema,
   },
   async () => {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error('A variável de ambiente GEMINI_API_KEY não está configurada.');
-    }
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models`;
 
     try {
+      // The API key is now configured in the googleAI() plugin, so it's sent automatically.
       const response = await fetch(url);
       if (!response.ok) {
         const errorBody = await response.text();
