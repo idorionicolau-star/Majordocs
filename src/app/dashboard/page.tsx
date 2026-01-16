@@ -45,16 +45,16 @@ export default function DashboardPage() {
         >
           <div className={cn("flex items-center gap-2 flex-nowrap", "animate-peek md:animate-none")}>
               {canEdit('inventory') && <Button asChild variant="outline">
-                <Link href="/inventory?action=add"><Box className="mr-2 h-4 w-4" />+ Inventário</Link>
+                <Link href="/inventory?action=add"><Box className="mr-2 h-4 w-4 text-[hsl(var(--chart-1))]" />+ Inventário</Link>
               </Button>}
               {canEdit('sales') && <Button asChild variant="outline">
-                <Link href="/sales?action=add"><ShoppingCart className="mr-2 h-4 w-4" />+ Vendas</Link>
+                <Link href="/sales?action=add"><ShoppingCart className="mr-2 h-4 w-4 text-[hsl(var(--chart-2))]" />+ Vendas</Link>
               </Button>}
               {canEdit('production') && <Button asChild variant="outline">
-                  <Link href="/production?action=add"><Hammer className="mr-2 h-4 w-4" />+ Produção</Link>
+                  <Link href="/production?action=add"><Hammer className="mr-2 h-4 w-4 text-[hsl(var(--chart-3))]" />+ Produção</Link>
                 </Button>}
               {canEdit('orders') && <Button asChild variant="outline">
-                  <Link href="/orders?action=add"><ClipboardList className="mr-2 h-4 w-4" />+ Encomenda</Link>
+                  <Link href="/orders?action=add"><ClipboardList className="mr-2 h-4 w-4 text-[hsl(var(--chart-4))]" />+ Encomenda</Link>
                 </Button>}
           </div>
           <ScrollBar orientation="horizontal" className="md:hidden" />
