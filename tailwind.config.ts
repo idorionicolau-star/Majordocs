@@ -65,10 +65,10 @@ export default {
         sm: 'calc(var(--radius) - 8px)',
       },
       boxShadow: {
-        'sm': '0 2px 4px 0 rgb(0 0 0 / 0.08)',
-        'lg': '0 12px 20px -4px rgb(0 0 0 / 0.15), 0 5px 8px -5px rgb(0 0 0 / 0.15)',
-        'xl': '0 22px 30px -6px rgb(0 0 0 / 0.18), 0 10px 12px -7px rgb(0 0 0 / 0.18)',
-        '2xl': '0 30px 60px -15px rgb(0 0 0 / 0.3)',
+        'sm': '0 2px 8px 0 rgb(0 0 0 / 0.1)',
+        'lg': '0 15px 25px -5px rgb(0 0 0 / 0.2), 0 8px 10px -6px rgb(0 0 0 / 0.2)',
+        'xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+        '2xl': '0 40px 80px -20px rgb(0 0 0 / 0.4)',
         'inner': 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
       },
       keyframes: {
@@ -133,5 +133,3 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
-
-    
