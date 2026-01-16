@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useContext } from "react";
@@ -95,31 +94,26 @@ export function TopSales() {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center gap-4 py-2">
-                <Skeleton className="h-8 w-8 rounded-full" />
-                <div className="flex-1 space-y-1">
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
-                <Skeleton className="h-6 w-1/4" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="p-4 rounded-xl bg-muted/50 space-y-2">
+                  <Skeleton className="h-8 w-8 rounded-full mx-auto" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-6 w-3/4 mx-auto" />
+                  <Skeleton className="h-4 w-1/2 mx-auto" />
               </div>
             ))}
           </div>
         ) : topProducts.length > 0 ? (
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {topProducts.map((product, index) => (
-              <div key={product.name} className="flex items-center gap-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted font-bold text-muted-foreground">
+              <div key={product.name} className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted/50 text-center">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background font-bold text-primary mb-2">
                   {index + 1}
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">{product.name}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold">{product.quantity} un.</p>
-                  <p className="text-xs text-muted-foreground">{formatCurrency(product.totalValue)}</p>
-                </div>
+                <p className="text-sm font-semibold truncate w-full" title={product.name}>{product.name}</p>
+                <p className="text-lg font-bold">{product.quantity} <span className="text-xs text-muted-foreground">un.</span></p>
+                <p className="text-xs text-muted-foreground">{formatCurrency(product.totalValue)}</p>
               </div>
             ))}
           </div>
