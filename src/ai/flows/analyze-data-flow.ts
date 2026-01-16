@@ -21,7 +21,7 @@ const ProductStatSchema = z.object({
   stock: z.number().optional().describe('The stock quantity for the product with the highest inventory.'),
 });
 
-export const AnalysisInputSchema = z.object({
+const AnalysisInputSchema = z.object({
   monthlySales: z.array(MonthlySaleSchema).describe('An array of sales data for the last 6 months.'),
   topSellingProduct: ProductStatSchema.describe('The product that sold the most units this month.'),
   highestInventoryProduct: ProductStatSchema.describe('The product with the highest current stock level.'),
@@ -31,7 +31,7 @@ export const AnalysisInputSchema = z.object({
 });
 export type AnalysisInput = z.infer<typeof AnalysisInputSchema>;
 
-export const AnalysisOutputSchema = z.object({
+const AnalysisOutputSchema = z.object({
   headline: z.string().describe('A single, impactful headline summarizing the most important finding.'),
   positiveObservation: z.string().describe('A key positive observation from the data. Be encouraging.'),
   criticalObservation: z.string().describe('A key area for improvement or a potential risk. Be direct but constructive.'),
