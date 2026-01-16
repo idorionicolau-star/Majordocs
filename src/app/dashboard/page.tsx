@@ -39,7 +39,7 @@ export default function DashboardPage() {
           onTouchMove={e => e.stopPropagation()}
           onTouchEnd={e => e.stopPropagation()}
         >
-          <div className={cn("flex items-center gap-2 flex-nowrap", "animate-peek md:animate-none")}>
+          <div className={cn("flex items-center justify-center gap-2 flex-nowrap", "animate-peek md:animate-none")}>
               {canEdit('inventory') && <Button asChild variant="outline" size="sm">
                 <Link href="/inventory?action=add"><Box className="mr-2 h-4 w-4 text-[hsl(var(--chart-1))]" />+ Inventário</Link>
               </Button>}
