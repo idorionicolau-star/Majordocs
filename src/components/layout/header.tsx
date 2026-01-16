@@ -10,7 +10,7 @@ import { Settings, Search } from "lucide-react";
 export function Header({ onSearchClick }: { onSearchClick: () => void }) {
   
   return (
-    <header className="sticky top-0 z-30 flex h-16 sm:h-20 items-center justify-between gap-4 border-b px-4 sm:px-6 bg-primary text-primary-foreground">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b px-4 sm:px-6 bg-primary text-primary-foreground">
       
       {/* Logo and Title for mobile, hidden on desktop */}
       <div className="flex items-center gap-3 md:hidden">

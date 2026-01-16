@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from "next/link";
@@ -28,7 +27,7 @@ export function Sidebar({ isCollapsed, onToggleCollapse }: DesktopSidebarProps) 
         "hidden md:flex flex-col fixed inset-y-0 left-0 z-40 h-full border-r bg-background transition-all duration-300 ease-in-out",
         isCollapsed ? "w-20" : "w-64"
     )}>
-        <div className="flex h-20 items-center justify-center border-b px-4">
+        <div className="flex h-16 items-center justify-center border-b px-4">
             <Link href="/dashboard" className="flex items-center gap-2.5 font-semibold">
                 <Image src="/logo.svg" alt="MajorStockX Logo" width={28} height={28} className="dark:invert" />
                 {!isCollapsed && <span className="text-xl font-headline font-bold">MajorStockX</span>}
