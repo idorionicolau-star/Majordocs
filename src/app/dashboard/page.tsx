@@ -1,4 +1,3 @@
-
 "use client";
 
 import { StatsCards } from "@/components/dashboard/stats-cards";
@@ -15,11 +14,6 @@ import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
-  ssr: false,
-  loading: () => <Skeleton className="h-[350px] w-full" />,
-});
-
-const MonthlySalesChart = dynamic(() => import("@/components/dashboard/monthly-sales-chart").then(mod => mod.MonthlySalesChart), {
   ssr: false,
   loading: () => <Skeleton className="h-[350px] w-full" />,
 });
@@ -68,7 +62,6 @@ export default function DashboardPage() {
         {/* Left Column (or full width on mobile) */}
         <div className="lg:col-span-2 flex flex-col gap-6">
           <StatsCards />
-          <MonthlySalesChart />
           <SalesActivity />
         </div>
 
