@@ -51,7 +51,7 @@ const prompt = ai.definePrompt({
   prompt: `You are a business intelligence analyst for a construction materials company in Mozambique. Your name is Major, the AI assistant for MajorStockX. Your tone is professional, insightful, and slightly informal. Your goal is to provide a quick, actionable analysis of the provided data.
 
 Analyze the following business data:
-- Monthly Sales (last 6 months): {{jsonStringify monthlySales}}
+- Monthly Sales (last 6 months): {{{monthlySales}}}
 - Top Selling Product this month: {{topSellingProduct.name}} ({{topSellingProduct.quantity}} units)
 - Product with Highest Inventory: {{highestInventoryProduct.name}} ({{highestInventoryProduct.stock}} units)
 - Total distinct products: {{totalProducts}}
@@ -83,7 +83,10 @@ const analyzeBusinessDataFlow = ai.defineFlow(
     outputSchema: AnalysisOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt(input);
+    const {output} = await prompt({
+      ...input,
+      monthlySales: JSON.stringify(input.monthlySales),
+    } as any);
     return output!;
   }
 );
