@@ -79,7 +79,12 @@ interface InventoryContextType {
   companyData: Company | null;
   notifications: AppNotification[];
   monthlySalesChartData: { name: string; vendas: number }[];
-  dashboardStats: DashboardStats;
+  dashboardStats: {
+    monthlySalesValue: number;
+    averageTicket: number;
+    totalInventoryValue: number;
+    totalItemsInStock: number;
+  };
 
 
   // Functions
@@ -522,27 +527,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
     }) || [];
 
-    let topSellingProduct = { name: 'N/A', quantity: 0 };
-    if (monthlySales.length > 0) {
-        const productQuantities = monthlySales.reduce((acc, sale) => {
-            acc[sale.productName] = (acc[sale.productName] || 0) + sale.quantity;
-            return acc;
-        }, {} as Record<string, number>);
+    const monthlySalesValue = monthlySales.reduce((sum, sale) => sum + sale.totalValue, 0);
+    const monthlySalesCount = monthlySales.length;
+    const averageTicket = monthlySalesCount > 0 ? monthlySalesValue / monthlySalesCount : 0;
 
-        const topProductEntry = Object.entries(productQuantities).reduce((best, current) => {
-            return current[1] > best[1] ? current : best;
-        }, ['', 0]);
-        if(topProductEntry[0]){
-             topSellingProduct = { name: topProductEntry[0], quantity: topProductEntry[1] };
-        }
-    }
+    const totalInventoryValue = products?.reduce((sum, p) => sum + (p.stock * p.price), 0) || 0;
+    const totalItemsInStock = products?.reduce((sum, p) => sum + p.stock, 0) || 0;
 
-    let highestInventoryProduct = { name: 'N/A', stock: 0 };
-    if (products && products.length > 0) {
-        highestInventoryProduct = products.reduce((max, p) => (p.stock > max.stock ? p : max), products[0]);
-    }
-
-    return { topSellingProduct, highestInventoryProduct };
+    return {
+      monthlySalesValue,
+      averageTicket,
+      totalInventoryValue,
+      totalItemsInStock,
+    };
   }, [salesData, products]);
 
 
@@ -950,3 +947,4 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
+

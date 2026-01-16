@@ -2,129 +2,70 @@
 "use client";
 
 import { useContext } from "react";
-import { Card } from "@/components/ui/card";
-import { DollarSign, AlertTriangle, ShoppingCart, Lock, ClipboardList } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { DollarSign, TrendingUp, Archive, Hash } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
 
 export function StatsCards() {
-    const inventoryContext = useContext(InventoryContext);
-    const { products, sales, orders, loading, user } = inventoryContext || { products: [], sales: [], orders: [], loading: true, user: null };
-
-    const isAuthorized = user?.role === 'Admin' || user?.role === 'Dono';
+    const { dashboardStats, loading } = useContext(InventoryContext) || { 
+      dashboardStats: {
+        monthlySalesValue: 0,
+        averageTicket: 0,
+        totalInventoryValue: 0,
+        totalItemsInStock: 0,
+      },
+      loading: true 
+    };
 
     if (loading) {
         return (
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                <Skeleton className="h-28 w-full" />
                 <Skeleton className="h-28 w-full" />
                 <Skeleton className="h-28 w-full" />
                 <Skeleton className="h-28 w-full" />
             </div>
         );
     }
-
-    const lowStockProducts = products.filter(p => p.stock < p.lowStockThreshold);
-    const lowStockCount = lowStockProducts.length;
-    const lowStockPercentage = products.length > 0 ? (lowStockCount / products.length) * 100 : 0;
     
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth();
-    const currentYear = currentDate.getFullYear();
-    
-    const monthlySales = sales.filter(sale => {
-        const saleDate = new Date(sale.date);
-        return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
-    });
-    
-    const totalSalesValue = monthlySales.reduce((sum, sale) => sum + sale.totalValue, 0);
-    const totalSalesCount = monthlySales.length;
-    
-    const pendingOrdersCount = orders.filter(o => o.status === 'Pendente').length;
-    const totalOrdersCount = orders.length;
-
-  const stats = [
-    {
-      title: "Vendas (Mês)",
-      value: formatCurrency(totalSalesValue),
-      icon: DollarSign,
-      iconClass: "text-[hsl(var(--chart-2))]",
-      contextClass: "text-[hsl(var(--chart-2))] bg-[hsl(var(--chart-2))]/10",
-      contextLabel: "Nº de Vendas",
-      contextValue: totalSalesCount,
-      contextIcon: ShoppingCart,
-      href: "/sales",
-      restricted: true,
-    },
-    {
-      title: "Estoque Baixo",
-      value: lowStockCount,
-      icon: AlertTriangle,
-      iconClass: "text-[hsl(var(--chart-4))]",
-      contextClass: "text-[hsl(var(--chart-4))] bg-[hsl(var(--chart-4))]/10",
-      contextLabel: `% dos produtos`,
-      contextValue: `${lowStockPercentage.toFixed(0)}%`,
-      contextIcon: AlertTriangle,
-      href: "/inventory"
-    },
-    {
-      title: "Encomendas Pendentes",
-      value: pendingOrdersCount,
-      icon: ClipboardList,
-      iconClass: "text-[hsl(var(--chart-5))]",
-      contextClass: "text-[hsl(var(--chart-5))] bg-[hsl(var(--chart-5))]/10",
-      contextLabel: "Total",
-      contextValue: totalOrdersCount,
-      contextIcon: ClipboardList,
-      href: "/orders",
-      restricted: true,
-    },
-  ];
+    const stats = [
+        {
+          title: "Vendas (Mês)",
+          value: formatCurrency(dashboardStats.monthlySalesValue),
+          icon: DollarSign,
+        },
+        {
+          title: "Ticket Médio",
+          value: formatCurrency(dashboardStats.averageTicket),
+          icon: TrendingUp,
+        },
+        {
+          title: "Valor do Inventário",
+          value: formatCurrency(dashboardStats.totalInventoryValue),
+          icon: Archive,
+        },
+        {
+          title: "Itens em Estoque",
+          value: dashboardStats.totalItemsInStock.toLocaleString('pt-BR'),
+          icon: Hash,
+        },
+      ];
 
   return (
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-      {stats.map((stat) => {
-        if (stat.restricted && !isAuthorized) {
-             return (
-                 <div key={stat.title}>
-                    <Card className="glass-card relative flex flex-col p-4 shadow-sm h-28 text-center">
-                        <div className="absolute inset-0 bg-background z-10 flex items-center justify-center">
-                            <div className="flex flex-col items-center gap-2 text-muted-foreground font-bold">
-                                <Lock className="h-6 w-6"/>
-                                <span>Acesso Restrito</span>
-                            </div>
-                        </div>
-                        <div className="flex-grow flex items-center justify-center">
-                            <h3 className="font-body text-2xl font-bold text-slate-900 dark:text-white truncate" title={String(stat.value)}>{stat.value}</h3>
-                        </div>
-                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
-                    </Card>
-                </div>
-            )
-        }
-        
-        return (
-            <Link href={stat.href} key={stat.title}>
-                <Card className="glass-card flex flex-col p-4 shadow-sm transition-all duration-300 group h-28 text-center">
-                    <div className="flex justify-center">
-                        <div className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold", stat.contextClass)}>
-                            {stat.contextIcon && <stat.contextIcon size={12} strokeWidth={3}/>}
-                            <span>{stat.contextValue}</span>
-                            <span className="font-medium hidden sm:inline">{stat.contextLabel}</span>
-                        </div>
-                    </div>
-                    <div className="flex-grow flex items-center justify-center">
-                        <h3 className="font-body text-2xl font-bold text-slate-900 dark:text-white truncate" title={String(stat.value)}>{stat.value}</h3>
-                    </div>
-                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
-                </Card>
-            </Link>
-        )
-      })}
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      {stats.map((stat) => (
+          <Card key={stat.title}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                  <stat.icon className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+              </CardContent>
+          </Card>
+      ))}
     </div>
   );
 }
-
-

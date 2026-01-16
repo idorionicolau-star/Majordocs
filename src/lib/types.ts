@@ -166,8 +166,10 @@ export type InitialCatalog = {
 };
 
 export type DashboardStats = {
-  topSellingProduct: { name: string; quantity: number };
-  highestInventoryProduct: { name: string; stock: number };
+  monthlySalesValue: number;
+  averageTicket: number;
+  totalInventoryValue: number;
+  totalItemsInStock: number;
 };
 
 export interface ModelInfo {

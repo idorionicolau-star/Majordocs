@@ -6,23 +6,36 @@ import { useContext } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Box, ShoppingCart, Hammer, ClipboardList, Book, ChevronDown } from "lucide-react";
+import { Box, ShoppingCart, Hammer, ClipboardList } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { InventoryContext } from "@/context/inventory-context";
-import { CatalogManager } from "@/components/settings/catalog-manager";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { SalesActivity } from "@/components/dashboard/sales-activity";
 import { TopSales } from "@/components/dashboard/top-sales";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { SalesActivity } from "@/components/dashboard/sales-activity";
+import dynamic from "next/dynamic";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[350px] w-full" />,
+});
+
+const MonthlySalesChart = dynamic(() => import("@/components/dashboard/monthly-sales-chart").then(mod => mod.MonthlySalesChart), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[350px] w-full" />,
+});
+
 
 export default function DashboardPage() {
-  const { canView, canEdit } = useContext(InventoryContext) || { canView: () => false, canEdit: () => false };
+  const { canEdit } = useContext(InventoryContext) || { canEdit: () => false };
   
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start gap-4">
         <div>
            <h1 className="text-2xl md:text-3xl font-headline font-[900] text-slate-900 dark:text-white tracking-tighter">Dashboard</h1>
+            <p className="text-sm font-medium text-slate-500 mt-1">
+             Uma visão geral e rápida do seu negócio.
+           </p>
         </div>
         <ScrollArea 
           className="w-full md:w-auto pb-4"
@@ -49,37 +62,16 @@ export default function DashboardPage() {
       </div>
 
       <StatsCards />
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <MonthlySalesChart />
+        <StockChart />
+      </div>
 
       <TopSales />
 
       <SalesActivity />
-
-      {canView('settings') && (
-        <Accordion type="single" collapsible className="w-full" defaultValue="catalog-manager">
-          <AccordionItem value="catalog-manager" className="border-0">
-            <Card className="glass-card shadow-sm overflow-hidden">
-              <AccordionTrigger className="w-full p-0 hover:no-underline">
-                <CardHeader className="p-6 sm:p-8 flex-row items-center justify-between w-full">
-                  <div className="text-left">
-                    <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
-                      <Book /> Gestor de Catálogo
-                    </CardTitle>
-                    <CardDescription>
-                      Expanda para gerir produtos, categorias e importação de dados.
-                    </CardDescription>
-                  </div>
-                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                </CardHeader>
-              </AccordionTrigger>
-              <AccordionContent>
-                <CardContent className="p-6 sm:p-8 pt-0">
-                  <CatalogManager />
-                </CardContent>
-              </AccordionContent>
-            </Card>
-          </AccordionItem>
-        </Accordion>
-      )}
+      
     </div>
   );
 }
