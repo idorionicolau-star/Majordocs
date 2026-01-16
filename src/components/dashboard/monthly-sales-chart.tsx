@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useContext, useState, useMemo } from "react";
@@ -14,10 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { subMonths, startOfYear, endOfYear, startOfMonth, format, eachMonthOfInterval, subYears } from 'date-fns';
+import { subMonths, startOfYear, endOfYear, startOfMonth, format, eachMonthOfInterval, subYears, eachDayOfInterval, subDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
 
-type Period = '6m' | 'this_year' | 'last_year';
+type Period = '30d' | '6m' | 'this_year' | 'last_year';
 
 export function MonthlySalesChart() {
   const { sales, loading } = useContext(InventoryContext) || { sales: [], loading: true };
@@ -27,6 +28,28 @@ export function MonthlySalesChart() {
     if (!sales) return [];
 
     const now = new Date();
+    
+    if (period === '30d') {
+        const startDate = subDays(now, 29); // 30 days including today
+        const endDate = now;
+        const dayInterval = eachDayOfInterval({ start: startDate, end: endDate });
+
+        return dayInterval.map(day => {
+            const daySales = sales.filter(s => {
+                const saleDate = new Date(s.date);
+                return saleDate.getFullYear() === day.getFullYear() && 
+                       saleDate.getMonth() === day.getMonth() && 
+                       saleDate.getDate() === day.getDate();
+            }).reduce((sum, s) => sum + s.totalValue, 0);
+
+            const dayName = format(day, 'dd/MMM', { locale: pt });
+            return {
+                name: dayName,
+                vendas: daySales,
+            };
+        });
+    }
+
     let startDate: Date, endDate: Date;
 
     switch (period) {
@@ -93,17 +116,18 @@ export function MonthlySalesChart() {
     <Card className="glass-card shadow-sm">
       <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-            <CardTitle>Vendas Mensais</CardTitle>
-            <CardDescription>Um resumo da sua receita de vendas ao longo do tempo.</CardDescription>
+            <CardTitle>Vendas ao Longo do Tempo</CardTitle>
+            <CardDescription>Um resumo da sua receita de vendas.</CardDescription>
         </div>
         <Select value={period} onValueChange={(value: Period) => setPeriod(value)}>
-            <SelectTrigger className="w-full md:w-[180px]">
+            <SelectTrigger className="w-full md:w-[220px]">
                 <SelectValue placeholder="Período" />
             </SelectTrigger>
             <SelectContent>
-                <SelectItem value="6m">Últimos 6 Meses</SelectItem>
-                <SelectItem value="this_year">Este Ano</SelectItem>
-                <SelectItem value="last_year">Ano Passado</SelectItem>
+                <SelectItem value="30d">Diário (Últimos 30 dias)</SelectItem>
+                <SelectItem value="6m">Mensal (Últimos 6 Meses)</SelectItem>
+                <SelectItem value="this_year">Mensal (Este Ano)</SelectItem>
+                <SelectItem value="last_year">Mensal (Ano Passado)</SelectItem>
             </SelectContent>
         </Select>
       </CardHeader>
