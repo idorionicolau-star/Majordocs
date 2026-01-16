@@ -1,0 +1,134 @@
+
+"use client";
+
+import { useState, useMemo, useContext } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { InventoryContext } from "@/context/inventory-context";
+import { subDays, startOfMonth, startOfToday } from 'date-fns';
+import { Trophy } from 'lucide-react';
+import { formatCurrency } from "@/lib/utils";
+import { Skeleton } from "../ui/skeleton";
+import type { Sale } from "@/lib/types";
+
+type Period = '7d' | '30d' | 'month';
+
+export function TopSales() {
+  const { sales, loading } = useContext(InventoryContext) || { sales: [], loading: true };
+  const [period, setPeriod] = useState<Period>('7d');
+
+  const topProducts = useMemo(() => {
+    if (!sales) return [];
+
+    const now = new Date();
+    let startDate: Date;
+
+    switch (period) {
+      case '7d':
+        startDate = subDays(now, 7);
+        break;
+      case '30d':
+        startDate = subDays(now, 30);
+        break;
+      case 'month':
+        startDate = startOfMonth(now);
+        break;
+      default:
+        startDate = subDays(now, 7);
+    }
+    
+    // Ensure we compare from the beginning of the start day
+    const startOfFilterDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+
+    const filteredSales = sales.filter(sale => new Date(sale.date) >= startOfFilterDay);
+
+    const productStats = filteredSales.reduce((acc, sale) => {
+      if (!acc[sale.productName]) {
+        acc[sale.productName] = { quantity: 0, totalValue: 0 };
+      }
+      acc[sale.productName].quantity += sale.quantity;
+      acc[sale.productName].totalValue += sale.totalValue;
+      return acc;
+    }, {} as Record<string, { quantity: number; totalValue: number }>);
+
+    return Object.entries(productStats)
+      .map(([name, stats]) => ({ name, ...stats }))
+      .sort((a, b) => b.quantity - a.quantity) // Sort by quantity sold
+      .slice(0, 5); // Get top 5
+
+  }, [sales, period]);
+
+  return (
+    <Card className="glass-card shadow-sm">
+      <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2">
+            <Trophy />
+            Produtos Mais Vendidos
+          </CardTitle>
+          <CardDescription>
+            Os campeões de vendas no período selecionado.
+          </CardDescription>
+        </div>
+        <Select value={period} onValueChange={(value: Period) => setPeriod(value)}>
+          <SelectTrigger className="w-full md:w-[180px]">
+            <SelectValue placeholder="Período" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7d">Últimos 7 dias</SelectItem>
+            <SelectItem value="30d">Últimos 30 dias</SelectItem>
+            <SelectItem value="month">Este Mês</SelectItem>
+          </SelectContent>
+        </Select>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 py-2">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div className="flex-1 space-y-1">
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+                <Skeleton className="h-6 w-1/4" />
+              </div>
+            ))}
+          </div>
+        ) : topProducts.length > 0 ? (
+          <div className="space-y-4">
+            {topProducts.map((product, index) => (
+              <div key={product.name} className="flex items-center gap-4">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted font-bold text-muted-foreground">
+                  {index + 1}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold">{product.name}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold">{product.quantity} un.</p>
+                  <p className="text-xs text-muted-foreground">{formatCurrency(product.totalValue)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>Nenhuma venda encontrada para este período.</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

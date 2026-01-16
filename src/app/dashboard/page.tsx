@@ -12,6 +12,7 @@ import { InventoryContext } from "@/context/inventory-context";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SalesActivity } from "@/components/dashboard/sales-activity";
+import { TopSales } from "@/components/dashboard/top-sales";
 
 export default function DashboardPage() {
   const { canView, canEdit } = useContext(InventoryContext) || { canView: () => false, canEdit: () => false };
@@ -45,6 +46,8 @@ export default function DashboardPage() {
           <ScrollBar orientation="horizontal" className="md:hidden" />
         </ScrollArea>
       </div>
+
+      <TopSales />
 
       <SalesActivity />
 
