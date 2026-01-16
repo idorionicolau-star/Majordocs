@@ -2,7 +2,7 @@
 "use client"
 
 import { useContext } from "react";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { InventoryContext } from "@/context/inventory-context";
@@ -42,7 +42,14 @@ export function MonthlySalesChart() {
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[300px] w-full">
           <ResponsiveContainer>
-            <BarChart data={monthlySalesChartData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+            <AreaChart data={monthlySalesChartData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+              <defs>
+                <linearGradient id="colorVendas" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-vendas)" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="var(--color-vendas)" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis
                 dataKey="name"
                 tickLine={false}
@@ -58,14 +65,21 @@ export function MonthlySalesChart() {
                 width={80}
               />
               <Tooltip
-                cursor={false}
+                cursor={true}
                 content={<ChartTooltipContent 
                     formatter={(value) => formatCurrency(value as number)}
                     className="dark:bg-slate-900/80 dark:border-slate-700/50 backdrop-blur-md rounded-xl" 
                 />}
               />
-              <Bar dataKey="vendas" fill="var(--color-vendas)" radius={8} />
-            </BarChart>
+              <Area 
+                type="monotone" 
+                dataKey="vendas" 
+                stroke="var(--color-vendas)" 
+                strokeWidth={2}
+                fillOpacity={1} 
+                fill="url(#colorVendas)" 
+              />
+            </AreaChart>
           </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
