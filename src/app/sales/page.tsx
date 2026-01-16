@@ -354,8 +354,8 @@ export default function SalesPage() {
           <div className={cn(
               "grid gap-2 sm:gap-4",
               gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
-              gridCols === '4' && "grid-cols-2 sm:grid-cols-3 md:grid-cols-4",
-              gridCols === '5' && "grid-cols-3 sm:grid-cols-4 md:grid-cols-5",
+              gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
+              gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
           )}>
               {filteredSales.map(sale => (
                   <SaleCard 
