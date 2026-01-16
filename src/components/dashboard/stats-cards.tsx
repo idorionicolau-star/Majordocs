@@ -58,7 +58,7 @@ export function StatsCards() {
       title: "Vendas (Mês)",
       value: formatCurrency(totalSalesValue),
       icon: DollarSign,
-      color: "emerald",
+      color: "sky",
       contextLabel: "Nº de Vendas",
       contextValue: totalSalesCount,
       contextIcon: ShoppingCart,
@@ -79,13 +79,13 @@ export function StatsCards() {
 
   const colorClasses = {
       blue: 'text-blue-500',
-      emerald: 'text-emerald-500',
+      sky: 'text-sky-500',
       amber: 'text-amber-500',
   }
   
   const contextColors = {
       blue: 'text-blue-600 bg-blue-50 dark:bg-blue-500/10',
-      emerald: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10',
+      sky: 'text-sky-600 bg-sky-50 dark:bg-sky-500/10',
       amber: 'text-amber-600 bg-amber-50 dark:bg-amber-500/10',
   }
 
