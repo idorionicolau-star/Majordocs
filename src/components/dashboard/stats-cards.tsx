@@ -73,7 +73,7 @@ export function StatsCards() {
         if (stat.restricted && !isAuthorized) {
              return (
                  <div key={stat.title}>
-                    <Card className="glass-card relative flex flex-col p-4 h-28 text-center shadow-sm">
+                    <Card className="glass-card relative flex flex-col p-4 shadow-sm h-28 text-center">
                         <div className="absolute inset-0 bg-background z-10 flex items-center justify-center">
                             <div className="flex flex-col items-center gap-2 text-muted-foreground font-bold">
                                 <Lock className="h-6 w-6"/>
@@ -91,11 +91,13 @@ export function StatsCards() {
         
         return (
             <Link href={stat.href} key={stat.title}>
-                <Card className="glass-card relative flex flex-col p-4 shadow-sm transition-all duration-300 group h-28 text-center">
-                    <div className={cn("absolute top-4 right-4 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold", stat.contextClass)}>
-                        {stat.contextIcon && <stat.contextIcon size={12} strokeWidth={3}/>}
-                        <span>{stat.contextValue}</span>
-                        <span className="font-medium hidden sm:inline">{stat.contextLabel}</span>
+                <Card className="glass-card flex flex-col p-4 shadow-sm transition-all duration-300 group h-28 text-center">
+                    <div className="flex justify-center">
+                        <div className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold", stat.contextClass)}>
+                            {stat.contextIcon && <stat.contextIcon size={12} strokeWidth={3}/>}
+                            <span>{stat.contextValue}</span>
+                            <span className="font-medium hidden sm:inline">{stat.contextLabel}</span>
+                        </div>
                     </div>
                     <div className="flex-grow flex items-center justify-center">
                         <h3 className="font-body text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white truncate" title={String(stat.value)}>{stat.value}</h3>
