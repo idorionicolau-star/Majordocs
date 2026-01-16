@@ -61,7 +61,7 @@ export default function DashboardPage() {
               <AccordionTrigger className="w-full p-0 hover:no-underline">
                 <CardHeader className="p-6 sm:p-8 flex-row items-center justify-between w-full">
                   <div className="text-left">
-                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2">
+                    <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
                       <Book /> Gestor de Catálogo
                     </CardTitle>
                     <CardDescription>

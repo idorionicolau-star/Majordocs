@@ -77,7 +77,7 @@ export function TopSales() {
     <Card className="glass-card shadow-sm">
       <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2">
+          <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
             <Trophy />
             Top 3 Produtos Mais Vendidos
           </CardTitle>

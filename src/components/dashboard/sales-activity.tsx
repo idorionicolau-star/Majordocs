@@ -30,7 +30,7 @@ export function SalesActivity() {
   return (
     <Card className="glass-card shadow-sm">
       <CardHeader>
-        <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2">
+        <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
             <Activity />
             Atividade de Vendas
         </CardTitle>

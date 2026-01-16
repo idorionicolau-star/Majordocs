@@ -95,7 +95,7 @@ export function StatsCards() {
                         <div className="flex flex-col">
                             <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
                             <div className="flex items-end gap-2">
-                                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{stat.value}</h3>
+                                <h3 className="font-body text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">{stat.value}</h3>
                             </div>
                         </div>
                     </Card>
@@ -122,7 +122,7 @@ export function StatsCards() {
                     <div className="flex flex-col">
                         <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
                         <div className="flex items-end gap-2">
-                            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white truncate" title={String(stat.value)}>{stat.value}</h3>
+                            <h3 className="font-body text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white truncate" title={String(stat.value)}>{stat.value}</h3>
                         </div>
                     </div>
                     <div className={cn(
