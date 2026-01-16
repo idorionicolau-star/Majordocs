@@ -2,13 +2,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Wifi, WifiOff, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Wifi, WifiOff } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export function ConnectionStatus() {
   const [isOnline, setIsOnline] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false); // Kept for potential future use (e.g., triggered by Firestore)
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.navigator !== 'undefined') {
@@ -25,14 +24,6 @@ export function ConnectionStatus() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
-
-  const handleForceSync = () => {
-    if (!isOnline) return;
-    setIsSyncing(true);
-    setTimeout(() => {
-      setIsSyncing(false);
-    }, 2000);
-  };
 
   const status = isSyncing ? 'syncing' : isOnline ? 'online' : 'offline';
   
@@ -56,7 +47,7 @@ export function ConnectionStatus() {
 
   return (
     <TooltipProvider>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center">
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="flex items-center gap-2 text-sm p-2 rounded-md hover:bg-white/10">
@@ -66,16 +57,6 @@ export function ConnectionStatus() {
           </TooltipTrigger>
           <TooltipContent>
             <p>{statusInfo[status].tooltip}</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={handleForceSync} disabled={!isOnline || isSyncing} className="h-8 w-8">
-                <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Forçar Sincronização</p>
           </TooltipContent>
         </Tooltip>
       </div>
