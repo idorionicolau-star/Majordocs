@@ -22,8 +22,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { InventoryContext } from "@/context/inventory-context";
 
-// Dynamically import the StockChart component with SSR turned off
+// Dynamically import the chart components with SSR turned off
 const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[438px] w-full" />,
+});
+
+const MonthlySalesChart = dynamic(() => import("@/components/dashboard/monthly-sales-chart").then(mod => mod.MonthlySalesChart), {
   ssr: false,
   loading: () => <Skeleton className="h-[438px] w-full" />,
 });
@@ -65,8 +70,13 @@ export default function DashboardPage() {
         </ScrollArea>
       </div>
       <StatsCards />
-      <div className="grid grid-cols-1 gap-6">
-        <StockChart />
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="lg:col-span-3">
+          <MonthlySalesChart />
+        </div>
+        <div className="lg:col-span-2">
+          <StockChart />
+        </div>
       </div>
     </div>
   );

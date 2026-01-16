@@ -41,6 +41,8 @@ import {
 } from 'firebase/firestore';
 import { allPermissions } from '@/lib/data';
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
+import { format, eachMonthOfInterval, subMonths } from 'date-fns';
+import { pt } from 'date-fns/locale';
 
 type CatalogProduct = Omit<
   Product,
@@ -75,6 +77,8 @@ interface InventoryContextType {
   isMultiLocation: boolean;
   companyData: Company | null;
   notifications: AppNotification[];
+  monthlySalesChartData: { name: string; vendas: number }[];
+
 
   // Functions
   addProduct: (
@@ -125,6 +129,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [monthlySalesChartData, setMonthlySalesChartData] = useState<{ name: string; vendas: number }[]>([]);
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -404,6 +409,36 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       return () => unsub();
     }
   }, [companyDocRef]);
+
+  useEffect(() => {
+    const end = new Date();
+    const start = subMonths(end, 5);
+    const monthInterval = eachMonthOfInterval({ start, end });
+
+    if (!salesData) {
+        const emptyData = monthInterval.map(d => ({
+            name: format(d, 'MMM', { locale: pt }).replace('.', ''),
+            vendas: 0,
+        }));
+        setMonthlySalesChartData(emptyData);
+        return;
+    }
+
+    const chartData = monthInterval.map(monthStart => {
+        const monthSales = salesData.filter(s => {
+            const saleDate = new Date(s.date);
+            return saleDate.getFullYear() === monthStart.getFullYear() && saleDate.getMonth() === monthStart.getMonth();
+        }).reduce((sum, s) => sum + s.totalValue, 0);
+
+        const monthName = format(monthStart, 'MMM', { locale: pt });
+        return {
+            name: monthName.charAt(0).toUpperCase() + monthName.slice(1).replace('.', ''),
+            vendas: monthSales,
+        };
+    });
+    setMonthlySalesChartData(chartData);
+
+  }, [salesData]);
 
   const triggerEmailAlert = useCallback(async (payload: any) => {
     const settings = companyData?.notificationSettings;
@@ -836,7 +871,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     canView, canEdit,
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
-    locations, isMultiLocation, notifications,
+    locations, isMultiLocation, notifications, monthlySalesChartData,
     addProduct, updateProduct, deleteProduct, clearProductsCollection,
     transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
     deleteSale, deleteProduction, deleteOrder,
