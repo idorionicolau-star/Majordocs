@@ -93,10 +93,8 @@ export function StatsCards() {
                             }}
                         />
                         <div className="flex flex-col">
+                            <h3 className="font-body text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">{stat.value}</h3>
                             <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
-                            <div className="flex items-end gap-2">
-                                <h3 className="font-body text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">{stat.value}</h3>
-                            </div>
                         </div>
                     </Card>
                 </div>
@@ -120,10 +118,8 @@ export function StatsCards() {
                         }}
                     />
                     <div className="flex flex-col">
+                        <h3 className="font-body text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white truncate" title={String(stat.value)}>{stat.value}</h3>
                         <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
-                        <div className="flex items-end gap-2">
-                            <h3 className="font-body text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white truncate" title={String(stat.value)}>{stat.value}</h3>
-                        </div>
                     </div>
                     <div className={cn(
                         "absolute top-4 right-4 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold", 
