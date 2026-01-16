@@ -25,7 +25,6 @@ export const mainNavItems: NavItem[] = [
   { title: 'Análise', href: '/analysis', id: 'analysis', icon: BarChart3 },
   { title: 'Relatórios', href: '/reports', id: 'reports', icon: FileText },
   { title: 'Funcionários', href: '/users', id: 'users', icon: Users, adminOnly: true },
-  { title: 'Ajustes', href: '/settings', id: 'settings', icon: Settings },
 ];
 
 export const allPermissions: Readonly<{ id: ModulePermission; label: string; adminOnly: boolean; }[]> = [

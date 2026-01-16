@@ -4,6 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { UserNav } from "@/components/user-nav";
+import { Button } from "@/components/ui/button";
+import { Settings } from "lucide-react";
 
 export function Header() {
   
@@ -20,6 +22,12 @@ export function Header() {
       {/* Right side icons */}
       <div className="flex items-center gap-1 md:gap-4">
         <NotificationsDropdown />
+        <Button asChild variant="ghost" size="icon">
+          <Link href="/settings">
+            <Settings className="h-5 w-5" />
+            <span className="sr-only">Ajustes</span>
+          </Link>
+        </Button>
         <UserNav />
       </div>
     </header>
