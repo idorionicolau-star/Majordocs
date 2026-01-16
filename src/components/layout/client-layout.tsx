@@ -3,13 +3,14 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
 import { Header } from './header';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BottomNav } from './bottom-nav';
 import { Sidebar } from './sidebar';
 import { cn } from '@/lib/utils';
+import { CommandMenu } from '@/components/command-menu';
 
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -18,7 +19,19 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const authContext = React.useContext(InventoryContext);
   const isAuthPage = pathname === '/login' || pathname === '/register';
   
-  const [isSidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [openCommandMenu, setOpenCommandMenu] = useState(false);
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setOpenCommandMenu((open) => !open)
+      }
+    }
+    document.addEventListener("keydown", down)
+    return () => document.removeEventListener("keydown", down)
+  }, []);
 
 
   React.useEffect(() => {
@@ -76,7 +89,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             "flex flex-col flex-1 transition-all duration-300 ease-in-out",
             isSidebarCollapsed ? "md:ml-20" : "md:ml-64"
         )}>
-            <Header />
+            <Header onSearchClick={() => setOpenCommandMenu(true)} />
             <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto main-content">
                 <AnimatePresence mode="wait">
                 <motion.div
@@ -92,6 +105,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             </main>
         </div>
       <BottomNav />
+      <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
     </div>
   );
 }
