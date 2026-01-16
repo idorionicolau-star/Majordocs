@@ -44,7 +44,7 @@ export function StockChart() {
 
   if (loading) {
       return (
-        <Card className="glass-card overflow-hidden shadow-xl">
+        <Card className="glass-card overflow-hidden shadow-sm">
              <CardHeader className="p-6 md:p-8">
                 <Skeleton className="h-8 w-2/3" />
                 <Skeleton className="h-4 w-1/2" />
@@ -58,7 +58,7 @@ export function StockChart() {
 
 
   return (
-    <Card className="glass-card overflow-hidden shadow-xl">
+    <Card className="glass-card overflow-hidden shadow-sm">
       <CardHeader className="p-6 md:p-8">
         <CardTitle className="font-headline font-[900] tracking-tighter text-xl md:text-2xl">Estoque por Categoria</CardTitle>
         <CardDescription>Distribuição do total de itens em estoque</CardDescription>

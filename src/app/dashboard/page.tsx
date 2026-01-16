@@ -57,7 +57,7 @@ export default function DashboardPage() {
       {canView('settings') && (
         <Accordion type="single" collapsible className="w-full" defaultValue="catalog-manager">
           <AccordionItem value="catalog-manager" className="border-0">
-            <Card className="glass-card shadow-xl overflow-hidden">
+            <Card className="glass-card shadow-sm overflow-hidden">
               <AccordionTrigger className="w-full p-0 hover:no-underline">
                 <CardHeader className="p-6 sm:p-8 flex-row items-center justify-between w-full">
                   <div className="text-left">

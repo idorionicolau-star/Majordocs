@@ -28,7 +28,7 @@ export function SalesActivity() {
     .slice(0, 5);
 
   return (
-    <Card className="glass-card shadow-xl">
+    <Card className="glass-card shadow-sm">
       <CardHeader>
         <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2">
             <Activity />

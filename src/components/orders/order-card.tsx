@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Order } from "@/lib/types";
@@ -98,7 +99,7 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-        <Card className="glass-card flex flex-col h-full group p-4 shadow-xl">
+        <Card className="glass-card flex flex-col h-full group p-4 shadow-sm">
             <CardHeader className="p-2">
                  <div className="flex items-start justify-between">
                     <div>
