@@ -6,13 +6,14 @@ import { useContext } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Box, ShoppingCart, Hammer, ClipboardList, Book } from "lucide-react";
+import { Box, ShoppingCart, Hammer, ClipboardList, Book, ChevronDown } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { InventoryContext } from "@/context/inventory-context";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SalesActivity } from "@/components/dashboard/sales-activity";
 import { TopSales } from "@/components/dashboard/top-sales";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export default function DashboardPage() {
   const { canView, canEdit } = useContext(InventoryContext) || { canView: () => false, canEdit: () => false };
@@ -54,17 +55,30 @@ export default function DashboardPage() {
       <SalesActivity />
 
       {canView('settings') && (
-        <Card className="glass-card shadow-xl">
-          <CardHeader className="p-6 sm:p-8">
-              <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2"><Book /> Gestor de Catálogo</CardTitle>
-              <CardDescription>
-                  Gerencie os produtos, categorias e importe dados em massa.
-              </CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 sm:p-8 pt-0">
-              <CatalogManager />
-          </CardContent>
-        </Card>
+        <Accordion type="single" collapsible className="w-full" defaultValue="catalog-manager">
+          <AccordionItem value="catalog-manager" className="border-0">
+            <Card className="glass-card shadow-xl overflow-hidden">
+              <AccordionTrigger className="w-full p-0 hover:no-underline">
+                <CardHeader className="p-6 sm:p-8 flex-row items-center justify-between w-full">
+                  <div className="text-left">
+                    <CardTitle className="font-headline font-[900] tracking-tighter text-xl sm:text-2xl flex items-center gap-2">
+                      <Book /> Gestor de Catálogo
+                    </CardTitle>
+                    <CardDescription>
+                      Expanda para gerir produtos, categorias e importação de dados.
+                    </CardDescription>
+                  </div>
+                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                </CardHeader>
+              </AccordionTrigger>
+              <AccordionContent>
+                <CardContent className="p-6 sm:p-8 pt-0">
+                  <CatalogManager />
+                </CardContent>
+              </AccordionContent>
+            </Card>
+          </AccordionItem>
+        </Accordion>
       )}
     </div>
   );
