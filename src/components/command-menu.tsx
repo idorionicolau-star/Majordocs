@@ -9,11 +9,9 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from "@/components/ui/command"
-import { mainNavItems } from "@/lib/data"
 import { InventoryContext } from "@/context/inventory-context"
-import type { ModulePermission, Product } from "@/lib/types"
+import type { Product } from "@/lib/types"
 import { Box } from "lucide-react"
 
 interface CommandMenuProps {
@@ -23,12 +21,7 @@ interface CommandMenuProps {
 
 export function CommandMenu({ open, setOpen }: CommandMenuProps) {
   const router = useRouter()
-  const { canView, products } = React.useContext(InventoryContext) || { canView: () => false, products: [] };
-
-  const navItems = mainNavItems.filter(item => {
-    if (item.isSubItem) return false;
-    return canView(item.id as ModulePermission);
-  });
+  const { products } = React.useContext(InventoryContext) || { products: [] };
 
   const runCommand = React.useCallback((command: () => unknown) => {
     setOpen(false)
@@ -49,24 +42,9 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Pesquisar por páginas ou produtos..." />
+      <CommandInput placeholder="Pesquisar por produto..." />
       <CommandList>
-        <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
-        <CommandGroup heading="Navegação">
-          {navItems.map((item) => (
-            <CommandItem
-              key={item.href}
-              value={item.title}
-              onSelect={() => {
-                runCommand(() => router.push(item.href))
-              }}
-            >
-              <item.icon className="mr-2 h-4 w-4" />
-              {item.title}
-            </CommandItem>
-          ))}
-        </CommandGroup>
-        {uniqueProducts.length > 0 && <CommandSeparator />}
+        <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
         {uniqueProducts.length > 0 && (
             <CommandGroup heading="Produtos do Inventário">
                 {uniqueProducts.map((product: Product) => (

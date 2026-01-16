@@ -24,14 +24,10 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
       <div className="hidden md:flex flex-1">
         <Button
             variant="outline"
-            className="relative w-full max-w-sm pl-10 pr-4 py-2 h-11 justify-start items-center text-left font-normal bg-white/10 text-primary-foreground/60 hover:bg-white/20 border-white/20 focus-visible:ring-offset-primary focus-visible:bg-white/20 hover:text-primary-foreground/80"
+            className="relative w-full max-w-sm px-4 py-2 h-11 justify-center items-center text-center font-normal bg-white/10 text-primary-foreground/60 hover:bg-white/20 border-white/20 focus-visible:ring-offset-primary focus-visible:bg-white/20 hover:text-primary-foreground/80"
             onClick={onSearchClick}
         >
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5" />
           <span>Pesquisar...</span>
-          <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-6 select-none items-center gap-1 rounded border bg-background/20 px-2 font-mono text-[11px] font-bold text-primary-foreground/80 sm:flex">
-            Ctrl K
-          </kbd>
         </Button>
       </div>
 
