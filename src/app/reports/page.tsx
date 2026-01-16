@@ -2,10 +2,11 @@
 "use client";
 
 import { useState, useMemo, useContext } from 'react';
-import { format, startOfDay, isSameDay } from 'date-fns';
+import { format } from 'date-fns';
+import { pt } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Printer, DollarSign, Hash, Box, Trash2 } from 'lucide-react';
+import { Printer, DollarSign, Hash, Box, Trash2, TrendingUp, Trophy } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { Sale } from '@/lib/types';
 import {
@@ -38,24 +39,40 @@ export default function ReportsPage() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
 
-  const salesForDate = useMemo(() => {
+  const salesForMonth = useMemo(() => {
     if (!selectedDate) return [];
-    return sales.filter(sale => isSameDay(new Date(sale.date), selectedDate));
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth();
+    return sales.filter(sale => {
+        const saleDate = new Date(sale.date);
+        return saleDate.getFullYear() === year && saleDate.getMonth() === month;
+    });
   }, [selectedDate, sales]);
 
   const reportSummary = useMemo(() => {
-    const totalSales = salesForDate.length;
-    const totalValue = salesForDate.reduce((sum, sale) => sum + sale.totalValue, 0);
-    const totalItems = salesForDate.reduce((sum, sale) => sum + sale.quantity, 0);
-    const uniqueProducts = new Set(salesForDate.map(s => s.productId)).size;
+    const totalSales = salesForMonth.length;
+    const totalValue = salesForMonth.reduce((sum, sale) => sum + sale.totalValue, 0);
+    const totalItems = salesForMonth.reduce((sum, sale) => sum + sale.quantity, 0);
+    const averageTicket = totalSales > 0 ? totalValue / totalSales : 0;
+    
+    const productQuantities = salesForMonth.reduce((acc, sale) => {
+        acc[sale.productName] = (acc[sale.productName] || 0) + sale.quantity;
+        return acc;
+    }, {} as Record<string, number>);
+
+    const bestSellingProduct = Object.entries(productQuantities).reduce((best, current) => {
+        return current[1] > best.quantity ? { name: current[0], quantity: current[1] } : best;
+    }, { name: 'N/A', quantity: 0 });
+
 
     return {
       totalSales,
       totalValue,
       totalItems,
-      uniqueProducts,
+      averageTicket,
+      bestSellingProduct
     };
-  }, [salesForDate]);
+  }, [salesForMonth]);
   
   const handleClearSales = async () => {
     if (clearSales) {
@@ -68,7 +85,7 @@ export default function ReportsPage() {
     if (!selectedDate) return;
     const printWindow = window.open('', '', 'height=800,width=800');
     if (printWindow) {
-        printWindow.document.write('<!DOCTYPE html><html><head><title>Relatório de Vendas</title>');
+        printWindow.document.write('<!DOCTYPE html><html><head><title>Relatório Mensal de Vendas</title>');
         printWindow.document.write(`
             <link rel="preconnect" href="https://fonts.googleapis.com">
             <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -82,7 +99,7 @@ export default function ReportsPage() {
                 .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: #3498db; margin: 0; }
                 .logo { display: flex; flex-direction: column; align-items: flex-start; }
                 .logo span { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: bold; color: #3498db; }
-                .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 2rem 0; }
+                .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin: 2rem 0; }
                 .summary-card { background-color: #f9fafb; padding: 1rem; border-radius: 6px; }
                 .summary-card strong { display: block; margin-bottom: 0.5rem; color: #374151; font-family: 'Space Grotesk', sans-serif; }
                 table { width: 100%; border-collapse: collapse; margin-top: 2rem; font-size: 12px; }
@@ -102,22 +119,23 @@ export default function ReportsPage() {
                  <div class="logo">
                     <span>${companyData?.name || 'MajorStockX'}</span>
                 </div>
-                <h1>Relatório de Vendas</h1>
+                <h1>Relatório Mensal de Vendas</h1>
             </div>
-            <h2>Dia: ${format(selectedDate, 'dd/MM/yyyy')}</h2>
+            <h2>Mês: ${format(selectedDate, 'MMMM yyyy', { locale: pt })}</h2>
         `);
 
         printWindow.document.write('<div class="summary-grid">');
         printWindow.document.write(`<div class="summary-card"><strong>Total de Vendas</strong><span>${reportSummary.totalSales}</span></div>`);
         printWindow.document.write(`<div class="summary-card"><strong>Valor Total</strong><span>${formatCurrency(reportSummary.totalValue)}</span></div>`);
-        printWindow.document.write(`<div class="summary-card"><strong>Itens Vendidos</strong><span>${reportSummary.totalItems}</span></div>`);
-        printWindow.document.write(`<div class="summary-card"><strong>Produtos Distintos</strong><span>${reportSummary.uniqueProducts}</span></div>`);
+        printWindow.document.write(`<div class="summary-card"><strong>Ticket Médio</strong><span>${formatCurrency(reportSummary.averageTicket)}</span></div>`);
+        printWindow.document.write(`<div class="summary-card"><strong>Total de Itens</strong><span>${reportSummary.totalItems}</span></div>`);
+        printWindow.document.write(`<div class="summary-card"><strong>Produto Mais Vendido</strong><span>${reportSummary.bestSellingProduct.name} (${reportSummary.bestSellingProduct.quantity} un)</span></div>`);
         printWindow.document.write('</div>');
 
         printWindow.document.write('<h3>Detalhes das Vendas</h3>');
-        printWindow.document.write('<table><thead><tr><th>Guia N.º</th><th>Produto</th><th>Qtd</th><th>Valor Total</th><th>Vendedor</th></tr></thead><tbody>');
-        salesForDate.forEach(sale => {
-            printWindow.document.write(`<tr><td>${sale.guideNumber}</td><td>${sale.productName}</td><td>${sale.quantity}</td><td>${formatCurrency(sale.totalValue)}</td><td>${sale.soldBy}</td></tr>`);
+        printWindow.document.write('<table><thead><tr><th>Data</th><th>Guia N.º</th><th>Produto</th><th>Qtd</th><th>Valor Total</th><th>Vendedor</th></tr></thead><tbody>');
+        salesForMonth.forEach(sale => {
+            printWindow.document.write(`<tr><td>${format(new Date(sale.date), 'dd/MM/yy')}</td><td>${sale.guideNumber}</td><td>${sale.productName}</td><td>${sale.quantity}</td><td>${formatCurrency(sale.totalValue)}</td><td>${sale.soldBy}</td></tr>`);
         });
         printWindow.document.write('</tbody></table>');
         
@@ -137,7 +155,7 @@ export default function ReportsPage() {
       <div className="space-y-4">
         <Skeleton className="h-12 w-1/3" />
         <Skeleton className="h-8 w-1/4" />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
@@ -170,9 +188,9 @@ export default function ReportsPage() {
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
         <div className="flex flex-col md:flex-row justify-between items-start gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-headline font-bold">Relatórios de Vendas</h1>
+            <h1 className="text-2xl md:text-3xl font-headline font-bold">Relatório Mensal de Vendas</h1>
             <p className="text-muted-foreground">
-              Selecione uma data para visualizar o relatório de vendas.
+              Selecione uma data para visualizar o relatório do mês correspondente.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -184,24 +202,25 @@ export default function ReportsPage() {
           </div>
         </div>
         
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
             <StatCard icon={Hash} title="Total de Vendas" value={reportSummary.totalSales} />
             <StatCard icon={DollarSign} title="Valor Total" value={formatCurrency(reportSummary.totalValue)} />
-            <StatCard icon={Box} title="Total de Itens" value={reportSummary.totalItems} />
-            <StatCard icon={Box} title="Produtos Distintos" value={reportSummary.uniqueProducts} />
+            <StatCard icon={TrendingUp} title="Ticket Médio" value={formatCurrency(reportSummary.averageTicket)} />
+            <StatCard icon={Trophy} title="Mais Vendido" value={reportSummary.bestSellingProduct.name} subValue={`${reportSummary.bestSellingProduct.quantity} un.`} />
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Detalhes das Vendas do Dia</CardTitle>
+            <CardTitle>Detalhes das Vendas do Mês</CardTitle>
             <CardDescription>
-              {selectedDate ? `Todas as vendas registadas em ${format(selectedDate, 'dd/MM/yyyy')}.` : "Nenhuma data selecionada."}
+              {selectedDate ? `Todas as vendas registadas em ${format(selectedDate, 'MMMM yyyy', { locale: pt })}.` : "Nenhuma data selecionada."}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[100px]">Data</TableHead>
                   <TableHead>Guia N.º</TableHead>
                   <TableHead>Produto</TableHead>
                   <TableHead className="text-right">Quantidade</TableHead>
@@ -210,9 +229,10 @@ export default function ReportsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {salesForDate.length > 0 ? (
-                  salesForDate.map((sale: Sale) => (
+                {salesForMonth.length > 0 ? (
+                  salesForMonth.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
                     <TableRow key={sale.id}>
+                      <TableCell>{format(new Date(sale.date), 'dd/MM/yy')}</TableCell>
                       <TableCell className="font-medium">{sale.guideNumber}</TableCell>
                       <TableCell>{sale.productName}</TableCell>
                       <TableCell className="text-right">{sale.quantity}</TableCell>
@@ -222,8 +242,8 @@ export default function ReportsPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      Nenhuma venda encontrada para esta data.
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      Nenhuma venda encontrada para este mês.
                     </TableCell>
                   </TableRow>
                 )}
@@ -255,19 +275,18 @@ interface StatCardProps {
     icon: React.ElementType;
     title: string;
     value: string | number;
+    subValue?: string;
 }
 
-const StatCard = ({ icon: Icon, title, value }: StatCardProps) => (
+const StatCard = ({ icon: Icon, title, value, subValue }: StatCardProps) => (
     <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{title}</CardTitle>
             <Icon className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-            <div className="text-2xl font-bold">{value}</div>
+            <div className="text-2xl font-bold truncate">{value}</div>
+            {subValue && <p className="text-xs text-muted-foreground">{subValue}</p>}
         </CardContent>
     </Card>
 );
-
-
-    
