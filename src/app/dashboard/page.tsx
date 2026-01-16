@@ -1,41 +1,16 @@
-
 "use client";
 
 import { StatsCards } from "@/components/dashboard/stats-cards";
-import dynamic from "next/dynamic";
-import { Skeleton } from "@/components/ui/skeleton";
-import { AddProductDialog } from "@/components/inventory/add-product-dialog";
-import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
-import { AddProductionDialog } from "@/components/production/add-production-dialog";
-import { products, sales, productions, orders as initialOrders } from "@/lib/data";
-import { useState, useContext } from "react";
-import type { Product, Sale, Production, Location, Order, ModulePermission, PermissionLevel } from "@/lib/types";
-import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
-import { AddOrderDialog } from "@/components/orders/add-order-dialog";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { useContext } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Box, ShoppingCart, Hammer, ClipboardList, Book } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CatalogManager } from "@/components/settings/catalog-manager";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { InventoryContext } from "@/context/inventory-context";
 
-// Dynamically import the chart components with SSR turned off
-const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
-  ssr: false,
-  loading: () => <Skeleton className="h-[438px] w-full" />,
-});
-
-const MonthlySalesChart = dynamic(() => import("@/components/dashboard/monthly-sales-chart").then(mod => mod.MonthlySalesChart), {
-  ssr: false,
-  loading: () => <Skeleton className="h-[438px] w-full" />,
-});
-
 export default function DashboardPage() {
-  const router = useRouter();
-  const { user, canView, canEdit } = useContext(InventoryContext) || { user: null, canView: () => false, canEdit: () => false };
+  const { canView, canEdit } = useContext(InventoryContext) || { canView: () => false, canEdit: () => false };
   
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
@@ -70,12 +45,6 @@ export default function DashboardPage() {
         </ScrollArea>
       </div>
       <StatsCards />
-      <div className="grid grid-cols-1 gap-6">
-        <StockChart />
-      </div>
-      <div className="grid grid-cols-1 gap-6">
-        <MonthlySalesChart />
-      </div>
     </div>
   );
 }
