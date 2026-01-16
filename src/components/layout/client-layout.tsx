@@ -2,26 +2,26 @@
 
 'use client';
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import React, { useState, useEffect, useContext } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import React from 'react';
 import { InventoryContext } from '@/context/inventory-context';
 import { Header } from './header';
 import { motion, AnimatePresence } from 'framer-motion';
-import { mainNavItems } from '@/lib/data';
-import type { ModulePermission } from '@/lib/types';
-import { Button } from '../ui/button';
-import Link from 'next/link';
 import { BottomNav } from './bottom-nav';
+import { Sidebar } from './sidebar';
+import { cn } from '@/lib/utils';
 
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const authContext = useContext(InventoryContext);
+  const authContext = React.useContext(InventoryContext);
   const isAuthPage = pathname === '/login' || pathname === '/register';
-  const { canView } = useContext(InventoryContext) || { canView: () => false };
   
-  useEffect(() => {
+  const [isSidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+
+
+  React.useEffect(() => {
     if (authContext?.loading) {
       return; 
     }
@@ -39,8 +39,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   }, [authContext?.loading, authContext?.firebaseUser, pathname, router, isAuthPage]);
 
 
-  const availableNavItems = mainNavItems.filter(item => canView(item.id as ModulePermission));
-  
   if (authContext?.loading || (!authContext?.firebaseUser && !isAuthPage)) {
      return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -69,21 +67,30 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   }
   
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background overflow-x-hidden">
-      <Header />
-      <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-hidden relative main-content">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-          >
-             {children}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+    <div className="flex min-h-screen w-full bg-muted/40">
+        <Sidebar 
+            isCollapsed={isSidebarCollapsed} 
+            onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
+        />
+        <div className={cn(
+            "flex flex-col flex-1 transition-all duration-300 ease-in-out",
+            isSidebarCollapsed ? "md:ml-20" : "md:ml-64"
+        )}>
+            <Header />
+            <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto main-content">
+                <AnimatePresence mode="wait">
+                <motion.div
+                    key={pathname}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                >
+                    {children}
+                </motion.div>
+                </AnimatePresence>
+            </main>
+        </div>
       <BottomNav />
     </div>
   );
