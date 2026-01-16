@@ -75,6 +75,9 @@ export type Sale = {
   productName: string;
   quantity: number;
   unitPrice: number;
+  subtotal: number;
+  discount?: number;
+  vat?: number;
   totalValue: number;
   soldBy: string;
   guideNumber: string;

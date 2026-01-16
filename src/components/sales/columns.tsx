@@ -46,7 +46,10 @@ const handlePrintGuide = (sale: Sale, companyName: string | undefined) => {
               table { width: 100%; border-collapse: collapse; margin-top: 2rem; }
               th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
               th { background-color: #f9fafb; font-family: 'Space Grotesk', sans-serif; }
-              .total-row td { font-weight: bold; font-size: 1.1rem; }
+              .totals-table { width: 50%; margin-left: auto; margin-top: 1rem; }
+              .totals-table td { border: none; }
+              .totals-table tr td:first-child { text-align: right; font-weight: bold; padding-right: 1rem; }
+              .final-total { font-size: 1.2rem; border-top: 2px solid #333; padding-top: 0.5rem; }
               .footer { text-align: center; margin-top: 3rem; font-size: 0.8rem; color: #999; }
               @media print {
                 body { margin: 0; }
@@ -73,11 +76,21 @@ const handlePrintGuide = (sale: Sale, companyName: string | undefined) => {
           </div>
       `);
       
-      printWindow.document.write('<table><thead><tr><th>Produto</th><th>Quantidade</th><th>Preço Unit.</th><th>Total</th></tr></thead><tbody>');
-      const unitPrice = sale.totalValue / sale.quantity;
-      printWindow.document.write(`<tr><td>${sale.productName}</td><td>${sale.quantity}</td><td>${formatCurrency(unitPrice)}</td><td>${formatCurrency(sale.totalValue)}</td></tr>`);
-      printWindow.document.write(`<tr class="total-row"><td colspan="3" style="text-align: right;"><strong>Total Geral:</strong></td><td><strong>${formatCurrency(sale.totalValue)}</strong></td></tr>`);
+      printWindow.document.write('<table><thead><tr><th>Produto</th><th>Quantidade</th><th>Preço Unit.</th><th>Subtotal</th></tr></thead><tbody>');
+      printWindow.document.write(`<tr><td>${sale.productName}</td><td>${sale.quantity}</td><td>${formatCurrency(sale.unitPrice)}</td><td>${formatCurrency(sale.subtotal)}</td></tr>`);
       printWindow.document.write('</tbody></table>');
+
+      let totalsHtml = '<table class="totals-table">';
+      totalsHtml += `<tr><td>Subtotal:</td><td>${formatCurrency(sale.subtotal)}</td></tr>`;
+      if (sale.discount && sale.discount > 0) {
+        totalsHtml += `<tr><td>Desconto:</td><td>-${formatCurrency(sale.discount)}</td></tr>`;
+      }
+      if (sale.vat && sale.vat > 0) {
+         totalsHtml += `<tr><td>IVA:</td><td>${formatCurrency(sale.vat)}</td></tr>`;
+      }
+      totalsHtml += `<tr class="final-total"><td>Total:</td><td>${formatCurrency(sale.totalValue)}</td></tr>`;
+      totalsHtml += '</table>';
+      printWindow.document.write(totalsHtml);
 
       printWindow.document.write('<div style="margin-top: 4rem;"><p>Recebido por: ___________________________________</p><p>Data: ____/____/______</p></div>');
       printWindow.document.write(`<div class="footer"><p>${companyName || 'MajorStockX'} &copy; ' + new Date().getFullYear() + '</p></div>`);
@@ -87,7 +100,6 @@ const handlePrintGuide = (sale: Sale, companyName: string | undefined) => {
       setTimeout(() => {
         printWindow.focus();
         printWindow.print();
-        printWindow.close();
       }, 500);
   }
 };

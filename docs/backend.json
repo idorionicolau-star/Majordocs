@@ -1,5 +1,4 @@
 
-
 {
   "entities": {
     "User": {
@@ -107,13 +106,16 @@
         "productName": { "type": "string" },
         "quantity": { "type": "number" },
         "unitPrice": { "type": "number" },
+        "subtotal": { "type": "number" },
+        "discount": { "type": "number" },
+        "vat": { "type": "number" },
         "totalValue": { "type": "number" },
         "soldBy": { "type": "string" },
         "guideNumber": { "type": "string" },
         "location": { "type": "string" },
         "status": { "type": "string", "enum": ["Pago", "Levantado"] }
       },
-      "required": ["date", "productId", "productName", "quantity", "totalValue", "soldBy", "guideNumber", "status"]
+      "required": ["date", "productId", "productName", "quantity", "unitPrice", "subtotal", "totalValue", "soldBy", "guideNumber", "status"]
     },
     "Production": {
       "title": "Production",

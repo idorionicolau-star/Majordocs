@@ -36,14 +36,17 @@ import { formatCurrency } from '@/lib/utils';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { InventoryContext } from '@/context/inventory-context';
 import { ScrollArea } from '../ui/scroll-area';
+import { Separator } from '../ui/separator';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
-  quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
-  unitPrice: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
+  quantity: z.coerce.number().min(1, "A quantidade deve ser pelo menos 1.").optional(),
+  unitPrice: z.coerce.number().min(0, "O preço não pode ser negativo.").optional(),
   location: z.string().optional(),
+  discount: z.coerce.number().min(0, "O desconto não pode ser negativo.").optional(),
+  vatPercentage: z.coerce.number().min(0, "O IVA deve ser um valor positivo.").max(100).optional(),
 });
 
 type AddSaleFormValues = z.infer<typeof formSchema>;
@@ -71,6 +74,8 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
     defaultValues: {
       productName: "",
       location: "",
+      discount: 0,
+      vatPercentage: 17, // Default VAT
     },
   });
   
@@ -83,7 +88,11 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
 
       form.reset({
         productName: "",
+        quantity: undefined,
+        unitPrice: undefined,
         location: finalLocation,
+        discount: 0,
+        vatPercentage: 17,
       });
     }
   }, [open, form, locations]);
@@ -92,6 +101,15 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
   const watchedQuantity = useWatch({ control: form.control, name: 'quantity' });
   const watchedUnitPrice = useWatch({ control: form.control, name: 'unitPrice' });
   const watchedLocation = useWatch({ control: form.control, name: 'location' });
+  const watchedDiscount = useWatch({ control: form.control, name: 'discount' });
+  const watchedVatPercentage = useWatch({ control: form.control, name: 'vatPercentage' });
+
+  const subtotal = (watchedUnitPrice || 0) * (watchedQuantity || 0);
+  const discount = watchedDiscount || 0;
+  const totalAfterDiscount = subtotal > discount ? subtotal - discount : 0;
+  const vatPercentage = watchedVatPercentage || 0;
+  const vatAmount = totalAfterDiscount * (vatPercentage / 100);
+  const totalValue = totalAfterDiscount + vatAmount;
   
   const productsInStock = useMemo(() => {
     if (!products || !catalogProducts) return [];
@@ -116,13 +134,13 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
     if (product) {
       form.setValue('unitPrice', product.price);
     } else {
-      form.setValue('unitPrice', 0);
+      form.setValue('unitPrice', undefined);
     }
   };
 
 
   useEffect(() => {
-    if(selectedProductInstance){
+    if(selectedProductInstance && watchedQuantity){
       const stockIsSufficient = watchedQuantity <= availableStock;
       if (!stockIsSufficient) {
         form.setError("quantity", { type: "manual", message: `Estoque insuficiente. Disponível: ${availableStock}` });
@@ -130,14 +148,17 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
         form.clearErrors("quantity");
       }
     } else if (watchedProductName && watchedLocation) {
-        form.setError("productName", { type: "manual", message: `Produto sem estoque nesta localização.` });
+        const productExistsInLocation = products.some(p => p.name === watchedProductName && p.location === watchedLocation);
+        if (!productExistsInLocation) {
+            form.setError("productName", { type: "manual", message: `Produto sem estoque nesta localização.` });
+        } else {
+            form.clearErrors("productName");
+        }
     } else {
         form.clearErrors("productName");
     }
-  }, [watchedQuantity, availableStock, selectedProductInstance, watchedProductName, watchedLocation, form]);
+  }, [watchedQuantity, availableStock, selectedProductInstance, watchedProductName, watchedLocation, form, products]);
 
-
-  const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
 
   async function onSubmit(values: AddSaleFormValues) {
     if (!user) {
@@ -149,18 +170,26 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
       form.setError("location", { type: "manual", message: "Selecione uma localização." });
       return;
     }
+
+    if (!values.quantity || !values.unitPrice) {
+       toast({ variant: "destructive", title: "Campos em Falta", description: "Por favor, preencha a quantidade e o preço." });
+       return;
+    }
     
     if (values.location) {
       localStorage.setItem('majorstockx-last-product-location', values.location);
     }
-
+    
     const newSale: Omit<Sale, 'id' | 'guideNumber'> = {
       date: new Date().toISOString(),
       productId: products?.find(p => p.name === values.productName)?.id || 'unknown',
       productName: values.productName,
       quantity: values.quantity,
       unitPrice: values.unitPrice,
-      totalValue: values.quantity * values.unitPrice,
+      subtotal: subtotal,
+      discount: discount,
+      vat: vatAmount,
+      totalValue: totalValue,
       soldBy: user.username,
       status: 'Pago',
       location: values.location,
@@ -175,7 +204,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Registrar Nova Venda</DialogTitle>
           <DialogDescription>
@@ -185,24 +214,6 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
         <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
-              <FormField
-                control={form.control}
-                name="productName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Produto</FormLabel>
-                    <FormControl>
-                      <CatalogProductSelector
-                          products={productsInStock}
-                          categories={catalogCategories || []}
-                          selectedValue={field.value}
-                          onValueChange={handleProductSelect}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               {isMultiLocation && (
                   <FormField
                     control={form.control}
@@ -229,6 +240,25 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                     )}
                   />
                 )}
+              <FormField
+                control={form.control}
+                name="productName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Produto</FormLabel>
+                    <FormControl>
+                      <CatalogProductSelector
+                          products={productsInStock}
+                          categories={catalogCategories || []}
+                          selectedValue={field.value}
+                          onValueChange={handleProductSelect}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                   control={form.control}
@@ -260,10 +290,56 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                       )}
                   />
               </div>
+
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                  control={form.control}
+                  name="discount"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Desconto (Valor Fixo)</FormLabel>
+                      <FormControl>
+                          <Input type="number" min="0" {...field} placeholder="0.00" />
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="vatPercentage"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>IVA (%)</FormLabel>
+                          <FormControl>
+                              <Input type="number" step="1" {...field} placeholder="17" />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+              </div>
               
-              <div className="rounded-lg bg-muted p-4 text-right">
-                  <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
-                  <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
+              <div className="rounded-lg bg-muted p-4 space-y-2 mt-4">
+                  <div className='flex justify-between items-center text-sm'>
+                      <span className='text-muted-foreground'>Subtotal</span>
+                      <span className='font-medium'>{formatCurrency(subtotal)}</span>
+                  </div>
+                  {discount > 0 && (
+                     <div className='flex justify-between items-center text-sm'>
+                        <span className='text-muted-foreground'>Desconto</span>
+                        <span className='font-medium text-red-500'>- {formatCurrency(discount)}</span>
+                    </div>
+                  )}
+                   <div className='flex justify-between items-center text-sm'>
+                      <span className='text-muted-foreground'>IVA ({vatPercentage}%)</span>
+                      <span className='font-medium'>{formatCurrency(vatAmount)}</span>
+                  </div>
+                  <Separator className='my-2 bg-border/50' />
+                  <div className='flex justify-between items-center text-lg'>
+                      <span className='font-bold'>Total</span>
+                      <span className='font-bold'>{formatCurrency(totalValue)}</span>
+                  </div>
               </div>
 
               <DialogFooter className="pt-4">
