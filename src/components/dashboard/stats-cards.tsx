@@ -1,10 +1,9 @@
 
-
 "use client";
 
 import { useContext } from "react";
 import { Card } from "@/components/ui/card";
-import { Box, DollarSign, AlertTriangle, Package, ShoppingCart, Lock, Trophy, Archive } from "lucide-react";
+import { Box, DollarSign, AlertTriangle, Package, ShoppingCart, Lock } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
@@ -13,15 +12,13 @@ import Link from "next/link";
 
 export function StatsCards() {
     const inventoryContext = useContext(InventoryContext);
-    const { products, sales, loading, user, dashboardStats } = inventoryContext || { products: [], sales: [], loading: true, user: null, dashboardStats: { topSellingProduct: { name: 'N/A', quantity: 0 }, highestInventoryProduct: { name: 'N/A', stock: 0 } } };
+    const { products, sales, loading, user } = inventoryContext || { products: [], sales: [], loading: true, user: null };
 
     const isAuthorized = user?.role === 'Admin' || user?.role === 'Dono';
 
     if (loading) {
         return (
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                <Skeleton className="h-[100px] w-full" />
-                <Skeleton className="h-[100px] w-full" />
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 <Skeleton className="h-[100px] w-full" />
                 <Skeleton className="h-[100px] w-full" />
                 <Skeleton className="h-[100px] w-full" />
@@ -70,29 +67,6 @@ export function StatsCards() {
       href: "/sales",
       restricted: true,
     },
-     {
-      title: "Mais Vendido (Mês)",
-      value: dashboardStats.topSellingProduct.name,
-      icon: Trophy,
-      iconClass: "text-[hsl(var(--chart-3))]",
-      contextClass: "text-[hsl(var(--chart-3))] bg-[hsl(var(--chart-3))]/10",
-      contextLabel: "unidades",
-      contextValue: dashboardStats.topSellingProduct.quantity,
-      contextIcon: Package,
-      href: "/sales",
-      restricted: true,
-    },
-    {
-      title: "Maior Inventário",
-      value: dashboardStats.highestInventoryProduct.name,
-      icon: Archive,
-      iconClass: "text-[hsl(var(--chart-5))]",
-      contextClass: "text-[hsl(var(--chart-5))] bg-[hsl(var(--chart-5))]/10",
-      contextLabel: "unidades",
-      contextValue: dashboardStats.highestInventoryProduct.stock,
-      contextIcon: Box,
-      href: "/inventory"
-    },
     {
       title: "Estoque Baixo",
       value: lowStockCount,
@@ -107,7 +81,7 @@ export function StatsCards() {
   ];
 
   return (
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
       {stats.map((stat) => {
         if (stat.restricted && !isAuthorized) {
              return (
