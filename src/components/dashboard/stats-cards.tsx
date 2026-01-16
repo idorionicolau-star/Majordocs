@@ -23,7 +23,7 @@ export function StatsCards() {
 
     if (loading) {
         return (
-            <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
                 <Skeleton className="h-28 w-full" />
                 <Skeleton className="h-28 w-full" />
                 <Skeleton className="h-28 w-full" />
@@ -64,7 +64,7 @@ export function StatsCards() {
       ];
 
   return (
-    <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
       {stats.map((stat) => (
           <Link href={stat.href} key={stat.title} className="group">
             <Card className="transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl">
