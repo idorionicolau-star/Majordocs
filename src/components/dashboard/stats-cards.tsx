@@ -60,7 +60,7 @@ export function StatsCards() {
       icon: AlertTriangle,
       iconClass: "text-[hsl(var(--chart-4))]",
       contextClass: "text-[hsl(var(--chart-4))] bg-[hsl(var(--chart-4))]/10",
-      contextLabel: `dos produtos`,
+      contextLabel: `% dos produtos`,
       contextValue: `${lowStockPercentage.toFixed(0)}%`,
       contextIcon: AlertTriangle,
       href: "/inventory"
@@ -73,29 +73,17 @@ export function StatsCards() {
         if (stat.restricted && !isAuthorized) {
              return (
                  <div key={stat.title}>
-                    <Card className="glass-card relative flex items-center justify-center gap-4 p-4 h-28 text-center shadow-sm">
+                    <Card className="glass-card relative flex flex-col p-4 h-28 text-center shadow-sm">
                         <div className="absolute inset-0 bg-background z-10 flex items-center justify-center">
                             <div className="flex flex-col items-center gap-2 text-muted-foreground font-bold">
                                 <Lock className="h-6 w-6"/>
                                 <span>Acesso Restrito</span>
                             </div>
                         </div>
-                        <stat.icon 
-                            strokeWidth={2.5} 
-                            className={cn(
-                            "h-8 w-8 flex-shrink-0",
-                            `var(--stats-icon-size, h-8 w-8)`,
-                            stat.iconClass
-                            )}
-                            style={{
-                                height: `var(--stats-icon-size, 32px)`,
-                                width: `var(--stats-icon-size, 32px)`,
-                            }}
-                        />
-                        <div className="flex flex-col">
+                        <div className="flex-grow flex items-center justify-center">
                             <h3 className="font-body text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">{stat.value}</h3>
-                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
                         </div>
+                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
                     </Card>
                 </div>
             )
@@ -103,32 +91,16 @@ export function StatsCards() {
         
         return (
             <Link href={stat.href} key={stat.title}>
-                <Card className="glass-card relative flex items-center gap-4 p-4 shadow-sm transition-all duration-300 group h-28">
-                    <stat.icon 
-                        strokeWidth={2.5} 
-                        className={cn(
-                        "h-8 w-8 flex-shrink-0",
-                        "transition-transform group-hover:scale-110",
-                        `var(--stats-icon-size, h-8 w-8)`,
-                        stat.iconClass
-                        )}
-                        style={{
-                            height: `var(--stats-icon-size, 32px)`,
-                            width: `var(--stats-icon-size, 32px)`,
-                        }}
-                    />
-                    <div className="flex flex-col">
-                        <h3 className="font-body text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white truncate" title={String(stat.value)}>{stat.value}</h3>
-                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
-                    </div>
-                    <div className={cn(
-                        "absolute top-4 right-4 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold", 
-                        stat.contextClass
-                    )}>
+                <Card className="glass-card relative flex flex-col p-4 shadow-sm transition-all duration-300 group h-28 text-center">
+                    <div className={cn("absolute top-4 right-4 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold", stat.contextClass)}>
                         {stat.contextIcon && <stat.contextIcon size={12} strokeWidth={3}/>}
                         <span>{stat.contextValue}</span>
                         <span className="font-medium hidden sm:inline">{stat.contextLabel}</span>
                     </div>
+                    <div className="flex-grow flex items-center justify-center">
+                        <h3 className="font-body text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white truncate" title={String(stat.value)}>{stat.value}</h3>
+                    </div>
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{stat.title}</p>
                 </Card>
             </Link>
         )
