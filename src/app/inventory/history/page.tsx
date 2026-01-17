@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useContext, useEffect } from "react";
@@ -11,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { startOfDay, endOfDay, isWithinInterval, format } from 'date-fns';
 import { Button } from "@/components/ui/button";
-import { Trash2, Printer, Download } from "lucide-react";
+import { Trash2, Printer, Download, ArrowLeft } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { MovementCard } from "@/components/inventory/history/movement-card";
+import Link from "next/link";
 
 export default function InventoryHistoryPage() {
   const searchParams = useSearchParams();
@@ -216,7 +218,12 @@ export default function InventoryHistoryPage() {
 
       <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex-1"></div>
+          <Button asChild variant="outline" className="h-12">
+            <Link href="/inventory">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar ao Inventário
+            </Link>
+          </Button>
           <div className="flex items-center gap-2">
             <Button onClick={handleDownloadPdf} variant="outline" className="h-12">
               <Download className="mr-2 h-4 w-4" />
