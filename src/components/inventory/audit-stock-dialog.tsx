@@ -68,9 +68,13 @@ function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProp
           <DialogTitle>Auditoria de Stock: {product.name}</DialogTitle>
           <DialogDescription>
             Insira a contagem física para ajustar o stock do sistema.
-             {adjustment !== 0 && (
+            {adjustment === 0 ? (
+                <span className="mt-2 block text-xs text-green-600 dark:text-green-400 font-semibold">
+                    A contagem joga com o stock do sistema. Tudo certo!
+                </span>
+            ) : (
                 <span className="mt-2 block text-xs text-amber-600 dark:text-yellow-400 font-semibold">
-                    Discrepância detetada. Após confirmar, consulte o histórico do produto para investigar.
+                    Discrepância detetada. Após confirmar, o stock será ajustado para a nova contagem.
                 </span>
             )}
           </DialogDescription>
