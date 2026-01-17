@@ -13,6 +13,8 @@ import { TopSales } from "@/components/dashboard/top-sales";
 import { SalesActivity } from "@/components/dashboard/sales-activity";
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Lock } from "lucide-react";
 
 const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
   ssr: false,
@@ -21,7 +23,8 @@ const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").th
 
 
 export default function DashboardPage() {
-  const { canEdit } = useContext(InventoryContext) || { canEdit: () => false };
+  const { user } = useContext(InventoryContext) || { user: null };
+  const isPrivilegedUser = user?.role === 'Admin' || user?.role === 'Dono';
   
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
@@ -31,14 +34,32 @@ export default function DashboardPage() {
         
         {/* Left Column (or full width on mobile) */}
         <div className="lg:col-span-2 flex flex-col gap-6">
-          <StatsCards />
-          <SalesActivity />
+           {isPrivilegedUser ? (
+            <>
+              <StatsCards />
+              <SalesActivity />
+            </>
+          ) : (
+             <Card className="glass-card shadow-sm h-full flex flex-col justify-center">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg text-muted-foreground">
+                    <Lock className="h-5 w-5" />
+                    Acesso Restrito
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    As estatísticas financeiras e a atividade de vendas estão disponíveis apenas para Administradores e Donos.
+                  </p>
+                </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Right Column (or below on mobile) */}
         <div className="flex flex-col gap-6">
           <StockChart />
-          <TopSales />
+          {isPrivilegedUser && <TopSales />}
         </div>
 
       </div>
