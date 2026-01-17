@@ -50,9 +50,10 @@ type EditEmployeeFormValues = z.infer<typeof formSchema>;
 interface EditEmployeeDialogProps {
   employee: Employee;
   onUpdateEmployee: (employee: Employee) => void;
+  trigger?: 'icon' | 'button';
 }
 
-function EditEmployeeDialogContent({ employee, onUpdateEmployee, setOpen }: EditEmployeeDialogProps & { setOpen: (open: boolean) => void }) {
+function EditEmployeeDialogContent({ employee, onUpdateEmployee, setOpen }: Omit<EditEmployeeDialogProps, 'trigger'> & { setOpen: (open: boolean) => void }) {
   const form = useForm<EditEmployeeFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -237,23 +238,29 @@ function EditEmployeeDialogContent({ employee, onUpdateEmployee, setOpen }: Edit
   );
 }
 
-export function EditEmployeeDialog(props: EditEmployeeDialogProps) {
+export function EditEmployeeDialog({ employee, onUpdateEmployee, trigger = 'icon' }: EditEmployeeDialogProps) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (open) {
-      const initialPermissions = { ...allPermissions.reduce((acc, p) => ({ ...acc, [p.id]: 'none' }), {}), ...props.employee.permissions };
+      const initialPermissions = { ...allPermissions.reduce((acc, p) => ({ ...acc, [p.id]: 'none' }), {}), ...employee.permissions };
     }
-  }, [open, props.employee]);
+  }, [open, employee]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Edit className="h-4 w-4" />
-        </Button>
+        {trigger === 'icon' ? (
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Edit className="h-4 w-4" />
+            </Button>
+        ) : (
+            <Button variant="outline" size="sm" className="flex-1">
+                <Edit className="mr-2 h-4 w-4" />
+                Editar
+            </Button>
+        )}
       </DialogTrigger>
-      {open && <EditEmployeeDialogContent {...props} setOpen={setOpen} />}
+      {open && <EditEmployeeDialogContent employee={employee} onUpdateEmployee={onUpdateEmployee} setOpen={setOpen} />}
     </Dialog>
   );
 }
-

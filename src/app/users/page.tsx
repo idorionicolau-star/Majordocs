@@ -25,6 +25,8 @@ import {
 import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
 import { firebaseConfig } from "@/firebase/config";
 import { initializeApp, deleteApp, FirebaseApp } from "firebase/app";
+import { EmployeeCard } from "@/components/users/employee-card";
+import { Card } from "@/components/ui/card";
 
 
 // Helper function to create a temporary, secondary Firebase app instance.
@@ -181,16 +183,36 @@ export default function UsersPage() {
             {isAdmin && <AddEmployeeDialog onAddEmployee={handleAddEmployee} />}
         </div>
       
-        <UsersDataTable 
-            columns={columns({
-                onDelete: (employee) => setEmployeeToDelete(employee),
-                onUpdate: handleUpdateEmployee,
-                currentUserId: user?.id,
-                isAdmin: isAdmin,
-                companyName: companyData?.name || null
-            })} 
-            data={employees || []} 
-        />
+        <div className="hidden md:block">
+            <UsersDataTable 
+                columns={columns({
+                    onDelete: (employee) => setEmployeeToDelete(employee),
+                    onUpdate: handleUpdateEmployee,
+                    currentUserId: user?.id,
+                    isAdmin: isAdmin,
+                    companyName: companyData?.name || null
+                })} 
+                data={employees || []} 
+            />
+        </div>
+        <div className="md:hidden space-y-3">
+          {(employees && employees.length > 0) ? (
+            employees.map(employee => (
+              <EmployeeCard 
+                key={employee.id}
+                employee={employee}
+                onDelete={setEmployeeToDelete}
+                onUpdate={handleUpdateEmployee}
+                currentUserId={user?.id}
+                isAdmin={isAdmin}
+              />
+            ))
+          ) : (
+            <Card className="text-center py-12 text-muted-foreground">
+              Nenhum funcionário encontrado.
+            </Card>
+          )}
+        </div>
     </div>
   );
 }

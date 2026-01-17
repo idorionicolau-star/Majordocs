@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Printer, DollarSign, Hash, Box, Trash2, TrendingUp, Trophy } from 'lucide-react';
+import { Printer, DollarSign, Hash, Box, Trash2, TrendingUp, Trophy, Calendar, User } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { Sale } from '@/lib/types';
 import {
@@ -30,6 +30,35 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { cn } from '@/lib/utils';
+
+const SaleReportCard = ({ sale }: { sale: Sale }) => (
+    <Card className="glass-card">
+        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+            <div>
+                <CardTitle className="text-base font-bold">{sale.productName}</CardTitle>
+                <CardDescription className="text-xs">Guia: {sale.guideNumber}</CardDescription>
+            </div>
+            <div className="text-lg font-bold font-mono text-primary">
+                {formatCurrency(sale.totalValue)}
+            </div>
+        </CardHeader>
+        <CardContent className="space-y-2 text-xs pt-2">
+            <div className="flex items-center gap-2 text-sm">
+                <Hash className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">{sale.quantity} unidades</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">{sale.soldBy}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">{format(new Date(sale.date), 'dd/MM/yy')}</span>
+            </div>
+        </CardContent>
+    </Card>
+);
 
 export default function ReportsPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -217,38 +246,51 @@ export default function ReportsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[100px]">Data</TableHead>
-                  <TableHead>Guia N.º</TableHead>
-                  <TableHead>Produto</TableHead>
-                  <TableHead className="text-right">Quantidade</TableHead>
-                  <TableHead className="text-right">Valor Total</TableHead>
-                  <TableHead>Vendedor</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {salesForMonth.length > 0 ? (
-                  salesForMonth.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
-                    <TableRow key={sale.id}>
-                      <TableCell>{format(new Date(sale.date), 'dd/MM/yy')}</TableCell>
-                      <TableCell className="font-medium">{sale.guideNumber}</TableCell>
-                      <TableCell>{sale.productName}</TableCell>
-                      <TableCell className="text-right">{sale.quantity}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(sale.totalValue)}</TableCell>
-                      <TableCell>{sale.soldBy}</TableCell>
+            <div className="hidden md:block">
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead className="w-[100px]">Data</TableHead>
+                    <TableHead>Guia N.º</TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead className="text-right">Quantidade</TableHead>
+                    <TableHead className="text-right">Valor Total</TableHead>
+                    <TableHead>Vendedor</TableHead>
                     </TableRow>
-                  ))
+                </TableHeader>
+                <TableBody>
+                    {salesForMonth.length > 0 ? (
+                    salesForMonth.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
+                        <TableRow key={sale.id}>
+                        <TableCell>{format(new Date(sale.date), 'dd/MM/yy')}</TableCell>
+                        <TableCell className="font-medium">{sale.guideNumber}</TableCell>
+                        <TableCell>{sale.productName}</TableCell>
+                        <TableCell className="text-right">{sale.quantity}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(sale.totalValue)}</TableCell>
+                        <TableCell>{sale.soldBy}</TableCell>
+                        </TableRow>
+                    ))
+                    ) : (
+                    <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                        Nenhuma venda encontrada para este mês.
+                        </TableCell>
+                    </TableRow>
+                    )}
+                </TableBody>
+                </Table>
+            </div>
+            <div className="block md:hidden space-y-3">
+                {salesForMonth.length > 0 ? (
+                    salesForMonth.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
+                        <SaleReportCard key={sale.id} sale={sale} />
+                    ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      Nenhuma venda encontrada para este mês.
-                    </TableCell>
-                  </TableRow>
+                    <div className="h-24 text-center flex items-center justify-center text-muted-foreground">
+                        Nenhuma venda encontrada para este mês.
+                    </div>
                 )}
-              </TableBody>
-            </Table>
+            </div>
           </CardContent>
         </Card>
         
@@ -290,5 +332,3 @@ const StatCard = ({ icon: Icon, title, value, subValue }: StatCardProps) => (
         </CardContent>
     </Card>
 );
-
-    

@@ -33,6 +33,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
 import { isSameDay } from "date-fns";
 import { Card } from "@/components/ui/card";
+import { columns } from "@/components/production/columns";
 
 export default function ProductionPage() {
   const inventoryContext = useContext(InventoryContext);
@@ -302,28 +303,51 @@ export default function ProductionPage() {
             </div>
         </div>
 
-      {view === 'list' ? (
-        <ProductionDataTable columns={[]} data={filteredProductions} />
-      ) : (
-        <div className={cn(
-            "grid gap-2 sm:gap-4",
-            gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
-            gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
-            gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
-        )}>
-            {filteredProductions.map(production => (
-                <ProductionCard 
-                    key={production.id}
-                    production={production}
-                    onTransfer={() => setProductionToTransfer(production)}
-                    onDelete={deleteProduction}
-                    viewMode={gridCols === '5' ? 'condensed' : 'normal'}
-                    canEdit={canEditProduction}
-                    locationName={locations.find(l => l.id === production.location)?.name}
-                />
-            ))}
-        </div>
-      )}
+      <div className="hidden md:block">
+        {view === 'list' ? (
+            <ProductionDataTable columns={columns({})} data={filteredProductions} />
+        ) : (
+            <div className={cn(
+                "grid gap-2 sm:gap-4",
+                gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
+                gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
+                gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
+            )}>
+                {filteredProductions.map(production => (
+                    <ProductionCard 
+                        key={production.id}
+                        production={production}
+                        onTransfer={() => setProductionToTransfer(production)}
+                        onDelete={deleteProduction}
+                        viewMode={gridCols === '5' ? 'condensed' : 'normal'}
+                        canEdit={canEditProduction}
+                        locationName={locations.find(l => l.id === production.location)?.name}
+                    />
+                ))}
+            </div>
+        )}
+      </div>
+
+      <div className="md:hidden space-y-3">
+        {filteredProductions.length > 0 ? (
+          filteredProductions.map(production => (
+            <ProductionCard 
+              key={production.id}
+              production={production}
+              onTransfer={() => setProductionToTransfer(production)}
+              onDelete={deleteProduction}
+              viewMode='normal'
+              canEdit={canEditProduction}
+              locationName={locations.find(l => l.id === production.location)?.name}
+            />
+          ))
+        ) : (
+          <Card className="text-center py-12 text-muted-foreground">
+            Nenhum registo de produção encontrado.
+          </Card>
+        )}
+      </div>
+
 
         {isAdmin && (
           <Card className="mt-8">
@@ -364,5 +388,3 @@ export default function ProductionPage() {
     </>
   );
 }
-
-    

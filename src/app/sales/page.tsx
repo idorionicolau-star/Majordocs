@@ -349,36 +349,59 @@ export default function SalesPage() {
               </div>
           </div>
 
-        {view === 'list' ? (
-          <SalesDataTable 
-            columns={columns({
-                onUpdateSale: handleUpdateSale,
-                onConfirmPickup: handleConfirmPickup,
-                canEdit: canEditSales
-            })} 
-            data={filteredSales} 
-          />
-        ) : (
-          <div className={cn(
-              "grid gap-2 sm:gap-4",
-              gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
-              gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
-              gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
-          )}>
-              {filteredSales.map(sale => (
-                  <SaleCard 
-                      key={sale.id}
-                      sale={sale}
-                      onUpdateSale={handleUpdateSale}
-                      onConfirmPickup={handleConfirmPickup}
-                      onDeleteSale={deleteSale}
-                      viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
-                      canEdit={canEditSales}
-                      locationName={locations.find(l => l.id === sale.location)?.name}
-                  />
-              ))}
-          </div>
-        )}
+        <div className="hidden md:block">
+            {view === 'list' ? (
+              <SalesDataTable 
+                columns={columns({
+                    onUpdateSale: handleUpdateSale,
+                    onConfirmPickup: handleConfirmPickup,
+                    canEdit: canEditSales
+                })} 
+                data={filteredSales} 
+              />
+            ) : (
+              <div className={cn(
+                  "grid gap-2 sm:gap-4",
+                  gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
+                  gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
+                  gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
+              )}>
+                  {filteredSales.map(sale => (
+                      <SaleCard 
+                          key={sale.id}
+                          sale={sale}
+                          onUpdateSale={handleUpdateSale}
+                          onConfirmPickup={handleConfirmPickup}
+                          onDeleteSale={deleteSale}
+                          viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
+                          canEdit={canEditSales}
+                          locationName={locations.find(l => l.id === sale.location)?.name}
+                      />
+                  ))}
+              </div>
+            )}
+        </div>
+
+        <div className="md:hidden space-y-3">
+          {filteredSales.length > 0 ? (
+            filteredSales.map(sale => (
+              <SaleCard 
+                  key={sale.id}
+                  sale={sale}
+                  onUpdateSale={handleUpdateSale}
+                  onConfirmPickup={handleConfirmPickup}
+                  onDeleteSale={deleteSale}
+                  viewMode='normal'
+                  canEdit={canEditSales}
+                  locationName={locations.find(l => l.id === sale.location)?.name}
+              />
+            ))
+          ) : (
+            <Card className="text-center py-12 text-muted-foreground">
+              Nenhuma venda encontrada com os filtros atuais.
+            </Card>
+          )}
+        </div>
 
         {isAdmin && (
           <Card className="mt-8">
@@ -419,5 +442,3 @@ export default function SalesPage() {
     </>
   );
 }
-
-    
