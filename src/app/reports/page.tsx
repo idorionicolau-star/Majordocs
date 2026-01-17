@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Printer, DollarSign, Hash, Box, Trash2, TrendingUp, Trophy, Calendar, User } from 'lucide-react';
+import { Printer, DollarSign, Hash, Box, Trash2, TrendingUp, Trophy, Calendar, User, Lock } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { Sale } from '@/lib/types';
 import {
@@ -65,6 +65,7 @@ export default function ReportsPage() {
   const inventoryContext = useContext(InventoryContext);
   const { sales, companyData, loading, user, clearSales } = inventoryContext || { sales: [], companyData: null, loading: true, user: null, clearSales: async () => {} };
   const isAdmin = user?.role === 'Admin';
+  const isPrivilegedUser = user?.role === 'Admin' || user?.role === 'Dono';
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
 
@@ -215,23 +216,47 @@ export default function ReportsPage() {
       </AlertDialog>
 
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-headline font-bold">Relatório Mensal de Vendas</h1>
-          </div>
-          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+        <div className="flex flex-col w-full items-center md:flex-row justify-between items-start gap-4">
+            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
               <DatePicker date={selectedDate} setDate={setSelectedDate} />
               <Button onClick={handlePrint} variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate}>
                   <Printer className="mr-2 h-4 w-4" />
                   Imprimir Relatório
               </Button>
-          </div>
+            </div>
         </div>
         
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard icon={Hash} title="Total de Vendas" value={reportSummary.totalSales} />
-            <StatCard icon={DollarSign} title="Valor Total" value={formatCurrency(reportSummary.totalValue)} />
-            <StatCard icon={TrendingUp} title="Ticket Médio" value={formatCurrency(reportSummary.averageTicket)} />
+            {isPrivilegedUser ? (
+                <>
+                    <StatCard icon={DollarSign} title="Valor Total" value={formatCurrency(reportSummary.totalValue)} />
+                    <StatCard icon={TrendingUp} title="Ticket Médio" value={formatCurrency(reportSummary.averageTicket)} />
+                </>
+            ) : (
+                 <>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
+                            <Lock className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">-</div>
+                            <p className="text-xs text-muted-foreground">Acesso Restrito</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Ticket Médio</CardTitle>
+                            <Lock className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">-</div>
+                            <p className="text-xs text-muted-foreground">Acesso Restrito</p>
+                        </CardContent>
+                    </Card>
+                </>
+            )}
             <StatCard icon={Trophy} title="Mais Vendido" value={reportSummary.bestSellingProduct.name} subValue={`${reportSummary.bestSellingProduct.quantity} un.`} />
         </div>
 
@@ -329,3 +354,5 @@ const StatCard = ({ icon: Icon, title, value, subValue }: StatCardProps) => (
         </CardContent>
     </Card>
 );
+
+    
