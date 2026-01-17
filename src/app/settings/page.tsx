@@ -38,6 +38,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTheme } from "@/components/theme-provider";
 import { themes } from "@/lib/themes";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 
 const colorOptions = [
@@ -365,40 +371,46 @@ export default function SettingsPage() {
                     <ThemeSwitcher />
                   </div>
 
-                   <div className="space-y-2">
-                    <Label>Cor do Tema</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Selecione a cor primária para a aplicação.
-                    </p>
-                    <div className="grid grid-cols-7 sm:grid-cols-10 gap-2 pt-2">
-                      {themes.map((theme) => {
-                        const isActive = colorTheme === theme.name;
-                        return (
-                          <TooltipProvider key={theme.name} delayDuration={0}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button
-                                  onClick={() => setColorTheme(theme.name)}
-                                  className={cn(
-                                    "h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all",
-                                    isActive ? "border-foreground" : "border-transparent"
-                                  )}
-                                  style={{
-                                    backgroundColor: `hsl(${theme.primary.light})`,
-                                  }}
-                                >
-                                  {isActive && <Check className="h-5 w-5 text-white" />}
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{theme.name}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        );
-                      })}
-                    </div>
-                  </div>
+                   <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="color-theme" className="border-b-0">
+                      <AccordionTrigger>
+                          <Label>Cor do Tema</Label>
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                          Selecione a cor primária para a aplicação.
+                        </p>
+                        <div className="grid grid-cols-7 sm:grid-cols-10 gap-2 pt-2">
+                          {themes.map((theme) => {
+                            const isActive = colorTheme === theme.name;
+                            return (
+                              <TooltipProvider key={theme.name} delayDuration={0}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      onClick={() => setColorTheme(theme.name)}
+                                      className={cn(
+                                        "h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all",
+                                        isActive ? "border-foreground" : "border-transparent"
+                                      )}
+                                      style={{
+                                        backgroundColor: `hsl(${theme.primary.light})`,
+                                      }}
+                                    >
+                                      {isActive && <Check className="h-5 w-5 text-white" />}
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{theme.name}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
 
                   <div className="space-y-2">
                     <Label htmlFor="border-radius">Arredondamento dos Cantos</Label>
