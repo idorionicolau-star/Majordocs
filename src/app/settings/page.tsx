@@ -13,7 +13,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { ChevronDown, Building, Book, Palette, User as UserIcon, MapPin, Code, Trash2, Mail } from "lucide-react";
+import { ChevronDown, Building, Book, Palette, User as UserIcon, MapPin, Trash2, Mail } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { LocationsManager } from "@/components/settings/locations-manager";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import type { ModulePermission, ModelInfo } from "@/lib/types";
+import type { ModulePermission } from "@/lib/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,9 +35,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { listModels } from "@/ai/flows/list-models-flow";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 
 const colorOptions = [
@@ -132,26 +129,6 @@ export default function SettingsPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState("profile");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [models, setModels] = useState<ModelInfo[] | null>(null);
-  const [isListingModels, setIsListingModels] = useState(false);
-
-  const handleListModels = async () => {
-    setIsListingModels(true);
-    setModels(null);
-    try {
-        const result = await listModels();
-        setModels(result);
-    } catch (error: any) {
-        toast({
-            variant: 'destructive',
-            title: 'Erro ao Listar Modelos',
-            description: error.message || 'Não foi possível obter a lista de modelos de IA.',
-        });
-    } finally {
-        setIsListingModels(false);
-    }
-  };
-
 
   const [companyDetails, setCompanyDetails] = useState({
     name: '',
@@ -370,7 +347,7 @@ export default function SettingsPage() {
 
         <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <ScrollArea className="w-full whitespace-nowrap" ref={scrollRef}>
-            <TabsList className="w-max">
+             <TabsList className="inline-flex h-auto items-center justify-start rounded-2xl bg-muted p-1.5 text-muted-foreground w-max">
               <TabsTrigger value="profile" id="tab-trigger-profile"><UserIcon className="mr-2 h-4 w-4" />Perfil</TabsTrigger>
               <TabsTrigger value="appearance" id="tab-trigger-appearance"><Palette className="mr-2 h-4 w-4" />Aparência</TabsTrigger>
               {hasPermission('settings') && (
@@ -378,7 +355,6 @@ export default function SettingsPage() {
                   <TabsTrigger value="company" id="tab-trigger-company"><Building className="mr-2 h-4 w-4" />Empresa</TabsTrigger>
                   <TabsTrigger value="locations" id="tab-trigger-locations"><MapPin className="mr-2 h-4 w-4" />Localizações</TabsTrigger>
                   <TabsTrigger value="catalog" id="tab-trigger-catalog"><Book className="mr-2 h-4 w-4" />Catálogo</TabsTrigger>
-                  <TabsTrigger value="devtools" id="tab-trigger-devtools"><Code className="mr-2 h-4 w-4" />Ferramentas</TabsTrigger>
                 </>
               )}
             </TabsList>
@@ -520,61 +496,6 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     <CatalogManager />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="devtools">
-                <Card className="glass-card">
-                  <CardHeader>
-                    <CardTitle>Ferramentas de Programador</CardTitle>
-                    <CardDescription>Ações avançadas para inspecionar e gerir a aplicação.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                      <div className="space-y-2">
-                          <h4 className="font-semibold">Modelos de IA</h4>
-                          <p className="text-sm text-muted-foreground">Liste os modelos de IA generativos disponíveis através da sua API Key do Google AI Studio.</p>
-                          <Button onClick={handleListModels} disabled={isListingModels}>
-                              {isListingModels ? 'A listar...' : 'Listar Modelos Disponíveis'}
-                          </Button>
-                      </div>
-
-                      {isListingModels && (
-                          <div className="space-y-2 pt-4">
-                              <Skeleton className="h-8 w-full" />
-                              <Skeleton className="h-8 w-full" />
-                              <Skeleton className="h-8 w-full" />
-                          </div>
-                      )}
-                      
-                      {models && (
-                          <div className="rounded-md border mt-4">
-                              <Table>
-                                  <TableHeader>
-                                      <TableRow>
-                                          <TableHead>Display Name</TableHead>
-                                          <TableHead>Model ID</TableHead>
-                                          <TableHead>Version</TableHead>
-                                      </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                      {models.length > 0 ? models.map(model => (
-                                          <TableRow key={model.name}>
-                                              <TableCell className="font-semibold">{model.displayName}</TableCell>
-                                              <TableCell className="font-mono text-xs">{model.name}</TableCell>
-                                              <TableCell>{model.version}</TableCell>
-                                          </TableRow>
-                                      )) : (
-                                        <TableRow>
-                                          <TableCell colSpan={3} className="h-24 text-center">
-                                            Nenhum modelo compatível encontrado. Verifique a sua API Key.
-                                          </TableCell>
-                                        </TableRow>
-                                      )}
-                                  </TableBody>
-                              </Table>
-                          </div>
-                      )}
                   </CardContent>
                 </Card>
               </TabsContent>
