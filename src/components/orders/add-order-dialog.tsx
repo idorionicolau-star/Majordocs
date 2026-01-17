@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useContext, useEffect } from 'react';
@@ -34,12 +33,7 @@ import type { Product, Order, Location } from '@/lib/types';
 import { InventoryContext } from '@/context/inventory-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { ScrollArea } from '../ui/scroll-area';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
 import { UniversalCalendar } from '../ui/universal-calendar';
-import { pt } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
@@ -64,7 +58,6 @@ interface AddOrderDialogProps {
 export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialogProps) {
   const inventoryContext = useContext(InventoryContext);
   const { catalogProducts, catalogCategories, locations, isMultiLocation } = inventoryContext || { catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false };
-  const [isCalendarOpen, setCalendarOpen] = useState(false);
   
   const form = useForm<AddOrderFormValues>({
     resolver: zodResolver(formSchema),
@@ -228,36 +221,10 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Data de Entrega (Opcional)</FormLabel>
-                    <Popover open={isCalendarOpen} onOpenChange={setCalendarOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP", { locale: pt })
-                            ) : (
-                              <span>Escolha uma data</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <UniversalCalendar
-                          selectedDate={field.value}
-                          onDateSelect={(date) => {
-                            field.onChange(date);
-                            setCalendarOpen(false);
-                          }}
-                          onClose={() => setCalendarOpen(false)}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <UniversalCalendar
+                      selectedDate={field.value}
+                      onDateSelect={field.onChange}
+                    />
                     <FormMessage />
                   </FormItem>
                 )}

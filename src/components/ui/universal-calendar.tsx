@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -13,10 +12,9 @@ import { cn } from '@/lib/utils';
 interface DatePickerProps {
   selectedDate?: Date;
   onDateSelect: (date: Date) => void;
-  onClose?: () => void;
 }
 
-export function UniversalCalendar({ selectedDate, onDateSelect, onClose }: DatePickerProps) {
+export function UniversalCalendar({ selectedDate, onDateSelect }: DatePickerProps) {
   const [viewDate, setViewDate] = useState(selectedDate || new Date());
 
   const days = eachDayOfInterval({
@@ -26,11 +24,10 @@ export function UniversalCalendar({ selectedDate, onDateSelect, onClose }: DateP
 
   const handleDateClick = (day: Date) => {
     onDateSelect(day);
-    if (onClose) onClose();
   };
 
   return (
-    <div className="w-[300px] bg-background border rounded-xl shadow-lg p-4 select-none">
+    <div className="w-full bg-background border rounded-xl shadow-lg p-4 select-none">
       {/* Navegação */}
       <div className="flex items-center justify-between mb-4 px-1">
         <h3 className="font-bold text-foreground capitalize">
