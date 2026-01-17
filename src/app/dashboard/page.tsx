@@ -1,4 +1,3 @@
-
 "use client";
 
 import { StatsCards } from "@/components/dashboard/stats-cards";
@@ -33,25 +32,6 @@ export default function DashboardPage() {
              Uma visão geral e rápida do seu negócio.
            </p>
         </div>
-        <ScrollArea 
-          className="w-full md:w-auto pb-4"
-          onTouchStart={e => e.stopPropagation()}
-          onTouchMove={e => e.stopPropagation()}
-          onTouchEnd={e => e.stopPropagation()}
-        >
-          <div className={cn("flex items-center justify-center gap-2 flex-nowrap", "animate-peek md:animate-none")}>
-              {canEdit('inventory') && <Button asChild variant="outline" size="sm">
-                <Link href="/inventory?action=add"><Box className="mr-2 h-4 w-4 text-[hsl(var(--chart-1))]" />+ Inventário</Link>
-              </Button>}
-              {canEdit('sales') && <Button asChild variant="outline" size="sm">
-                <Link href="/sales?action=add"><ShoppingCart className="mr-2 h-4 w-4 text-[hsl(var(--chart-2))]" />+ Vendas</Link>
-              </Button>}
-              {canEdit('production') && <Button asChild variant="outline" size="sm">
-                  <Link href="/production?action=add"><Hammer className="mr-2 h-4 w-4 text-[hsl(var(--chart-3))]" />+ Produção</Link>
-                </Button>}
-          </div>
-          <ScrollBar orientation="horizontal" className="md:hidden" />
-        </ScrollArea>
       </div>
 
       {/* Main content: single column on mobile, multi-column on desktop */}
