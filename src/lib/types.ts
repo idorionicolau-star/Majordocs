@@ -10,7 +10,6 @@ export type ModulePermission =
   | 'orders'
   | 'calendar'
   | 'reports'
-  | 'analysis'
   | 'users'
   | 'settings';
 
