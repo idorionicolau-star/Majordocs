@@ -218,9 +218,6 @@ export default function ReportsPage() {
         <div className="flex flex-col md:flex-row justify-between items-start gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-headline font-bold">Relatório Mensal de Vendas</h1>
-            <p className="text-muted-foreground">
-              Selecione uma data para visualizar o relatório do mês correspondente.
-            </p>
           </div>
           <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
               <DatePicker date={selectedDate} setDate={setSelectedDate} />
@@ -332,5 +329,3 @@ const StatCard = ({ icon: Icon, title, value, subValue }: StatCardProps) => (
         </CardContent>
     </Card>
 );
-
-    

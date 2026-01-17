@@ -176,9 +176,6 @@ export default function UsersPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h1 className="text-2xl md:text-3xl font-headline font-bold">Gestão de Funcionários</h1>
-                <p className="text-sm font-medium text-slate-500 mt-1">
-                    Adicione, edite e remova funcionários do sistema.
-                </p>
             </div>
             {isAdmin && <AddEmployeeDialog onAddEmployee={handleAddEmployee} />}
         </div>

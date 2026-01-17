@@ -28,9 +28,6 @@ export default function DashboardPage() {
       <div className="flex flex-col items-center gap-4 text-center">
         <div>
            <h1 className="text-2xl md:text-3xl font-headline font-[900] text-slate-900 dark:text-white tracking-tighter">Dashboard</h1>
-            <p className="text-sm font-medium text-slate-500 mt-1">
-             Uma visão geral e rápida do seu negócio.
-           </p>
         </div>
       </div>
 

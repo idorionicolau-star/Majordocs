@@ -90,7 +90,6 @@ function ProfileTab() {
     <Card className="glass-card">
       <CardHeader>
         <CardTitle>Perfil de Utilizador</CardTitle>
-        <CardDescription>Visualize e gira as suas informações pessoais.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex items-center gap-6">
@@ -317,9 +316,6 @@ export default function SettingsPage() {
       <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
         <div>
           <h1 className="text-2xl md:text-3xl font-headline font-[900] text-slate-900 dark:text-white tracking-tighter">Configurações</h1>
-          <p className="text-sm font-medium text-slate-500 mt-1">
-            Ajuste as preferências da aplicação e da sua empresa.
-          </p>
         </div>
 
         <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -363,7 +359,6 @@ export default function SettingsPage() {
              <Card className="glass-card">
                 <CardHeader>
                   <CardTitle>Aparência</CardTitle>
-                  <CardDescription>Personalize a aparência da aplicação.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="flex items-center justify-between">
@@ -440,7 +435,6 @@ export default function SettingsPage() {
                 <Card className="glass-card">
                   <CardHeader>
                     <CardTitle>Detalhes da Empresa</CardTitle>
-                    <CardDescription>Visualize e edite os dados da sua empresa.</CardDescription>
                   </CardHeader>
                   <CardContent>
                       <form onSubmit={handleCompanyUpdate} className="space-y-6">
@@ -516,7 +510,6 @@ export default function SettingsPage() {
                 <Card className="glass-card">
                   <CardHeader>
                     <CardTitle>Gestão de Localizações</CardTitle>
-                    <CardDescription>Ative e gerencie múltiplas localizações para o seu negócio.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <LocationsManager />
@@ -528,7 +521,6 @@ export default function SettingsPage() {
                 <Card className="glass-card">
                   <CardHeader>
                     <CardTitle>Gestor de Catálogo</CardTitle>
-                    <CardDescription>Gerencie os produtos, categorias e importe dados.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <CatalogManager />
