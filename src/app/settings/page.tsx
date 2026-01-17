@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useContext, useRef } from "react";
@@ -586,4 +585,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
