@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useContext } from "react";
@@ -173,10 +172,7 @@ export default function UsersPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <h1 className="text-2xl md:text-3xl font-headline font-bold">Gestão de Funcionários</h1>
-            </div>
+        <div className="flex flex-col md:flex-row justify-end items-start md:items-center gap-4">
             {isAdmin && <AddEmployeeDialog onAddEmployee={handleAddEmployee} />}
         </div>
       
