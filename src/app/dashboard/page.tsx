@@ -6,7 +6,7 @@ import { useContext } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Box, ShoppingCart, Hammer } from "lucide-react";
+import { Box, ShoppingCart, Hammer, Book } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { InventoryContext } from "@/context/inventory-context";
 import { TopSales } from "@/components/dashboard/top-sales";
@@ -34,12 +34,39 @@ export default function DashboardPage() {
         
         {/* Left Column (or full width on mobile) */}
         <div className="lg:col-span-2 flex flex-col gap-6">
+           {isPrivilegedUser && <StatsCards />}
+
+            {/* Quick Access Buttons */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
+                    <Link href="/settings#catalog">
+                        <Book className="h-6 w-6" />
+                        <span>Catálogo</span>
+                    </Link>
+                </Button>
+                <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
+                    <Link href="/sales">
+                        <ShoppingCart className="h-6 w-6" />
+                        <span>Vendas</span>
+                    </Link>
+                </Button>
+                <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
+                    <Link href="/production">
+                        <Hammer className="h-6 w-6" />
+                        <span>Produção</span>
+                    </Link>
+                </Button>
+                <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
+                    <Link href="/inventory">
+                        <Box className="h-6 w-6" />
+                        <span>Inventário</span>
+                    </Link>
+                </Button>
+            </div>
+
            {isPrivilegedUser ? (
-            <>
-              <StatsCards />
               <SalesActivity />
-            </>
-          ) : (
+           ) : (
              <Card className="glass-card shadow-sm h-full flex flex-col justify-center">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg text-muted-foreground">
@@ -49,7 +76,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    As estatísticas financeiras e a atividade de vendas estão disponíveis apenas para Administradores e Donos.
+                    As estatísticas e a atividade de vendas estão disponíveis apenas para Administradores e Donos. Use os atalhos acima para navegar.
                   </p>
                 </CardContent>
             </Card>
