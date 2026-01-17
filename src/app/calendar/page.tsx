@@ -37,13 +37,7 @@ export default function CalendarPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
-       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-headline font-bold">Calendário de Produção</h1>
-            <p className="text-sm font-medium text-slate-500 mt-1">
-              Visualize as datas de entrega das encomendas de produção.
-            </p>
-          </div>
+       <div className="flex flex-col md:flex-row justify-end items-start md:items-center gap-4">
            {isMultiLocation && (
               <Select onValueChange={setSelectedLocation} defaultValue="all">
                 <SelectTrigger className="w-full md:w-[180px]">

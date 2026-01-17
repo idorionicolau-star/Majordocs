@@ -374,9 +374,6 @@ export default function InventoryPage() {
 
       <div className="flex flex-col gap-6">
           <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
-              <div>
-                  <h1 className="text-2xl md:text-3xl font-headline font-bold">Inventário</h1>
-              </div>
           </div>
           <div className="py-4 space-y-4">
              <div className="flex flex-col sm:flex-row items-center gap-2">

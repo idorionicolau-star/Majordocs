@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useContext, useEffect } from "react";
@@ -214,9 +215,7 @@ export default function InventoryHistoryPage() {
 
       <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-headline font-bold">Histórico de Movimentos</h1>
-          </div>
+          <div className="flex-1"></div>
           <div className="flex items-center gap-2">
             <Button onClick={handleDownloadPdf} variant="outline" className="h-12">
               <Download className="mr-2 h-4 w-4" />
