@@ -1,3 +1,4 @@
+
 "use client";
 
 import { StatsCards } from "@/components/dashboard/stats-cards";
@@ -24,12 +25,6 @@ export default function DashboardPage() {
   
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
-      {/* Header Section */}
-      <div className="flex flex-col items-center gap-4 text-center">
-        <div>
-           <h1 className="text-2xl md:text-3xl font-headline font-[900] text-slate-900 dark:text-white tracking-tighter">Dashboard</h1>
-        </div>
-      </div>
 
       {/* Main content: single column on mobile, multi-column on desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
