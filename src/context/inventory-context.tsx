@@ -11,7 +11,7 @@ import {
   useMemo,
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification, DashboardStats } from '@/lib/types';
+import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification, DashboardStats, InventoryContextType } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase, getFirebaseAuth } from '@/firebase';
 import {
@@ -50,82 +50,6 @@ type CatalogProduct = Omit<
   'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'
 >;
 type CatalogCategory = { id: string; name: string };
-
-interface InventoryContextType {
-  // Auth related
-  user: Employee | null;
-  firebaseUser: FirebaseAuthUser | null;
-  companyId: string | null;
-  loading: boolean;
-  login: (email: string, pass: string) => Promise<boolean>;
-  logout: () => void;
-  registerCompany: (companyName: string, adminUsername: string, adminEmail: string, adminPass: string) => Promise<boolean>;
-  profilePicture: string | null;
-  setProfilePicture: (url: string) => void;
-
-  // Permission helpers
-  canView: (module: ModulePermission) => boolean;
-  canEdit: (module: ModulePermission) => boolean;
-
-  // Data related
-  products: Product[];
-  sales: Sale[];
-  productions: Production[];
-  orders: Order[];
-  catalogProducts: CatalogProduct[];
-  catalogCategories: CatalogCategory[];
-  locations: Location[];
-  isMultiLocation: boolean;
-  companyData: Company | null;
-  notifications: AppNotification[];
-  monthlySalesChartData: { name: string; vendas: number }[];
-  dashboardStats: {
-    monthlySalesValue: number;
-    averageTicket: number;
-    totalInventoryValue: number;
-    totalItemsInStock: number;
-  };
-
-
-  // Functions
-  addProduct: (
-    newProductData: Omit<
-      Product,
-      'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'
-    >
-  ) => void;
-  updateProduct: (instanceId: string, updatedData: Partial<Product>) => void;
-  deleteProduct: (instanceId: string) => void;
-  clearProductsCollection: () => Promise<void>;
-  transferStock: (
-    productName: string,
-    fromLocationId: string,
-    toLocationId: string,
-    quantity: number
-  ) => void;
-  updateProductStock: (
-    productName: string,
-    quantity: number,
-    locationId?: string
-  ) => void;
-  updateCompany: (details: Partial<Company>) => Promise<void>;
-  addSale: (newSaleData: Omit<Sale, 'id' | 'guideNumber'>) => Promise<void>;
-  confirmSalePickup: (sale: Sale) => void;
-  deleteSale: (saleId: string) => void;
-  addProductionLog: (orderId: string, logData: { quantity: number; notes?: string; }) => void;
-  deleteProduction: (productionId: string) => void;
-  deleteOrder: (orderId: string) => void;
-  clearSales: () => Promise<void>;
-  clearProductions: () => Promise<void>;
-  clearOrders: () => Promise<void>;
-  clearStockMovements: () => Promise<void>;
-  markNotificationAsRead: (id: string) => void;
-  markAllAsRead: () => void;
-  clearNotifications: () => void;
-  addNotification: (notification: Omit<AppNotification, 'id' | 'date' | 'read'>) => void;
-  addCatalogProduct: (productData: Omit<CatalogProduct, 'id'>) => Promise<void>;
-  addCatalogCategory: (categoryName: string) => Promise<void>;
-}
 
 export const InventoryContext = createContext<InventoryContextType | undefined>(
   undefined
@@ -632,6 +556,52 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const clearOrders = useCallback(() => clearCollection(ordersCollectionRef, "Encomendas"), [clearCollection, ordersCollectionRef]);
   const clearStockMovements = useCallback(() => clearCollection(stockMovementsCollectionRef, "Histórico de Movimentos"), [clearCollection, stockMovementsCollectionRef]);
 
+  const auditStock = useCallback(async (product: Product, physicalCount: number, reason: string) => {
+    if (!firestore || !companyId || !user || !product.id) return;
+
+    const productRef = doc(firestore, `companies/${companyId}/products`, product.id);
+    const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+    
+    const systemCountBefore = product.stock;
+    const adjustment = physicalCount - systemCountBefore;
+
+    if (adjustment === 0) {
+        toast({ title: 'Nenhum ajuste necessário', description: 'A contagem física corresponde ao stock do sistema.' });
+        return;
+    }
+
+    try {
+        await runTransaction(firestore, async (transaction) => {
+            // 1. Update the product's stock
+            transaction.update(productRef, { stock: physicalCount });
+
+            // 2. Create a stock movement record for the audit adjustment
+            const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+                productId: product.id!,
+                productName: product.name,
+                type: 'ADJUSTMENT',
+                quantity: adjustment,
+                toLocationId: product.location, // An adjustment happens AT a location
+                reason: reason,
+                userId: user.id,
+                userName: user.username,
+                isAudit: true,
+                systemCountBefore: systemCountBefore,
+                physicalCount: physicalCount,
+            };
+            transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+        });
+        
+        toast({ title: 'Auditoria Concluída', description: `O stock de ${product.name} foi ajustado em ${adjustment > 0 ? '+' : ''}${adjustment}.` });
+        
+        // Post-transaction notification
+        checkStockAndNotify({ ...product, stock: physicalCount });
+
+    } catch (error) {
+        console.error('Audit transaction failed: ', error);
+        toast({ variant: 'destructive', title: 'Erro na Auditoria', description: 'Não foi possível guardar o ajuste de stock.' });
+    }
+  }, [firestore, companyId, user, toast, checkStockAndNotify]);
 
  const transferStock = useCallback(async (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => {
     if (!firestore || !companyId || !user) return;
@@ -969,7 +939,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
     locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
     addProduct, updateProduct, deleteProduct, clearProductsCollection,
-    transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
+    auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
     deleteSale, deleteProduction, deleteOrder,
     clearSales, clearProductions, clearOrders, clearStockMovements,
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,

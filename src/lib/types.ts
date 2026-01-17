@@ -176,3 +176,80 @@ export interface ModelInfo {
   description: string;
   version: string;
 }
+
+export interface InventoryContextType {
+  // Auth related
+  user: Employee | null;
+  firebaseUser: FirebaseAuthUser | null;
+  companyId: string | null;
+  loading: boolean;
+  login: (email: string, pass: string) => Promise<boolean>;
+  logout: () => void;
+  registerCompany: (companyName: string, adminUsername: string, adminEmail: string, adminPass: string) => Promise<boolean>;
+  profilePicture: string | null;
+  setProfilePicture: (url: string) => void;
+
+  // Permission helpers
+  canView: (module: ModulePermission) => boolean;
+  canEdit: (module: ModulePermission) => boolean;
+
+  // Data related
+  products: Product[];
+  sales: Sale[];
+  productions: Production[];
+  orders: Order[];
+  catalogProducts: CatalogProduct[];
+  catalogCategories: CatalogCategory[];
+  locations: Location[];
+  isMultiLocation: boolean;
+  companyData: Company | null;
+  notifications: AppNotification[];
+  monthlySalesChartData: { name: string; vendas: number }[];
+  dashboardStats: {
+    monthlySalesValue: number;
+    averageTicket: number;
+    totalInventoryValue: number;
+    totalItemsInStock: number;
+  };
+
+
+  // Functions
+  addProduct: (
+    newProductData: Omit<
+      Product,
+      'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'
+    >
+  ) => void;
+  updateProduct: (instanceId: string, updatedData: Partial<Product>) => void;
+  deleteProduct: (instanceId: string) => void;
+  clearProductsCollection: () => Promise<void>;
+  auditStock: (product: Product, physicalCount: number, reason: string) => void;
+  transferStock: (
+    productName: string,
+    fromLocationId: string,
+    toLocationId: string,
+    quantity: number
+  ) => void;
+  updateProductStock: (
+    productName: string,
+    quantity: number,
+    locationId?: string
+  ) => void;
+  updateCompany: (details: Partial<Company>) => Promise<void>;
+  addSale: (newSaleData: Omit<Sale, 'id' | 'guideNumber'>) => Promise<void>;
+  confirmSalePickup: (sale: Sale) => void;
+  deleteSale: (saleId: string) => void;
+  addProductionLog: (orderId: string, logData: { quantity: number; notes?: string; }) => void;
+  deleteProduction: (productionId: string) => void;
+  deleteOrder: (orderId: string) => void;
+  clearSales: () => Promise<void>;
+  clearProductions: () => Promise<void>;
+  clearOrders: () => Promise<void>;
+  clearStockMovements: () => Promise<void>;
+  markNotificationAsRead: (id: string) => void;
+  markAllAsRead: () => void;
+  clearNotifications: () => void;
+  addNotification: (notification: Omit<AppNotification, 'id' | 'date' | 'read'>) => void;
+  addCatalogProduct: (productData: Omit<CatalogProduct, 'id'>) => Promise<void>;
+  addCatalogCategory: (categoryName: string) => Promise<void>;
+}
