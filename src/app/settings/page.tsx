@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useContext, useRef } from "react";
@@ -8,12 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import { ChevronDown, Building, Book, Palette, User as UserIcon, MapPin, Trash2, Mail } from "lucide-react";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { LocationsManager } from "@/components/settings/locations-manager";
 import { Button } from "@/components/ui/button";
@@ -121,8 +120,6 @@ function ProfileTab() {
 export default function SettingsPage() {
   const [isClient, setIsClient] = useState(false);
   const [borderRadius, setBorderRadius] = useState(0.8);
-  const [borderWidth, setBorderWidth] = useState(1);
-  const [borderColor, setBorderColor] = useState('hsl(var(--primary))');
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
   const { user, clearProductsCollection } = inventoryContext || {};
@@ -165,6 +162,14 @@ export default function SettingsPage() {
     
     return false;
   };
+  
+  const settingsTabs = [
+    { value: 'profile', label: 'Perfil', icon: UserIcon, permission: true },
+    { value: 'appearance', label: 'Aparência', icon: Palette, permission: true },
+    { value: 'company', label: 'Empresa', icon: Building, permission: hasPermission('settings') },
+    { value: 'locations', label: 'Localizações', icon: MapPin, permission: hasPermission('settings') },
+    { value: 'catalog', label: 'Catálogo', icon: Book, permission: hasPermission('settings') },
+  ].filter(tab => tab.permission);
 
   useEffect(() => {
     setIsClient(true);
@@ -195,16 +200,6 @@ export default function SettingsPage() {
       if (storedRadius) {
         setBorderRadius(parseFloat(storedRadius));
       }
-
-      const storedBorderWidth = localStorage.getItem('majorstockx-border-width');
-      if (storedBorderWidth) {
-        setBorderWidth(parseFloat(storedBorderWidth));
-      }
-
-      const storedBorderColor = localStorage.getItem('majorstockx-border-color');
-      if (storedBorderColor) {
-        setBorderColor(storedBorderColor);
-      }
     }
   }, []);
 
@@ -213,20 +208,6 @@ export default function SettingsPage() {
       document.documentElement.style.setProperty('--radius', `${borderRadius}rem`);
     }
   }, [borderRadius, isClient]);
-
-   useEffect(() => {
-    if (typeof window !== 'undefined' && isClient) {
-      const root = document.documentElement;
-      root.style.setProperty('--card-border-width', `${borderWidth}px`);
-    }
-  }, [borderWidth, isClient]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && isClient) {
-      const root = document.documentElement;
-      root.style.setProperty('--card-border-color', borderColor);
-    }
-  }, [borderColor, isClient]);
   
    useEffect(() => {
     const activeLink = document.getElementById(`tab-trigger-${activeTab}`);
@@ -249,21 +230,6 @@ export default function SettingsPage() {
     setBorderRadius(newRadius);
     if (typeof window !== 'undefined') {
       localStorage.setItem('majorstockx-border-radius', newRadius.toString());
-    }
-  };
-
-  const handleBorderWidthChange = (value: number[]) => {
-    const newWidth = value[0];
-    setBorderWidth(newWidth);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('majorstockx-border-width', newWidth.toString());
-    }
-  };
-
-  const handleBorderColorChange = (color: string) => {
-    setBorderColor(color);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('majorstockx-border-color', color);
     }
   };
 
@@ -346,20 +312,39 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <ScrollArea className="w-full whitespace-nowrap" ref={scrollRef}>
-             <TabsList className="inline-flex h-auto items-center justify-start rounded-2xl bg-muted p-1.5 text-muted-foreground w-max">
-              <TabsTrigger value="profile" id="tab-trigger-profile"><UserIcon className="mr-2 h-4 w-4" />Perfil</TabsTrigger>
-              <TabsTrigger value="appearance" id="tab-trigger-appearance"><Palette className="mr-2 h-4 w-4" />Aparência</TabsTrigger>
-              {hasPermission('settings') && (
-                <>
-                  <TabsTrigger value="company" id="tab-trigger-company"><Building className="mr-2 h-4 w-4" />Empresa</TabsTrigger>
-                  <TabsTrigger value="locations" id="tab-trigger-locations"><MapPin className="mr-2 h-4 w-4" />Localizações</TabsTrigger>
-                  <TabsTrigger value="catalog" id="tab-trigger-catalog"><Book className="mr-2 h-4 w-4" />Catálogo</TabsTrigger>
-                </>
-              )}
-            </TabsList>
-            <ScrollBar orientation="horizontal" className="h-0.5" />
-          </ScrollArea>
+          {/* Desktop Tabs */}
+          <div className="hidden md:block">
+            <ScrollArea className="w-full whitespace-nowrap" ref={scrollRef}>
+              <TabsList className="inline-flex h-auto items-center justify-start rounded-2xl bg-muted p-1.5 text-muted-foreground w-max">
+                {settingsTabs.map(tab => (
+                  <TabsTrigger key={tab.value} value={tab.value} id={`tab-trigger-${tab.value}`}>
+                    <tab.icon className="mr-2 h-4 w-4" />{tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </div>
+          
+          {/* Mobile Dropdown */}
+          <div className="md:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  <span>{settingsTabs.find(t => t.value === activeTab)?.label || 'Menu'}</span>
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                {settingsTabs.map(tab => (
+                    <DropdownMenuItem key={tab.value} onSelect={() => setActiveTab(tab.value)}>
+                        <tab.icon className="mr-2 h-4 w-4" />
+                        <span>{tab.label}</span>
+                    </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
           <TabsContent value="profile">
             <ProfileTab />
