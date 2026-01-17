@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useContext, useEffect } from "react";
@@ -24,9 +23,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { formatCurrency } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { MovementCard } from "@/components/inventory/history/movement-card";
 
 export default function InventoryHistoryPage() {
   const { companyId, locations, loading: contextLoading, user, clearStockMovements, companyData } = useContext(InventoryContext) || {};
@@ -242,10 +241,23 @@ export default function InventoryHistoryPage() {
           <DatePicker date={selectedDate} setDate={setSelectedDate} />
         </div>
 
-        <HistoryDataTable 
-          columns={columns({ locationMap })}
-          data={filteredMovements}
-        />
+        <div className="hidden md:block">
+          <HistoryDataTable 
+            columns={columns({ locationMap })}
+            data={filteredMovements}
+          />
+        </div>
+        <div className="block md:hidden space-y-3">
+          {filteredMovements.length > 0 ? (
+            filteredMovements.map(movement => (
+              <MovementCard key={movement.id} movement={movement} locationMap={locationMap} />
+            ))
+          ) : (
+            <Card className="text-center py-12 text-muted-foreground">
+                Nenhum movimento encontrado com os filtros atuais.
+            </Card>
+          )}
+        </div>
         
         {isAdmin && (
             <Card className="mt-8">
@@ -265,5 +277,3 @@ export default function InventoryHistoryPage() {
     </>
   );
 }
-
-    
