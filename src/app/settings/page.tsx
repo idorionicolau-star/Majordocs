@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useContext, useRef } from "react";
@@ -369,7 +370,7 @@ export default function SettingsPage() {
 
         <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <ScrollArea className="w-full whitespace-nowrap" ref={scrollRef}>
-            <TabsList className={cn("w-max md:w-full md:justify-center", "animate-peek md:animate-none")}>
+            <div role="tablist" className="inline-flex h-auto items-center justify-start rounded-2xl bg-muted p-1.5 text-muted-foreground w-max">
               <TabsTrigger value="profile" id="tab-trigger-profile"><UserIcon className="mr-2 h-4 w-4" />Perfil</TabsTrigger>
               <TabsTrigger value="appearance" id="tab-trigger-appearance"><Palette className="mr-2 h-4 w-4" />Aparência</TabsTrigger>
               {hasPermission('settings') && (
@@ -380,8 +381,8 @@ export default function SettingsPage() {
                   <TabsTrigger value="devtools" id="tab-trigger-devtools"><Code className="mr-2 h-4 w-4" />Ferramentas</TabsTrigger>
                 </>
               )}
-            </TabsList>
-            <ScrollBar orientation="horizontal" className="h-0.5 md:hidden" />
+            </div>
+            <ScrollBar orientation="horizontal" className="h-0.5" />
           </ScrollArea>
 
           <TabsContent value="profile">
