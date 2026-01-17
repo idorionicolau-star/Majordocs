@@ -3,13 +3,13 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import { Product, Location } from "@/lib/types"
-import { AlertCircle, MapPin } from "lucide-react"
+import { AlertCircle, MapPin, History, Trash2, Edit2 } from "lucide-react"
 import { EditProductDialog } from "./edit-product-dialog"
 import { Button } from "../ui/button";
-import { Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "@/lib/utils";
 import { AuditStockDialog } from "./audit-stock-dialog"
+import Link from "next/link";
 
 interface ColumnsOptions {
   onAttemptDelete: (product: Product) => void;
@@ -135,43 +135,54 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
     }
   );
 
-  if (canEdit) {
-    baseColumns.push({
-        id: "actions",
-        cell: ({ row }) => {
-          const product = row.original
-          return (
-            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <AuditStockDialog product={product} trigger="icon" />
-              <EditProductDialog 
-                product={product} 
-                onProductUpdate={options.onProductUpdate}
-                trigger="icon"
-              />
-              <TooltipProvider>
+  baseColumns.push({
+      id: "actions",
+      cell: ({ row }) => {
+        const product = row.original
+        return (
+          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <TooltipProvider>
                 <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="p-3 h-auto w-auto text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
-                      onClick={() => options.onAttemptDelete(product)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Apagar</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Apagar Produto</p>
-                  </TooltipContent>
+                    <TooltipTrigger asChild>
+                        <Button asChild variant="ghost" size="icon" className="p-3 h-auto w-auto text-muted-foreground hover:text-primary rounded-xl transition-all">
+                            <Link href={`/inventory/history?productName=${encodeURIComponent(product.name)}`}>
+                                <History className="h-4 w-4" />
+                            </Link>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Ver Histórico</p></TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
-            </div>
-          )
-        },
-      });
-  }
-
+              {canEdit && (
+                  <>
+                    <AuditStockDialog product={product} trigger="icon" />
+                    <EditProductDialog 
+                      product={product} 
+                      onProductUpdate={options.onProductUpdate}
+                      trigger="icon"
+                    />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="p-3 h-auto w-auto text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
+                          onClick={() => options.onAttemptDelete(product)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Apagar</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Apagar Produto</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </>
+              )}
+            </TooltipProvider>
+          </div>
+        )
+      },
+    });
 
   return baseColumns;
 }

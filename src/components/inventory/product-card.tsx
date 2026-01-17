@@ -5,12 +5,13 @@ import type { Product } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertCircle, Edit2, Trash2, PackageCheck } from "lucide-react";
+import { AlertCircle, Edit2, Trash2, PackageCheck, History } from "lucide-react";
 import { getStockStatus } from "./columns";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { EditProductDialog } from "./edit-product-dialog";
 import { AuditStockDialog } from "./audit-stock-dialog";
+import Link from "next/link";
 
 interface ProductCardProps {
     product: Product;
@@ -67,34 +68,45 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                     </div>
                 )}
             </CardContent>
-            {canEdit && <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
-                <AuditStockDialog product={product} trigger="card-button" />
-                <EditProductDialog
-                    product={product}
-                    onProductUpdate={onProductUpdate}
-                    trigger={'card-button'}
-                />
+            <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button
-                                variant="outline"
-                                className={cn(
-                                    "text-destructive hover:bg-destructive/10 hover:text-destructive",
-                                     "flex-1 h-8 sm:h-9"
-                                )}
-                                size={'icon'}
-                                onClick={() => onAttemptDelete(product)}
-                            >
-                                <Trash2 className="h-4 w-4"/>
+                                <Button asChild variant="outline" size="icon" className="flex-1 h-8 sm:h-9">
+                                <Link href={`/inventory/history?productName=${encodeURIComponent(product.name)}`}>
+                                    <History className="h-4 w-4" />
+                                </Link>
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Apagar Produto</p>
-                        </TooltipContent>
+                        <TooltipContent><p>Ver Histórico</p></TooltipContent>
                     </Tooltip>
+                    {canEdit && (
+                        <>
+                        <AuditStockDialog product={product} trigger="card-button" />
+                        <EditProductDialog
+                            product={product}
+                            onProductUpdate={onProductUpdate}
+                            trigger={'card-button'}
+                        />
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className="text-destructive hover:bg-destructive/10 hover:text-destructive flex-1 h-8 sm:h-9"
+                                    size={'icon'}
+                                    onClick={() => onAttemptDelete(product)}
+                                >
+                                    <Trash2 className="h-4 w-4"/>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Apagar Produto</p>
+                            </TooltipContent>
+                        </Tooltip>
+                        </>
+                    )}
                 </TooltipProvider>
-            </CardFooter>}
+            </CardFooter>
         </Card>
     );
 }

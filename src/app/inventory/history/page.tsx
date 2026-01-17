@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, useContext, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { HistoryDataTable } from "@/components/inventory/history/data-table";
 import { columns } from "@/components/inventory/history/columns";
 import { InventoryContext } from "@/context/inventory-context";
@@ -29,6 +30,9 @@ import { useToast } from "@/hooks/use-toast";
 import { MovementCard } from "@/components/inventory/history/movement-card";
 
 export default function InventoryHistoryPage() {
+  const searchParams = useSearchParams();
+  const productNameFromQuery = searchParams.get('productName');
+
   const { companyId, locations, loading: contextLoading, user, clearStockMovements, companyData } = useContext(InventoryContext) || {};
   const firestore = useFirestore();
   const isAdmin = user?.role === 'Admin';
@@ -36,7 +40,7 @@ export default function InventoryHistoryPage() {
   const { toast } = useToast();
 
 
-  const [searchFilter, setSearchFilter] = useState("");
+  const [searchFilter, setSearchFilter] = useState(productNameFromQuery || "");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   const stockMovementsCollectionRef = useMemoFirebase(() => {

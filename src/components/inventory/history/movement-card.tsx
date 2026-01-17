@@ -21,9 +21,9 @@ const movementConfig = {
 };
 
 const DetailItem = ({ icon: Icon, value }: { icon: React.ElementType, value: React.ReactNode }) => (
-    <div className="flex items-center gap-2 text-sm">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-        <span className="text-muted-foreground">{value}</span>
+    <div className="flex items-start gap-2 text-sm">
+        <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+        <div className="text-muted-foreground">{value}</div>
     </div>
 );
 
@@ -50,6 +50,17 @@ export function MovementCard({ movement, locationMap }: MovementCardProps) {
     const quantityDisplay = movement.quantity > 0 && !isOut ? `+${movement.quantity}` : movement.quantity;
     const quantityColor = isOut ? "text-red-500" : "text-green-500";
 
+    const reasonDisplay = movement.isAudit
+        ? (
+            <>
+                <p className="font-semibold text-foreground">{movement.reason}</p>
+                <p className="text-xs">
+                    Ajuste de {movement.systemCountBefore} para {movement.physicalCount} ({movement.quantity > 0 ? '+' : ''}{movement.quantity})
+                </p>
+            </>
+          )
+        : movement.reason;
+
 
     return (
         <Card className="glass-card">
@@ -66,7 +77,7 @@ export function MovementCard({ movement, locationMap }: MovementCardProps) {
                 </div>
             </CardHeader>
             <CardContent className="space-y-2 text-xs pt-2">
-                <DetailItem icon={Tag} value={movement.reason} />
+                <DetailItem icon={Tag} value={reasonDisplay} />
                 {locationText && <DetailItem icon={MapPin} value={locationText} />}
                 <DetailItem icon={User} value={movement.userName} />
             </CardContent>

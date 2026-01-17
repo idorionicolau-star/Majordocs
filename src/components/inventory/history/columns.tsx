@@ -30,7 +30,7 @@ const MovementTypeCell = ({ type }: { type: MovementType }) => {
 
 const QuantityCell = ({ quantity, type }: { quantity: number, type: MovementType }) => {
     const isOut = type === 'OUT' || (type === 'ADJUSTMENT' && quantity < 0);
-    const displayQuantity = quantity > 0 ? `+${quantity}` : quantity;
+    const displayQuantity = quantity > 0 && !isOut ? `+${quantity}` : quantity;
     return (
         <span className={cn(
             "font-mono font-bold",
@@ -99,6 +99,20 @@ export const columns = (options: ColumnsOptions): ColumnDef<StockMovement>[] => 
      {
         accessorKey: "reason",
         header: "Motivo",
+        cell: ({ row }) => {
+            const movement = row.original;
+            if (movement.isAudit) {
+                return (
+                    <div className="text-xs">
+                        <p className="font-semibold">{movement.reason}</p>
+                        <p className="text-muted-foreground">
+                            Ajuste de {movement.systemCountBefore} para {movement.physicalCount} ({movement.quantity > 0 ? '+' : ''}{movement.quantity})
+                        </p>
+                    </div>
+                )
+            }
+            return <span className="text-xs">{movement.reason}</span>;
+        }
     },
     {
         accessorKey: "userName",
