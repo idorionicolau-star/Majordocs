@@ -10,6 +10,7 @@ import { getStockStatus } from "./columns";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { EditProductDialog } from "./edit-product-dialog";
+import { AuditStockDialog } from "./audit-stock-dialog";
 
 interface ProductCardProps {
     product: Product;
@@ -67,7 +68,8 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                 )}
             </CardContent>
             {canEdit && <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
-                 <EditProductDialog
+                <AuditStockDialog product={product} trigger="card-button" />
+                <EditProductDialog
                     product={product}
                     onProductUpdate={onProductUpdate}
                     trigger={'card-button'}

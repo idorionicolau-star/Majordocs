@@ -9,6 +9,7 @@ import { Button } from "../ui/button";
 import { Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "@/lib/utils";
+import { AuditStockDialog } from "./audit-stock-dialog"
 
 interface ColumnsOptions {
   onAttemptDelete: (product: Product) => void;
@@ -141,6 +142,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
           const product = row.original
           return (
             <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <AuditStockDialog product={product} trigger="icon" />
               <EditProductDialog 
                 product={product} 
                 onProductUpdate={options.onProductUpdate}

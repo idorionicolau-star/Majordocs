@@ -7,7 +7,7 @@ import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle, Plus } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle, Plus, FileCheck } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -225,8 +225,7 @@ export default function InventoryPage() {
             color: #374151;
           }
           .count-col { width: 80px; }
-          .color-col { width: 90px; }
-          .obs-col { width: 200px; }
+          .obs-col { width: 150px; }
           .signature-line {
             border-top: 1px solid #999;
             width: 250px;
@@ -269,10 +268,33 @@ export default function InventoryPage() {
       printWindow.document.write(`<p><b>Responsável:</b> _________________________</p>`);
 
       printWindow.document.write('<table>');
-      printWindow.document.write('<thead><tr><th>Produto</th><th>Categoria</th><th class="color-col">Cor</th><th class="count-col">Qtd. Contada</th><th class="count-col">Danificados</th><th class="obs-col">Observações</th></tr></thead>');
+      printWindow.document.write(`
+        <thead>
+            <tr>
+                <th>Produto</th>
+                <th>Categoria</th>
+                ${isMultiLocation ? '<th>Localização</th>' : ''}
+                <th class="count-col">Stock Sistema</th>
+                <th class="count-col">Qtd. Contada</th>
+                <th class="count-col">Diferença</th>
+                <th class="obs-col">Observações</th>
+            </tr>
+        </thead>
+      `);
       printWindow.document.write('<tbody>');
       filteredProducts.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)).forEach(product => {
-        printWindow.document.write(`<tr><td>${product.name}</td><td>${product.category}</td><td></td><td></td><td></td><td></td></tr>`);
+         const locationName = isMultiLocation ? (locations.find(l => l.id === product.location)?.name || product.location) : '';
+        printWindow.document.write(`
+            <tr>
+                <td>${product.name}</td>
+                <td>${product.category}</td>
+                ${isMultiLocation ? `<td>${locationName}</td>` : ''}
+                <td>${product.stock - product.reservedStock}</td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+        `);
       });
       printWindow.document.write('</tbody></table>');
 

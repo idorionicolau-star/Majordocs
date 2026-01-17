@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { StockMovement, MovementType } from "@/lib/types";
@@ -41,9 +42,14 @@ export function MovementCard({ movement, locationMap }: MovementCardProps) {
         locationText = toLocation;
     } else if (movement.type === 'OUT') {
         locationText = fromLocation;
+    } else if (movement.type === 'ADJUSTMENT') {
+        locationText = toLocation || fromLocation;
     }
     
-    const quantityDisplay = movement.quantity > 0 && movement.type !== 'OUT' ? `+${movement.quantity}` : movement.quantity;
+    const isOut = movement.type === 'OUT' || (movement.type === 'ADJUSTMENT' && movement.quantity < 0);
+    const quantityDisplay = movement.quantity > 0 && !isOut ? `+${movement.quantity}` : movement.quantity;
+    const quantityColor = isOut ? "text-red-500" : "text-green-500";
+
 
     return (
         <Card className="glass-card">
@@ -55,7 +61,7 @@ export function MovementCard({ movement, locationMap }: MovementCardProps) {
                     </CardTitle>
                     <p className="text-xs text-muted-foreground">{date}</p>
                 </div>
-                 <div className={cn("text-lg font-bold font-mono", movement.quantity < 0 ? "text-red-500" : "text-green-500")}>
+                 <div className={cn("text-lg font-bold font-mono", quantityColor)}>
                     {quantityDisplay}
                 </div>
             </CardHeader>

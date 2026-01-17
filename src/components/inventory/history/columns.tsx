@@ -29,8 +29,8 @@ const MovementTypeCell = ({ type }: { type: MovementType }) => {
 }
 
 const QuantityCell = ({ quantity, type }: { quantity: number, type: MovementType }) => {
-    const isOut = type === 'OUT' || (type === 'TRANSFER' && quantity < 0);
-    const displayQuantity = isOut ? quantity : `+${quantity}`;
+    const isOut = type === 'OUT' || (type === 'ADJUSTMENT' && quantity < 0);
+    const displayQuantity = quantity > 0 ? `+${quantity}` : quantity;
     return (
         <span className={cn(
             "font-mono font-bold",
@@ -54,6 +54,10 @@ const LocationCell = ({ movement, locationMap }: { movement: StockMovement, loca
     }
     if (type === 'OUT') {
         return <span className="text-xs">{from}</span>;
+    }
+    if (type === 'ADJUSTMENT') {
+        const location = to !== 'N/A' ? to : from;
+        return <span className="text-xs">{location}</span>;
     }
     return <span className="text-xs text-muted-foreground">N/A</span>;
 };
