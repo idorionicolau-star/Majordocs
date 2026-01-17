@@ -64,17 +64,6 @@ function NotificationsDropdownContent() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="focus:bg-transparent cursor-default text-amber-700 dark:text-amber-400">
-            <div className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 mt-1 flex-shrink-0" />
-                <p className="text-xs whitespace-normal leading-relaxed">
-                    Atenção: A transferência de propriedade pode ter reatribuído algumas notificações para outros utilizadores.
-                </p>
-            </div>
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-
         <ScrollArea className="h-[300px]">
             {notifications.length > 0 ? notifications.map(notification => {
                 const Icon = iconMap[notification.type as keyof typeof iconMap] || AlertTriangle;

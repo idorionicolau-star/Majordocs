@@ -247,6 +247,20 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [companyData, addNotification, toast]);
 
+  const logout = useCallback(async () => {
+    try {
+        await signOut(auth);
+        setUser(null);
+        setCompanyId(null);
+        setFirebaseUser(null);
+        setNotifications([]); // Explicitly clear notifications
+        router.push('/login');
+        toast({ title: "Sessão terminada" });
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Erro ao sair' });
+    }
+  }, [auth, router, toast]);
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
@@ -273,12 +287,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribeAuth();
-  }, [auth, firestore]);
+  }, [auth, firestore, logout]);
 
   useEffect(() => {
     let unsubscribeEmployee: () => void = () => {};
 
     if (firebaseUser && companyId) {
+      setNotifications([]); // Clear notifications on company change
       const employeeDocRef = doc(firestore, `companies/${companyId}/employees/${firebaseUser.uid}`);
       unsubscribeEmployee = onSnapshot(employeeDocRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -304,7 +319,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
     
     return () => unsubscribeEmployee();
-  }, [firebaseUser, companyId, firestore]);
+  }, [firebaseUser, companyId, firestore, logout]);
   
 
   const login = async (email: string, pass: string): Promise<boolean> => {
@@ -391,19 +406,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       return false;
     }
   };
-
-  const logout = useCallback(async () => {
-    try {
-        await signOut(auth);
-        setUser(null);
-        setCompanyId(null);
-        setFirebaseUser(null);
-        router.push('/login');
-        toast({ title: "Sessão terminada" });
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Erro ao sair' });
-    }
-  }, [auth, router, toast]);
 
   const canView = (module: ModulePermission) => {
     if (!user) return false;
