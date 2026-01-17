@@ -123,6 +123,8 @@ interface InventoryContextType {
   markAllAsRead: () => void;
   clearNotifications: () => void;
   addNotification: (notification: Omit<AppNotification, 'id' | 'date' | 'read'>) => void;
+  addCatalogProduct: (productData: Omit<CatalogProduct, 'id'>) => Promise<void>;
+  addCatalogCategory: (categoryName: string) => Promise<void>;
 }
 
 export const InventoryContext = createContext<InventoryContextType | undefined>(
@@ -908,6 +910,36 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [firestore, companyId, user, ordersData, toast, addNotification]);
 
+  const addCatalogProduct = useCallback(async (productData: Omit<CatalogProduct, 'id'>) => {
+    if (!catalogProductsCollectionRef) {
+      throw new Error("Referência da coleção do catálogo não disponível.");
+    }
+    try {
+        await addDoc(catalogProductsCollectionRef, productData);
+    } catch(e) {
+        console.error("Error adding catalog product:", e);
+        throw new Error("Não foi possível adicionar o produto ao catálogo.");
+    }
+  }, [catalogProductsCollectionRef]);
+
+  const addCatalogCategory = useCallback(async (categoryName: string) => {
+    if (!catalogCategoriesCollectionRef || !catalogCategoriesData) return;
+    const trimmedName = categoryName.trim();
+    if (!trimmedName) return;
+    
+    const exists = catalogCategoriesData.some(c => c.name.toLowerCase() === trimmedName.toLowerCase());
+    if (exists) {
+      return;
+    }
+      
+    try {
+      await addDoc(catalogCategoriesCollectionRef, { name: trimmedName });
+    } catch (e) {
+      console.error("Error adding catalog category:", e);
+      throw new Error("Não foi possível adicionar a nova categoria.");
+    }
+  }, [catalogCategoriesCollectionRef, catalogCategoriesData]);
+
   const deleteSale = useCallback(async (saleId: string) => {
     if (!salesCollectionRef) return;
     await deleteDoc(doc(salesCollectionRef, saleId));
@@ -941,6 +973,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     deleteSale, deleteProduction, deleteOrder,
     clearSales, clearProductions, clearOrders, clearStockMovements,
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
+    addCatalogProduct, addCatalogCategory,
   };
 
   return (
@@ -949,4 +982,3 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
-

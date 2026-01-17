@@ -34,6 +34,7 @@ import type { Product, Location } from '@/lib/types';
 import { InventoryContext } from '@/context/inventory-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { ScrollArea } from '../ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -57,7 +58,9 @@ interface AddProductDialogProps {
 
 export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProductDialogProps) {
   const inventoryContext = useContext(InventoryContext);
-  const { catalogCategories, catalogProducts, locations, isMultiLocation } = inventoryContext || { catalogCategories: [], catalogProducts: [], locations: [], isMultiLocation: false };
+  const { catalogCategories, catalogProducts, locations, isMultiLocation, addCatalogProduct, addCatalogCategory } = inventoryContext || { catalogCategories: [], catalogProducts: [], locations: [], isMultiLocation: false, addCatalogProduct: async () => {}, addCatalogCategory: async () => {} };
+  const [isCreatingNewProduct, setIsCreatingNewProduct] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<AddProductFormValues>({
     resolver: zodResolver(formSchema),
@@ -73,6 +76,10 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
   });
 
   useEffect(() => {
+    if (!open) {
+      setIsCreatingNewProduct(false);
+    }
+    
     if (open) {
       const savedLocation = localStorage.getItem('majorstockx-last-product-location');
       const locationExists = locations.some(l => l.id === savedLocation);
@@ -94,20 +101,56 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
 
 
   const handleProductSelect = (productName: string, product?: CatalogProduct) => {
-    form.setValue('name', productName);
+    form.setValue('name', productName.trim());
     if (product) {
+      setIsCreatingNewProduct(false);
       form.setValue('price', product.price);
       form.setValue('lowStockThreshold', product.lowStockThreshold);
       form.setValue('criticalStockThreshold', product.criticalStockThreshold);
       form.setValue('category', product.category);
+    } else {
+      setIsCreatingNewProduct(true);
+      form.setValue('price', 0);
+      form.setValue('lowStockThreshold', 10);
+      form.setValue('criticalStockThreshold', 5);
+      form.setValue('category', '');
     }
   };
 
 
-  function onSubmit(values: AddProductFormValues) {
+  async function onSubmit(values: AddProductFormValues) {
     if (isMultiLocation && !values.location) {
       form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
       return;
+    }
+
+    if (isCreatingNewProduct) {
+      if (!values.category.trim()) {
+        form.setError("category", { type: "manual", message: "A categoria é obrigatória para novos produtos." });
+        return;
+      }
+      try {
+        if(addCatalogCategory) await addCatalogCategory(values.category);
+        
+        if(addCatalogProduct) {
+          await addCatalogProduct({
+            name: values.name,
+            category: values.category,
+            price: values.price,
+            lowStockThreshold: values.lowStockThreshold,
+            criticalStockThreshold: values.criticalStockThreshold,
+          });
+        }
+
+        toast({
+            title: "Produto de Catálogo Criado",
+            description: `${values.name} foi adicionado ao catálogo.`,
+        });
+
+      } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Erro ao Criar no Catálogo', description: error.message });
+        return;
+      }
     }
     
     if (values.location) {
@@ -158,6 +201,22 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
                   )}
                 />
                 
+                {isCreatingNewProduct && (
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Categoria do Novo Produto</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Digite uma categoria nova ou existente" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
                 {isMultiLocation && (
                     <FormField
                       control={form.control}

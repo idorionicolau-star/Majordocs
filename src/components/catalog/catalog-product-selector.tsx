@@ -4,7 +4,7 @@
 import { useState, useMemo } from 'react';
 import type { Product } from '@/lib/types';
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Check, PlusCircle } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -72,8 +72,20 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
             />
             <ScrollArea className="h-32">
               <CommandList>
-                <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+                <CommandEmpty>
+                  {searchQuery ? `Nenhum produto encontrado para "${searchQuery}".` : 'Nenhum produto encontrado.'}
+                </CommandEmpty>
                 <CommandGroup>
+                  {searchQuery.length > 0 && !filteredProducts.some(p => p.name.toLowerCase() === searchQuery.toLowerCase()) && (
+                     <CommandItem
+                      key="create-new"
+                      value={searchQuery}
+                      onSelect={() => onValueChange(searchQuery, undefined)}
+                    >
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      <span>Criar: "{searchQuery}"</span>
+                    </CommandItem>
+                  )}
                   {filteredProducts.sort((a,b) => a.name.localeCompare(b.name)).map((product) => (
                     <CommandItem
                       key={product.id}
