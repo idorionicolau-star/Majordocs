@@ -65,7 +65,7 @@
         "price": { "type": "number" },
         "lowStockThreshold": { "type": "number" },
         "criticalStockThreshold": { "type": "number" },
-        "unit": { "type": "string" }
+        "unit": { "type": "string", "enum": ["un", "m²", "m", "cj", "outro"] }
       },
       "required": ["name", "category", "price"]
     },
@@ -92,7 +92,7 @@
         "criticalStockThreshold": { "type": "number" },
         "lastUpdated": { "type": "string", "format": "date" },
         "location": { "type": "string" },
-        "unit": { "type": "string" }
+        "unit": { "type": "string", "enum": ["un", "m²", "m", "cj", "outro"] }
       },
       "required": ["name", "category", "stock", "price", "lastUpdated"]
     },

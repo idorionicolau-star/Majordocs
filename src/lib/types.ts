@@ -64,7 +64,7 @@ export type Product = {
   criticalStockThreshold: number;
   lastUpdated: string;
   location?: string;
-  unit?: string;
+  unit?: 'un' | 'm²' | 'm' | 'cj' | 'outro';
 };
 
 export type Sale = {
@@ -180,7 +180,7 @@ export interface ModelInfo {
 export interface InventoryContextType {
   // Auth related
   user: Employee | null;
-  firebaseUser: FirebaseAuthUser | null;
+  firebaseUser: any | null;
   companyId: string | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<boolean>;

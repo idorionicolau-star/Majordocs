@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -40,6 +41,7 @@ const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   category: z.string().min(2, { message: "A categoria é obrigatória." }),
   price: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
+  unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
   lowStockThreshold: z.coerce.number().min(0),
   criticalStockThreshold: z.coerce.number().min(0),
 });
@@ -59,6 +61,7 @@ function AddCatalogProductDialogContent({ categories, onAdd, setOpen }: AddCatal
       name: '',
       category: categories[0] || '',
       price: 0,
+      unit: 'un',
       lowStockThreshold: 10,
       criticalStockThreshold: 5,
     },
@@ -115,19 +118,45 @@ function AddCatalogProductDialogContent({ categories, onAdd, setOpen }: AddCatal
                     </FormItem>
                 )}
             />
-            <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Preço Unitário Padrão (MT)</FormLabel>
-                    <FormControl>
-                        <Input type="number" step="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="price"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Preço Padrão</FormLabel>
+                        <FormControl>
+                            <Input type="number" step="0.01" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Unidade</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              <SelectItem value="un">Unidade (un)</SelectItem>
+                              <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
+                              <SelectItem value="m">Metro Linear (m)</SelectItem>
+                              <SelectItem value="cj">Conjunto (cj)</SelectItem>
+                              <SelectItem value="outro">Outro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+            </div>
             <div className="grid grid-cols-2 gap-4">
                <FormField
                 control={form.control}

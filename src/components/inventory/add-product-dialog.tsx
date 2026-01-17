@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useContext } from 'react';
@@ -43,6 +44,7 @@ const formSchema = z.object({
   category: z.string().min(1, { message: "A categoria é obrigatória." }),
   price: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
   stock: z.coerce.number().min(0, { message: "O estoque não pode ser negativo." }),
+  unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
   lowStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
   criticalStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
   location: z.string().optional(),
@@ -69,6 +71,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       name: "",
       price: 0,
       stock: 0,
+      unit: "un",
       lowStockThreshold: 10,
       criticalStockThreshold: 5,
       location: "",
@@ -92,6 +95,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
         name: "",
         price: 0,
         stock: 0,
+        unit: 'un',
         lowStockThreshold: 10,
         criticalStockThreshold: 5,
         location: finalLocation,
@@ -108,12 +112,16 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       form.setValue('lowStockThreshold', product.lowStockThreshold);
       form.setValue('criticalStockThreshold', product.criticalStockThreshold);
       form.setValue('category', product.category);
+      if (product.unit) {
+        form.setValue('unit', product.unit);
+      }
     } else {
       setIsCreatingNewProduct(true);
       form.setValue('price', 0);
       form.setValue('lowStockThreshold', 10);
       form.setValue('criticalStockThreshold', 5);
       form.setValue('category', '');
+      form.setValue('unit', 'un');
     }
   };
 
@@ -137,6 +145,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
             name: values.name,
             category: values.category,
             price: values.price,
+            unit: values.unit,
             lowStockThreshold: values.lowStockThreshold,
             criticalStockThreshold: values.criticalStockThreshold,
           });
@@ -162,6 +171,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       category: values.category,
       price: values.price,
       stock: values.stock,
+      unit: values.unit,
       lowStockThreshold: values.lowStockThreshold,
       criticalStockThreshold: values.criticalStockThreshold,
       location: values.location || (locations.length > 0 ? locations[0].id : 'Principal'),
@@ -257,7 +267,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
                       </FormItem>
                   )}
                   />
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                   control={form.control}
                   name="stock"
@@ -271,6 +281,32 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
                       </FormItem>
                   )}
                   />
+                  <FormField
+                    control={form.control}
+                    name="unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Unidade</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              <SelectItem value="un">Unidade (un)</SelectItem>
+                              <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
+                              <SelectItem value="m">Metro Linear (m)</SelectItem>
+                              <SelectItem value="cj">Conjunto (cj)</SelectItem>
+                              <SelectItem value="outro">Outro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                   control={form.control}
                   name="lowStockThreshold"
