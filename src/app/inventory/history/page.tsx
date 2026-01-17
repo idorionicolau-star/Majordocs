@@ -1,10 +1,7 @@
-
 "use client";
 
 import { useState, useMemo, useContext, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { HistoryDataTable } from "@/components/inventory/history/data-table";
-import { columns } from "@/components/inventory/history/columns";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { StockMovement } from "@/lib/types";
@@ -241,21 +238,17 @@ export default function InventoryHistoryPage() {
           <DatePicker date={selectedDate} setDate={setSelectedDate} />
         </div>
 
-        <div className="hidden md:block">
-          <HistoryDataTable 
-            columns={columns({ locationMap })}
-            data={filteredMovements}
-          />
-        </div>
-        <div className="block md:hidden space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredMovements.length > 0 ? (
             filteredMovements.map(movement => (
               <MovementCard key={movement.id} movement={movement} locationMap={locationMap} />
             ))
           ) : (
-            <Card className="text-center py-12 text-muted-foreground">
-                Nenhum movimento encontrado com os filtros atuais.
-            </Card>
+            <div className="col-span-full">
+                <Card className="text-center py-12 text-muted-foreground">
+                    Nenhum movimento encontrado com os filtros atuais.
+                </Card>
+            </div>
           )}
         </div>
         
