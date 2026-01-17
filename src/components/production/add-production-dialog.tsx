@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useContext } from 'react';
@@ -30,14 +31,17 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import type { Production, Location } from '@/lib/types';
+import type { Production, Location, Product } from '@/lib/types';
 import { InventoryContext } from '@/context/inventory-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { ScrollArea } from '../ui/scroll-area';
 
+type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
+
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
+  unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
   location: z.string().optional(),
 });
 
@@ -63,9 +67,17 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
     defaultValues: {
       productName: "",
       location: "",
+      unit: "un",
     },
   });
   
+  const handleProductSelect = (productName: string, product?: CatalogProduct) => {
+    form.setValue('productName', productName);
+    if (product) {
+      form.setValue('unit', product.unit || 'un');
+    }
+  };
+
   useEffect(() => {
     if (open) {
       const savedLocation = localStorage.getItem('majorstockx-last-product-location');
@@ -76,6 +88,7 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
       form.reset({
         productName: "",
         location: finalLocation,
+        unit: 'un',
       });
     }
   }, [open, form, locations]);
@@ -94,6 +107,7 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
     onAddProduction({
       productName: values.productName,
       quantity: values.quantity,
+      unit: values.unit,
       location: values.location,
     });
 
@@ -127,26 +141,52 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
                           products={catalogProducts || []}
                           categories={catalogCategories || []}
                           selectedValue={field.value}
-                          onValueChange={field.onChange}
+                          onValueChange={handleProductSelect}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantidade Produzida</FormLabel>
-                    <FormControl>
-                      <Input type="number" min="1" {...field} placeholder="0" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quantidade Produzida</FormLabel>
+                      <FormControl>
+                        <Input type="number" min="1" {...field} placeholder="0" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Unidade</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              <SelectItem value="un">Unidade (un)</SelectItem>
+                              <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
+                              <SelectItem value="m">Metro Linear (m)</SelectItem>
+                              <SelectItem value="cj">Conjunto (cj)</SelectItem>
+                              <SelectItem value="outro">Outro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+              </div>
               {isMultiLocation && (
                   <FormField
                     control={form.control}

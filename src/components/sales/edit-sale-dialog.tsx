@@ -17,6 +17,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useForm, useWatch } from "react-hook-form";
@@ -33,6 +40,7 @@ type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | '
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
+  unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
   unitPrice: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
 });
 
@@ -55,6 +63,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
       productName: sale.productName,
       quantity: sale.quantity,
       unitPrice: sale.unitPrice,
+      unit: sale.unit || 'un',
     },
   });
   
@@ -84,6 +93,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
     form.setValue('productName', productName);
     if (product && productName !== sale.productName) {
       form.setValue('unitPrice', product.price);
+      form.setValue('unit', product.unit || 'un');
     }
   };
 
@@ -94,8 +104,9 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
       ...sale,
       productName: values.productName,
       quantity: values.quantity,
+      unit: values.unit,
       unitPrice: values.unitPrice,
-      totalValue: values.quantity * values.unitPrice,
+      totalValue: values.quantity * values.unitPrice, // This should be recalculated based on logic
     });
     onOpenChange(false);
   }
@@ -139,22 +150,46 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
                   )}
                   />
                   <FormField
-                      control={form.control}
-                      name="unitPrice"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Preço Unitário</FormLabel>
+                    control={form.control}
+                    name="unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Unidade</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                              <Input type="number" step="0.01" {...field} />
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
                           </FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
+                          <SelectContent>
+                              <SelectItem value="un">Unidade (un)</SelectItem>
+                              <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
+                              <SelectItem value="m">Metro Linear (m)</SelectItem>
+                              <SelectItem value="cj">Conjunto (cj)</SelectItem>
+                              <SelectItem value="outro">Outro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
               </div>
+              <FormField
+                  control={form.control}
+                  name="unitPrice"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Preço Unitário</FormLabel>
+                      <FormControl>
+                          <Input type="number" step="0.01" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+              />
 
               <div className="rounded-lg bg-muted p-4 text-right">
-                  <p className="text-sm font-medium text-muted-foreground">Novo Valor Total</p>
+                  <p className="text-sm font-medium text-muted-foreground">Novo Valor Total (sem impostos)</p>
                   <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
               </div>
 

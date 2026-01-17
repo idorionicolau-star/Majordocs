@@ -73,6 +73,7 @@ export type Sale = {
   productId: string;
   productName: string;
   quantity: number;
+  unit?: 'un' | 'm²' | 'm' | 'cj' | 'outro';
   unitPrice: number;
   subtotal: number;
   discount?: number;
@@ -89,6 +90,7 @@ export type Production = {
   date: string;
   productName: string;
   quantity: number;
+  unit?: 'un' | 'm²' | 'm' | 'cj' | 'outro';
   registeredBy: string;
   location?: string;
   status: 'Concluído' | 'Transferido';

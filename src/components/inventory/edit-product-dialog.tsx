@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -19,6 +20,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Edit2 } from "lucide-react";
@@ -34,6 +42,7 @@ const formSchema = z.object({
   category: z.string().min(2, { message: "A categoria deve ter pelo menos 2 caracteres." }),
   price: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
   stock: z.coerce.number().min(0, { message: "O estoque não pode ser negativo." }),
+  unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
   lowStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
   criticalStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
 });
@@ -54,6 +63,7 @@ function EditProductDialogContent({ product, onProductUpdate, setOpen }: Omit<Ed
         category: product.category,
         price: product.price,
         stock: product.stock,
+        unit: product.unit || 'un',
         lowStockThreshold: product.lowStockThreshold,
         criticalStockThreshold: product.criticalStockThreshold,
     },
@@ -119,7 +129,7 @@ function EditProductDialogContent({ product, onProductUpdate, setOpen }: Omit<Ed
                       </FormItem>
                   )}
                   />
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                   <FormField
                   control={form.control}
                   name="stock"
@@ -133,6 +143,32 @@ function EditProductDialogContent({ product, onProductUpdate, setOpen }: Omit<Ed
                       </FormItem>
                   )}
                   />
+                  <FormField
+                    control={form.control}
+                    name="unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Unidade</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              <SelectItem value="un">Unidade (un)</SelectItem>
+                              <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
+                              <SelectItem value="m">Metro Linear (m)</SelectItem>
+                              <SelectItem value="cj">Conjunto (cj)</SelectItem>
+                              <SelectItem value="outro">Outro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                   <FormField
                   control={form.control}
                   name="lowStockThreshold"
@@ -228,4 +264,5 @@ export function EditProductDialog({ product, onProductUpdate, trigger }: EditPro
         </Dialog>
     );
 }
+
 

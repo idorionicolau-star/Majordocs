@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from 'react';
@@ -43,6 +44,7 @@ type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | '
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   quantity: z.coerce.number().min(1, "A quantidade deve ser pelo menos 1.").optional(),
+  unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
   unitPrice: z.coerce.number().min(0, "O preço não pode ser negativo.").optional(),
   location: z.string().optional(),
   discountType: z.enum(['fixed', 'percentage']).default('fixed'),
@@ -75,6 +77,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
     defaultValues: {
       productName: "",
       location: "",
+      unit: 'un',
       discountType: 'fixed',
       discountValue: 0,
       vatPercentage: 17, // Default VAT
@@ -92,6 +95,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
         productName: "",
         quantity: undefined,
         unitPrice: undefined,
+        unit: 'un',
         location: finalLocation,
         discountType: 'fixed',
         discountValue: 0,
@@ -145,8 +149,10 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
     form.setValue('productName', productName);
     if (product) {
       form.setValue('unitPrice', product.price);
+      form.setValue('unit', product.unit || 'un');
     } else {
       form.setValue('unitPrice', undefined);
+      form.setValue('unit', 'un');
     }
   };
 
@@ -197,6 +203,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
       productId: products?.find(p => p.name === values.productName)?.id || 'unknown',
       productName: values.productName,
       quantity: values.quantity,
+      unit: values.unit,
       unitPrice: values.unitPrice,
       subtotal: subtotal,
       discount: discountAmount,

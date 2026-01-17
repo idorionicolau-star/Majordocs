@@ -65,7 +65,7 @@
         "price": { "type": "number" },
         "lowStockThreshold": { "type": "number" },
         "criticalStockThreshold": { "type": "number" },
-        "unit": { "type": "string" }
+        "unit": { "type": "string", "enum": ["un", "m²", "m", "cj", "outro"] }
       },
       "required": ["name", "category", "price"]
     },
@@ -92,7 +92,7 @@
         "criticalStockThreshold": { "type": "number" },
         "lastUpdated": { "type": "string", "format": "date" },
         "location": { "type": "string" },
-        "unit": { "type": "string" }
+        "unit": { "type": "string", "enum": ["un", "m²", "m", "cj", "outro"] }
       },
       "required": ["name", "category", "stock", "price", "lastUpdated"]
     },
@@ -105,6 +105,7 @@
         "productId": { "type": "string" },
         "productName": { "type": "string" },
         "quantity": { "type": "number" },
+        "unit": { "type": "string", "enum": ["un", "m²", "m", "cj", "outro"] },
         "unitPrice": { "type": "number" },
         "subtotal": { "type": "number" },
         "discount": { "type": "number" },
@@ -125,6 +126,7 @@
         "date": { "type": "string", "format": "date" },
         "productName": { "type": "string" },
         "quantity": { "type": "number" },
+        "unit": { "type": "string", "enum": ["un", "m²", "m", "cj", "outro"] },
         "registeredBy": { "type": "string" },
         "location": { "type": "string" },
         "status": { "type": "string", "enum": ["Concluído", "Transferido"] }
@@ -138,7 +140,7 @@
       "properties": {
         "productName": { "type": "string" },
         "quantity": { "type": "number" },
-        "unit": { "type": "string" },
+        "unit": { "type": "string", "enum": ["un", "m²", "m", "cj", "outro"] },
         "clientName": { "type": "string" },
         "deliveryDate": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["Pendente", "Em produção", "Concluída"] },
