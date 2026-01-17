@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useContext } from 'react';
@@ -221,16 +222,16 @@ export default function ReportsPage() {
               Selecione uma data para visualizar o relatório do mês correspondente.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
               <DatePicker date={selectedDate} setDate={setSelectedDate} />
-              <Button onClick={handlePrint} variant="outline" className="h-12" disabled={!selectedDate}>
+              <Button onClick={handlePrint} variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate}>
                   <Printer className="mr-2 h-4 w-4" />
                   Imprimir Relatório
               </Button>
           </div>
         </div>
         
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard icon={Hash} title="Total de Vendas" value={reportSummary.totalSales} />
             <StatCard icon={DollarSign} title="Valor Total" value={formatCurrency(reportSummary.totalValue)} />
             <StatCard icon={TrendingUp} title="Ticket Médio" value={formatCurrency(reportSummary.averageTicket)} />
@@ -331,3 +332,5 @@ const StatCard = ({ icon: Icon, title, value, subValue }: StatCardProps) => (
         </CardContent>
     </Card>
 );
+
+    
