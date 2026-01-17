@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useContext } from 'react';
@@ -239,7 +238,7 @@ export default function ReportsPage() {
         </div>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="text-center">
             <CardTitle>Detalhes das Vendas do Mês</CardTitle>
             <CardDescription>
               {selectedDate ? `Todas as vendas registadas em ${format(selectedDate, 'MMMM yyyy', { locale: pt })}.` : "Nenhuma data selecionada."}
