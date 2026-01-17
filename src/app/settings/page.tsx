@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useContext, useRef } from "react";
@@ -12,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail } from "lucide-react";
+import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Check } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { LocationsManager } from "@/components/settings/locations-manager";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTheme } from "@/components/theme-provider";
+import { themes } from "@/lib/themes";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
 const colorOptions = [
@@ -126,6 +130,7 @@ export default function SettingsPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState("profile");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const { colorTheme, setColorTheme } = useTheme();
 
   const [companyDetails, setCompanyDetails] = useState({
     name: '',
@@ -312,7 +317,6 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          {/* Desktop Tabs */}
           <div className="hidden md:block">
             <ScrollArea className="w-full whitespace-nowrap" ref={scrollRef}>
               <TabsList className="inline-flex h-auto items-center justify-start rounded-2xl bg-muted p-1.5 text-muted-foreground w-max">
@@ -326,7 +330,6 @@ export default function SettingsPage() {
             </ScrollArea>
           </div>
           
-          {/* Mobile Dropdown */}
           <div className="md:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -358,9 +361,45 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="theme">Tema</Label>
+                    <Label htmlFor="theme">Modo de Cor</Label>
                     <ThemeSwitcher />
                   </div>
+
+                   <div className="space-y-2">
+                    <Label>Cor do Tema</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Selecione a cor primária para a aplicação.
+                    </p>
+                    <div className="grid grid-cols-7 sm:grid-cols-10 gap-2 pt-2">
+                      {themes.map((theme) => {
+                        const isActive = colorTheme === theme.name;
+                        return (
+                          <TooltipProvider key={theme.name} delayDuration={0}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => setColorTheme(theme.name)}
+                                  className={cn(
+                                    "h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all",
+                                    isActive ? "border-foreground" : "border-transparent"
+                                  )}
+                                  style={{
+                                    backgroundColor: `hsl(${theme.primary.light})`,
+                                  }}
+                                >
+                                  {isActive && <Check className="h-5 w-5 text-white" />}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{theme.name}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="border-radius">Arredondamento dos Cantos</Label>
                     <p className="text-sm text-muted-foreground">Ajuste o raio das bordas dos elementos.</p>
