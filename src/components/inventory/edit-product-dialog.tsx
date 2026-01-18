@@ -31,7 +31,7 @@ import { Edit2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import type { Product } from '@/lib/types';
+import type { Product, Location } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { ScrollArea } from '../ui/scroll-area';
 
@@ -43,6 +43,7 @@ const formSchema = z.object({
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
   lowStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
   criticalStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
+  location: z.string().optional(),
 });
 
 type EditProductFormValues = z.infer<typeof formSchema>;
@@ -51,9 +52,11 @@ interface EditProductDialogProps {
     product: Product;
     onProductUpdate: (product: Product) => void;
     trigger: 'icon' | 'button' | 'card-button';
+    locations: Location[];
+    isMultiLocation: boolean;
 }
 
-function EditProductDialogContent({ product, onProductUpdate, setOpen }: Omit<EditProductDialogProps, 'trigger'> & { setOpen: (open: boolean) => void }) {
+function EditProductDialogContent({ product, onProductUpdate, setOpen, locations, isMultiLocation }: Omit<EditProductDialogProps, 'trigger'> & { setOpen: (open: boolean) => void }) {
   const form = useForm<EditProductFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -64,6 +67,7 @@ function EditProductDialogContent({ product, onProductUpdate, setOpen }: Omit<Ed
         unit: product.unit || 'un',
         lowStockThreshold: product.lowStockThreshold,
         criticalStockThreshold: product.criticalStockThreshold,
+        location: product.location || '',
     },
   });
 
@@ -114,6 +118,32 @@ function EditProductDialogContent({ product, onProductUpdate, setOpen }: Omit<Ed
                   )}
                   />
               </div>
+               {isMultiLocation && (
+                    <FormField
+                      control={form.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Localização</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione uma localização" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {locations.map((location: Location) => (
+                                <SelectItem key={location.id} value={location.id}>
+                                  {location.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                )}
               <FormField
                   control={form.control}
                   name="price"
@@ -206,7 +236,7 @@ function EditProductDialogContent({ product, onProductUpdate, setOpen }: Omit<Ed
 }
 
 
-export function EditProductDialog({ product, onProductUpdate, trigger }: EditProductDialogProps) {
+export function EditProductDialog({ product, onProductUpdate, trigger, locations, isMultiLocation }: EditProductDialogProps) {
     const [open, setOpen] = useState(false);
 
     const TriggerComponent = () => {
@@ -258,7 +288,7 @@ export function EditProductDialog({ product, onProductUpdate, trigger }: EditPro
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <TriggerComponent />
-            {open && <EditProductDialogContent product={product} onProductUpdate={onProductUpdate} setOpen={setOpen} />}
+            {open && <EditProductDialogContent product={product} onProductUpdate={onProductUpdate} setOpen={setOpen} locations={locations} isMultiLocation={isMultiLocation} />}
         </Dialog>
     );
 }

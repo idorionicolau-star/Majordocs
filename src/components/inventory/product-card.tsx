@@ -1,6 +1,6 @@
 "use client";
 
-import type { Product } from "@/lib/types";
+import type { Product, Location } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -18,9 +18,11 @@ interface ProductCardProps {
     onAttemptDelete: (product: Product) => void;
     viewMode?: 'normal' | 'condensed';
     canEdit: boolean;
+    locations: Location[];
+    isMultiLocation: boolean;
 }
 
-export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMode = 'normal', canEdit }: ProductCardProps) {
+export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMode = 'normal', canEdit, locations, isMultiLocation }: ProductCardProps) {
     const status = getStockStatus(product);
     
     const statusInfo = {
@@ -86,6 +88,8 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                             product={product}
                             onProductUpdate={onProductUpdate}
                             trigger={'card-button'}
+                            locations={locations}
+                            isMultiLocation={isMultiLocation}
                         />
                         <Tooltip>
                             <TooltipTrigger asChild>

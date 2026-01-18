@@ -1,4 +1,3 @@
-
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
@@ -159,6 +158,8 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
                       product={product} 
                       onProductUpdate={options.onProductUpdate}
                       trigger="icon"
+                      locations={options.locations}
+                      isMultiLocation={options.isMultiLocation}
                     />
                     <Tooltip>
                       <TooltipTrigger asChild>

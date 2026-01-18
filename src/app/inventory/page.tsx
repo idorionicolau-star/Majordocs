@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, useContext } from "react";
@@ -637,6 +636,8 @@ export default function InventoryPage() {
                         onAttemptDelete={setProductToDelete}
                         viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
                         canEdit={canEditInventory}
+                        locations={locations}
+                        isMultiLocation={isMultiLocation}
                     />
                 ))}
             </div>
