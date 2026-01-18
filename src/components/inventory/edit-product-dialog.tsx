@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -137,7 +135,7 @@ function EditProductDialogContent({ product, onProductUpdate, setOpen }: Omit<Ed
                       <FormItem>
                       <FormLabel>Estoque</FormLabel>
                       <FormControl>
-                          <Input type="number" {...field} />
+                          <Input type="number" step="any" {...field} />
                       </FormControl>
                       <FormMessage />
                       </FormItem>
@@ -264,5 +262,3 @@ export function EditProductDialog({ product, onProductUpdate, trigger }: EditPro
         </Dialog>
     );
 }
-
-

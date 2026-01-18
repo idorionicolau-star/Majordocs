@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from 'react';
@@ -43,7 +42,7 @@ type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | '
 
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
-  quantity: z.coerce.number().min(1, "A quantidade deve ser pelo menos 1.").optional(),
+  quantity: z.coerce.number().min(0.01, "A quantidade deve ser maior que zero.").optional(),
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
   unitPrice: z.coerce.number().min(0, "O preço não pode ser negativo.").optional(),
   location: z.string().optional(),
@@ -289,7 +288,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                           {selectedProductInstance && <p className="text-xs text-muted-foreground">Disponível: {availableStock}</p>}
                       </div>
                       <FormControl>
-                          <Input type="number" min="1" {...field} placeholder="0" />
+                          <Input type="number" step="any" min="0.01" {...field} placeholder="0.0" />
                       </FormControl>
                       <FormMessage />
                       </FormItem>

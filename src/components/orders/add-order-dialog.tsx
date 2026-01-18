@@ -40,7 +40,7 @@ type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | '
 
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
-  quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
+  quantity: z.coerce.number().min(0.01, { message: "A quantidade deve ser maior que zero." }),
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']),
   clientName: z.string().optional(),
   deliveryDate: z.date().optional(),
@@ -150,7 +150,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Quantidade</FormLabel>
-                      <FormControl><Input type="number" min="1" {...field} placeholder="0" /></FormControl>
+                      <FormControl><Input type="number" step="any" min="0.01" {...field} placeholder="0.0" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

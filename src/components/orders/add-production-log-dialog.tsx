@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useContext } from 'react';
@@ -29,7 +28,7 @@ import type { Order } from '@/lib/types';
 import { InventoryContext } from '@/context/inventory-context';
 
 const formSchema = z.object({
-  quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
+  quantity: z.coerce.number().min(0.01, { message: "A quantidade deve ser maior que zero." }),
   notes: z.string().optional(),
 });
 
@@ -89,7 +88,7 @@ export function AddProductionLogDialog({ order, onAddLog }: AddProductionLogDial
                     <p className='text-xs text-muted-foreground'>Faltam: {remainingQuantity}</p>
                   </div>
                   <FormControl>
-                    <Input type="number" min="1" max={remainingQuantity} {...field} placeholder="0" />
+                    <Input type="number" step="any" min="0.01" max={remainingQuantity} {...field} placeholder="0.0" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

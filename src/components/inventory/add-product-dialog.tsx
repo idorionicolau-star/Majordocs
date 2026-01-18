@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { useState, useEffect, useContext } from 'react';
@@ -275,7 +273,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
                       <FormItem>
                       <FormLabel>Estoque Inicial</FormLabel>
                       <FormControl>
-                          <Input type="number" {...field} />
+                          <Input type="number" step="any" {...field} />
                       </FormControl>
                       <FormMessage />
                       </FormItem>

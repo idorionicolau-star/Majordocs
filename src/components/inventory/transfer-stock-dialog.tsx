@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from 'react';
@@ -41,7 +40,7 @@ const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   fromLocationId: z.string().nonempty({ message: "Por favor, selecione a localização de origem." }),
   toLocationId: z.string().nonempty({ message: "Por favor, selecione a localização de destino." }),
-  quantity: z.coerce.number().min(1, { message: "A quantidade deve ser pelo menos 1." }),
+  quantity: z.coerce.number().min(0.01, { message: "A quantidade deve ser maior que 0.01." }),
 }).refine(data => data.fromLocationId !== data.toLocationId, {
   message: "A localização de origem e destino não podem ser as mesmas.",
   path: ["toLocationId"],
@@ -113,7 +112,7 @@ export function TransferStockDialog({ onTransfer }: TransferStockDialogProps) {
             <Tooltip>
                 <TooltipTrigger asChild>
                     <DialogTrigger asChild>
-                        <Button variant="outline" size="icon" className="shadow-lg h-12 w-12 rounded-2xl">
+                        <Button variant="outline" size="icon" className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0">
                             <Truck className="h-5 w-5" />
                         </Button>
                     </DialogTrigger>
@@ -214,7 +213,7 @@ export function TransferStockDialog({ onTransfer }: TransferStockDialogProps) {
                     {watchedProductName && watchedFromLocation && <p className="text-xs text-muted-foreground mt-1">Disponível: {availableStock}</p>}
                   </div>
                   <FormControl>
-                    <Input type="number" min="1" {...field} />
+                    <Input type="number" min="0.01" step="any" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

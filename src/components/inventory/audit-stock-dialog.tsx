@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useContext } from 'react';
@@ -101,7 +100,7 @@ function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProp
                       <FormItem>
                       <FormLabel>Contagem Física Atual</FormLabel>
                       <FormControl>
-                          <Input type="number" {...field} />
+                          <Input type="number" step="any" {...field} />
                       </FormControl>
                       <FormMessage />
                       </FormItem>
