@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useContext } from 'react';
@@ -5,7 +6,7 @@ import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, DollarSign, Hash, Box, Trash2, TrendingUp, Trophy, Calendar, User, Lock, Share2 } from 'lucide-react';
+import { Download, DollarSign, Hash, Box, Trash2, TrendingUp, Trophy, Calendar, User, Lock, Share2, BrainCircuit } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { Sale } from '@/lib/types';
 import {
@@ -31,6 +32,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
+import { generateSalesReport } from '@/ai/flows/generate-sales-report-flow';
 
 const SaleReportCard = ({ sale }: { sale: Sale }) => (
     <Card className="glass-card">
@@ -59,6 +62,69 @@ const SaleReportCard = ({ sale }: { sale: Sale }) => (
         </CardContent>
     </Card>
 );
+
+function AIReportGenerator() {
+    const [reportText, setReportText] = useState('');
+    const [generatedReport, setGeneratedReport] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const { toast } = useToast();
+
+    const handleGenerate = async () => {
+        if (!reportText.trim()) {
+            toast({ variant: 'destructive', title: 'Texto em falta', description: 'Por favor, insira alguns dados ou uma descrição para o relatório.' });
+            return;
+        }
+        setIsGenerating(true);
+        setGeneratedReport('');
+        try {
+            const result = await generateSalesReport(reportText); 
+            setGeneratedReport(result);
+            toast({ title: 'Relatório Gerado!', description: 'A IA concluiu a sua análise.' });
+        } catch (error) {
+            console.error("Error generating AI report:", error);
+            toast({ variant: 'destructive', title: 'Erro ao gerar relatório', description: 'Não foi possível contactar a IA.' });
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><BrainCircuit className="h-6 w-6 text-primary" /> Gerador de Relatórios com IA</CardTitle>
+                <CardDescription>Cole os seus dados de vendas ou descreva o que pretende analisar, e a IA irá gerar um resumo para testar a sua capacidade.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <Textarea
+                    placeholder="Ex: Cole aqui uma lista de vendas em CSV, ou escreva 'Gere um resumo das vendas do produto X este mês'..."
+                    value={reportText}
+                    onChange={(e) => setReportText(e.target.value)}
+                    rows={6}
+                    className="text-sm"
+                />
+                <Button onClick={handleGenerate} disabled={isGenerating} className="w-full">
+                    {isGenerating ? 'A gerar...' : 'Gerar Relatório com IA'}
+                </Button>
+            </CardContent>
+            {isGenerating && (
+                <CardContent>
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                        <span>A IA está a pensar...</span>
+                    </div>
+                </CardContent>
+            )}
+            {generatedReport && (
+                <CardFooter className="flex flex-col items-start gap-2">
+                     <h3 className="font-semibold">Relatório Gerado</h3>
+                     <div className="w-full p-4 border rounded-lg bg-muted/50 text-sm whitespace-pre-wrap">
+                        {generatedReport}
+                     </div>
+                </CardFooter>
+            )}
+        </Card>
+    );
+}
 
 export default function ReportsPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -410,6 +476,7 @@ export default function ReportsPage() {
                 </div>
             </Card>
         )}
+        <AIReportGenerator />
       </div>
     </>
   );
@@ -434,3 +501,5 @@ const StatCard = ({ icon: Icon, title, value, subValue }: StatCardProps) => (
         </CardContent>
     </Card>
 );
+
+    
