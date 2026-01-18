@@ -46,7 +46,7 @@ export function AIAssistant() {
       <CardHeader>
         <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
           <Sparkles className="text-primary" />
-          Assistente IA
+          MajorAssistant
         </CardTitle>
         <CardDescription>
           Obtenha um resumo e insights acionáveis sobre o seu negócio.

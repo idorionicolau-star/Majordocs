@@ -12,38 +12,29 @@ export async function POST(req: NextRequest) {
   
   try {
     const data = await req.json();
-    console.log("📦 Dados recebidos para:", data.company?.name || "Sem nome");
-
-    if (!data.sales || !Array.isArray(data.sales)) {
-      return NextResponse.json({ error: "Dados de vendas ausentes." }, { status: 400 });
-    }
-
-    // 1. IA GEMINI 🧠
+    
+    // 1. IA GEMINI 3 FLASH 🧠
     let aiSummaryText = "Análise automática não disponível.";
     const apiKey = process.env.GEMINI_API_KEY;
     
     if (apiKey) {
       try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        // AJUSTE: Usado o nome do modelo correto sem o prefixo 'models/'.
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "models/gemini-3-flash-preview" });
         
         const prompt = `Analise estes dados de vendas da empresa ${data.company?.name || 'nossa empresa'}: ${JSON.stringify(data.sales).substring(0, 2000)}. Escreva um resumo executivo de 2 frases em Português.`;
         
         const result = await model.generateContent(prompt);
-        // AJUSTE: Usado .text como propriedade, que é a sintaxe mais recente.
         const response = await result.response;
-        aiSummaryText = response.text; 
+        aiSummaryText = response.text(); 
         
-        console.log("✅ IA Gemini para PDF ativada!");
+        console.log("✅ IA Gemini 3 ativada com sucesso!");
       } catch (aiError: any) {
         console.error("❌ Erro na IA do PDF:", aiError.message);
-        // Mantém o texto padrão se a IA falhar
       }
     }
 
     // 2. GERAÇÃO DO PDF 📄
-    console.log("🎨 Renderizando PDF...");
     const pdfBuffer = await pdf(
       <ReportPDF 
         sales={data.sales} 
@@ -54,29 +45,33 @@ export async function POST(req: NextRequest) {
       />
     ).toBuffer();
 
-    // 3. NOME DO ARQUIVO (Limpeza Final)
-    const companyName = data.company?.name 
-      ? data.company.name.replace(/[^a-zA-Z0-9]/g, "_").trim() 
-      : 'Relatorio';
-    
+    // 3. NOME DO ARQUIVO (Limpeza Definitiva)
+    const companyClean = (data.company?.name || 'Relatorio')
+      .trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Remove acentos
+      .replace(/[^a-zA-Z0-9]/g, "_")                  // Troca símbolos por _
+      .replace(/_+/g, "_")                            // Evita "___"
+      .replace(/_$/, "");                             // Remove _ se for o último char
+
     const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
-    // Forçamos o nome sem espaços extras ou underscores soltos no final
-    const fileName = `Relatorio_${companyName}_${timestamp}.pdf`;
+    const fileName = `Relatorio_${companyClean}_${timestamp}.pdf`;
 
-    console.log(`✅ PDF gerado: ${fileName}`);
+    console.log(`✅ Enviando arquivo: ${fileName}`);
 
-    return new NextResponse(pdfBuffer, {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${fileName}"`,
-      },
-    });
+    // 4. RESPOSTA COM FORMATATAÇÃO RFC PARA ELIMINAR O "_" NO FIM
+    const response = new NextResponse(pdfBuffer);
+    
+    response.headers.set('Content-Type', 'application/pdf');
+    // Esta linha é o segredo: usa o formato oficial que navegadores não alteram
+    response.headers.set(
+      'Content-Disposition', 
+      `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
+    );
+
+    return response;
 
   } catch (error: any) {
     console.error("❌ ERRO CRÍTICO NA API:", error);
-    return NextResponse.json(
-      { error: "Erro interno no servidor", details: error.message }, 
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
