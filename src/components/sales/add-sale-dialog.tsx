@@ -17,6 +17,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import {
   Select,
@@ -39,6 +40,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Textarea } from '../ui/textarea';
+import { Switch } from '../ui/switch';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -50,6 +52,7 @@ const formSchema = z.object({
   location: z.string().optional(),
   discountType: z.enum(['fixed', 'percentage']).default('fixed'),
   discountValue: z.coerce.number().min(0, "O desconto não pode ser negativo.").optional(),
+  applyVat: z.boolean().default(true),
   vatPercentage: z.coerce.number().min(0, "O IVA deve ser um valor positivo.").max(100).optional(),
   documentType: z.enum(['Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo']),
   clientName: z.string().optional(),
@@ -84,6 +87,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
       unit: 'un',
       discountType: 'fixed',
       discountValue: 0,
+      applyVat: true,
       vatPercentage: 17, // Default VAT
       documentType: 'Factura Proforma',
       clientName: '',
@@ -106,6 +110,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
         location: finalLocation,
         discountType: 'fixed',
         discountValue: 0,
+        applyVat: true,
         vatPercentage: 17,
         documentType: 'Factura Proforma',
         clientName: '',
@@ -121,6 +126,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
   const watchedDiscountType = useWatch({ control: form.control, name: 'discountType' });
   const watchedDiscountValue = useWatch({ control: form.control, name: 'discountValue' });
   const watchedVatPercentage = useWatch({ control: form.control, name: 'vatPercentage' });
+  const watchedApplyVat = useWatch({ control: form.control, name: 'applyVat' });
 
   const subtotal = (watchedUnitPrice || 0) * (watchedQuantity || 0);
 
@@ -134,7 +140,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
 
   const totalAfterDiscount = subtotal > discountAmount ? subtotal - discountAmount : 0;
   const vatPercentage = watchedVatPercentage || 0;
-  const vatAmount = totalAfterDiscount * (vatPercentage / 100);
+  const vatAmount = watchedApplyVat ? totalAfterDiscount * (vatPercentage / 100) : 0;
   const totalValue = totalAfterDiscount + vatAmount;
   
   const productsInStock = useMemo(() => {
@@ -409,34 +415,55 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Notas (Opcional)</FormLabel>
-                        <FormControl>
+                      <FormLabel>Notas (Opcional)</FormLabel>
+                      <FormControl>
                         <Textarea
-                            placeholder="Adicione notas ou termos..."
-                            {...field}
+                          placeholder="Adicione notas ou termos..."
+                          {...field}
                         />
-                        </FormControl>
-                        <FormMessage />
+                      </FormControl>
+                      <FormMessage />
                     </FormItem>
-                    )}
+                  )}
                 />
-                 <FormField
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="applyVat"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm h-full">
+                        <div className="space-y-0.5">
+                          <FormLabel className="cursor-pointer">Aplicar IVA</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  {watchedApplyVat && (
+                    <FormField
                       control={form.control}
                       name="vatPercentage"
                       render={({ field }) => (
-                          <FormItem>
+                        <FormItem>
                           <FormLabel>IVA (%)</FormLabel>
                           <FormControl>
-                              <Input type="number" step="1" {...field} placeholder="17" />
+                            <Input type="number" step="1" {...field} placeholder="17" />
                           </FormControl>
                           <FormMessage />
-                          </FormItem>
+                        </FormItem>
                       )}
-                  />
+                    />
+                  )}
+                </div>
               </div>
               
               <div className="rounded-lg bg-muted p-4 space-y-2 mt-4">
@@ -450,10 +477,12 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                         <span className='font-medium text-red-500'>- {formatCurrency(discountAmount)}</span>
                     </div>
                   )}
-                   <div className='flex justify-between items-center text-sm'>
-                      <span className='text-muted-foreground'>IVA ({vatPercentage}%)</span>
-                      <span className='font-medium'>{formatCurrency(vatAmount)}</span>
-                  </div>
+                  {watchedApplyVat && (
+                    <div className='flex justify-between items-center text-sm'>
+                        <span className='text-muted-foreground'>IVA ({vatPercentage}%)</span>
+                        <span className='font-medium'>{formatCurrency(vatAmount)}</span>
+                    </div>
+                  )}
                   <Separator className='my-2 bg-border/50' />
                   <div className='flex justify-between items-center text-lg'>
                       <span className='font-bold'>Total</span>
