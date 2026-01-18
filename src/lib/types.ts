@@ -42,6 +42,7 @@ export type Company = {
     address?: string;
     taxId?: string;
     email?: string;
+    businessType: 'manufacturer' | 'reseller';
     notificationSettings?: NotificationSettings;
     isMultiLocation?: boolean;
     locations?: Location[];
@@ -187,7 +188,7 @@ export interface InventoryContextType {
   loading: boolean;
   login: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
-  registerCompany: (companyName: string, adminUsername: string, adminEmail: string, adminPass: string) => Promise<boolean>;
+  registerCompany: (companyName: string, adminUsername: string, adminEmail: string, adminPass: string, businessType: 'manufacturer' | 'reseller') => Promise<boolean>;
   profilePicture: string | null;
   setProfilePicture: (url: string) => void;
 

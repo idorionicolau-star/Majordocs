@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from "next/link";
@@ -12,11 +13,15 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { canView } = useContext(InventoryContext) || { canView: () => false };
+  const { canView, companyData } = useContext(InventoryContext) || { canView: () => false, companyData: null };
 
   const navItems = mainNavItems.filter(item => {
     if (item.isSubItem) return false;
-    return canView(item.id as ModulePermission);
+    if (!canView(item.id as ModulePermission)) return false;
+    if (companyData?.businessType === 'reseller' && (item.id === 'production' || item.id === 'orders')) {
+        return false;
+    }
+    return true;
   });
 
   return (

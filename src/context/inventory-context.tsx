@@ -263,7 +263,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const registerCompany = async (companyName: string, adminUsername: string, adminEmail: string, adminPass: string): Promise<boolean> => {
+  const registerCompany = async (companyName: string, adminUsername: string, adminEmail: string, adminPass: string, businessType: 'manufacturer' | 'reseller'): Promise<boolean> => {
     if (!firestore) return false;
   
     try {
@@ -300,7 +300,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       
       batch.set(userMapDocRef, { companyId: newCompanyRef.id });
 
-      batch.set(newCompanyRef, { name: companyName, ownerId: newUserId, isMultiLocation: false, locations: [] });
+      batch.set(newCompanyRef, { name: companyName, ownerId: newUserId, isMultiLocation: false, locations: [], businessType });
 
       await batch.commit();
 

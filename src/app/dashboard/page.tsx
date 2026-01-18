@@ -24,8 +24,9 @@ const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").th
 
 
 export default function DashboardPage() {
-  const { user } = useContext(InventoryContext) || { user: null };
+  const { user, companyData } = useContext(InventoryContext) || { user: null, companyData: null };
   const isPrivilegedUser = user?.role === 'Admin' || user?.role === 'Dono';
+  const isManufacturer = companyData?.businessType === 'manufacturer';
   
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
@@ -51,12 +52,14 @@ export default function DashboardPage() {
                         <span>Vendas</span>
                     </Link>
                 </Button>
-                <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
-                    <Link href="/production">
-                        <Hammer className="h-6 w-6" />
-                        <span>Produção</span>
-                    </Link>
-                </Button>
+                {isManufacturer && (
+                  <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
+                      <Link href="/production">
+                          <Hammer className="h-6 w-6" />
+                          <span>Produção</span>
+                      </Link>
+                  </Button>
+                )}
                 <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
                     <Link href="/inventory">
                         <Box className="h-6 w-6" />

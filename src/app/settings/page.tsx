@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useContext, useRef } from "react";
@@ -43,7 +44,8 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"
+} from "@/components/ui/accordion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 const colorOptions = [
@@ -143,6 +145,7 @@ export default function SettingsPage() {
     phone: '',
     address: '',
     taxId: '',
+    businessType: 'manufacturer' as 'manufacturer' | 'reseller',
     notificationSettings: {
       email: '',
       onSale: false,
@@ -190,6 +193,7 @@ export default function SettingsPage() {
         phone: companyData.phone || '',
         address: companyData.address || '',
         taxId: companyData.taxId || '',
+        businessType: companyData.businessType || 'manufacturer',
         notificationSettings: {
           email: companyData.notificationSettings?.email || '',
           onSale: companyData.notificationSettings?.onSale || false,
@@ -442,6 +446,18 @@ export default function SettingsPage() {
                             <div className="space-y-2">
                                 <Label htmlFor="name">Nome da Empresa</Label>
                                 <Input id="name" value={companyDetails.name} onChange={handleDetailChange} />
+                            </div>
+                             <div className="space-y-2">
+                                <Label>Tipo de Negócio</Label>
+                                <Select value={companyDetails.businessType} onValueChange={(value: 'manufacturer' | 'reseller') => setCompanyDetails(prev => ({ ...prev, businessType: value}))}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione o tipo de negócio" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="manufacturer">Fábrica / Produtor</SelectItem>
+                                        <SelectItem value="reseller">Loja / Revendedor</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email de Contacto</Label>

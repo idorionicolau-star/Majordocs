@@ -16,12 +16,15 @@ import { InventoryContext } from '@/context/inventory-context';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const registerSchema = z.object({
   companyName: z.string().min(3, 'O nome da empresa deve ter pelo menos 3 caracteres.').refine(s => !s.includes('@'), 'O nome da empresa não pode conter "@".'),
   adminUsername: z.string().min(3, 'O nome de utilizador deve ter pelo menos 3 caracteres.').refine(s => !s.includes('@'), 'O nome de utilizador não pode conter "@".'),
   adminEmail: z.string().email("O email do administrador não é válido."),
   adminPassword: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.'),
+  businessType: z.enum(['manufacturer', 'reseller'], { required_error: 'Por favor, selecione o tipo de negócio.' }),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -33,14 +36,18 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const form = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      businessType: 'manufacturer',
+    }
+  });
   const {
     register,
     handleSubmit,
     watch,
     formState: { errors },
-  } = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
-  });
+  } = form;
 
   const companyName = watch('companyName');
   const adminUsername = watch('adminUsername');
@@ -54,7 +61,7 @@ export default function RegisterPage() {
     }
 
     try {
-        const success = await context.registerCompany(data.companyName, data.adminUsername, data.adminEmail, data.adminPassword);
+        const success = await context.registerCompany(data.companyName, data.adminUsername, data.adminEmail, data.adminPassword, data.businessType);
         if (success) {
             toast({
                 title: 'Empresa Registada com Sucesso!',
@@ -70,7 +77,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900 px-4 py-8">
        <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -80,31 +87,95 @@ export default function RegisterPage() {
             <CardDescription>Registe a sua empresa para começar a usar o MajorStockX.</CardDescription>
         </CardHeader>
         <CardContent>
-            <div className="space-y-4">
+            <Form {...form}>
                  <form onSubmit={handleSubmit(handleRegister)} className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="companyName">Nome da Empresa</Label>
-                        <Input id="companyName" {...register('companyName')} placeholder="O nome da sua empresa" />
-                        {errors.companyName && <p className="text-xs text-red-500">{errors.companyName.message}</p>}
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="adminUsername">Nome de Utilizador do Administrador</Label>
-                        <Input id="adminUsername" {...register('adminUsername')} placeholder="Ex: admin" />
-                        {errors.adminUsername && <p className="text-xs text-red-500">{errors.adminUsername.message}</p>}
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="adminEmail">Email do Administrador</Label>
-                        <Input id="adminEmail" {...register('adminEmail')} placeholder="Ex: admin@suaempresa.com" type="email" />
-                        <p className="text-[11px] text-muted-foreground bg-muted p-2 rounded-md">
-                            Este será o seu email para fazer login no sistema.
-                        </p>
-                        {errors.adminEmail && <p className="text-xs text-red-500">{errors.adminEmail.message}</p>}
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="adminPassword">Senha do Administrador</Label>
-                        <Input id="adminPassword" type={showPassword ? 'text' : 'password'} {...register('adminPassword')} placeholder="Crie uma senha segura" />
-                        {errors.adminPassword && <p className="text-xs text-red-500">{errors.adminPassword.message}</p>}
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="companyName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <Label htmlFor="companyName">Nome da Empresa</Label>
+                          <Input id="companyName" {...field} placeholder="O nome da sua empresa" />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="businessType"
+                      render={({ field }) => (
+                        <FormItem className="space-y-3">
+                          <Label>Qual é o seu tipo de negócio?</Label>
+                          <FormControl>
+                            <RadioGroup
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                              className="flex flex-col space-y-2 pt-2"
+                            >
+                              <FormItem className="flex items-center space-x-3 space-y-0 p-4 border rounded-2xl has-[[data-state=checked]]:border-primary">
+                                <FormControl>
+                                  <RadioGroupItem value="manufacturer" />
+                                </FormControl>
+                                <div>
+                                  <FormLabel className="font-bold cursor-pointer">
+                                    Fábrica / Produtor
+                                  </FormLabel>
+                                  <p className="text-xs text-muted-foreground">Eu fabrico os meus próprios produtos.</p>
+                                </div>
+                              </FormItem>
+                              <FormItem className="flex items-center space-x-3 space-y-0 p-4 border rounded-2xl has-[[data-state=checked]]:border-primary">
+                                <FormControl>
+                                  <RadioGroupItem value="reseller" />
+                                </FormControl>
+                                <div>
+                                  <FormLabel className="font-normal cursor-pointer">
+                                    Loja / Revendedor
+                                  </FormLabel>
+                                  <p className="text-xs text-muted-foreground">Eu compro produtos para revender.</p>
+                                </div>
+                              </FormItem>
+                            </RadioGroup>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="adminUsername"
+                      render={({ field }) => (
+                        <FormItem>
+                          <Label htmlFor="adminUsername">Nome de Utilizador do Administrador</Label>
+                          <Input id="adminUsername" {...field} placeholder="Ex: admin" />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="adminEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <Label htmlFor="adminEmail">Email do Administrador</Label>
+                          <Input id="adminEmail" {...field} placeholder="Ex: admin@suaempresa.com" type="email" />
+                          <p className="text-[11px] text-muted-foreground bg-muted p-2 rounded-md">
+                              Este será o seu email para fazer login no sistema.
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="adminPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <Label htmlFor="adminPassword">Senha do Administrador</Label>
+                          <Input id="adminPassword" type={showPassword ? 'text' : 'password'} {...field} placeholder="Crie uma senha segura" />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <div className="flex items-center space-x-2">
                         <Checkbox id="show-password" checked={showPassword} onCheckedChange={(checked) => setShowPassword(!!checked)} />
                         <label
@@ -118,7 +189,7 @@ export default function RegisterPage() {
                         {isLoading ? 'A registar...' : 'Registar Empresa'}
                     </Button>
                 </form>
-            </div>
+            </Form>
         </CardContent>
         <CardFooter className="flex justify-center text-sm">
             <p className="text-muted-foreground">

@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from "next/link";
@@ -19,8 +20,15 @@ interface DesktopSidebarProps {
 
 export function Sidebar({ isCollapsed, onToggleCollapse }: DesktopSidebarProps) {
   const pathname = usePathname();
-  const { canView } = useContext(InventoryContext) || { canView: () => false };
-  const navItems = mainNavItems.filter(item => canView(item.id as ModulePermission) && !item.isSubItem);
+  const { canView, companyData } = useContext(InventoryContext) || { canView: () => false, companyData: null };
+  const navItems = mainNavItems.filter(item => {
+    if (!canView(item.id as ModulePermission)) return false;
+    if (item.isSubItem) return false;
+    if (companyData?.businessType === 'reseller' && (item.id === 'production' || item.id === 'orders')) {
+        return false;
+    }
+    return true;
+  });
 
   return (
     <aside className={cn(
