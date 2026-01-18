@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock } from "lucide-react";
 import { LeastSoldProducts } from "@/components/dashboard/least-sold-products";
 import { AIAssistant } from "@/components/dashboard/ai-assistant";
+import { useSearchParams } from "next/navigation";
 
 const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
   ssr: false,
@@ -26,6 +27,9 @@ const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").th
 
 export default function DashboardPage() {
   const { user, companyData } = useContext(InventoryContext) || { user: null, companyData: null };
+  const searchParams = useSearchParams();
+  const aiQuery = searchParams.get('ai_query');
+  
   const isPrivilegedUser = user?.role === 'Admin' || user?.role === 'Dono';
   const isManufacturer = companyData?.businessType === 'manufacturer';
   
@@ -71,7 +75,7 @@ export default function DashboardPage() {
 
            {isPrivilegedUser ? (
              <>
-              <AIAssistant />
+              <AIAssistant initialQuery={aiQuery || undefined} />
               <SalesActivity />
              </>
            ) : (
