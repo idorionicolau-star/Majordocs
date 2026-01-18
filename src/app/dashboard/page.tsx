@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock } from "lucide-react";
 import { LeastSoldProducts } from "@/components/dashboard/least-sold-products";
+import { AIAssistant } from "@/components/dashboard/ai-assistant";
 
 const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
   ssr: false,
@@ -69,7 +70,10 @@ export default function DashboardPage() {
             </div>
 
            {isPrivilegedUser ? (
+             <>
+              <AIAssistant />
               <SalesActivity />
+             </>
            ) : (
              <Card className="glass-card shadow-sm h-full flex flex-col justify-center">
                 <CardHeader>
