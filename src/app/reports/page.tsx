@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useContext } from 'react';
@@ -6,7 +5,7 @@ import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, DollarSign, Hash, Box, Trash2, TrendingUp, Trophy, Calendar, User, Lock } from 'lucide-react';
+import { Download, DollarSign, Hash, Box, Trash2, TrendingUp, Trophy, Calendar, User, Lock, Share2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { Sale } from '@/lib/types';
 import {
@@ -63,7 +62,7 @@ const SaleReportCard = ({ sale }: { sale: Sale }) => (
 
 export default function ReportsPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
   const { sales, companyData, loading, user, clearSales } = inventoryContext || { sales: [], companyData: null, loading: true, user: null, clearSales: async () => {} };
@@ -124,7 +123,7 @@ export default function ReportsPage() {
       return;
     }
 
-    setIsGeneratingPdf(true);
+    setIsProcessing(true);
     toast({ title: "A gerar PDF...", description: "O seu relatório está a ser preparado." });
 
     try {
@@ -177,7 +176,83 @@ export default function ReportsPage() {
         duration: 9000,
       });
     } finally {
-      setIsGeneratingPdf(false);
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSharePdf = async () => {
+    if (!navigator.share) {
+      toast({
+        title: "Navegador não suportado",
+        description: "A função de partilha não é suportada pelo seu navegador. Por favor, descarregue o PDF e partilhe-o manualmente.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!selectedDate) {
+      toast({
+        title: "Nenhuma data selecionada",
+        description: "Por favor, escolha um mês para partilhar o relatório.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    toast({ title: "A preparar para partilhar...", description: "O seu relatório está a ser preparado." });
+
+    try {
+      const response = await fetch('/api/generate-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sales: salesForMonth,
+          summary: reportSummary,
+          company: companyData,
+          date: selectedDate,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.details || errorData.error || 'Falha ao gerar o PDF no servidor.');
+      }
+
+      const blob = await response.blob();
+      const fileName = `relatorio-vendas-${format(selectedDate, 'MM-yyyy')}.pdf`;
+      const file = new File([blob], fileName, { type: 'application/pdf' });
+      
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `Relatório de Vendas - ${format(selectedDate, 'MMMM yyyy', { locale: pt })}`,
+            text: `Aqui está o relatório de vendas para ${companyData?.name || 'a nossa empresa'}.`,
+            files: [file],
+          });
+          toast({ title: "Sucesso!", description: "O diálogo de partilha foi aberto." });
+      } else {
+         toast({
+            title: "Partilha não suportada",
+            description: "O seu navegador não suporta a partilha de ficheiros. Por favor, descarregue o PDF.",
+            variant: "destructive"
+          });
+      }
+
+    } catch (error: any) {
+      // Don't show an error if the user cancels the share dialog
+      if (error.name !== 'AbortError') {
+        console.error("Error sharing PDF:", error);
+        toast({
+          title: "Erro ao Partilhar",
+          description: error.message || "Não foi possível partilhar o relatório.",
+          variant: "destructive",
+          duration: 9000,
+        });
+      }
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -220,9 +295,13 @@ export default function ReportsPage() {
         <div className="flex flex-col w-full items-center md:flex-row justify-between items-start gap-4">
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
               <DatePicker date={selectedDate} setDate={setSelectedDate} />
-              <Button onClick={handleGeneratePdf} variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate || isGeneratingPdf}>
+              <Button onClick={handleGeneratePdf} variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate || isProcessing}>
                 <Download className="mr-2 h-4 w-4" />
-                {isGeneratingPdf ? 'A gerar...' : 'Exportar PDF'}
+                {isProcessing ? 'A processar...' : 'Exportar PDF'}
+              </Button>
+              <Button onClick={handleSharePdf} variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate || isProcessing}>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  {isProcessing ? 'A processar...' : 'Partilhar'}
               </Button>
             </div>
         </div>
