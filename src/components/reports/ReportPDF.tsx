@@ -1,32 +1,23 @@
-
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
-import type { Sale } from '@/lib/types';
+import type { Sale, Company } from '@/lib/types';
 
-// This is a simplified version of the data for demonstration
-const mockData = {
-  company: { name: 'MajorStockX' },
-  date: new Date(),
-  summary: {
-    totalSales: 15,
-    totalValue: 12345.67,
-    averageTicket: 823.04,
-    bestSellingProduct: { name: 'Grelha 30x30 Bonita difícil', quantity: 20 },
-  },
-  sales: [
-    { id: '1', date: new Date().toISOString(), guideNumber: 'GT202407-001', productName: 'Grelha 30x30 Bonita difícil', quantity: 10, totalValue: 5000, soldBy: 'Admin', documentType: 'Factura', status: 'Pago' },
-    { id: '2', date: new Date().toISOString(), guideNumber: 'GT202407-002', productName: 'Pavê Borbulhas', quantity: 5, totalValue: 7345.67, soldBy: 'Admin', documentType: 'Factura', status: 'Pago' },
-  ] as Sale[]
-};
+type ReportSummary = {
+  totalSales: number;
+  totalValue: number;
+  averageTicket: number;
+  bestSellingProduct: { name: string; quantity: number };
+}
 
-export default function ReportTemplate() {
-    const { company, date, summary, sales } = mockData;
+interface ReportPDFProps {
+  sales: Sale[];
+  summary: ReportSummary;
+  company: Company | null;
+  date: Date;
+}
 
-    // The styles here must be inline or embedded in a <style> tag because external CSS files
-    // might not be loaded correctly by Puppeteer depending on the configuration.
-    // Tailwind classes will NOT work here unless we run PostCSS on this HTML, which is complex.
-    // So, inline styles are the most reliable option for server-generated PDFs.
+export function ReportPDF({ sales, summary, company, date }: ReportPDFProps) {
     const styles = `
         body { font-family: 'PT Sans', sans-serif; line-height: 1.6; color: #333; margin: 0; background-color: #fff; }
         .container { max-width: 800px; margin: auto; padding: 2rem; }
@@ -61,7 +52,7 @@ export default function ReportTemplate() {
                         </div>
                         <h1>Relatório Mensal</h1>
                     </div>
-                    <h2>Mês: {format(date, 'MMMM yyyy', { locale: pt })}</h2>
+                    <h2>Mês: {format(new Date(date), 'MMMM yyyy', { locale: pt })}</h2>
 
                     <div className="summary-grid">
                         <div className="summary-card"><strong>Total de Vendas</strong><span>{summary.totalSales}</span></div>

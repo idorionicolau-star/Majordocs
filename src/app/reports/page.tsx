@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 const SaleReportCard = ({ sale }: { sale: Sale }) => (
     <Card className="glass-card">
@@ -62,6 +63,8 @@ const SaleReportCard = ({ sale }: { sale: Sale }) => (
 
 export default function ReportsPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
   const { sales, companyData, loading, user, clearSales } = inventoryContext || { sales: [], companyData: null, loading: true, user: null, clearSales: async () => {} };
   const isAdmin = user?.role === 'Admin';
@@ -110,6 +113,63 @@ export default function ReportsPage() {
     }
     setShowClearConfirm(false);
   };
+  
+  const handleGeneratePdf = async () => {
+    if (!selectedDate) {
+      toast({
+        title: "Nenhuma data selecionada",
+        description: "Por favor, escolha um mês para gerar o relatório.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGeneratingPdf(true);
+    toast({ title: "A gerar PDF...", description: "O seu relatório está a ser preparado." });
+
+    try {
+      const response = await fetch('/api/generate-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sales: salesForMonth,
+          summary: reportSummary,
+          company: companyData,
+          date: selectedDate,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Falha ao gerar o PDF no servidor.');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      const fileName = `relatorio-${format(selectedDate, 'MM-yyyy')}.pdf`;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast({ title: "Sucesso!", description: "O seu relatório em PDF foi descarregado." });
+
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({
+        title: "Erro ao gerar PDF",
+        description: "Não foi possível criar o relatório. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -150,11 +210,9 @@ export default function ReportsPage() {
         <div className="flex flex-col w-full items-center md:flex-row justify-between items-start gap-4">
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
               <DatePicker date={selectedDate} setDate={setSelectedDate} />
-              <Button asChild variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate}>
-                <a href={selectedDate ? `/api/generate-report?month=${format(selectedDate, 'yyyy-MM')}` : '#'} target="_blank">
-                    <Download className="mr-2 h-4 w-4" />
-                    Exportar PDF
-                </a>
+              <Button onClick={handleGeneratePdf} variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate || isGeneratingPdf}>
+                <Download className="mr-2 h-4 w-4" />
+                {isGeneratingPdf ? 'A gerar...' : 'Exportar PDF'}
               </Button>
             </div>
         </div>
