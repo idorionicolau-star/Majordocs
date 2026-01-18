@@ -5,6 +5,9 @@ import { generateHTML } from '@/lib/pdf-helper';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { format } from 'date-fns';
 
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
