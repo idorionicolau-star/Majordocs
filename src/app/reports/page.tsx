@@ -150,8 +150,16 @@ export default function ReportsPage() {
       const a = document.createElement('a');
       a.href = url;
       
-      const fileName = `relatorio-${format(selectedDate, 'MM-yyyy')}.pdf`;
+      const contentDisposition = response.headers.get('content-disposition');
+      let fileName = 'relatorio.pdf';
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (fileNameMatch && fileNameMatch.length > 1) {
+            fileName = fileNameMatch[1];
+        }
+      }
       a.download = fileName;
+      
       document.body.appendChild(a);
       a.click();
       a.remove();

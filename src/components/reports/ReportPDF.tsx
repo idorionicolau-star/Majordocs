@@ -15,9 +15,10 @@ interface ReportPDFProps {
   summary: ReportSummary;
   company: Company | null;
   date: Date;
+  aiSummary?: string;
 }
 
-export function ReportPDF({ sales, summary, company, date }: ReportPDFProps) {
+export function ReportPDF({ sales, summary, company, date, aiSummary }: ReportPDFProps) {
     const styles = `
         body { font-family: 'PT Sans', sans-serif; line-height: 1.6; color: #333; margin: 0; background-color: #fff; }
         .container { max-width: 800px; margin: auto; padding: 2rem; }
@@ -54,6 +55,16 @@ export function ReportPDF({ sales, summary, company, date }: ReportPDFProps) {
                     </div>
                     <h2>Mês: {format(new Date(date), 'MMMM yyyy', { locale: pt })}</h2>
 
+                    {aiSummary && (
+                      <div>
+                        <h2 style={{fontSize: '1.2rem', marginTop: '1.5rem'}}>Análise da IA</h2>
+                        <div style={{backgroundColor: '#f9fafb', padding: '1rem', borderRadius: '6px', border: '1px solid #eee', marginBottom: '2rem'}}>
+                            {aiSummary.split('\n').map((p, i) => <p key={i} style={{margin: '0 0 0.5rem 0'}}>{p}</p>)}
+                        </div>
+                      </div>
+                    )}
+
+                    <h2>Resumo das Vendas</h2>
                     <div className="summary-grid">
                         <div className="summary-card"><strong>Total de Vendas</strong><span>{summary.totalSales}</span></div>
                         <div className="summary-card"><strong>Valor Total</strong><span>{formatCurrency(summary.totalValue)}</span></div>
