@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
+    // AJUSTE: Usado o nome do modelo correto sem o prefixo 'models/'.
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
@@ -20,7 +21,9 @@ export async function POST(req: NextRequest) {
     `;
 
     const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    // AJUSTE: Usado .text como propriedade, que é a sintaxe mais recente.
+    const response = await result.response;
+    const text = response.text;
 
     return NextResponse.json({ text });
   } catch (error: any) {

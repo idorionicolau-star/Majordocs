@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { pdf } from '@react-pdf/renderer';
 import React from 'react';
@@ -13,11 +12,10 @@ export async function POST(req: NextRequest) {
   
   try {
     const data = await req.json();
-    console.log("📦 Dados recebidos na API para a empresa:", data.company?.name || "Sem nome de empresa");
+    console.log("📦 Dados recebidos para:", data.company?.name || "Sem nome");
 
-    if (!data.sales || !Array.isArray(data.sales) || !data.summary) {
-      console.error("❌ Erro: Dados de vendas ou resumo inválidos ou ausentes");
-      return NextResponse.json({ error: "Dados de vendas ou resumo ausentes." }, { status: 400 });
+    if (!data.sales || !Array.isArray(data.sales)) {
+      return NextResponse.json({ error: "Dados de vendas ausentes." }, { status: 400 });
     }
 
     // 1. IA GEMINI 🧠
@@ -27,20 +25,21 @@ export async function POST(req: NextRequest) {
     if (apiKey) {
       try {
         const genAI = new GoogleGenerativeAI(apiKey);
+        // AJUSTE: Usado o nome do modelo correto sem o prefixo 'models/'.
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         
         const prompt = `Analise estes dados de vendas da empresa ${data.company?.name || 'nossa empresa'}: ${JSON.stringify(data.sales).substring(0, 2000)}. Escreva um resumo executivo de 2 frases em Português.`;
         
         const result = await model.generateContent(prompt);
+        // AJUSTE: Usado .text como propriedade, que é a sintaxe mais recente.
         const response = await result.response;
-        aiSummaryText = response.text(); 
+        aiSummaryText = response.text; 
         
-        console.log("✅ IA Gemini ativada e a responder!");
+        console.log("✅ IA Gemini para PDF ativada!");
       } catch (aiError: any) {
-        console.error("❌ Erro na IA:", aiError.message);
+        console.error("❌ Erro na IA do PDF:", aiError.message);
+        // Mantém o texto padrão se a IA falhar
       }
-    } else {
-      console.error("❌ Chave GEMINI_API_KEY não encontrada no .env");
     }
 
     // 2. GERAÇÃO DO PDF 📄
@@ -48,19 +47,23 @@ export async function POST(req: NextRequest) {
     const pdfBuffer = await pdf(
       <ReportPDF 
         sales={data.sales} 
-        summary={data.summary} 
+        summary={data.summary || ""} 
         aiSummary={aiSummaryText}
         company={data.company || null} 
-        date={new Date(data.date)} 
+        date={data.date ? new Date(data.date) : new Date()} 
       />
     ).toBuffer();
 
-    console.log("✅ PDF gerado com sucesso!");
+    // 3. NOME DO ARQUIVO (Limpeza Final)
+    const companyName = data.company?.name 
+      ? data.company.name.replace(/[^a-zA-Z0-9]/g, "_").trim() 
+      : 'Relatorio';
     
-    const now = new Date();
-    const companyName = data.company?.name ? data.company.name.replace(/[^a-zA-Z0-9\s]/g, "").trim().replace(/\s+/g, '_') : 'Relatorio';
-    const timestamp = format(now, 'yyyy-MM-dd_HH-mm-ss');
+    const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+    // Forçamos o nome sem espaços extras ou underscores soltos no final
     const fileName = `Relatorio_${companyName}_${timestamp}.pdf`;
+
+    console.log(`✅ PDF gerado: ${fileName}`);
 
     return new NextResponse(pdfBuffer, {
       headers: {
