@@ -1,4 +1,5 @@
 // src/lib/pdf-helper.tsx
+import 'server-only';
 import React from 'react';
 import { ReportPDF } from '@/components/reports/ReportPDF';
 import type { Sale, Company } from '@/lib/types';
@@ -18,12 +19,12 @@ interface PdfHelperData {
   aiSummary?: string;
 }
 
-// Esta função isola a "química" do React longe da API Route
+// This function isolates the React "chemistry" away from the API Route
 export async function generateHTML(data: PdfHelperData) {
-  // A importação dinâmica engana o compilador do Next.js no momento da compilação.
+  // The dynamic import tricks the Next.js compiler during build time.
   const { renderToStaticMarkup } = await import('react-dom/server');
   
-  // Aqui montamos o componente com os dados
+  // Here we assemble the component with the data
   const component = (
     <ReportPDF 
       sales={data.sales}
@@ -34,6 +35,6 @@ export async function generateHTML(data: PdfHelperData) {
     />
   );
   
-  // Transformamos em string HTML pura, que já inclui a estrutura <html>
+  // We transform it into a pure HTML string, which already includes the <html> structure
   return renderToStaticMarkup(component);
 }
