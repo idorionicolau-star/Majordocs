@@ -29,14 +29,18 @@ export async function POST(req: NextRequest) {
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         
-        const prompt = `Analise estes dados de vendas e crie um resumo executivo de 3 linhas: ${JSON.stringify(data.sales).substring(0, 2000)}`;
+        const prompt = `Analise estes dados de vendas da empresa ${data.company?.name || 'nossa empresa'}: ${JSON.stringify(data.sales).substring(0, 2000)}. Escreva um resumo executivo de 2 frases em Português.`;
         
         const result = await model.generateContent(prompt);
-        aiSummaryText = result.response.text();
-        console.log("🤖 IA: Resumo gerado com sucesso");
-      } catch (aiError) {
-        console.error("⚠️ Erro na IA Gemini (mas continuarei o PDF):", aiError);
+        const response = await result.response;
+        aiSummaryText = response.text(); 
+        
+        console.log("✅ IA Gemini ativada e a responder!");
+      } catch (aiError: any) {
+        console.error("❌ Erro na IA:", aiError.message);
       }
+    } else {
+      console.error("❌ Chave GEMINI_API_KEY não encontrada no .env");
     }
 
     // 2. GERAÇÃO DO PDF 📄
