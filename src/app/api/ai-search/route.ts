@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "models/gemini-3-flash-preview" });
 
     const prompt = `
       És o MajorAssistant, um assistente de IA para uma aplicação de gestão de negócios.
