@@ -8,6 +8,11 @@ export const runtime = 'nodejs';
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
+    console.log("Dados recebidos na API:", data); // Isso vai aparecer no seu terminal
+
+    if (!data.sales) {
+        return NextResponse.json({ error: "Dados de vendas ausentes" }, { status: 400 });
+    }
 
     // 1. IA GEMINI: Gerar Análise de Dados 🧠
     let aiSummary = "Análise automática não disponível.";
