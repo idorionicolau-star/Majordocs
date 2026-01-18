@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Production } from "@/lib/types";
@@ -90,7 +89,7 @@ export function ProductionCard({ production, onTransfer, onDelete, viewMode = 'n
                      isCondensed ? "flex-col" : ""
                     )}>
                     <span className={cn("font-black text-primary", isCondensed ? "text-xl" : "text-3xl")}>{production.quantity}</span>
-                    <span className="text-[10px] sm:text-xs font-bold text-muted-foreground">/un.</span>
+                    <span className="text-[10px] sm:text-xs font-bold text-muted-foreground">/{production.unit || 'un'}</span>
                 </div>
                  
                  <div className={cn("text-xs text-muted-foreground space-y-1", isCondensed && "text-center")}>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Product } from "@/lib/types";
@@ -46,7 +45,7 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                      isCondensed ? "flex-col" : ""
                     )}>
                     <span className={cn("font-black", statusInfo[status], isCondensed ? "text-xl" : "text-3xl")}>{availableStock}</span>
-                    <span className="text-[10px] sm:text-xs font-bold text-muted-foreground">/un.</span>
+                    <span className="text-[10px] sm:text-xs font-bold text-muted-foreground">/{product.unit || 'un'}</span>
                 </div>
                 {product.reservedStock > 0 && (
                   <div className="flex items-center justify-center gap-1.5 text-xs text-primary font-semibold">
