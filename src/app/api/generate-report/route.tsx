@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     const dataForPDF = { ...body, aiSummary: aiSummary };
 
     // --- GERAÇÃO DO PDF com @react-pdf/renderer ---
-    const pdfStream = await pdf(
+    const pdfStream = await pdf((
         <ReportPDF 
             sales={dataForPDF.sales}
             summary={dataForPDF.summary}
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
             date={new Date(dataForPDF.date)}
             aiSummary={dataForPDF.aiSummary}
         />
-    ).toBuffer();
+    )).toBuffer();
     
     const fileName = `relatorio-${format(new Date(body.date), 'MM-yyyy')}.pdf`;
 
