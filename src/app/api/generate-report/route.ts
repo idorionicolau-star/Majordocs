@@ -1,22 +1,24 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import puppeteer from 'puppeteer';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ReportPDF } from '@/components/reports/ReportPDF';
 import { format } from 'date-fns';
+import React from 'react';
 
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const { sales, summary, company, date } = body;
 
-        // Render the React component to a static HTML string
+        // Render the React component to a static HTML string using React.createElement
         const html = renderToStaticMarkup(
-            <ReportPDF 
-                sales={sales}
-                summary={summary}
-                company={company}
-                date={date}
-            />
+            React.createElement(ReportPDF, {
+                sales: sales,
+                summary: summary,
+                company: company,
+                date: date
+            })
         );
 
         const browser = await puppeteer.launch({
