@@ -15,6 +15,7 @@ import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock } from "lucide-react";
+import { LeastSoldProducts } from "@/components/dashboard/least-sold-products";
 
 const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
   ssr: false,
@@ -87,6 +88,7 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-6">
           <StockChart />
           {isPrivilegedUser && <TopSales />}
+          {isPrivilegedUser && <LeastSoldProducts />}
         </div>
 
       </div>
