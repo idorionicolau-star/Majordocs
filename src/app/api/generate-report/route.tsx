@@ -3,6 +3,7 @@ import { pdf } from '@react-pdf/renderer';
 import React from 'react';
 import { ReportPDF } from '@/components/reports/ReportPDF';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { format } from 'date-fns';
 
 export const runtime = 'nodejs';
 
@@ -50,11 +51,16 @@ export async function POST(req: NextRequest) {
     ).toBuffer();
 
     console.log("✅ PDF gerado com sucesso!");
+    
+    const now = new Date();
+    const companyName = data.company?.name ? data.company.name.replace(/[^a-zA-Z0-9]/g, '_') : 'Relatorio';
+    const timestamp = format(now, 'yyyy-MM-dd_HH-mm-ss');
+    const fileName = `Relatorio_${companyName}_${timestamp}.pdf`;
 
     return new NextResponse(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="relatorio-inteligente.pdf"',
+        'Content-Disposition': `attachment; filename="${fileName}"`,
       },
     });
 
