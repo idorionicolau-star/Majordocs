@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     console.log("✅ PDF gerado com sucesso!");
     
     const now = new Date();
-    const companyName = data.company?.name ? data.company.name.replace(/[^a-zA-Z0-9]/g, '_') : 'Relatorio';
+    const companyName = data.company?.name ? data.company.name.replace(/[^a-zA-Z0-9\s]/g, "").trim().replace(/\s+/g, '_') : 'Relatorio';
     const timestamp = format(now, 'yyyy-MM-dd_HH-mm-ss');
     const fileName = `Relatorio_${companyName}_${timestamp}.pdf`;
 
