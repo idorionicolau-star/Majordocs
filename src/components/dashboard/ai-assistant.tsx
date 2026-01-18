@@ -5,8 +5,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Sparkles, Bot } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { generateDashboardInsights, type DashboardInsightsInput } from '@/ai/flows/generate-dashboard-insights-flow';
 import { InventoryContext } from '@/context/inventory-context';
+
+type DashboardInsightsInput = {
+  totalSales: number;
+  topSellingProducts: { name: string; quantity: number; }[];
+  unsoldProducts: { name: string; totalStock: number; }[];
+};
+
 
 export function AIAssistant() {
   const [insights, setInsights] = useState('');
@@ -75,11 +81,22 @@ export function AIAssistant() {
     };
 
     try {
-      const result = await generateDashboardInsights(input);
-      setInsights(result);
-    } catch (e) {
-      console.error(e);
-      setError('Não foi possível gerar a análise. Tente novamente.');
+      const response = await fetch('/api/generate-insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Falha ao comunicar com a API de insights.');
+      }
+
+      const data = await response.json();
+      setInsights(data.text);
+    } catch (e: any) {
+      console.error("Erro ao gerar insights:", e);
+      setError(e.message || 'Não foi possível gerar a análise. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
