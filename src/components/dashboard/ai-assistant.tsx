@@ -7,84 +7,23 @@ import { Sparkles, Bot } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryContext } from '@/context/inventory-context';
 
-type DashboardInsightsInput = {
-  totalSales: number;
-  topSellingProducts: { name: string; quantity: number; }[];
-  unsoldProducts: { name: string; totalStock: number; }[];
-};
-
-
 export function AIAssistant() {
   const [insights, setInsights] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const { dashboardStats, products, sales } = useContext(InventoryContext) || {};
-  
-  const unsoldProducts = useMemo(() => {
-    if (!products || !sales) return [];
-    const soldProductNames = new Set(sales.map(sale => sale.productName));
-    const unsoldMap = new Map<string, { name: string, totalStock: number }>();
-    for (const product of products) {
-        if (!soldProductNames.has(product.name)) {
-            const availableStock = product.stock - product.reservedStock;
-            if (availableStock > 0) {
-                const existing = unsoldMap.get(product.name);
-                if (existing) {
-                    existing.totalStock += availableStock;
-                } else {
-                    unsoldMap.set(product.name, { name: product.name, totalStock: availableStock });
-                }
-            }
-        }
-    }
-    return Array.from(unsoldMap.values()).sort((a, b) => b.totalStock - a.totalStock).slice(0, 5);
-  }, [products, sales]);
-  
-  const topSellingProducts = useMemo(() => {
-    if (!sales) return [];
-    
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
-    const monthlySales = sales.filter(sale => {
-        const saleDate = new Date(sale.date);
-        return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
-    });
-
-    const productStats = monthlySales.reduce((acc, sale) => {
-      if (!acc[sale.productName]) {
-        acc[sale.productName] = { quantity: 0 };
-      }
-      acc[sale.productName].quantity += sale.quantity;
-      return acc;
-    }, {} as Record<string, { quantity: number }>);
-
-    return Object.entries(productStats)
-      .map(([name, stats]) => ({ name, ...stats }))
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 3);
-  }, [sales]);
+  const { sales } = useContext(InventoryContext) || { sales: [] };
 
   const handleGenerateInsights = async () => {
-    if (!dashboardStats) return;
-
     setIsLoading(true);
     setError('');
     setInsights('');
-
-    const input: DashboardInsightsInput = {
-      totalSales: dashboardStats.monthlySalesValue,
-      topSellingProducts: topSellingProducts,
-      unsoldProducts: unsoldProducts,
-    };
 
     try {
       const response = await fetch('/api/generate-insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
+        body: JSON.stringify({ sales }),
       });
 
       if (!response.ok) {
