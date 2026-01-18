@@ -7,7 +7,7 @@ import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle, Plus, FileCheck } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle, Plus, FileCheck, ChevronsUpDown } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -56,6 +56,7 @@ export default function InventoryPage() {
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [sortBy, setSortBy] = useState<'stock_desc' | 'stock_asc' | 'name_asc' | 'date_desc'>('stock_desc');
   const { toast } = useToast();
 
   const { 
@@ -317,7 +318,7 @@ export default function InventoryPage() {
   }, [products]);
 
   const filteredProducts = useMemo(() => {
-    let result = products;
+    let result = [...products];
 
     if (selectedLocation !== 'all') {
       result = result.filter(p => p.location === selectedLocation);
@@ -335,8 +336,27 @@ export default function InventoryPage() {
       result = result.filter(p => isSameDay(new Date(p.lastUpdated), dateFilter));
     }
     
+    // Sorting logic
+    switch (sortBy) {
+      case 'stock_desc':
+        result.sort((a, b) => (b.stock - b.reservedStock) - (a.stock - a.reservedStock));
+        break;
+      case 'stock_asc':
+        result.sort((a, b) => (a.stock - a.reservedStock) - (b.stock - b.reservedStock));
+        break;
+      case 'name_asc':
+        result.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'date_desc':
+        result.sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime());
+        break;
+      default:
+         result.sort((a, b) => (b.stock - b.reservedStock) - (a.stock - a.reservedStock));
+        break;
+    }
+    
     return result;
-  }, [products, selectedLocation, nameFilter, categoryFilter, dateFilter]);
+  }, [products, selectedLocation, nameFilter, categoryFilter, dateFilter, sortBy]);
   
   const handleClearInventory = async () => {
     if (clearProductsCollection) {
@@ -407,6 +427,22 @@ export default function InventoryPage() {
                 />
                  <div className="flex w-full sm:w-auto items-center gap-2">
                     <DatePicker date={dateFilter} setDate={setDateFilter} />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between sm:w-auto h-12">
+                          <ChevronsUpDown className="mr-2 h-4 w-4" />
+                          <span>Ordenar por</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuRadioGroup value={sortBy} onValueChange={(value) => setSortBy(value as 'stock_desc' | 'stock_asc' | 'name_asc' | 'date_desc')}>
+                          <DropdownMenuRadioItem value="stock_desc">Maior Stock</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="stock_asc">Menor Stock</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="name_asc">Ordem Alfabética (A-Z)</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="date_desc">Atualizados Recentemente</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
             
