@@ -1,60 +1,73 @@
-'use server';
-/**
- * @fileOverview A flow to list available AI models from the provider.
- *
- * - listModels - A function that fetches and returns a list of available models.
- * - ModelInfo - The type for a single model's information.
- */
-
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
-
-const ModelInfoSchema = z.object({
-  name: z.string().describe('The unique identifier for the model, e.g., "models/gemini-1.5-flash-latest".'),
-  displayName: z.string().describe('The human-readable name for the model, e.g., "Gemini 1.5 Flash".'),
-  description: z.string().describe('A description of the model.'),
-  version: z.string().describe('The version of the model.'),
-});
-export type ModelInfo = z.infer<typeof ModelInfoSchema>;
-
-const ListModelsOutputSchema = z.array(ModelInfoSchema);
-export type ListModelsOutput = z.infer<typeof ListModelsOutputSchema>;
-
-export async function listModels(): Promise<ListModelsOutput> {
-  return listModelsFlow();
-}
-
-const listModelsFlow = ai.defineFlow(
-  {
-    name: 'listModelsFlow',
-    inputSchema: z.void(),
-    outputSchema: ListModelsOutputSchema,
+{
+  "name": "nextn",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbo -p 9002",
+    "build": "NODE_ENV=production next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
   },
-  async () => {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models`;
-
-    try {
-      // The API key is now configured in the googleAI() plugin, so it's sent automatically.
-      const response = await fetch(url);
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`Falha ao obter modelos: ${response.status} ${response.statusText} - ${errorBody}`);
-      }
-      const data = await response.json();
-      
-      const models = data.models.map((model: any) => ({
-          name: model.name,
-          displayName: model.displayName,
-          description: model.description,
-          version: model.version,
-      }));
-      
-      // Filter for generative models only, as the API returns others like embedding models
-      return models.filter((m: ModelInfo) => m.name.includes('gemini'));
-
-    } catch (error: any) {
-      console.error('Error fetching models from Google AI:', error);
-      throw new Error(`Ocorreu um erro ao tentar listar os modelos: ${error.message}`);
-    }
+  "dependencies": {
+    "@google/generative-ai": "^0.16.0",
+    "@hookform/resolvers": "^4.1.3",
+    "react-hook-form": "^7.52.1",
+    "@radix-ui/react-accordion": "^1.2.3",
+    "@radix-ui/react-alert-dialog": "^1.1.6",
+    "@radix-ui/react-avatar": "^1.1.3",
+    "@radix-ui/react-checkbox": "^1.1.4",
+    "@radix-ui/react-collapsible": "^1.1.11",
+    "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-dropdown-menu": "^2.1.6",
+    "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-menubar": "^1.1.6",
+    "@radix-ui/react-popover": "^1.1.6",
+    "@radix-ui/react-progress": "^1.1.2",
+    "@radix-ui/react-radio-group": "^1.2.3",
+    "@radix-ui/react-scroll-area": "^1.2.3",
+    "@radix-ui/react-select": "^2.1.6",
+    "@radix-ui/react-separator": "^1.1.2",
+    "@radix-ui/react-slider": "^1.2.3",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-switch": "^1.1.3",
+    "@radix-ui/react-tabs": "^1.1.3",
+    "@radix-ui/react-toast": "^1.2.6",
+    "@radix-ui/react-tooltip": "^1.1.8",
+    "@react-pdf/renderer": "^3.4.4",
+    "@svgr/webpack": "^8.1.0",
+    "@tanstack/react-table": "^8.19.3",
+    "@use-gesture/react": "^10.3.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.0.0",
+    "date-fns": "^3.6.0",
+    "dotenv": "^16.5.0",
+    "firebase": "^11.9.1",
+    "framer-motion": "^11.5.7",
+    "lucide-react": "^0.475.0",
+    "next": "14.2.3",
+    "papaparse": "^5.4.1",
+    "patch-package": "^8.0.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "recharts": "^2.15.1",
+    "resend": "^3.2.0",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^3.0.1",
+    "tailwindcss-animate": "^1.0.7",
+    "uuid": "^10.0.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/papaparse": "^5.3.14",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/uuid": "^10.0.0",
+    "eslint-config-next": "14.2.3",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
   }
-);
+}
