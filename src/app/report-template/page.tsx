@@ -1,0 +1,106 @@
+
+import { format } from 'date-fns';
+import { pt } from 'date-fns/locale';
+import { formatCurrency } from '@/lib/utils';
+import type { Sale } from '@/lib/types';
+
+// This is a simplified version of the data for demonstration
+const mockData = {
+  company: { name: 'MajorStockX' },
+  date: new Date(),
+  summary: {
+    totalSales: 15,
+    totalValue: 12345.67,
+    averageTicket: 823.04,
+    bestSellingProduct: { name: 'Grelha 30x30 Bonita difícil', quantity: 20 },
+  },
+  sales: [
+    { id: '1', date: new Date().toISOString(), guideNumber: 'GT202407-001', productName: 'Grelha 30x30 Bonita difícil', quantity: 10, totalValue: 5000, soldBy: 'Admin', documentType: 'Factura', status: 'Pago' },
+    { id: '2', date: new Date().toISOString(), guideNumber: 'GT202407-002', productName: 'Pavê Borbulhas', quantity: 5, totalValue: 7345.67, soldBy: 'Admin', documentType: 'Factura', status: 'Pago' },
+  ] as Sale[]
+};
+
+export default function ReportTemplate() {
+    const { company, date, summary, sales } = mockData;
+
+    // The styles here must be inline or embedded in a <style> tag because external CSS files
+    // might not be loaded correctly by Puppeteer depending on the configuration.
+    // Tailwind classes will NOT work here unless we run PostCSS on this HTML, which is complex.
+    // So, inline styles are the most reliable option for server-generated PDFs.
+    const styles = `
+        body { font-family: 'PT Sans', sans-serif; line-height: 1.6; color: #333; margin: 0; background-color: #fff; }
+        .container { max-width: 800px; margin: auto; padding: 2rem; }
+        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 1rem; margin-bottom: 2rem; }
+        .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: #3498db; margin: 0; }
+        .logo span { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: bold; color: #3498db; }
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin: 2rem 0; text-align: center; }
+        .summary-card { background-color: #f9fafb; padding: 1rem; border-radius: 6px; border: 1px solid #eee; }
+        .summary-card strong { display: block; margin-bottom: 0.5rem; color: #374151; font-size: 0.8rem; font-family: 'Space Grotesk', sans-serif; }
+        .summary-card span { font-size: 1.2rem; font-weight: bold; }
+        h2 { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; margin-top: 2rem; margin-bottom: 1rem;}
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 12px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f9fafb; font-family: 'Space Grotesk', sans-serif; }
+        .footer { text-align: center; margin-top: 3rem; font-size: 0.8rem; color: #999; }
+    `;
+
+    return (
+        <html>
+            <head>
+                <title>Relatório Mensal de Vendas</title>
+                 <link rel="preconnect" href="https://fonts.googleapis.com" />
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+                <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet" />
+                <style>{styles}</style>
+            </head>
+            <body>
+                <div className="container">
+                    <div className="header">
+                        <div className="logo">
+                            <span>{company?.name || 'MajorStockX'}</span>
+                        </div>
+                        <h1>Relatório Mensal</h1>
+                    </div>
+                    <h2>Mês: {format(date, 'MMMM yyyy', { locale: pt })}</h2>
+
+                    <div className="summary-grid">
+                        <div className="summary-card"><strong>Total de Vendas</strong><span>{summary.totalSales}</span></div>
+                        <div className="summary-card"><strong>Valor Total</strong><span>{formatCurrency(summary.totalValue)}</span></div>
+                        <div className="summary-card"><strong>Ticket Médio</strong><span>{formatCurrency(summary.averageTicket)}</span></div>
+                        <div className="summary-card" style={{gridColumn: 'span 3'}}><strong>Produto Mais Vendido</strong><span>{summary.bestSellingProduct.name} ({summary.bestSellingProduct.quantity} un)</span></div>
+                    </div>
+
+                    <h2>Detalhes das Vendas</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Guia N.º</th>
+                                <th>Produto</th>
+                                <th>Qtd</th>
+                                <th>Valor Total</th>
+                                <th>Vendedor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sales.map(sale => (
+                                <tr key={sale.id}>
+                                    <td>{format(new Date(sale.date), 'dd/MM/yy')}</td>
+                                    <td>{sale.guideNumber}</td>
+                                    <td>{sale.productName}</td>
+                                    <td>{sale.quantity}</td>
+                                    <td>{formatCurrency(sale.totalValue)}</td>
+                                    <td>{sale.soldBy}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    <div className="footer">
+                        <p>{company?.name || 'MajorStockX'} &copy; {new Date().getFullYear()}</p>
+                    </div>
+                </div>
+            </body>
+        </html>
+    );
+}

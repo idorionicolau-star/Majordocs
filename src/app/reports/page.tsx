@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Printer, DollarSign, Hash, Box, Trash2, TrendingUp, Trophy, Calendar, User, Lock } from 'lucide-react';
+import { Download, DollarSign, Hash, Box, Trash2, TrendingUp, Trophy, Calendar, User, Lock } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { Sale } from '@/lib/types';
 import {
@@ -111,75 +111,6 @@ export default function ReportsPage() {
     setShowClearConfirm(false);
   };
 
-  const handlePrint = () => {
-    if (!selectedDate) return;
-    const printWindow = window.open('', '', 'height=800,width=800');
-    if (printWindow) {
-        printWindow.document.write('<!DOCTYPE html><html><head><title>Relatório Mensal de Vendas</title>');
-        printWindow.document.write(`
-            <link rel="preconnect" href="https://fonts.googleapis.com">
-            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-            <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
-        `);
-        printWindow.document.write(`
-            <style>
-                body { font-family: 'PT Sans', sans-serif; line-height: 1.6; color: #333; margin: 2rem; }
-                .container { max-width: 800px; margin: auto; padding: 2rem; border: 1px solid #eee; border-radius: 8px; }
-                .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 1rem; margin-bottom: 2rem; }
-                .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: #3498db; margin: 0; }
-                .logo { display: flex; flex-direction: column; align-items: flex-start; }
-                .logo span { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: bold; color: #3498db; }
-                .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin: 2rem 0; }
-                .summary-card { background-color: #f9fafb; padding: 1rem; border-radius: 6px; }
-                .summary-card strong { display: block; margin-bottom: 0.5rem; color: #374151; font-family: 'Space Grotesk', sans-serif; }
-                table { width: 100%; border-collapse: collapse; margin-top: 2rem; font-size: 12px; }
-                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                th { background-color: #f9fafb; font-family: 'Space Grotesk', sans-serif; }
-                .footer { text-align: center; margin-top: 3rem; font-size: 0.8rem; color: #999; }
-                @media print {
-                  body { margin: 0; }
-                  .no-print { display: none; }
-                  .container { border: none; box-shadow: none; }
-                }
-            </style>
-        `);
-        printWindow.document.write('</head><body><div class="container">');
-        printWindow.document.write(`
-            <div class="header">
-                 <div class="logo">
-                    <span>${companyData?.name || 'MajorStockX'}</span>
-                </div>
-                <h1>Relatório Mensal de Vendas</h1>
-            </div>
-            <h2>Mês: ${format(selectedDate, 'MMMM yyyy', { locale: pt })}</h2>
-        `);
-
-        printWindow.document.write('<div class="summary-grid">');
-        printWindow.document.write(`<div class="summary-card"><strong>Total de Vendas</strong><span>${reportSummary.totalSales}</span></div>`);
-        printWindow.document.write(`<div class="summary-card"><strong>Valor Total</strong><span>${formatCurrency(reportSummary.totalValue)}</span></div>`);
-        printWindow.document.write(`<div class="summary-card"><strong>Ticket Médio</strong><span>${formatCurrency(reportSummary.averageTicket)}</span></div>`);
-        printWindow.document.write(`<div class="summary-card"><strong>Total de Itens</strong><span>${reportSummary.totalItems}</span></div>`);
-        printWindow.document.write(`<div class="summary-card"><strong>Produto Mais Vendido</strong><span>${reportSummary.bestSellingProduct.name} (${reportSummary.bestSellingProduct.quantity} un)</span></div>`);
-        printWindow.document.write('</div>');
-
-        printWindow.document.write('<h3>Detalhes das Vendas</h3>');
-        printWindow.document.write('<table><thead><tr><th>Data</th><th>Guia N.º</th><th>Produto</th><th>Qtd</th><th>Valor Total</th><th>Vendedor</th></tr></thead><tbody>');
-        salesForMonth.forEach(sale => {
-            printWindow.document.write(`<tr><td>${format(new Date(sale.date), 'dd/MM/yy')}</td><td>${sale.guideNumber}</td><td>${sale.productName}</td><td>${sale.quantity}</td><td>${formatCurrency(sale.totalValue)}</td><td>${sale.soldBy}</td></tr>`);
-        });
-        printWindow.document.write('</tbody></table>');
-        
-        printWindow.document.write(`<div class="footer"><p>${companyData?.name || 'MajorStockX'} &copy; ' + new Date().getFullYear() + '</p></div>`);
-        printWindow.document.write('</div></body></html>');
-        printWindow.document.close();
-        
-        setTimeout(() => {
-          printWindow.focus();
-          printWindow.print();
-        }, 500);
-    }
-  };
-
   if (loading) {
     return (
       <div className="space-y-4">
@@ -219,9 +150,11 @@ export default function ReportsPage() {
         <div className="flex flex-col w-full items-center md:flex-row justify-between items-start gap-4">
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
               <DatePicker date={selectedDate} setDate={setSelectedDate} />
-              <Button onClick={handlePrint} variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Imprimir Relatório
+              <Button asChild variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate}>
+                <a href={selectedDate ? `/api/generate-report?month=${format(selectedDate, 'yyyy-MM')}` : '#'} target="_blank">
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar PDF
+                </a>
               </Button>
             </div>
         </div>
@@ -354,5 +287,3 @@ const StatCard = ({ icon: Icon, title, value, subValue }: StatCardProps) => (
         </CardContent>
     </Card>
 );
-
-    
