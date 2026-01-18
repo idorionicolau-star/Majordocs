@@ -7,6 +7,8 @@ import { Sparkles, Bot, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryContext } from '@/context/inventory-context';
 import { Input } from '../ui/input';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
   const [insights, setInsights] = useState('');
@@ -96,7 +98,9 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
           ) : error ? (
             <p className="text-sm text-destructive">{error}</p>
           ) : insights ? (
-            <div className="text-sm text-foreground whitespace-pre-wrap">{insights}</div>
+            <div className="prose dark:prose-invert prose-sm max-w-none">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{insights}</ReactMarkdown>
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6 border-2 border-dashed rounded-xl">
               <Bot size={40} className="mb-4" />
