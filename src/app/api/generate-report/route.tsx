@@ -1,25 +1,19 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import puppeteer from 'puppeteer';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { ReportPDF } from '@/components/reports/ReportPDF';
-import { format } from 'date-fns';
-import React from 'react';
+import { Buffer } from 'buffer';
 
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { sales, summary, company, date } = body;
 
-        // Render the React component to a static HTML string
-        const html = renderToStaticMarkup(
-            <ReportPDF 
-                sales={sales}
-                summary={summary}
-                company={company}
-                date={date}
-            />
-        );
+        // Serialize and Base64-encode the data to pass in the URL
+        const dataString = JSON.stringify(body);
+        const encodedData = Buffer.from(dataString).toString('base64');
+        
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
+        const reportUrl = new URL(`${baseUrl}/reports/preview`);
+        reportUrl.searchParams.append('data', encodedData);
 
         const browser = await puppeteer.launch({
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
@@ -27,10 +21,8 @@ export async function POST(req: NextRequest) {
         });
 
         const page = await browser.newPage();
-
-        // Set the content of the page to our rendered HTML
-        // We use 'networkidle0' to ensure any external resources like fonts are loaded
-        await page.setContent(html, { waitUntil: 'networkidle0' });
+        
+        await page.goto(reportUrl.toString(), { waitUntil: 'networkidle0' });
 
         const pdfBuffer = await page.pdf({
             format: 'A4',
@@ -45,9 +37,8 @@ export async function POST(req: NextRequest) {
 
         await browser.close();
         
-        const fileName = `relatorio-${format(new Date(date), 'MM-yyyy')}.pdf`;
+        const fileName = `relatorio-${new Date().toISOString().slice(0, 7)}.pdf`;
 
-        // Return the PDF as a response
         return new NextResponse(pdfBuffer, {
             status: 200,
             headers: {
