@@ -142,7 +142,8 @@ export default function ReportsPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Falha ao gerar o PDF no servidor.');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.details || errorData.error || 'Falha ao gerar o PDF no servidor.');
       }
 
       const blob = await response.blob();
@@ -167,12 +168,13 @@ export default function ReportsPage() {
       
       toast({ title: "Sucesso!", description: "O seu relatório em PDF foi descarregado." });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating PDF:", error);
       toast({
         title: "Erro ao gerar PDF",
-        description: "Não foi possível criar o relatório. Tente novamente.",
-        variant: "destructive"
+        description: error.message,
+        variant: "destructive",
+        duration: 9000,
       });
     } finally {
       setIsGeneratingPdf(false);

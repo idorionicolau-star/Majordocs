@@ -26,8 +26,8 @@ export async function POST(req: NextRequest) {
             
             const result = await model.generateContent(prompt);
             aiSummary = result.response.text();
-        } catch (aiError) {
-            console.error("Erro na IA:", aiError);
+        } catch (aiError: any) {
+            console.error("Erro na IA (ignorado para geração de PDF):", aiError.message);
             aiSummary = "Não foi possível gerar a análise da IA no momento.";
         }
     }
@@ -67,10 +67,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
-  } catch (error) {
-    console.error('Erro Fatal:', error);
+  } catch (error: any) {
+    console.error('Erro Fatal ao gerar relatório PDF:', error);
     return NextResponse.json(
-      { error: 'Erro interno ao gerar relatório' }, 
+      { error: 'Erro interno ao gerar relatório', details: error.message }, 
       { status: 500 }
     );
   }
