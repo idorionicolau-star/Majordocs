@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from 'react';
@@ -37,6 +38,7 @@ import { InventoryContext } from '@/context/inventory-context';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Textarea } from '../ui/textarea';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -49,6 +51,9 @@ const formSchema = z.object({
   discountType: z.enum(['fixed', 'percentage']).default('fixed'),
   discountValue: z.coerce.number().min(0, "O desconto não pode ser negativo.").optional(),
   vatPercentage: z.coerce.number().min(0, "O IVA deve ser um valor positivo.").max(100).optional(),
+  documentType: z.enum(['Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo']),
+  clientName: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 type AddSaleFormValues = z.infer<typeof formSchema>;
@@ -80,6 +85,9 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
       discountType: 'fixed',
       discountValue: 0,
       vatPercentage: 17, // Default VAT
+      documentType: 'Factura Proforma',
+      clientName: '',
+      notes: ''
     },
   });
   
@@ -99,6 +107,9 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
         discountType: 'fixed',
         discountValue: 0,
         vatPercentage: 17,
+        documentType: 'Factura Proforma',
+        clientName: '',
+        notes: ''
       });
     }
   }, [open, form, locations]);
@@ -211,6 +222,9 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
       soldBy: user.username,
       status: 'Pago',
       location: values.location,
+      documentType: values.documentType,
+      clientName: values.clientName,
+      notes: values.notes,
     };
     
     await onAddSale(newSale);
@@ -224,14 +238,53 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Registrar Nova Venda</DialogTitle>
+          <DialogTitle>Registrar Novo Documento de Venda</DialogTitle>
           <DialogDescription>
-            A venda será marcada como 'Paga' e o stock ficará reservado.
+            Crie uma cotação, fatura ou guia. As vendas pagas reservam o stock automaticamente.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="clientName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do Cliente</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome do cliente" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="documentType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo de Documento</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o tipo de documento" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Factura Proforma">Factura Proforma</SelectItem>
+                          <SelectItem value="Guia de Remessa">Guia de Remessa</SelectItem>
+                          <SelectItem value="Factura">Factura</SelectItem>
+                          <SelectItem value="Recibo">Recibo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               {isMultiLocation && (
                   <FormField
                     control={form.control}
@@ -355,7 +408,22 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                   />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div></div>
+                <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Notas (Opcional)</FormLabel>
+                        <FormControl>
+                        <Textarea
+                            placeholder="Adicione notas ou termos..."
+                            {...field}
+                        />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
                  <FormField
                       control={form.control}
                       name="vatPercentage"

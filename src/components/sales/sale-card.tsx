@@ -74,7 +74,9 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, vi
                          </Button>
                     )}
                 </div>
-                <CardDescription className={cn("text-[10px]", isCondensed && "hidden")}>{sale.guideNumber}</CardDescription>
+                <CardDescription className={cn("text-[10px]", isCondensed && "hidden")}>
+                    {sale.documentType} #{sale.guideNumber}
+                </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow space-y-2 p-1 sm:p-2">
                  <div className={cn(
@@ -96,7 +98,7 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, vi
                     )}
                     <div className="flex items-center gap-1.5 justify-center">
                         <User size={12} />
-                        <span>{sale.soldBy}</span>
+                        <span>{sale.clientName || sale.soldBy}</span>
                     </div>
                  </div>
 

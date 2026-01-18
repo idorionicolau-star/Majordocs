@@ -2,21 +2,14 @@
 "use client";
 
 import {
-  Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { Sale } from "@/lib/types";
-import { Calendar, Clock, Box, User, Hash, DollarSign, Tag, Percent, MinusCircle } from "lucide-react";
+import { Calendar, User, Box, Hash } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-
-export function SaleDetailsDialog() {
-    // This component is now just a shell.
-    // The main logic is in SaleDetailsDialogContent and triggered from columns.tsx
-    return <Dialog />;
-}
 
 interface SaleDetailsDialogProps {
   sale: Sale;
@@ -39,25 +32,23 @@ export function SaleDetailsDialogContent({ sale }: SaleDetailsDialogProps) {
   const formattedDiscount = sale.discount ? formatCurrency(sale.discount) : 'N/A';
   const formattedVat = sale.vat ? formatCurrency(sale.vat) : 'N/A';
   const formattedTotalValue = formatCurrency(sale.totalValue);
-  const formattedUnitPrice = formatCurrency(sale.unitPrice);
-
 
   return (
     <DialogContent className="sm:max-w-md">
     <DialogHeader>
-        <DialogTitle>Detalhes da Venda</DialogTitle>
+        <DialogTitle>{sale.documentType} #{sale.guideNumber}</DialogTitle>
         <DialogDescription>
-        Informações completas sobre a transação #{sale.guideNumber}.
+        Detalhes completos da transação.
         </DialogDescription>
     </DialogHeader>
     <div className="grid gap-6 py-4">
         <div className="grid grid-cols-2 gap-4">
-            <DetailItem icon={Box} label="Produto" value={sale.productName} />
-            <DetailItem icon={Hash} label="Quantidade" value={sale.quantity} />
+            <DetailItem icon={Calendar} label="Data" value={saleDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })} />
+            <DetailItem icon={User} label="Cliente" value={sale.clientName || 'N/A'} />
         </div>
         <div className="grid grid-cols-2 gap-4">
-            <DetailItem icon={Calendar} label="Data" value={saleDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })} />
-            <DetailItem icon={User} label="Vendedor" value={sale.soldBy} />
+            <DetailItem icon={Box} label="Produto" value={sale.productName} />
+            <DetailItem icon={Hash} label="Quantidade" value={`${sale.quantity} ${sale.unit || ''}`} />
         </div>
          <div className="space-y-4 rounded-lg bg-muted p-4">
             <div className="flex justify-between items-center">
@@ -81,6 +72,12 @@ export function SaleDetailsDialogContent({ sale }: SaleDetailsDialogProps) {
                 <span className="font-bold">{formattedTotalValue}</span>
             </div>
         </div>
+        {sale.notes && (
+            <div>
+                <h4 className="font-semibold text-muted-foreground mb-1">Notas</h4>
+                <p className="text-sm border p-3 rounded-md bg-background">{sale.notes}</p>
+            </div>
+        )}
     </div>
     </DialogContent>
   );

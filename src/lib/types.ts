@@ -84,6 +84,9 @@ export type Sale = {
   guideNumber: string;
   location?: string;
   status: 'Pago' | 'Levantado';
+  documentType: 'Guia de Remessa' | 'Factura' | 'Factura Proforma' | 'Recibo';
+  clientName?: string;
+  notes?: string;
 };
 
 export type Production = {
@@ -256,3 +259,8 @@ export interface InventoryContextType {
   addCatalogProduct: (productData: Omit<CatalogProduct, 'id'>) => Promise<void>;
   addCatalogCategory: (categoryName: string) => Promise<void>;
 }
+
+type CatalogProduct = Omit<
+  Product,
+  'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'
+>;

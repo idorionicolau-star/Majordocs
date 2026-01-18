@@ -104,9 +104,10 @@
     "Sale": {
       "title": "Sale",
       "type": "object",
-      "description": "Represents a sale transaction.",
+      "description": "Represents a sale transaction or related document like an invoice or quote.",
       "properties": {
         "date": { "type": "string", "format": "date-time" },
+        "clientName": { "type": "string" },
         "productId": { "type": "string" },
         "productName": { "type": "string" },
         "quantity": { "type": "number" },
@@ -119,9 +120,11 @@
         "soldBy": { "type": "string" },
         "guideNumber": { "type": "string" },
         "location": { "type": "string" },
-        "status": { "type": "string", "enum": ["Pago", "Levantado"] }
+        "status": { "type": "string", "enum": ["Pago", "Levantado"] },
+        "documentType": { "type": "string", "enum": ["Guia de Remessa", "Factura", "Factura Proforma", "Recibo"] },
+        "notes": { "type": "string" }
       },
-      "required": ["date", "productId", "productName", "quantity", "unitPrice", "subtotal", "totalValue", "soldBy", "guideNumber", "status"]
+      "required": ["date", "productId", "productName", "quantity", "unitPrice", "subtotal", "totalValue", "soldBy", "guideNumber", "status", "documentType"]
     },
     "Production": {
       "title": "Production",
