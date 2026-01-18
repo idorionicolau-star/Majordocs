@@ -1,8 +1,8 @@
-import type {NextConfig} from 'next';
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   /* config options here */
   typescript: {
+    // Mantemos isto para evitar que erros de tipos travem o seu progresso
     ignoreBuildErrors: true,
   },
   eslint: {
