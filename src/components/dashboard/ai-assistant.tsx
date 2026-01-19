@@ -46,7 +46,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
       const lastMessage = messages[messages.length - 1];
       if (lastMessage.role === 'model') {
         setTimeout(() => {
-          lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 100);
       }
     }
