@@ -1,8 +1,8 @@
 export const firebaseConfig = {
-  "projectId": "atrevamoneytracker",
-  "appId": "1:882443102074:web:17ba3de56b34350bd718c3",
-  "apiKey": "AIzaSyB4HFV5VZ9FU3vQ3bu04KV_sHhioECJqNo",
-  "authDomain": "atrevamoneytracker.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "882443102074"
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  measurementId: "",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
 };
