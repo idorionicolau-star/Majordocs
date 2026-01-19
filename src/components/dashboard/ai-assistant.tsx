@@ -24,7 +24,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" })
+    endOfMessagesRef.current?.scrollIntoView({ behavior: "auto", block: "nearest" });
   }
 
   useEffect(() => {
