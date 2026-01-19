@@ -3,7 +3,7 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Bot, User, Send, ThumbsUp, ThumbsDown, PersonStanding } from 'lucide-react';
+import { Sparkles, Bot, User, Send, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryContext } from '@/context/inventory-context';
 import { Input } from '../ui/input';
@@ -42,19 +42,16 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
   const isMounted = useRef(false);
 
   useEffect(() => {
-    if (isMounted.current) {
-        if (messages.length > 0) {
-            const lastMessage = messages[messages.length - 1];
-            if (lastMessage.role === 'model') {
-                setTimeout(() => {
-                lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }, 100);
-            }
-        }
+    // We only want to auto-scroll when new messages are added, not on initial load.
+    if (isMounted.current && lastMessageRef.current) {
+      // Use a short timeout to allow the DOM to update before scrolling.
+      setTimeout(() => {
+        lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
     } else {
-        isMounted.current = true;
+      isMounted.current = true;
     }
-  }, [messages]);
+  }, [messages]); // This effect runs every time the messages array changes.
   
 
   const handleAskAI = async (currentQuery: string) => {
@@ -104,7 +101,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && query) {
       e.preventDefault();
       handleAskAI(query);
@@ -216,11 +213,12 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
         </ScrollArea>
       </CardContent>
       <CardFooter>
-         <div onKeyDown={handleKeyDown} className="flex items-center gap-2 w-full">
+         <div className="flex items-center gap-2 w-full">
             <Input 
                 placeholder="Qual foi o produto mais vendido este mês?"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
                 disabled={isLoading}
             />
             <Button type="button" onClick={() => handleAskAI(query)} size="icon" disabled={isLoading || !query}>
