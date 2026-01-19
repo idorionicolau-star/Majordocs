@@ -1,29 +1,49 @@
 'use client';
 
-import { useState, useContext, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useContext, useEffect, useRef } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Bot, Search } from 'lucide-react';
+import { Sparkles, Bot, Search, User, Send } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryContext } from '@/context/inventory-context';
 import { Input } from '../ui/input';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
+import { ScrollArea } from '../ui/scroll-area';
+import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback } from '../ui/avatar';
+
 
 export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
-  const [insights, setInsights] = useState('');
-  const [query, setQuery] = useState(initialQuery || '');
+  const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string }[]>([]);
+  const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const { sales, products, dashboardStats } = useContext(InventoryContext) || { sales: [], products: [], dashboardStats: {} };
+  const endOfMessagesRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages]);
 
   const handleAskAI = async (currentQuery: string) => {
     if (!currentQuery) return;
     setIsLoading(true);
-    setError('');
-    setInsights('');
+
+    const newMessages: { role: 'user' | 'model', text: string }[] = [...messages, { role: 'user', text: currentQuery }];
+    setMessages(newMessages);
+    setQuery(''); 
+
+    const historyForAPI = newMessages.slice(0, -1).map(msg => ({
+      role: msg.role,
+      parts: [{ text: msg.text }],
+    }));
+
 
     try {
       const response = await fetch('/api/ai-search', {
@@ -31,6 +51,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: currentQuery,
+          history: historyForAPI,
           contextData: {
             stats: dashboardStats,
             recentSales: sales?.slice(0, 10),
@@ -45,10 +66,10 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
       }
 
       const data = await response.json();
-      setInsights(data.text);
+      setMessages(prev => [...prev, { role: 'model', text: data.text }]);
     } catch (e: any) {
       console.error("Erro na pesquisa com IA:", e);
-      setError(e.message || 'Não foi possível obter uma resposta. Tente novamente.');
+      setMessages(prev => [...prev, { role: 'model', text: `Erro: ${e.message || 'Não foi possível obter uma resposta. Tente novamente.'}` }]);
     } finally {
       setIsLoading(false);
     }
@@ -56,9 +77,9 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
 
   useEffect(() => {
     if (initialQuery) {
-      setQuery(initialQuery);
       handleAskAI(initialQuery);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -67,59 +88,79 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
   }
 
   return (
-    <Card className="glass-card shadow-sm">
+     <Card className="glass-card shadow-sm flex flex-col h-full">
       <CardHeader>
         <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
           <Sparkles className="text-primary" />
           MajorAssistant
         </CardTitle>
         <CardDescription>
-          Faça uma pergunta sobre o seu negócio ou peça um resumo.
+          Faça uma pergunta sobre o seu negócio. O assistente tem memória da conversa atual.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <form onSubmit={handleSubmit} className="flex items-center gap-2">
+      <CardContent className="flex-grow flex flex-col gap-4">
+        <ScrollArea className="flex-grow h-[200px] pr-4 -mr-4">
+          <div className="space-y-4">
+             {messages.length === 0 && !isLoading && (
+              <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6 border-2 border-dashed rounded-xl h-full">
+                  <Bot size={40} className="mb-4" />
+                  <p>A resposta do assistente aparecerá aqui.</p>
+              </div>
+            )}
+            {messages.map((message, index) => (
+              <div key={index} className={cn("flex items-start gap-3", message.role === 'user' ? 'justify-end' : '')}>
+                {message.role === 'model' && <Avatar className="h-8 w-8"><AvatarFallback><Bot /></AvatarFallback></Avatar>}
+                <div className={cn(
+                  "p-3 rounded-2xl max-w-lg",
+                  message.role === 'user'
+                    ? "bg-primary text-primary-foreground rounded-br-none"
+                    : "bg-muted rounded-bl-none"
+                )}>
+                  <div className="prose dark:prose-invert prose-sm max-w-none">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({ node, ...props }) => {
+                          if (!props.href) return <a {...props} />;
+                          return <Link href={props.href} {...props} />;
+                        },
+                      }}
+                    >
+                      {message.text}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+                 {message.role === 'user' && <Avatar className="h-8 w-8"><AvatarFallback><User /></AvatarFallback></Avatar>}
+              </div>
+            ))}
+             {isLoading && (
+              <div className="flex items-start gap-3">
+                <Avatar className="h-8 w-8"><AvatarFallback><Bot /></AvatarFallback></Avatar>
+                <div className="p-3 rounded-2xl bg-muted rounded-bl-none">
+                  <div className="space-y-2">
+                    <Skeleton className="h-3 w-48" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={endOfMessagesRef} />
+          </div>
+        </ScrollArea>
+      </CardContent>
+      <CardFooter>
+         <form onSubmit={handleSubmit} className="flex items-center gap-2 w-full">
             <Input 
-                placeholder="Ex: Qual foi o produto mais vendido este mês?"
+                placeholder="Qual foi o produto mais vendido este mês?"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                disabled={isLoading}
             />
-            <Button type="submit" size="icon" disabled={isLoading}>
-                <Search className="h-4 w-4" />
+            <Button type="submit" size="icon" disabled={isLoading || !query}>
+                <Send className="h-4 w-4" />
             </Button>
         </form>
-
-        <div className="min-h-[100px]">
-          {isLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-3/4" />
-            </div>
-          ) : error ? (
-            <p className="text-sm text-destructive">{error}</p>
-          ) : insights ? (
-            <div className="prose dark:prose-invert prose-sm max-w-none">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  a: ({ node, ...props }) => {
-                    if (!props.href) return <a {...props} />;
-                    return <Link href={props.href} {...props} />;
-                  },
-                }}
-              >
-                {insights}
-              </ReactMarkdown>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6 border-2 border-dashed rounded-xl">
-              <Bot size={40} className="mb-4" />
-              <p>A resposta do assistente aparecerá aqui.</p>
-            </div>
-          )}
-        </div>
-      </CardContent>
+      </CardFooter>
     </Card>
   );
 }

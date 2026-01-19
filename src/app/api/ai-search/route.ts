@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, Content } from "@google/generative-ai";
 
 export async function POST(req: NextRequest) {
   try {
-    const { query, contextData } = await req.json();
+    const { query, contextData, history } = await req.json();
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
@@ -11,8 +11,6 @@ export async function POST(req: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    
-    // ATUALIZAÇÃO: Mudando para o 2.0 Flash para evitar o erro 429 de limite de 20 requisições
     const model = genAI.getGenerativeModel({ model: "models/gemini-3-flash-preview" });
 
     const prompt = `
@@ -33,8 +31,9 @@ export async function POST(req: NextRequest) {
       2.  Se a pergunta for sobre uma funcionalidade (ex: "como adiciono um produto?"), responde de forma clara e inclui um link em Markdown para a página relevante (ex: "Pode adicionar produtos na página de [Inventário](/inventory)").
       3.  Se a pergunta for sobre os dados do negócio (ex: "qual foi o meu produto mais vendido?"), usa os "Dados de Contexto" para formular uma resposta precisa.
       4.  Sê sempre prestável e profissional. Não deves ter perguntas sem resposta sobre o programa.
-      5.  Se for absolutamente impossível responder, recomenda ao utilizador que contacte o suporte técnico.
-      6.  Responde sempre em Português.
+      5.  Usa o histórico da conversa para manter o contexto.
+      6.  Se for absolutamente impossível responder, recomenda ao utilizador que contacte o suporte técnico.
+      7.  Responde sempre em Português.
 
       Pergunta do Utilizador: "${query}"
 
@@ -42,9 +41,12 @@ export async function POST(req: NextRequest) {
       ${JSON.stringify(contextData, null, 2).substring(0, 5000)}
     `;
 
-    const result = await model.generateContent(prompt);
+    const chat = model.startChat({
+        history: history as Content[],
+    });
+
+    const result = await chat.sendMessage(prompt);
     const response = await result.response;
-    // CORREÇÃO: Certificando o uso de .text() como função
     const text = response.text();
 
     return NextResponse.json({ text });
