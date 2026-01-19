@@ -23,12 +23,14 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
       setChatHistory: setMessages,
       sales, 
       products, 
-      dashboardStats 
+      dashboardStats,
+      stockMovements
   } = useContext(InventoryContext) || { 
       chatHistory: [], 
       setChatHistory: () => {}, 
       sales: [], 
       products: [], 
+      stockMovements: [],
       dashboardStats: {} 
   };
   
@@ -72,7 +74,8 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
           contextData: {
             stats: dashboardStats,
             recentSales: sales?.slice(0, 10),
-            inventoryProducts: products?.slice(0, 10),
+            inventoryProducts: products,
+            stockMovements: stockMovements,
           }
         }),
       });

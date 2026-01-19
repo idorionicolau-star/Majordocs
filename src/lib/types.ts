@@ -209,6 +209,7 @@ export interface InventoryContextType {
   sales: Sale[];
   productions: Production[];
   orders: Order[];
+  stockMovements: StockMovement[];
   catalogProducts: CatalogProduct[];
   catalogCategories: CatalogCategory[];
   locations: Location[];

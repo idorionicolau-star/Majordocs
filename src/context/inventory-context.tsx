@@ -396,6 +396,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const { data: salesData, isLoading: salesLoading } = useCollection<Sale>(salesCollectionRef);
   const { data: productionsData, isLoading: productionsLoading } = useCollection<Production>(productionsCollectionRef);
   const { data: ordersData, isLoading: ordersLoading } = useCollection<Order>(ordersCollectionRef);
+  const { data: stockMovementsData, isLoading: stockMovementsLoading } = useCollection<StockMovement>(stockMovementsCollectionRef);
   const { data: catalogProductsData, isLoading: catalogProductsLoading } = useCollection<CatalogProduct>(catalogProductsCollectionRef);
   const { data: catalogCategoriesData, isLoading: catalogCategoriesLoading } = useCollection<CatalogCategory>(catalogCategoriesCollectionRef);
 
@@ -932,14 +933,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [ordersCollectionRef, toast]);
 
 
-  const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || catalogProductsLoading || catalogCategoriesLoading;
+  const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || stockMovementsLoading || catalogProductsLoading || catalogCategoriesLoading;
 
   const value: InventoryContextType = {
     user, firebaseUser, companyId, loading: isDataLoading,
     login, logout, registerCompany, profilePicture, setProfilePicture: handleSetProfilePicture,
     canView, canEdit,
     companyData, products, sales: salesData || [], productions: productionsData || [],
-    orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
+    orders: ordersData || [], stockMovements: stockMovementsData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
     locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
     chatHistory, setChatHistory,
     addProduct, updateProduct, deleteProduct, clearProductsCollection,
