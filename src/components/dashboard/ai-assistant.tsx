@@ -82,10 +82,12 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleAskAI(query);
-  }
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && query) {
+      e.preventDefault();
+      handleAskAI(query);
+    }
+  };
 
   return (
      <Card className="glass-card shadow-sm flex flex-col h-full">
@@ -149,17 +151,18 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
         </ScrollArea>
       </CardContent>
       <CardFooter>
-         <form onSubmit={handleSubmit} className="flex items-center gap-2 w-full">
+         <div className="flex items-center gap-2 w-full">
             <Input 
                 placeholder="Qual foi o produto mais vendido este mês?"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 disabled={isLoading}
+                onKeyDown={handleKeyDown}
             />
-            <Button type="submit" size="icon" disabled={isLoading || !query}>
+            <Button type="button" onClick={() => handleAskAI(query)} size="icon" disabled={isLoading || !query}>
                 <Send className="h-4 w-4" />
             </Button>
-        </form>
+        </div>
       </CardFooter>
     </Card>
   );
