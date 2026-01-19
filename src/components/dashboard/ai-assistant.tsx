@@ -3,7 +3,7 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Bot, User, Send, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Sparkles, Bot, User, Send, ThumbsUp, ThumbsDown, PersonStanding } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryContext } from '@/context/inventory-context';
 import { Input } from '../ui/input';
@@ -15,6 +15,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { confirmMajorAction } from '@/app/actions/execute-action';
 
 
 export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
@@ -37,18 +38,25 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
   const [feedback, setFeedback] = useState<Record<number, 'like' | 'dislike' | null>>({});
   const [showFeedbackInputFor, setShowFeedbackInputFor] = useState<number | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
+  const [proposedAction, setProposedAction] = useState<any>(null);
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
   const { toast } = useToast();
   const lastMessageRef = useRef<HTMLDivElement>(null);
+  const isMounted = useRef(false);
 
   useEffect(() => {
-    if (messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.role === 'model') {
-        setTimeout(() => {
-          lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 100);
-      }
+    if (isMounted.current) {
+        if (messages.length > 0) {
+            const lastMessage = messages[messages.length - 1];
+            if (lastMessage.role === 'model') {
+                setTimeout(() => {
+                lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+            }
+        }
+    } else {
+        isMounted.current = true;
     }
   }, [messages]);
   
@@ -56,16 +64,11 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
   const handleAskAI = async (currentQuery: string) => {
     if (!currentQuery || !setMessages) return;
     setIsLoading(true);
+    setProposedAction(null); // Clear previous actions
 
-    const newMessages: { role: 'user' | 'model', text: string }[] = [...messages, { role: 'user', text: currentQuery }];
+    const newMessages: { role: 'user' | 'model', text: string, toolCalls?: any[], toolResponse?: any }[] = [...messages, { role: 'user', text: currentQuery }];
     setMessages(newMessages);
     setQuery(''); 
-
-    const historyForAPI = newMessages.slice(0, -1).map(msg => ({
-      role: msg.role,
-      parts: [{ text: msg.text }],
-    }));
-
 
     try {
       const response = await fetch('/api/ai-search', {
@@ -73,7 +76,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: currentQuery,
-          history: historyForAPI,
+          history: messages,
           contextData: {
             stats: dashboardStats,
             recentSales: sales?.slice(0, 10),
@@ -88,7 +91,13 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
       }
 
       const data = await response.json();
+
+      if (data.action) {
+        setProposedAction(data.action);
+      }
+      
       setMessages(prev => [...prev, { role: 'model', text: data.text }]);
+
     } catch (e: any) {
       console.error("Erro na pesquisa com IA:", e);
       setMessages(prev => [...prev, { role: 'model', text: `Erro: ${e.message || 'Não foi possível obter uma resposta. Tente novamente.'}` }]);
@@ -104,7 +113,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && query) {
       e.preventDefault();
       handleAskAI(query);
@@ -127,6 +136,39 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     setShowFeedbackInputFor(null);
     setFeedbackText('');
   };
+  
+  const handleConfirmAction = async () => {
+    if (!proposedAction) return;
+    setIsActionLoading(true);
+    
+    const result = await confirmMajorAction(proposedAction);
+
+    if (result.success) {
+      toast({
+        title: "Ação Executada!",
+        description: result.message,
+      });
+      addNotification({
+        type: proposedAction.actionType,
+        message: `Ação de ${proposedAction.actionType} para "${proposedAction.productName}" executada via IA.`,
+        href: `/${proposedAction.actionType}s`
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Erro na Ação",
+        description: result.error,
+      });
+    }
+
+    setProposedAction(null);
+    setIsActionLoading(false);
+  };
+  
+  const addNotification = (notification: Omit<any, 'id' | 'date' | 'read'>) => {
+    // Placeholder for context function
+    console.log("Adding notification:", notification);
+  }
 
   return (
      <Card className="glass-card shadow-sm flex flex-col h-full">
@@ -136,7 +178,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
           MajorAssistant
         </CardTitle>
         <CardDescription>
-          Faça uma pergunta sobre o seu negócio. O assistente tem memória da conversa atual.
+          Faça uma pergunta sobre o seu negócio ou peça para executar uma ação.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col gap-4">
@@ -166,14 +208,30 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
                       remarkPlugins={[remarkGfm]}
                       components={{
                         a: ({ node, ...props }) => {
-                          if (!props.href) return <a {...props} />;
-                          return <Link href={props.href} {...props} className="text-primary hover:underline font-bold" />;
+                          const href = props.href || '';
+                          if (href.startsWith('/')) {
+                             return <Link href={href} {...props} className="text-primary hover:underline font-bold" />;
+                          }
+                          return <a {...props} className="text-primary hover:underline font-bold" target="_blank" rel="noopener noreferrer" />;
                         },
                       }}
                     >
                       {message.text}
                     </ReactMarkdown>
                   </div>
+                   {message.role === 'model' && index === messages.length - 1 && proposedAction && (
+                      <div className="mt-4 pt-4 border-t border-border/50">
+                          <p className="text-xs font-semibold mb-2">Ação Proposta:</p>
+                          <div className="flex items-center gap-2">
+                             <Button onClick={handleConfirmAction} disabled={isActionLoading} size="sm">
+                              {isActionLoading ? "A processar..." : "Sim, Confirmar"}
+                            </Button>
+                            <Button onClick={() => setProposedAction(null)} disabled={isActionLoading} variant="outline" size="sm">
+                              Cancelar
+                            </Button>
+                          </div>
+                      </div>
+                  )}
                   {message.role === 'model' && (
                     <>
                       <div className="mt-3 flex items-center gap-1 border-t pt-2">
@@ -200,27 +258,25 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
               </div>
             ))}
              {isLoading && (
-              <div className="flex items-start gap-3">
-                <Avatar className="h-8 w-8"><AvatarFallback><Bot /></AvatarFallback></Avatar>
-                <div className="p-3 rounded-2xl bg-muted rounded-bl-none">
-                  <div className="space-y-2">
-                    <Skeleton className="h-3 w-48" />
-                    <Skeleton className="h-3 w-32" />
-                  </div>
-                </div>
+                <div className="flex items-start gap-3">
+                    <Avatar className="h-8 w-8"><AvatarFallback><Bot /></AvatarFallback></Avatar>
+                    <div className="p-3 rounded-2xl bg-muted rounded-bl-none">
+                        <div className="space-y-2">
+                            <Skeleton className="h-3 w-12" />
+                        </div>
+                    </div>
               </div>
             )}
           </div>
         </ScrollArea>
       </CardContent>
       <CardFooter>
-         <div className="flex items-center gap-2 w-full">
+         <div onKeyDown={handleKeyDown} className="flex items-center gap-2 w-full">
             <Input 
                 placeholder="Qual foi o produto mais vendido este mês?"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 disabled={isLoading}
-                onKeyDown={handleKeyDown}
             />
             <Button type="button" onClick={() => handleAskAI(query)} size="icon" disabled={isLoading || !query}>
                 <Send className="h-4 w-4" />
