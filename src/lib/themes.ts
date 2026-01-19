@@ -39,4 +39,8 @@ export const themes: Theme[] = [
   { name: 'Gray', primary: { light: '220 9% 46%', dark: '215 14% 65%' } },
   { name: 'Zinc', primary: { light: '220 13% 46%', dark: '220 9% 65%' } },
   { name: 'Stone', primary: { light: '25 15% 46%', dark: '25 8% 65%' } },
+  { name: 'Forest', primary: { light: '150 50% 40%', dark: '150 50% 30%' } },
+  { name: 'Ocean', primary: { light: '170 70% 35%', dark: '170 70% 25%' } },
+  { name: 'Grape', primary: { light: '270 50% 55%', dark: '270 50% 45%' } },
+  { name: 'Charcoal', primary: { light: '220 10% 40%', dark: '220 10% 25%' } },
 ];
