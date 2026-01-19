@@ -183,6 +183,11 @@ export interface ModelInfo {
   version: string;
 }
 
+export type ChatMessage = {
+  role: 'user' | 'model';
+  text: string;
+};
+
 export interface InventoryContextType {
   // Auth related
   user: Employee | null;
@@ -217,6 +222,8 @@ export interface InventoryContextType {
     totalInventoryValue: number;
     totalItemsInStock: number;
   };
+  chatHistory: ChatMessage[];
+  setChatHistory: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
 
 
   // Functions

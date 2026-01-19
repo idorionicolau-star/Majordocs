@@ -11,7 +11,7 @@ import {
   useMemo,
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification, DashboardStats, InventoryContextType } from '@/lib/types';
+import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification, DashboardStats, InventoryContextType, ChatMessage } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase, getFirebaseAuth } from '@/firebase';
 import {
@@ -63,6 +63,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [monthlySalesChartData, setMonthlySalesChartData] = useState<{ name: string; vendas: number }[]>([]);
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -180,6 +181,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         setCompanyId(null);
         setFirebaseUser(null);
         setNotifications([]); // Explicitly clear notifications
+        setChatHistory([]); // Clear chat history on logout
         router.push('/login');
         toast({ title: "Sessão terminada" });
     } catch (error) {
@@ -220,6 +222,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     if (firebaseUser && companyId) {
       setNotifications([]); // Clear notifications on company change
+      setChatHistory([]); // Clear chat history on company change
       const employeeDocRef = doc(firestore, `companies/${companyId}/employees/${firebaseUser.uid}`);
       unsubscribeEmployee = onSnapshot(employeeDocRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -938,6 +941,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
     locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
+    chatHistory, setChatHistory,
     addProduct, updateProduct, deleteProduct, clearProductsCollection,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
     deleteSale, deleteProduction, deleteOrder,

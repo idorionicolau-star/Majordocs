@@ -3,36 +3,58 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Bot, Search, User, Send } from 'lucide-react';
+import { Sparkles, Bot, User, Send, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryContext } from '@/context/inventory-context';
 import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '../ui/avatar';
+import { useToast } from '@/hooks/use-toast';
 
 
 export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
-  const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string }[]>([]);
+  const { 
+      chatHistory: messages, 
+      setChatHistory: setMessages,
+      sales, 
+      products, 
+      dashboardStats 
+  } = useContext(InventoryContext) || { 
+      chatHistory: [], 
+      setChatHistory: () => {}, 
+      sales: [], 
+      products: [], 
+      dashboardStats: {} 
+  };
+  
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [feedback, setFeedback] = useState<Record<number, 'like' | 'dislike' | null>>({});
+  const [showFeedbackInputFor, setShowFeedbackInputFor] = useState<number | null>(null);
+  const [feedbackText, setFeedbackText] = useState('');
 
-  const { sales, products, dashboardStats } = useContext(InventoryContext) || { sales: [], products: [], dashboardStats: {} };
-  const endOfMessagesRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    endOfMessagesRef.current?.scrollIntoView({ behavior: "auto", block: "nearest" });
-  }
+  const { toast } = useToast();
+  const lastMessageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    scrollToBottom()
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === 'model') {
+        setTimeout(() => {
+          lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    }
   }, [messages]);
+  
 
   const handleAskAI = async (currentQuery: string) => {
-    if (!currentQuery) return;
+    if (!currentQuery || !setMessages) return;
     setIsLoading(true);
 
     const newMessages: { role: 'user' | 'model', text: string }[] = [...messages, { role: 'user', text: currentQuery }];
@@ -89,6 +111,23 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     }
   };
 
+  const handleFeedback = (index: number, choice: 'like' | 'dislike') => {
+    setFeedback(prev => ({ ...prev, [index]: choice }));
+    if (choice === 'dislike') {
+        setShowFeedbackInputFor(index);
+        setFeedbackText('');
+    } else {
+        setShowFeedbackInputFor(null);
+    }
+  };
+
+  const handleSendFeedback = (index: number) => {
+    console.log(`Feedback for message ${index}:`, feedbackText);
+    toast({ title: 'Obrigado!', description: 'O seu feedback ajuda-nos a melhorar.' });
+    setShowFeedbackInputFor(null);
+    setFeedbackText('');
+  };
+
   return (
      <Card className="glass-card shadow-sm flex flex-col h-full">
       <CardHeader>
@@ -110,7 +149,11 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
               </div>
             )}
             {messages.map((message, index) => (
-              <div key={index} className={cn("flex items-start gap-3", message.role === 'user' ? 'justify-end' : '')}>
+              <div 
+                key={index}
+                ref={index === messages.length - 1 ? lastMessageRef : null}
+                className={cn("flex items-start gap-3", message.role === 'user' ? 'justify-end' : '')}
+              >
                 {message.role === 'model' && <Avatar className="h-8 w-8"><AvatarFallback><Bot /></AvatarFallback></Avatar>}
                 <div className={cn(
                   "p-3 rounded-2xl max-w-lg",
@@ -124,13 +167,34 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
                       components={{
                         a: ({ node, ...props }) => {
                           if (!props.href) return <a {...props} />;
-                          return <Link href={props.href} {...props} />;
+                          return <Link href={props.href} {...props} className="text-primary hover:underline font-bold" />;
                         },
                       }}
                     >
                       {message.text}
                     </ReactMarkdown>
                   </div>
+                  {message.role === 'model' && (
+                    <>
+                      <div className="mt-3 flex items-center gap-1 border-t pt-2">
+                          <Button variant="ghost" size="icon" className={`h-7 w-7 rounded-md ${feedback[index] === 'like' ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`} onClick={() => handleFeedback(index, 'like')}>
+                              <ThumbsUp className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className={`h-7 w-7 rounded-md ${feedback[index] === 'dislike' ? 'text-destructive bg-destructive/10' : 'text-muted-foreground'}`} onClick={() => handleFeedback(index, 'dislike')}>
+                              <ThumbsDown className="h-4 w-4" />
+                          </Button>
+                      </div>
+                       {showFeedbackInputFor === index && (
+                          <div className="mt-2 space-y-2">
+                              <Textarea placeholder="O que podemos melhorar?" value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} />
+                              <div className="flex justify-end gap-2">
+                                  <Button variant="ghost" size="sm" onClick={() => setShowFeedbackInputFor(null)}>Cancelar</Button>
+                                  <Button size="sm" onClick={() => handleSendFeedback(index)}>Enviar</Button>
+                              </div>
+                          </div>
+                      )}
+                    </>
+                  )}
                 </div>
                  {message.role === 'user' && <Avatar className="h-8 w-8"><AvatarFallback><User /></AvatarFallback></Avatar>}
               </div>
@@ -146,7 +210,6 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
                 </div>
               </div>
             )}
-            <div ref={endOfMessagesRef} />
           </div>
         </ScrollArea>
       </CardContent>
