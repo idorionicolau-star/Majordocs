@@ -4,7 +4,7 @@
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
-import { FirebaseProvider } from '@/firebase';
+import { FirebaseProvider } from '@/firebase/provider';
 import { InventoryProvider } from '@/context/inventory-context';
 import { ClientLayout } from '@/components/layout/client-layout';
 

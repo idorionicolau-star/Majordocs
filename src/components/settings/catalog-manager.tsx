@@ -30,7 +30,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { EditCatalogProductDialog } from './edit-catalog-product-dialog';
 import { InventoryContext } from '@/context/inventory-context';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useMemoFirebase } from '@/firebase/provider';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import { doc, setDoc, deleteDoc, updateDoc, collection, writeBatch, query, getDocs, where, addDoc } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
 import { AddCatalogProductDialog } from './add-catalog-product-dialog';
