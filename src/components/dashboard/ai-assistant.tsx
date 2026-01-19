@@ -15,7 +15,6 @@ import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { confirmMajorAction } from '@/app/actions/execute-action';
 
 
 export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
@@ -38,9 +37,6 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
   const [feedback, setFeedback] = useState<Record<number, 'like' | 'dislike' | null>>({});
   const [showFeedbackInputFor, setShowFeedbackInputFor] = useState<number | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
-  const [proposedAction, setProposedAction] = useState<any>(null);
-  const [isActionLoading, setIsActionLoading] = useState(false);
-
   const { toast } = useToast();
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const isMounted = useRef(false);
@@ -64,7 +60,6 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
   const handleAskAI = async (currentQuery: string) => {
     if (!currentQuery || !setMessages) return;
     setIsLoading(true);
-    setProposedAction(null); // Clear previous actions
 
     const newMessages: { role: 'user' | 'model', text: string, toolCalls?: any[], toolResponse?: any }[] = [...messages, { role: 'user', text: currentQuery }];
     setMessages(newMessages);
@@ -91,10 +86,6 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
       }
 
       const data = await response.json();
-
-      if (data.action) {
-        setProposedAction(data.action);
-      }
       
       setMessages(prev => [...prev, { role: 'model', text: data.text }]);
 
@@ -137,39 +128,6 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     setFeedbackText('');
   };
   
-  const handleConfirmAction = async () => {
-    if (!proposedAction) return;
-    setIsActionLoading(true);
-    
-    const result = await confirmMajorAction(proposedAction);
-
-    if (result.success) {
-      toast({
-        title: "Ação Executada!",
-        description: result.message,
-      });
-      addNotification({
-        type: proposedAction.actionType,
-        message: `Ação de ${proposedAction.actionType} para "${proposedAction.productName}" executada via IA.`,
-        href: `/${proposedAction.actionType}s`
-      });
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Erro na Ação",
-        description: result.error,
-      });
-    }
-
-    setProposedAction(null);
-    setIsActionLoading(false);
-  };
-  
-  const addNotification = (notification: Omit<any, 'id' | 'date' | 'read'>) => {
-    // Placeholder for context function
-    console.log("Adding notification:", notification);
-  }
-
   return (
      <Card className="glass-card shadow-sm flex flex-col h-full">
       <CardHeader>
@@ -219,19 +177,6 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
                       {message.text}
                     </ReactMarkdown>
                   </div>
-                   {message.role === 'model' && index === messages.length - 1 && proposedAction && (
-                      <div className="mt-4 pt-4 border-t border-border/50">
-                          <p className="text-xs font-semibold mb-2">Ação Proposta:</p>
-                          <div className="flex items-center gap-2">
-                             <Button onClick={handleConfirmAction} disabled={isActionLoading} size="sm">
-                              {isActionLoading ? "A processar..." : "Sim, Confirmar"}
-                            </Button>
-                            <Button onClick={() => setProposedAction(null)} disabled={isActionLoading} variant="outline" size="sm">
-                              Cancelar
-                            </Button>
-                          </div>
-                      </div>
-                  )}
                   {message.role === 'model' && (
                     <>
                       <div className="mt-3 flex items-center gap-1 border-t pt-2">
