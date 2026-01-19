@@ -9,6 +9,7 @@ import { InventoryContext } from '@/context/inventory-context';
 import { Input } from '../ui/input';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Link from 'next/link';
 
 export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
   const [insights, setInsights] = useState('');
@@ -99,7 +100,17 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
             <p className="text-sm text-destructive">{error}</p>
           ) : insights ? (
             <div className="prose dark:prose-invert prose-sm max-w-none">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{insights}</ReactMarkdown>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  a: ({ node, ...props }) => {
+                    if (!props.href) return <a {...props} />;
+                    return <Link href={props.href} {...props} />;
+                  },
+                }}
+              >
+                {insights}
+              </ReactMarkdown>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6 border-2 border-dashed rounded-xl">
