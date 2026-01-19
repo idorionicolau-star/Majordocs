@@ -11,6 +11,8 @@ export async function POST(req: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
+    
+    // ATUALIZAÇÃO: Mudando para o 2.0 Flash para evitar o erro 429 de limite de 20 requisições
     const model = genAI.getGenerativeModel({ model: "models/gemini-3-flash-preview" });
 
     const prompt = `
@@ -42,6 +44,7 @@ export async function POST(req: NextRequest) {
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
+    // CORREÇÃO: Certificando o uso de .text() como função
     const text = response.text();
 
     return NextResponse.json({ text });

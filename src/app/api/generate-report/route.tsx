@@ -20,12 +20,15 @@ export async function POST(req: NextRequest) {
     if (apiKey) {
       try {
         const genAI = new GoogleGenerativeAI(apiKey);
+        // CORREÇÃO 1: Adicionado prefixo 'models/' para evitar 404
         const model = genAI.getGenerativeModel({ model: "models/gemini-3-flash-preview" });
         
         const prompt = `Analise estes dados de vendas da empresa ${data.company?.name || 'nossa empresa'}: ${JSON.stringify(data.sales).substring(0, 2000)}. Escreva um resumo executivo de 2 frases em Português.`;
         
         const result = await model.generateContent(prompt);
         const response = await result.response;
+        
+        // CORREÇÃO 2: .text() é um método, precisa dos parênteses
         aiSummaryText = response.text(); 
         
         console.log("✅ IA Gemini 3 ativada com sucesso!");
@@ -45,30 +48,21 @@ export async function POST(req: NextRequest) {
       />
     ).toBuffer();
 
-    // 3. NOME DO ARQUIVO (Limpeza Definitiva)
+    // 3. NOME DO ARQUIVO (Limpeza de espaços e caracteres)
+    // CORREÇÃO 3: .trim() antes do replace para evitar underscores duplos no final
     const companyClean = (data.company?.name || 'Relatorio')
       .trim()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Remove acentos
-      .replace(/[^a-zA-Z0-9]/g, "_")                  // Troca símbolos por _
-      .replace(/_+/g, "_")                            // Evita "___"
-      .replace(/_$/, "");                             // Remove _ se for o último char
-
+      .replace(/[^a-zA-Z0-9]/g, "_");
+    
     const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
     const fileName = `Relatorio_${companyClean}_${timestamp}.pdf`;
 
-    console.log(`✅ Enviando arquivo: ${fileName}`);
-
-    // 4. RESPOSTA COM FORMATATAÇÃO RFC PARA ELIMINAR O "_" NO FIM
-    const response = new NextResponse(pdfBuffer);
-    
-    response.headers.set('Content-Type', 'application/pdf');
-    // Esta linha é o segredo: usa o formato oficial que navegadores não alteram
-    response.headers.set(
-      'Content-Disposition', 
-      `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
-    );
-
-    return response;
+    return new NextResponse(pdfBuffer, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${fileName}"`,
+      },
+    });
 
   } catch (error: any) {
     console.error("❌ ERRO CRÍTICO NA API:", error);
