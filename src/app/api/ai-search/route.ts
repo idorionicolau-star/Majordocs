@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
     const prompt = `
       És o MajorAssistant, um assistente especialista na aplicação de gestão "MajorStockX". A tua missão é responder a perguntas sobre os dados do negócio do utilizador com extrema precisão e fornecer orientação sobre como usar a aplicação.
