@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI, Content } from "@google/generative-ai";
 
@@ -11,7 +12,7 @@ export async function POST(req: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "models/gemini-3-flash-preview" });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const prompt = `
       És o MajorAssistant, um assistente especialista na aplicação de gestão de negócios "MajorStockX". A tua missão é responder a qualquer pergunta sobre a aplicação ou sobre os dados do negócio do utilizador, fornecendo links para as páginas relevantes sempre que possível.
@@ -41,8 +42,13 @@ export async function POST(req: NextRequest) {
       ${JSON.stringify(contextData, null, 2).substring(0, 5000)}
     `;
 
+    const formattedHistory: Content[] = (history || []).map((msg: { role: 'user' | 'model', text: string }) => ({
+      role: msg.role,
+      parts: [{ text: msg.text }],
+    }));
+
     const chat = model.startChat({
-        history: history as Content[],
+        history: formattedHistory,
     });
 
     const result = await chat.sendMessage(prompt);
