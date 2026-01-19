@@ -56,6 +56,7 @@ export type Location = {
 export type Product = {
   id?: string; // Document ID from Firestore
   instanceId: string; // Temporary UI-only ID for React keys
+  sourceIds?: string[]; // To track merged documents
   name: string;
   category: string;
   stock: number;
@@ -231,7 +232,7 @@ export interface InventoryContextType {
   addProduct: (
     newProductData: Omit<
       Product,
-      'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'
+      'id' | 'lastUpdated' | 'instanceId' | 'reservedStock' | 'sourceIds'
     >
   ) => void;
   updateProduct: (instanceId: string, updatedData: Partial<Product>) => void;

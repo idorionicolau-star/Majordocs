@@ -402,10 +402,24 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const products = useMemo(() => {
     if (!productsData) return [];
-    return productsData.map((p) => ({
-      ...p,
-      instanceId: p.id,
-    }));
+
+    const productMap = new Map<string, Product & { sourceIds: string[] }>();
+
+    productsData.forEach(p => {
+      const key = `${p.name}|${p.location || 'default'}`;
+      const productWithInstanceId = { ...p, instanceId: p.id };
+
+      if (productMap.has(key)) {
+        const existing = productMap.get(key)!;
+        existing.stock += productWithInstanceId.stock;
+        existing.reservedStock += productWithInstanceId.reservedStock;
+        existing.sourceIds.push(productWithInstanceId.id);
+      } else {
+        productMap.set(key, { ...productWithInstanceId, sourceIds: [productWithInstanceId.id] });
+      }
+    });
+
+    return Array.from(productMap.values());
   }, [productsData]);
 
   useEffect(() => {
@@ -503,41 +517,122 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 }, [companyData, locations, triggerEmailAlert, toast]);
 
  const addProduct = useCallback(
-    (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => {
-      if (!productsCollectionRef) return;
+    (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock' | 'sourceIds'>) => {
+      if (!productsCollectionRef || !firestore || !user || !companyId) return;
+
+      const { name, location, stock: newStock } = newProductData;
       
-      const newProduct: Omit<Product, 'id' | 'instanceId'> = {
-        ...newProductData,
-        lastUpdated: new Date().toISOString().split('T')[0],
-        reservedStock: 0,
+      const processAdd = async () => {
+        try {
+          await runTransaction(firestore, async (transaction) => {
+            const q = query(productsCollectionRef, where("name", "==", name), where("location", "==", location || ""));
+            
+            const querySnapshot = await getDocs(q);
+
+            let productId: string;
+            const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+
+            if (!querySnapshot.empty) {
+              const existingDoc = querySnapshot.docs[0];
+              productId = existingDoc.id;
+              const existingData = existingDoc.data();
+              const oldStock = existingData.stock || 0;
+              const docRef = doc(productsCollectionRef, productId);
+              
+              transaction.update(docRef, { stock: oldStock + newStock, lastUpdated: new Date().toISOString().split('T')[0] });
+            } else {
+              const newProduct: Omit<Product, 'id' | 'instanceId' | 'sourceIds'> = {
+                ...newProductData,
+                lastUpdated: new Date().toISOString().split('T')[0],
+                reservedStock: 0,
+              };
+              const newDocRef = doc(productsCollectionRef);
+              transaction.set(newDocRef, newProduct);
+              productId = newDocRef.id;
+            }
+            
+            const movement: Omit<StockMovement, 'id'|'timestamp'> = {
+                productId: productId,
+                productName: name,
+                type: 'IN',
+                quantity: newStock,
+                toLocationId: location,
+                reason: querySnapshot.empty ? `Criação de novo produto` : `Entrada de novo lote`,
+                userId: user.id,
+                userName: user.username,
+            };
+            const movementDocRef = doc(movementsRef);
+            transaction.set(movementDocRef, { ...movement, timestamp: serverTimestamp() });
+          });
+          
+          addNotification({
+            type: 'production',
+            message: `Inventário atualizado para: ${name}`,
+            href: '/inventory',
+          });
+
+        } catch (error) {
+          console.error("Failed to add/update product:", error);
+          toast({
+            variant: "destructive",
+            title: "Erro ao atualizar inventário",
+            description: "Não foi possível guardar as alterações.",
+          });
+        }
       };
-      addDoc(productsCollectionRef, newProduct);
-      addNotification({
-          type: 'production',
-          message: `Novo produto adicionado: ${newProduct.name}`,
-          href: '/inventory',
-      });
+
+      processAdd();
     },
-    [productsCollectionRef, addNotification]
+    [productsCollectionRef, firestore, user, companyId, addNotification, toast]
   );
   
   const updateProduct = useCallback(async (instanceId: string, updatedData: Partial<Product>) => {
-       if (!productsCollectionRef || !instanceId) return;
-      const docRef = doc(productsCollectionRef, instanceId);
-      await updateDoc(docRef, { ...updatedData, lastUpdated: new Date().toISOString().split('T')[0] });
+       if (!productsCollectionRef || !instanceId || !firestore) return;
+
+      const productToUpdate = products.find(p => p.instanceId === instanceId);
+      if (!productToUpdate || !productToUpdate.sourceIds) return;
+
+      const batch = writeBatch(firestore);
+      const { stock, ...restOfData } = updatedData;
+
+      productToUpdate.sourceIds.forEach(id => {
+        const docRef = doc(productsCollectionRef, id);
+        batch.update(docRef, { ...restOfData, lastUpdated: new Date().toISOString().split('T')[0] });
+      });
+
+      if (stock !== undefined) {
+        const firstDocRef = doc(productsCollectionRef, productToUpdate.sourceIds[0]);
+        batch.update(firstDocRef, { stock });
+
+        for(let i = 1; i < productToUpdate.sourceIds.length; i++) {
+          const otherDocRef = doc(productsCollectionRef, productToUpdate.sourceIds[i]);
+          batch.update(otherDocRef, { stock: 0, reservedStock: 0 });
+        }
+      }
+
+      await batch.commit();
 
       const fullProduct = products.find(p => p.id === instanceId);
       if(fullProduct) {
           const productForNotification = { ...fullProduct, ...updatedData };
           checkStockAndNotify(productForNotification);
       }
-    }, [productsCollectionRef, products, checkStockAndNotify]);
+    }, [productsCollectionRef, products, checkStockAndNotify, firestore]);
 
   const deleteProduct = useCallback((instanceId: string) => {
-       if (!productsCollectionRef || !instanceId) return;
-       const docRef = doc(productsCollectionRef, instanceId);
-      deleteDoc(docRef);
-    }, [productsCollectionRef]);
+       if (!productsCollectionRef || !instanceId || !firestore) return;
+       const productToDelete = products.find(p => p.instanceId === instanceId);
+       if (!productToDelete || !productToDelete.sourceIds) return;
+       
+       const batch = writeBatch(firestore);
+       productToDelete.sourceIds.forEach(id => {
+          const docRef = doc(productsCollectionRef, id);
+          batch.delete(docRef);
+       });
+       
+       batch.commit();
+
+    }, [productsCollectionRef, firestore, products]);
     
   const clearCollection = useCallback(async (collectionRef: CollectionReference | null, toastTitle: string) => {
     if (!collectionRef) {
