@@ -1022,6 +1022,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     await deleteDoc(doc(productionsCollectionRef, productionId));
     toast({ title: 'Registo de Produção Apagado' });
   }, [productionsCollectionRef, toast]);
+  
+  const updateProduction = useCallback(async (productionId: string, data: Partial<Production>) => {
+    if (!productionsCollectionRef) return;
+    const docRef = doc(productionsCollectionRef, productionId);
+    await updateDoc(docRef, data);
+    toast({ title: 'Registo de Produção Atualizado' });
+  }, [productionsCollectionRef, toast]);
 
   const deleteOrder = useCallback(async (orderId: string) => {
     if (!ordersCollectionRef) return;
@@ -1042,6 +1049,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     chatHistory, setChatHistory,
     addProduct, updateProduct, deleteProduct, clearProductsCollection,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
+    updateProduction,
     deleteSale, deleteProduction, deleteOrder,
     clearSales, clearProductions, clearOrders, clearStockMovements,
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,

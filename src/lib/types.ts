@@ -255,6 +255,7 @@ export interface InventoryContextType {
   confirmSalePickup: (sale: Sale) => void;
   deleteSale: (saleId: string) => void;
   addProductionLog: (orderId: string, logData: { quantity: number; notes?: string; }) => void;
+  updateProduction: (productionId: string, data: Partial<Production>) => void;
   deleteProduction: (productionId: string) => void;
   deleteOrder: (orderId: string) => void;
   clearSales: () => Promise<void>;

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from "react";
@@ -50,7 +49,7 @@ export default function ProductionPage() {
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const { productions, companyId, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation, deleteProduction, clearProductions } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false, deleteProduction: () => {}, clearProductions: async () => {} };
+  const { productions, companyId, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation, deleteProduction, updateProduction, clearProductions } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false, deleteProduction: () => {}, updateProduction: () => {}, clearProductions: async () => {} };
 
   const canEditProduction = canEdit('production');
   const canViewProduction = canView('production');
@@ -311,6 +310,7 @@ export default function ProductionPage() {
                         production={production}
                         onTransfer={() => setProductionToTransfer(production)}
                         onDelete={deleteProduction}
+                        onUpdate={updateProduction}
                         viewMode={gridCols === '5' ? 'condensed' : 'normal'}
                         canEdit={canEditProduction}
                         locationName={locations.find(l => l.id === production.location)?.name}
@@ -328,6 +328,7 @@ export default function ProductionPage() {
               production={production}
               onTransfer={() => setProductionToTransfer(production)}
               onDelete={deleteProduction}
+              onUpdate={updateProduction}
               viewMode='normal'
               canEdit={canEditProduction}
               locationName={locations.find(l => l.id === production.location)?.name}

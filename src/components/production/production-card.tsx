@@ -3,7 +3,7 @@
 import type { Production } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Calendar, User, Hammer, Package, CheckCircle, MapPin, Trash2 } from "lucide-react";
+import { Calendar, User, Hammer, Package, CheckCircle, MapPin, Trash2, Edit } from "lucide-react";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import {
@@ -15,21 +15,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
+import { EditProductionDialog } from "./edit-production-dialog";
 
 
 interface ProductionCardProps {
     production: Production;
     onTransfer: (production: Production) => void;
     onDelete: (productionId: string) => void;
+    onUpdate: (productionId: string, data: Partial<Production>) => void;
     viewMode?: 'normal' | 'condensed';
     canEdit: boolean;
     locationName?: string;
 }
 
-export function ProductionCard({ production, onTransfer, onDelete, viewMode = 'normal', canEdit, locationName }: ProductionCardProps) {
+export function ProductionCard({ production, onTransfer, onDelete, onUpdate, viewMode = 'normal', canEdit, locationName }: ProductionCardProps) {
     const isCondensed = viewMode === 'condensed';
     const isTransferred = production.status === 'Transferido';
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -77,9 +78,12 @@ export function ProductionCard({ production, onTransfer, onDelete, viewMode = 'n
                         </div>
                     </div>
                     {canEdit && (
-                         <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={() => setShowDeleteConfirm(true)}>
-                            <Trash2 className="h-3 w-3" />
-                         </Button>
+                         <div className="flex items-center">
+                            <EditProductionDialog production={production} onUpdate={onUpdate} />
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={() => setShowDeleteConfirm(true)}>
+                                <Trash2 className="h-3 w-3" />
+                            </Button>
+                        </div>
                     )}
                  </div>
             </CardHeader>
