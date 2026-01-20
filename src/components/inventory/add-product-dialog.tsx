@@ -17,6 +17,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import {
   Select,
@@ -61,7 +62,7 @@ interface AddProductDialogProps {
 export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProductDialogProps) {
   const inventoryContext = useContext(InventoryContext);
   const { catalogCategories, catalogProducts, locations, isMultiLocation, addCatalogProduct, addCatalogCategory } = inventoryContext || { catalogCategories: [], catalogProducts: [], locations: [], isMultiLocation: false, addCatalogProduct: async () => {}, addCatalogCategory: async () => {} };
-  const [isCreatingNewProduct, setIsCreatingNewProduct] = useState(false);
+  const [isCatalogProductSelected, setIsCatalogProductSelected] = useState(false);
   const { toast } = useToast();
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -82,7 +83,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
 
   useEffect(() => {
     if (!open) {
-      setIsCreatingNewProduct(false);
+      setIsCatalogProductSelected(false);
     }
     
     if (open) {
@@ -109,7 +110,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
   const handleProductSelect = (productName: string, product?: CatalogProduct) => {
     form.setValue('name', productName.trim());
     if (product) {
-      setIsCreatingNewProduct(false);
+      setIsCatalogProductSelected(true);
       form.setValue('price', product.price);
       form.setValue('lowStockThreshold', product.lowStockThreshold);
       form.setValue('criticalStockThreshold', product.criticalStockThreshold);
@@ -118,7 +119,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
         form.setValue('unit', product.unit);
       }
     } else {
-      setIsCreatingNewProduct(true);
+      setIsCatalogProductSelected(false);
       form.setValue('price', 0);
       form.setValue('lowStockThreshold', 10);
       form.setValue('criticalStockThreshold', 5);
@@ -156,7 +157,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       return;
     }
 
-    if (isCreatingNewProduct) {
+    if (!isCatalogProductSelected) {
       if (!values.category.trim()) {
         form.setError("category", { type: "manual", message: "A categoria é obrigatória para novos produtos." });
         return;
@@ -235,28 +236,32 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
                   )}
                 />
                 
-                {isCreatingNewProduct && (
-                  <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Categoria do Novo Produto</FormLabel>
-                        <div className="flex items-center gap-2">
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione uma categoria" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {(catalogCategories || []).sort((a,b) => a.name.localeCompare(b.name)).map((cat) => (
-                                <SelectItem key={cat.id} value={cat.name}>
-                                  {cat.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Categoria</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <Select 
+                          onValueChange={field.onChange} 
+                          value={field.value}
+                          disabled={isCatalogProductSelected}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione uma categoria" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {(catalogCategories || []).sort((a,b) => a.name.localeCompare(b.name)).map((cat) => (
+                              <SelectItem key={cat.id} value={cat.name}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {!isCatalogProductSelected && (
                           <Dialog open={showAddCategoryDialog} onOpenChange={setShowAddCategoryDialog}>
                             <DialogTrigger asChild>
                               <Button type="button" variant="outline" size="icon" className="flex-shrink-0">
@@ -293,12 +298,13 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
                               </DialogFooter>
                             </DialogContent>
                           </Dialog>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                        )}
+                      </div>
+                      {isCatalogProductSelected && <FormDescription>A categoria é definida pelo produto do catálogo.</FormDescription>}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 {isMultiLocation && (
                     <FormField
