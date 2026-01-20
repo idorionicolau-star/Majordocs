@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -34,6 +35,7 @@ import { InventoryContext } from '@/context/inventory-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { ScrollArea } from '../ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { PlusCircle } from 'lucide-react';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -61,6 +63,8 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
   const { catalogCategories, catalogProducts, locations, isMultiLocation, addCatalogProduct, addCatalogCategory } = inventoryContext || { catalogCategories: [], catalogProducts: [], locations: [], isMultiLocation: false, addCatalogProduct: async () => {}, addCatalogCategory: async () => {} };
   const [isCreatingNewProduct, setIsCreatingNewProduct] = useState(false);
   const { toast } = useToast();
+  const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   const form = useForm<AddProductFormValues>({
     resolver: zodResolver(formSchema),
@@ -120,6 +124,28 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       form.setValue('criticalStockThreshold', 5);
       form.setValue('category', '');
       form.setValue('unit', 'un');
+    }
+  };
+  
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Nome da categoria inválido',
+        description: 'O nome da categoria não pode estar em branco.',
+      });
+      return;
+    }
+    if (addCatalogCategory) {
+      // The function in context already checks for existence
+      await addCatalogCategory(newCategoryName);
+      form.setValue('category', newCategoryName, { shouldValidate: true });
+      setShowAddCategoryDialog(false);
+      setNewCategoryName('');
+      toast({
+        title: 'Categoria adicionada',
+        description: `"${newCategoryName}" foi adicionada e selecionada.`,
+      });
     }
   };
 
@@ -216,9 +242,58 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Categoria do Novo Produto</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Digite uma categoria nova ou existente" {...field} />
-                        </FormControl>
+                        <div className="flex items-center gap-2">
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione uma categoria" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {(catalogCategories || []).sort((a,b) => a.name.localeCompare(b.name)).map((cat) => (
+                                <SelectItem key={cat.id} value={cat.name}>
+                                  {cat.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Dialog open={showAddCategoryDialog} onOpenChange={setShowAddCategoryDialog}>
+                            <DialogTrigger asChild>
+                              <Button type="button" variant="outline" size="icon" className="flex-shrink-0">
+                                <PlusCircle className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                              <DialogHeader>
+                                <DialogTitle>Adicionar Nova Categoria</DialogTitle>
+                                <DialogDescription>
+                                  Digite o nome da nova categoria. Ela será adicionada e selecionada automaticamente.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="py-4">
+                                <Input
+                                  placeholder="Nome da categoria"
+                                  value={newCategoryName}
+                                  onChange={(e) => setNewCategoryName(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleAddCategory();
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <DialogFooter>
+                                <Button type="button" variant="secondary" onClick={() => setShowAddCategoryDialog(false)}>
+                                  Cancelar
+                                </Button>
+                                <Button type="button" onClick={handleAddCategory}>
+                                  Adicionar
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
