@@ -89,6 +89,7 @@ export default function ProductionPage() {
       date: new Date().toISOString().split('T')[0],
       productName: newProductionData.productName,
       quantity: newProductionData.quantity,
+      unit: newProductionData.unit,
       location: newProductionData.location,
       registeredBy: user.username || 'Desconhecido',
       status: 'Concluído'

@@ -953,6 +953,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           date: new Date().toISOString().split('T')[0],
           productName: orderToUpdate.productName,
           quantity: logData.quantity,
+          unit: orderToUpdate.unit,
           location: orderToUpdate.location,
           registeredBy: user.username || 'Desconhecido',
           status: 'Concluído'
