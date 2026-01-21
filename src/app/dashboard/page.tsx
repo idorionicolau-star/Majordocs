@@ -71,34 +71,37 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 flex flex-col gap-6">
            {isPrivilegedUser && <StatsCards />}
 
-            {/* Quick Access Buttons */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
-                    <Link href="/settings#catalog">
-                        <Book className="h-6 w-6" />
-                        <span>Catálogo</span>
-                    </Link>
-                </Button>
-                <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
-                    <Link href="/sales">
-                        <ShoppingCart className="h-6 w-6" />
-                        <span>Vendas</span>
-                    </Link>
-                </Button>
-                {isManufacturer && (
+            {/* Quick Access */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-lg">Atalhos</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
-                      <Link href="/production">
-                          <Hammer className="h-6 w-6" />
-                          <span>Produção</span>
+                      <Link href="/settings#catalog">
+                          <Book className="h-6 w-6" />
+                          <span>Catálogo</span>
                       </Link>
                   </Button>
-                )}
-                <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
-                    <Link href="/inventory">
-                        <Box className="h-6 w-6" />
-                        <span>Inventário</span>
-                    </Link>
-                </Button>
+                  <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
+                      <Link href="/sales">
+                          <ShoppingCart className="h-6 w-6" />
+                          <span>Vendas</span>
+                      </Link>
+                  </Button>
+                  {isManufacturer && (
+                    <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
+                        <Link href="/production">
+                            <Hammer className="h-6 w-6" />
+                            <span>Produção</span>
+                        </Link>
+                    </Button>
+                  )}
+                  <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
+                      <Link href="/inventory">
+                          <Box className="h-6 w-6" />
+                          <span>Inventário</span>
+                      </Link>
+                  </Button>
+              </div>
             </div>
 
            {isPrivilegedUser ? (
