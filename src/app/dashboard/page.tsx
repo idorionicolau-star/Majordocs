@@ -53,7 +53,7 @@ export default function DashboardPage() {
               O catálogo funciona como uma lista mestre de todos os produtos que a sua empresa vende ou fabrica. Uma vez adicionados ao catálogo, pode facilmente adicioná-los ao seu inventário.
             </p>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="justify-center">
             <Button asChild>
               <Link href="/settings#catalog">
                 <PlusCircle className="mr-2 h-4 w-4" />
