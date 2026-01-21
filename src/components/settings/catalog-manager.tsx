@@ -82,6 +82,7 @@ export function CatalogManager() {
   const [categoryToEdit, setCategoryToEdit] = useState<CatalogCategory | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
+  const wasCatalogEmpty = useMemo(() => categories?.length === 0, [categoriesLoading]);
 
   useEffect(() => {
     if (activeTab === 'products') {
@@ -118,14 +119,12 @@ export function CatalogManager() {
       toast({ variant: 'destructive', title: 'Erro', description: 'Essa categoria já existe.' });
       return;
     }
-      
-    const wasCatalogEmpty = categories?.length === 0;
 
     toast({ title: 'A adicionar categoria...' });
     const newCategory = { name: newCategoryName.trim() };
     try {
       await addDoc(catalogCategoriesCollectionRef, newCategory);
-
+      
       if (wasCatalogEmpty) {
         setHighlightProductsTab(true);
       }
@@ -508,7 +507,7 @@ export function CatalogManager() {
       </AlertDialog>
 
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="categories">
+      <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="categories" className="mt-6">
         <div className="relative">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="categories">Categorias</TabsTrigger>
