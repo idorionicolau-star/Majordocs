@@ -124,8 +124,8 @@ export default {
         },
         'shake': {
           '0%, 100%': { transform: 'rotate(0deg)' },
-          '25%': { transform: 'rotate(1.5deg)' },
-          '75%': { transform: 'rotate(-1.5deg)' },
+          '25%': { transform: 'rotate(1.25deg)' },
+          '75%': { transform: 'rotate(-1.25deg)' },
         },
         'bounce-down': {
           '0%, 100%': {
@@ -139,15 +139,15 @@ export default {
         },
       },
       animation: {
-        'accordion-down': 'accordion-down 1.2s ease-out',
-        'accordion-up': 'accordion-up 1.2s ease-out',
-        'in': 'fade-in 1.2s ease-out, slide-in-from-bottom-4 1.2s ease-out',
+        'accordion-down': 'accordion-down 0.4s ease-out',
+        'accordion-up': 'accordion-up 0.4s ease-out',
+        'in': 'fade-in 0.4s ease-out, slide-in-from-bottom-4 0.4s ease-out',
         'peek': 'peek 2.5s ease-in-out 1s',
         'slide-in-from-right': 'slide-in-from-right 0.6s ease-out',
         'slide-out-to-left': 'slide-out-to-left 0.6s ease-in',
         'slide-in-from-left': 'slide-in-from-left 0.6s ease-out',
         'slide-out-to-right': 'slide-out-to-right 0.6s ease-in',
-        'shake': 'shake 1.5s ease-in-out infinite',
+        'shake': 'shake 1.0s ease-in-out infinite',
         'fade-in-out': 'fade-in-out 2.0s ease-in-out infinite',
         'bounce-down': 'bounce-down 1.5s infinite',
       },
