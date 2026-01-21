@@ -675,6 +675,7 @@ export function CatalogManager() {
               <Button
                 size="sm"
                 onClick={() => setShowAddCategoryDialog(true)}
+                className={cn((!products || products.length === 0) && "animate-shake")}
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Adicionar Categoria
@@ -767,5 +768,3 @@ export function CatalogManager() {
     </>
   );
 }
-
-    
