@@ -3,9 +3,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UploadCloud, FileText } from 'lucide-react';
+import { UploadCloud } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
@@ -20,7 +18,6 @@ interface DataImporterProps {
 
 
 export function DataImporter({ onImport }: DataImporterProps) {
-  const [textData, setTextData] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const { toast } = useToast();
 
@@ -36,7 +33,7 @@ export function DataImporter({ onImport }: DataImporterProps) {
       complete: (results) => {
         if (results.errors.length > 0) {
           console.error("CSV Parsing errors: ", results.errors);
-          toast({ variant: 'destructive', title: 'Erro ao Ler CSV', description: 'Verifique o formato do seu ficheiro ou dados.' });
+          toast({ variant: 'destructive', title: 'Erro ao Ler CSV', description: 'Verifique o formato do seu ficheiro.' });
           return;
         }
 
@@ -55,17 +52,13 @@ export function DataImporter({ onImport }: DataImporterProps) {
           price: parseFloat(row["Preço"] || 0),
           lowStockThreshold: parseInt(row["Alerta Baixo"] || '10', 10),
           criticalStockThreshold: parseInt(row["Alerta Crítico"] || '5', 10),
+          unit: row["Unidade"] || "un",
         }));
 
         onImport(productsToImport);
-        setTextData('');
         setFile(null);
       }
     });
-  };
-
-  const handleImportText = () => {
-    processData(textData);
   };
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,41 +87,19 @@ export function DataImporter({ onImport }: DataImporterProps) {
   return (
     <div className="space-y-4">
        <p className="text-sm text-muted-foreground">
-        Selecione um método para carregar o seu catálogo de produtos. O formato esperado é CSV com os cabeçalhos: `Nome`, `Categoria`, `Preço`, `Alerta Baixo`, `Alerta Crítico`.
+        Carregue um ficheiro CSV para importar o seu catálogo de produtos. O formato esperado é CSV com os cabeçalhos: `Nome`, `Categoria`, `Preço`, `Unidade`, `Alerta Baixo`, `Alerta Crítico`.
       </p>
-      <Tabs defaultValue="paste">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="paste">
-            <FileText className="mr-2 h-4 w-4" />
-            Colar Texto
-          </TabsTrigger>
-          <TabsTrigger value="upload">
-            <UploadCloud className="mr-2 h-4 w-4" />
-            Carregar Ficheiro
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="paste" className="mt-4">
-          <div className="space-y-3">
-            <Textarea
-              placeholder="Cole aqui os dados do seu catálogo em formato CSV..."
-              className="min-h-[200px]"
-              value={textData}
-              onChange={(e) => setTextData(e.target.value)}
-            />
-            <Button onClick={handleImportText} className="w-full">Importar Catálogo de Texto</Button>
-          </div>
-        </TabsContent>
-        <TabsContent value="upload" className="mt-4">
-           <div className="space-y-3">
-            <div className="grid w-full max-w-sm items-center gap-1.5">
-              <Label htmlFor="catalog-file">Ficheiro do Catálogo</Label>
-              <Input id="catalog-file" type="file" accept=".csv" onChange={handleFileChange} />
-            </div>
-            {file && <p className="text-sm text-muted-foreground">Ficheiro selecionado: <strong>{file.name}</strong></p>}
-            <Button onClick={handleImportFile} className="w-full">Importar Catálogo de Ficheiro</Button>
-          </div>
-        </TabsContent>
-      </Tabs>
+      <div className="space-y-3">
+        <div className="grid w-full max-w-sm items-center gap-1.5">
+          <Label htmlFor="catalog-file">Ficheiro do Catálogo</Label>
+          <Input id="catalog-file" type="file" accept=".csv" onChange={handleFileChange} />
+        </div>
+        {file && <p className="text-sm text-muted-foreground">Ficheiro selecionado: <strong>{file.name}</strong></p>}
+        <Button onClick={handleImportFile} className="w-full">
+          <UploadCloud className="mr-2 h-4 w-4" />
+          Importar Catálogo de Ficheiro
+        </Button>
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@
 import { useState, useEffect, useContext, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlusCircle, Trash2, Edit, Download, Search, ChevronsDown } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Search, ChevronsDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
@@ -395,47 +395,6 @@ export function CatalogManager() {
 
   const isAllProductsSelected = filteredProducts.length > 0 && selectedProducts.length === filteredProducts.length;
   const isAllCategoriesSelected = filteredCategories.length > 0 && selectedCategories.length === filteredCategories.length;
-  
-  const handleExportCSV = () => {
-    if (!products || products.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Nenhum produto",
-        description: "Não há produtos no catálogo para exportar.",
-      });
-      return;
-    }
-
-    const headers = ["Nome", "Categoria", "Preço", "Alerta Baixo", "Alerta Crítico"];
-    const csvRows = [
-      headers.join(','),
-      ...products.map(p => 
-        [
-          `"${p.name.replace(/"/g, '""')}"`,
-          `"${p.category.replace(/"/g, '""')}"`,
-          p.price,
-          p.lowStockThreshold,
-          p.criticalStockThreshold
-        ].join(',')
-      )
-    ];
-    
-    const csvString = csvRows.join('\n');
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'catalogo-produtos.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast({
-      title: "Exportação Concluída",
-      description: "O ficheiro CSV do catálogo foi descarregado.",
-    });
-  };
 
   return (
     <>
@@ -553,7 +512,7 @@ export function CatalogManager() {
         <div className="relative">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="categories">Categorias</TabsTrigger>
-            <TabsTrigger value="products">Produtos</TabsTrigger>
+            <TabsTrigger value="products" className={cn(highlightProductsTab && 'animate-shake')}>Produtos</TabsTrigger>
             <TabsTrigger value="import">Importar</TabsTrigger>
           </TabsList>
            {highlightProductsTab && (
@@ -586,10 +545,6 @@ export function CatalogManager() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                 <Button variant="outline" size="sm" onClick={handleExportCSV}>
-                   <Download className="mr-2 h-4 w-4" />
-                   Exportar CSV
-                 </Button>
                  <AddCatalogProductDialog 
                       categories={categories?.map(c => c.name) || []}
                       onAdd={handleAddProduct}
