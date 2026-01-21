@@ -124,8 +124,8 @@ export default {
         },
         'shake': {
           '0%, 100%': { transform: 'rotate(0deg)' },
-          '25%': { transform: 'rotate(1.25deg)' },
-          '75%': { transform: 'rotate(-1.25deg)' },
+          '25%': { transform: 'rotate(0.625deg)' },
+          '75%': { transform: 'rotate(-0.625deg)' },
         },
         'bounce-down': {
           '0%, 100%': {
@@ -139,9 +139,9 @@ export default {
         },
       },
       animation: {
-        'accordion-down': 'accordion-down 0.4s ease-out',
-        'accordion-up': 'accordion-up 0.4s ease-out',
-        'in': 'fade-in 0.4s ease-out, slide-in-from-bottom-4 0.4s ease-out',
+        'accordion-down': 'accordion-down 0.8s ease-out',
+        'accordion-up': 'accordion-up 0.8s ease-out',
+        'in': 'fade-in 0.8s ease-out, slide-in-from-bottom-4 0.8s ease-out',
         'peek': 'peek 2.5s ease-in-out 1s',
         'slide-in-from-right': 'slide-in-from-right 0.6s ease-out',
         'slide-out-to-left': 'slide-out-to-left 0.6s ease-in',
