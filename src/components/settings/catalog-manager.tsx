@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from 'react';
@@ -82,7 +83,7 @@ export function CatalogManager() {
   const [categoryToEdit, setCategoryToEdit] = useState<CatalogCategory | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
-  const wasCatalogEmpty = useMemo(() => categories?.length === 0, [categoriesLoading]);
+  const wasCatalogEmpty = useMemo(() => !categoriesLoading && categories?.length === 0, [categories, categoriesLoading]);
 
   useEffect(() => {
     if (activeTab === 'products') {
