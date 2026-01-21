@@ -50,6 +50,9 @@ export function CatalogManager() {
   const firestore = useFirestore();
 
   const { companyId } = inventoryContext || {};
+
+  const [activeTab, setActiveTab] = useState("categories");
+  const [highlightProductsTab, setHighlightProductsTab] = useState(false);
   
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -79,6 +82,12 @@ export function CatalogManager() {
   const [categoryToEdit, setCategoryToEdit] = useState<CatalogCategory | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'products') {
+      setHighlightProductsTab(false);
+    }
+  }, [activeTab]);
   
   useEffect(() => {
     setSelectedProducts([]);
@@ -110,6 +119,9 @@ export function CatalogManager() {
       return;
     }
       
+    if (categories?.length === 0) {
+      setHighlightProductsTab(true);
+    }
     toast({ title: 'A adicionar categoria...' });
     const newCategory = { name: newCategoryName.trim() };
     try {
@@ -533,10 +545,10 @@ export function CatalogManager() {
       </AlertDialog>
 
 
-      <Tabs defaultValue="categories">
+      <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="categories">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="categories">Categorias</TabsTrigger>
-          <TabsTrigger value="products">Produtos</TabsTrigger>
+          <TabsTrigger value="products" className={cn(highlightProductsTab && "animate-shake")}>Produtos</TabsTrigger>
           <TabsTrigger value="import">Importar</TabsTrigger>
         </TabsList>
         
