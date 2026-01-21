@@ -83,6 +83,8 @@ export function CatalogManager() {
   const [categoryToEdit, setCategoryToEdit] = useState<CatalogCategory | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
+  
+  // Track if the catalog was empty on initial load
   const wasCatalogEmpty = useMemo(() => !categoriesLoading && categories?.length === 0, [categories, categoriesLoading]);
 
   useEffect(() => {
@@ -126,6 +128,7 @@ export function CatalogManager() {
     try {
       await addDoc(catalogCategoriesCollectionRef, newCategory);
       
+      // Only highlight if it was the very first category
       if (wasCatalogEmpty) {
         setHighlightProductsTab(true);
       }
@@ -509,15 +512,15 @@ export function CatalogManager() {
 
 
       <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="categories" className="mt-6">
-        <div className="relative">
+        <div className="relative mt-4">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="categories">Categorias</TabsTrigger>
             <TabsTrigger value="products" className={cn(highlightProductsTab && 'animate-shake')}>Produtos</TabsTrigger>
             <TabsTrigger value="import">Importar</TabsTrigger>
           </TabsList>
            {highlightProductsTab && (
-              <div className="absolute top-[-20px] left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce-down pointer-events-none">
-                  <ChevronsDown className="h-5 w-5 text-primary" />
+              <div className="absolute top-[-24px] left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce-down pointer-events-none">
+                  <ChevronsDown className="h-6 w-6 text-primary" strokeWidth={2.5} />
               </div>
           )}
         </div>

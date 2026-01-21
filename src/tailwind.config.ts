@@ -129,7 +129,7 @@ export default {
         },
         'bounce-down': {
           '0%, 100%': {
-            transform: 'translateY(-25%)',
+            transform: 'translateY(-40%)',
             animationTimingFunction: 'cubic-bezier(0.8, 0, 1, 1)',
           },
           '50%': {
@@ -147,9 +147,9 @@ export default {
         'slide-out-to-left': 'slide-out-to-left 0.6s ease-in',
         'slide-in-from-left': 'slide-in-from-left 0.6s ease-out',
         'slide-out-to-right': 'slide-out-to-right 0.6s ease-in',
-        'shake': 'shake 1.0s ease-in-out infinite',
-        'fade-in-out': 'fade-in-out 2.0s ease-in-out infinite',
-        'bounce-down': 'bounce-down 1.5s infinite',
+        'shake': 'shake 2s ease-in-out infinite',
+        'fade-in-out': 'fade-in-out 0.8s ease-in-out infinite',
+        'bounce-down': 'bounce-down 1.2s infinite',
       },
     },
   },
