@@ -12,9 +12,9 @@ type ThemeProviderState = {
 }
 
 const initialState: ThemeProviderState = {
-  mode: "dark",
+  mode: "light",
   setMode: () => null,
-  colorTheme: "Default",
+  colorTheme: "Red",
   setColorTheme: () => null,
 }
 
@@ -22,8 +22,8 @@ const ThemeProviderContext = React.createContext<ThemeProviderState>(initialStat
 
 export function ThemeProvider({
   children,
-  defaultMode = "dark",
-  defaultColorTheme = "Default",
+  defaultMode = "light",
+  defaultColorTheme = "Red",
   storageKeyMode = "majorstockx-mode",
   storageKeyColor = "majorstockx-color-theme",
   ...props
