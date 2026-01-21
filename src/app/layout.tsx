@@ -1,22 +1,14 @@
 
-"use client";
-
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster"
-import { ThemeProvider } from "@/components/theme-provider"
-import { FirebaseProvider } from '@/firebase/provider';
-import { InventoryProvider } from '@/context/inventory-context';
-import { ClientLayout } from '@/components/layout/client-layout';
-
-// Using Inter font for a modern, clean look
-import { Inter, Space_Grotesk } from 'next/font/google'
-import { useEffect } from 'react';
+import { AppProviders } from '@/firebase/client-provider';
+import type { Metadata } from 'next';
+import { Inter, Space_Grotesk } from 'next/font/google';
 
 const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-body',
-})
+});
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -24,34 +16,34 @@ const spaceGrotesk = Space_Grotesk({
   variable: '--font-headline',
 });
 
+export const metadata: Metadata = {
+  title: 'MajorStockX',
+  description: 'Sistema de gestão de estoque e produção para materiais de construção.',
+  manifest: '/manifest.json',
+  viewport:
+    'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0d1117' },
+  ],
+  icons: {
+    icon: '/logo.svg',
+  },
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-
   return (
-    <html lang="pt-BR" suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable}`}>
-      <head>
-        <title>MajorStockX</title>
-        <meta name="description" content="Sistema de gestão de estoque e produção para materiais de construção." />
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)" />
-        <link rel="icon" href="/logo.svg" type="image/svg+xml" />
-      </head>
+    <html
+      lang="pt-BR"
+      suppressHydrationWarning
+      className={`${inter.variable} ${spaceGrotesk.variable}`}
+    >
       <body className="font-body antialiased">
-        <ThemeProvider>
-          <FirebaseProvider>
-            <InventoryProvider>
-              <ClientLayout>
-                {children}
-              </ClientLayout>
-              <Toaster />
-            </InventoryProvider>
-          </FirebaseProvider>
-        </ThemeProvider>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

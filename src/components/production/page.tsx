@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useFirestore } from "@/firebase";
+import { useFirestore } from "@/firebase/provider";
 import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
 
 export default function ProductionPage() {
@@ -229,3 +229,5 @@ export default function ProductionPage() {
     </>
   );
 }
+
+    

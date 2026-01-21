@@ -88,6 +88,10 @@ export default {
             height: '0',
           },
         },
+        'fade-in-out': {
+          '0%, 100%': { opacity: '0.6' },
+          '50%': { opacity: '1' },
+        },
         'slide-in-from-bottom-4': {
           from: {
             transform: 'translateY(16px)',
@@ -134,6 +138,7 @@ export default {
         'slide-in-from-left': 'slide-in-from-left 0.3s ease-out',
         'slide-out-to-right': 'slide-out-to-right 0.3s ease-in',
         'shake': 'shake 1.5s ease-in-out infinite',
+        'fade-in-out': 'fade-in-out 2.5s ease-in-out infinite',
       },
     },
   },

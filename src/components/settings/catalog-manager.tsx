@@ -26,7 +26,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { EditCatalogProductDialog } from './edit-catalog-product-dialog';
 import { InventoryContext } from '@/context/inventory-context';
@@ -38,6 +37,7 @@ import { AddCatalogProductDialog } from './add-catalog-product-dialog';
 import { initialCatalog } from '@/lib/data';
 import { DataImporter } from './data-importer';
 import { Checkbox } from '../ui/checkbox';
+import { cn } from '@/lib/utils';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'> & { id: string };
 type CatalogCategory = { id: string; name: string };
@@ -672,7 +672,13 @@ export function CatalogManager() {
                   </Button>
                 )}
               </div>
-              <Button size="sm" onClick={() => setShowAddCategoryDialog(true)}>
+              <Button
+                size="sm"
+                onClick={() => setShowAddCategoryDialog(true)}
+                className={cn(
+                  (!products || products.length === 0) && 'animate-fade-in-out'
+                )}
+              >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Adicionar Categoria
               </Button>
@@ -764,3 +770,5 @@ export function CatalogManager() {
     </>
   );
 }
+
+    

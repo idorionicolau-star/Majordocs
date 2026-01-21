@@ -1,29 +1,22 @@
 
 'use client';
 
-import React, { useMemo, type ReactNode } from 'react';
+import React from 'react';
+import { Toaster } from '@/components/ui/toaster';
+import { ThemeProvider } from '@/components/theme-provider';
 import { FirebaseProvider } from '@/firebase/provider';
-import { initializeFirebase } from '@/firebase';
+import { InventoryProvider } from '@/context/inventory-context';
+import { ClientLayout } from '@/components/layout/client-layout';
 
-interface FirebaseClientProviderProps {
-  children: ReactNode;
-}
-
-// This component is no longer used in the simplified app structure
-// but is kept to avoid breaking changes if it were re-introduced.
-// The FirebaseProvider is now initialized directly in the root layout.
-export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
-  const firebaseServices = useMemo(() => {
-    return initializeFirebase();
-  }, []);
-
+export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <FirebaseProvider
-      firebaseApp={firebaseServices.firebaseApp}
-      auth={firebaseServices.auth}
-      firestore={firebaseServices.firestore}
-    >
-      {children}
-    </FirebaseProvider>
+    <ThemeProvider>
+      <FirebaseProvider>
+        <InventoryProvider>
+          <ClientLayout>{children}</ClientLayout>
+          <Toaster />
+        </InventoryProvider>
+      </FirebaseProvider>
+    </ThemeProvider>
   );
 }
