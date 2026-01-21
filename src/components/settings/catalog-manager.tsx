@@ -119,13 +119,17 @@ export function CatalogManager() {
       return;
     }
       
-    if (categories?.length === 0) {
-      setHighlightProductsTab(true);
-    }
+    const wasCatalogEmpty = categories?.length === 0;
+
     toast({ title: 'A adicionar categoria...' });
     const newCategory = { name: newCategoryName.trim() };
     try {
       await addDoc(catalogCategoriesCollectionRef, newCategory);
+
+      if (wasCatalogEmpty) {
+        setHighlightProductsTab(true);
+      }
+
       toast({ title: 'Categoria Adicionada', description: `A categoria "${newCategoryName.trim()}" foi adicionada.` });
       setNewCategoryName('');
       setShowAddCategoryDialog(false);
@@ -687,7 +691,7 @@ export function CatalogManager() {
               <Button
                 size="sm"
                 onClick={() => setShowAddCategoryDialog(true)}
-                className={cn((!products || products.length === 0) && "animate-shake")}
+                className={cn((!categories || categories.length === 0) && "animate-shake")}
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Adicionar Categoria
