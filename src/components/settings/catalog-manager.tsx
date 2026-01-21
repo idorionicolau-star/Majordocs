@@ -533,10 +533,10 @@ export function CatalogManager() {
       </AlertDialog>
 
 
-      <Tabs defaultValue="products">
+      <Tabs defaultValue="categories">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="products">Produtos</TabsTrigger>
           <TabsTrigger value="categories">Categorias</TabsTrigger>
+          <TabsTrigger value="products">Produtos</TabsTrigger>
           <TabsTrigger value="import">Importar</TabsTrigger>
         </TabsList>
         
