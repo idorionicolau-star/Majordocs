@@ -54,7 +54,7 @@ export default function DashboardPage() {
             </p>
           </CardContent>
           <CardFooter className="justify-center">
-            <Button asChild>
+            <Button asChild className="animate-shake">
               <Link href="/settings#catalog">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Adicionar Produtos ao Catálogo
