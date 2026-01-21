@@ -675,9 +675,6 @@ export function CatalogManager() {
               <Button
                 size="sm"
                 onClick={() => setShowAddCategoryDialog(true)}
-                className={cn(
-                  (!products || products.length === 0) && 'animate-fade-in-out'
-                )}
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Adicionar Categoria
