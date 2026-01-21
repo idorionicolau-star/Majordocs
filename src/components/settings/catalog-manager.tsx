@@ -4,7 +4,7 @@
 import { useState, useEffect, useContext, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlusCircle, Trash2, Edit, Download, Search } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Download, Search, ChevronsDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
@@ -550,11 +550,18 @@ export function CatalogManager() {
 
 
       <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="categories">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="categories">Categorias</TabsTrigger>
-          <TabsTrigger value="products" className={cn(highlightProductsTab && "animate-shake")}>Produtos</TabsTrigger>
-          <TabsTrigger value="import">Importar</TabsTrigger>
-        </TabsList>
+        <div className="relative">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="categories">Categorias</TabsTrigger>
+            <TabsTrigger value="products">Produtos</TabsTrigger>
+            <TabsTrigger value="import">Importar</TabsTrigger>
+          </TabsList>
+           {highlightProductsTab && (
+              <div className="absolute top-[-20px] left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce-down pointer-events-none">
+                  <ChevronsDown className="h-5 w-5 text-primary" />
+              </div>
+          )}
+        </div>
         
         <div className="relative mt-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
