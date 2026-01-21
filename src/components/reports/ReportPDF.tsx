@@ -1,5 +1,6 @@
+
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
-import { format } from 'date-fns';
+import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
 import type { Sale, Company } from '@/lib/types';
@@ -17,6 +18,7 @@ interface ReportPDFProps {
   company: Company | null;
   date: Date;
   aiSummary?: string;
+  period: 'daily' | 'weekly' | 'monthly' | 'yearly';
 }
 
 // Register fonts for consistent rendering (optional but recommended)
@@ -153,7 +155,33 @@ const styles = StyleSheet.create({
   },
 });
 
-export function ReportPDF({ sales, summary, company, date, aiSummary }: ReportPDFProps) {
+export function ReportPDF({ sales, summary, company, date, aiSummary, period }: ReportPDFProps) {
+    const getPeriodTitle = (period: string) => {
+        switch (period) {
+            case 'daily': return 'Relatório Diário';
+            case 'weekly': return 'Relatório Semanal';
+            case 'monthly': return 'Relatório Mensal';
+            case 'yearly': return 'Relatório Anual';
+            default: return 'Relatório';
+        }
+    }
+    const getPeriodSubtitle = (period: string, date: Date) => {
+        if (!date) return "";
+        switch (period) {
+            case 'daily': return format(date, "dd 'de' MMMM 'de' yyyy", { locale: pt });
+            case 'weekly':
+                const start = startOfWeek(date, { locale: pt });
+                const end = endOfWeek(date, { locale: pt });
+                return `${format(start, 'dd/MM')} a ${format(end, 'dd/MM/yyyy')}`;
+            case 'monthly': return format(date, 'MMMM yyyy', { locale: pt });
+            case 'yearly': return format(date, 'yyyy');
+            default: return format(date, 'MMMM yyyy', { locale: pt });
+        }
+    }
+
+    const reportTitle = getPeriodTitle(period);
+    const reportSubtitle = getPeriodSubtitle(period, date);
+
     return (
         <Document>
             <Page size="A4" style={styles.page}>
@@ -164,9 +192,9 @@ export function ReportPDF({ sales, summary, company, date, aiSummary }: ReportPD
                         <Text style={{fontSize: 9, color: '#475569'}}>NUIT: {company?.taxId}</Text>
                     </View>
                     <View>
-                      <Text style={styles.reportTitle}>Relatório Mensal</Text>
+                      <Text style={styles.reportTitle}>{reportTitle}</Text>
                       <Text style={{fontSize: 11, textAlign: 'right', color: '#475569'}}>
-                        {format(date, 'MMMM yyyy', { locale: pt })}
+                        {reportSubtitle}
                       </Text>
                     </View>
                 </View>
@@ -210,7 +238,7 @@ export function ReportPDF({ sales, summary, company, date, aiSummary }: ReportPD
                     ))}
                     {sales.length === 0 && (
                         <View style={styles.tableRow}>
-                            <Text style={[styles.tableCell, {textAlign: 'center', width: '100%', padding: 20}]}>Nenhuma venda encontrada para este mês.</Text>
+                            <Text style={[styles.tableCell, {textAlign: 'center', width: '100%', padding: 20}]}>Nenhuma venda encontrada para este período.</Text>
                         </View>
                     )}
                 </View>
@@ -222,3 +250,5 @@ export function ReportPDF({ sales, summary, company, date, aiSummary }: ReportPD
         </Document>
     );
 }
+
+    

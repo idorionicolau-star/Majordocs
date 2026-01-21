@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useContext } from 'react';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,8 +30,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+
+type Period = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 const SaleReportCard = ({ sale }: { sale: Sale }) => (
     <Card className="glass-card">
@@ -63,6 +72,7 @@ const SaleReportCard = ({ sale }: { sale: Sale }) => (
 
 export default function ReportsPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [period, setPeriod] = useState<Period>('monthly');
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
@@ -72,23 +82,43 @@ export default function ReportsPage() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
 
-  const salesForMonth = useMemo(() => {
-    if (!selectedDate) return [];
-    const year = selectedDate.getFullYear();
-    const month = selectedDate.getMonth();
+  const salesForPeriod = useMemo(() => {
+    if (!selectedDate || !sales) return [];
+
+    let start: Date, end: Date;
+
+    switch (period) {
+      case 'daily':
+        start = startOfDay(selectedDate);
+        end = endOfDay(selectedDate);
+        break;
+      case 'weekly':
+        start = startOfWeek(selectedDate, { locale: pt });
+        end = endOfWeek(selectedDate, { locale: pt });
+        break;
+      case 'monthly':
+        start = startOfMonth(selectedDate);
+        end = endOfMonth(selectedDate);
+        break;
+      case 'yearly':
+        start = startOfYear(selectedDate);
+        end = endOfYear(selectedDate);
+        break;
+    }
+    
     return sales.filter(sale => {
         const saleDate = new Date(sale.date);
-        return saleDate.getFullYear() === year && saleDate.getMonth() === month;
+        return isWithinInterval(saleDate, { start, end });
     });
-  }, [selectedDate, sales]);
+  }, [selectedDate, sales, period]);
 
   const reportSummary = useMemo(() => {
-    const totalSales = salesForMonth.length;
-    const totalValue = salesForMonth.reduce((sum, sale) => sum + sale.totalValue, 0);
-    const totalItems = salesForMonth.reduce((sum, sale) => sum + sale.quantity, 0);
+    const totalSales = salesForPeriod.length;
+    const totalValue = salesForPeriod.reduce((sum, sale) => sum + sale.totalValue, 0);
+    const totalItems = salesForPeriod.reduce((sum, sale) => sum + sale.quantity, 0);
     const averageTicket = totalSales > 0 ? totalValue / totalSales : 0;
     
-    const productQuantities = salesForMonth.reduce((acc, sale) => {
+    const productQuantities = salesForPeriod.reduce((acc, sale) => {
         acc[sale.productName] = (acc[sale.productName] || 0) + sale.quantity;
         return acc;
     }, {} as Record<string, number>);
@@ -105,7 +135,7 @@ export default function ReportsPage() {
       averageTicket,
       bestSellingProduct
     };
-  }, [salesForMonth]);
+  }, [salesForPeriod]);
   
   const handleClearSales = async () => {
     if (clearSales) {
@@ -114,6 +144,25 @@ export default function ReportsPage() {
     setShowClearConfirm(false);
   };
   
+  const getPeriodDescription = () => {
+    if (!selectedDate) return "Nenhuma data selecionada.";
+
+    switch (period) {
+      case 'daily':
+        return `Todas as vendas registadas em ${format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: pt } )}.`
+      case 'weekly':
+        const start = startOfWeek(selectedDate, { locale: pt });
+        const end = endOfWeek(selectedDate, { locale: pt });
+        return `Vendas para a semana de ${format(start, 'dd/MM')} a ${format(end, 'dd/MM/yyyy')}.`;
+      case 'monthly':
+        return `Todas as vendas registadas em ${format(selectedDate, 'MMMM yyyy', { locale: pt })}.`
+      case 'yearly':
+        return `Todas as vendas registadas em ${format(selectedDate, 'yyyy')}.`
+      default:
+        return "Selecione um período e data."
+    }
+  }
+
   const handleGeneratePdf = async () => {
     if (!selectedDate) {
       toast({
@@ -134,10 +183,11 @@ export default function ReportsPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sales: salesForMonth,
+          sales: salesForPeriod,
           summary: reportSummary,
           company: companyData,
           date: selectedDate,
+          period,
         }),
       });
 
@@ -210,10 +260,11 @@ export default function ReportsPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sales: salesForMonth,
+          sales: salesForPeriod,
           summary: reportSummary,
           company: companyData,
           date: selectedDate,
+          period,
         }),
       });
 
@@ -295,6 +346,17 @@ export default function ReportsPage() {
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
         <div className="flex flex-col w-full items-center md:flex-row justify-between items-start gap-4">
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+              <Select value={period} onValueChange={(value: Period) => setPeriod(value)}>
+                <SelectTrigger className="h-12 w-full md:w-[180px]">
+                  <SelectValue placeholder="Selecionar Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Diário</SelectItem>
+                  <SelectItem value="weekly">Semanal</SelectItem>
+                  <SelectItem value="monthly">Mensal</SelectItem>
+                  <SelectItem value="yearly">Anual</SelectItem>
+                </SelectContent>
+              </Select>
               <DatePicker date={selectedDate} setDate={setSelectedDate} />
               <Button onClick={handleGeneratePdf} variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate || isProcessing}>
                 <Download className="mr-2 h-4 w-4" />
@@ -343,9 +405,9 @@ export default function ReportsPage() {
 
         <Card>
           <CardHeader className="text-center">
-            <CardTitle>Detalhes das Vendas do Mês</CardTitle>
+            <CardTitle>Detalhes das Vendas do Período</CardTitle>
             <CardDescription>
-              {selectedDate ? `Todas as vendas registadas em ${format(selectedDate, 'MMMM yyyy', { locale: pt })}.` : "Nenhuma data selecionada."}
+              {getPeriodDescription()}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -362,8 +424,8 @@ export default function ReportsPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {salesForMonth.length > 0 ? (
-                    salesForMonth.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
+                    {salesForPeriod.length > 0 ? (
+                    salesForPeriod.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
                         <TableRow key={sale.id}>
                         <TableCell>{format(new Date(sale.date), 'dd/MM/yy')}</TableCell>
                         <TableCell className="font-medium">{sale.guideNumber}</TableCell>
@@ -376,7 +438,7 @@ export default function ReportsPage() {
                     ) : (
                     <TableRow>
                         <TableCell colSpan={6} className="h-24 text-center">
-                        Nenhuma venda encontrada para este mês.
+                        Nenhuma venda encontrada para este período.
                         </TableCell>
                     </TableRow>
                     )}
@@ -384,13 +446,13 @@ export default function ReportsPage() {
                 </Table>
             </div>
             <div className="block md:hidden space-y-3">
-                {salesForMonth.length > 0 ? (
-                    salesForMonth.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
+                {salesForPeriod.length > 0 ? (
+                    salesForPeriod.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
                         <SaleReportCard key={sale.id} sale={sale} />
                     ))
                 ) : (
                     <div className="h-24 text-center flex items-center justify-center text-muted-foreground">
-                        Nenhuma venda encontrada para este mês.
+                        Nenhuma venda encontrada para este período.
                     </div>
                 )}
             </div>
@@ -435,3 +497,5 @@ const StatCard = ({ icon: Icon, title, value, subValue }: StatCardProps) => (
         </CardContent>
     </Card>
 );
+
+    

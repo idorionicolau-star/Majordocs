@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { pdf } from '@react-pdf/renderer';
 import React from 'react';
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest) {
         aiSummary={aiSummaryText}
         company={data.company || null} 
         date={data.date ? new Date(data.date) : new Date()} 
+        period={data.period || 'monthly'}
       />
     ).toBuffer();
 
@@ -69,3 +71,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+    
