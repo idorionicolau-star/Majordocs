@@ -73,7 +73,7 @@ export default function DashboardPage() {
 
             {/* Quick Access */}
             <div className="space-y-3">
-              <h3 className="font-semibold text-lg">Atalhos</h3>
+              <h3 className="font-semibold text-lg text-center">Atalhos</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
                       <Link href="/settings#catalog">
