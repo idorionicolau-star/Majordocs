@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from 'react';
@@ -36,6 +35,7 @@ import { InventoryContext } from '@/context/inventory-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { ScrollArea } from '../ui/scroll-area';
 import { Textarea } from '../ui/textarea';
+import { DatePicker } from '../ui/date-picker';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -47,6 +47,7 @@ const formSchema = z.object({
   documentType: z.enum(['Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo']),
   clientName: z.string().optional(),
   notes: z.string().optional(),
+  date: z.date(),
 });
 
 type EditSaleFormValues = z.infer<typeof formSchema>;
@@ -72,6 +73,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
       documentType: sale.documentType,
       clientName: sale.clientName || '',
       notes: sale.notes || '',
+      date: new Date(sale.date),
     },
   });
   
@@ -111,6 +113,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
     onUpdateSale({
       ...sale,
       ...values,
+      date: values.date.toISOString(),
       // Recalculate totals
       subtotal: (values.unitPrice || 0) * (values.quantity || 0),
       totalValue: (values.unitPrice || 0) * (values.quantity || 0), // Note: Simplified, doesn't re-apply discount/VAT logic from add dialog
@@ -167,6 +170,21 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data da Venda</FormLabel>
+                    <DatePicker
+                      date={field.value}
+                      setDate={field.onChange}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from 'react';
@@ -41,6 +40,7 @@ import { Separator } from '../ui/separator';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Textarea } from '../ui/textarea';
 import { Switch } from '../ui/switch';
+import { DatePicker } from '../ui/date-picker';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -57,6 +57,7 @@ const formSchema = z.object({
   documentType: z.enum(['Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo']),
   clientName: z.string().optional(),
   notes: z.string().optional(),
+  date: z.date(),
 });
 
 type AddSaleFormValues = z.infer<typeof formSchema>;
@@ -91,7 +92,8 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
       vatPercentage: 17, // Default VAT
       documentType: 'Factura Proforma',
       clientName: '',
-      notes: ''
+      notes: '',
+      date: new Date(),
     },
   });
   
@@ -114,7 +116,8 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
         vatPercentage: 17,
         documentType: 'Factura Proforma',
         clientName: '',
-        notes: ''
+        notes: '',
+        date: new Date(),
       });
     }
   }, [open, form, locations]);
@@ -215,7 +218,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
     }
     
     const newSale: Omit<Sale, 'id' | 'guideNumber'> = {
-      date: new Date().toISOString(),
+      date: values.date.toISOString(),
       productId: products?.find(p => p.name === values.productName)?.id || 'unknown',
       productName: values.productName,
       quantity: values.quantity,
@@ -290,6 +293,21 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                   )}
                 />
               </div>
+
+               <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data da Venda</FormLabel>
+                    <DatePicker
+                      date={field.value}
+                      setDate={field.onChange}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {isMultiLocation && (
                   <FormField
