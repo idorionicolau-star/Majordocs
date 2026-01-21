@@ -138,7 +138,7 @@ export default {
         'slide-in-from-left': 'slide-in-from-left 0.3s ease-out',
         'slide-out-to-right': 'slide-out-to-right 0.3s ease-in',
         'shake': 'shake 1.5s ease-in-out infinite',
-        'fade-in-out': 'fade-in-out 2.5s ease-in-out infinite',
+        'fade-in-out': 'fade-in-out 7.5s ease-in-out infinite',
       },
     },
   },
