@@ -44,6 +44,29 @@
         },
         "notificationSettings": {
            "$ref": "#/entities/NotificationSettings"
+        },
+        "ownerId": {
+            "type": "string",
+            "description": "The ID of the user who created the company."
+        },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "taxId": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "isMultiLocation": { "type": "boolean" },
+        "locations": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": "string" },
+                    "name": { "type": "string" }
+                }
+            }
+        },
+        "saleCounter": {
+            "type": "number",
+            "description": "A counter for generating sequential sale numbers."
         }
       },
       "required": ["name", "businessType"]

@@ -46,6 +46,7 @@ export type Company = {
     notificationSettings?: NotificationSettings;
     isMultiLocation?: boolean;
     locations?: Location[];
+    saleCounter?: number;
 };
 
 export type Location = {

@@ -305,7 +305,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       
       batch.set(userMapDocRef, { companyId: newCompanyRef.id });
 
-      batch.set(newCompanyRef, { name: companyName, ownerId: newUserId, isMultiLocation: false, locations: [], businessType });
+      batch.set(newCompanyRef, { name: companyName, ownerId: newUserId, isMultiLocation: false, locations: [], businessType, saleCounter: 0 });
 
       await batch.commit();
 
@@ -848,17 +848,34 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         where("location", "==", newSaleData.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
     );
 
-    const now = new Date();
-    const guideNumber = `GT${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${Date.now().toString().slice(-3)}`;
     const salesCollectionRef = collection(firestore, `companies/${companyId}/sales`);
     const newSaleRef = doc(salesCollectionRef);
+    const companyDocRef = doc(firestore, `companies/${companyId}`);
+
+    let guideNumberForOuterScope: string | null = null;
+    
+    // This is a read outside the transaction to get the document reference.
+    const productSnapshot = await getDocs(productQuery);
+    if (productSnapshot.empty) {
+        throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque para a localização selecionada.`);
+    }
+    const productDocRef = productSnapshot.docs[0].ref;
 
     await runTransaction(firestore, async (transaction) => {
-        const productSnapshot = await getDocs(productQuery);
-        if (productSnapshot.empty) {
-            throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque.`);
+        const companyDoc = await transaction.get(companyDocRef);
+        if (!companyDoc.exists()) {
+            throw new Error("Documento da empresa não encontrado.");
         }
-        const productDoc = productSnapshot.docs[0];
+        const currentCompanyData = companyDoc.data();
+        const newSaleCounter = (currentCompanyData.saleCounter || 0) + 1;
+        
+        const guideNumber = `GT-${String(newSaleCounter).padStart(6, '0')}`;
+        guideNumberForOuterScope = guideNumber;
+
+        const productDoc = await transaction.get(productDocRef);
+        if (!productDoc.exists()) {
+          throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque.`);
+        }
         const productData = productDoc.data() as Product;
         const availableStock = productData.stock - productData.reservedStock;
 
@@ -868,24 +885,27 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
         const newReservedStock = productData.reservedStock + newSaleData.quantity;
         transaction.update(productDoc.ref, { reservedStock: newReservedStock });
+        transaction.update(companyDocRef, { saleCounter: newSaleCounter });
         transaction.set(newSaleRef, { ...newSaleData, guideNumber });
     });
 
-    const createdSale: Sale = {
-      ...newSaleData,
-      id: newSaleRef.id,
-      guideNumber: guideNumber,
-    };
-    downloadSaleDocument(createdSale, companyData);
-
-    await triggerEmailAlert({
-        type: 'SALE',
+    if (guideNumberForOuterScope) {
+      const createdSale: Sale = {
         ...newSaleData,
-        guideNumber,
-        location: locations.find(l => l.id === newSaleData.location)?.name || 'Principal',
-    });
+        id: newSaleRef.id,
+        guideNumber: guideNumberForOuterScope,
+      };
+      downloadSaleDocument(createdSale, companyData);
+
+      await triggerEmailAlert({
+          type: 'SALE',
+          ...newSaleData,
+          guideNumber: guideNumberForOuterScope,
+          location: locations.find(l => l.id === newSaleData.location)?.name || 'Principal',
+      });
+    }
     
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, addNotification, triggerEmailAlert, companyData, toast]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, toast, triggerEmailAlert]);
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
      if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
