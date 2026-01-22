@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -490,7 +491,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const totalItemsInStock = products?.reduce((sum, p) => sum + p.stock, 0) || 0;
 
     const pendingOrders = ordersData?.filter(o => o.status === 'Pendente').length || 0;
-    const inProductionOrders = ordersData?.filter(o => o.status === 'Em produção').length || 0;
+    const readyForTransfer = productionsData?.filter(p => p.status === 'Concluído').length || 0;
 
     return {
       monthlySalesValue,
@@ -498,9 +499,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       totalInventoryValue,
       totalItemsInStock,
       pendingOrders,
-      inProductionOrders,
+      readyForTransfer,
     };
-  }, [salesData, products, ordersData]);
+  }, [salesData, products, ordersData, productionsData]);
 
 
   const checkStockAndNotify = useCallback(async (product: Product) => {

@@ -177,7 +177,7 @@ export type DashboardStats = {
   totalInventoryValue: number;
   totalItemsInStock: number;
   pendingOrders: number;
-  inProductionOrders: number;
+  readyForTransfer: number;
 };
 
 export interface ModelInfo {

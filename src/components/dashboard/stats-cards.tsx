@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useContext } from "react";
@@ -17,7 +18,7 @@ export function StatsCards() {
         totalInventoryValue: 0,
         totalItemsInStock: 0,
         pendingOrders: 0,
-        inProductionOrders: 0,
+        readyForTransfer: 0,
       },
       loading: true 
     };
@@ -62,10 +63,10 @@ export function StatsCards() {
           href: "/orders",
         },
         {
-          title: "Em Produção",
-          value: dashboardStats.inProductionOrders,
+          title: "Pronto p/ Transferir",
+          value: dashboardStats.readyForTransfer,
           icon: Hammer,
-          href: "/orders",
+          href: "/production",
         },
       ];
 
