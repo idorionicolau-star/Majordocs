@@ -1,4 +1,3 @@
-
 "use client";
 
 import { StatsCards } from "@/components/dashboard/stats-cards";
@@ -128,8 +127,8 @@ export default function DashboardPage() {
 
         {/* Right Column (or below on mobile) */}
         <div className="flex flex-col gap-6">
-          <StockChart />
           {isPrivilegedUser && <TopSales />}
+          <StockChart />
           {isPrivilegedUser && <LeastSoldProducts />}
         </div>
 
