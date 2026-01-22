@@ -8,7 +8,7 @@ export type Theme = {
 };
 
 export const themes: Theme[] = [
-  { name: 'Default', primary: { light: '279 60% 44%', dark: '279 60% 55%' } },
+  { name: 'Default', primary: { light: '258 83% 65%', dark: '258 75% 70%' } },
   { name: 'Red', primary: { light: '4 70% 50%', dark: '4 75% 55%' } },
   { name: 'Crimson', primary: { light: '348 83% 47%', dark: '348 73% 42%' } },
   { name: 'Orange', primary: { light: '25 95% 53%', dark: '25 90% 48%' } },

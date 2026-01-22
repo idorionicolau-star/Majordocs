@@ -4,8 +4,8 @@
   "description": "Sistema de gestão de estoque e produção para materiais de construção.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#8134AF",
-  "theme_color": "#8134AF",
+  "background_color": "#ffffff",
+  "theme_color": "#6D28D9",
   "icons": [
     {
       "src": "/logo.svg",

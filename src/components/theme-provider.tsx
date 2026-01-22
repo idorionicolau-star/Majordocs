@@ -63,7 +63,7 @@ export function ThemeProvider({
         if (effectiveMode === 'light') {
             root.style.setProperty('--accent', `${h} ${s}% 95%`);
         } else {
-            root.style.setProperty('--accent', `${h} ${s}% 20%`);
+            root.style.setProperty('--accent', `${h} ${s}% 25%`);
         }
     }
 
