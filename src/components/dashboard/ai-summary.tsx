@@ -138,22 +138,24 @@ export function AISummary() {
      <Card className="border-t-4 border-primary glass-card shadow-sm overflow-hidden">
         <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
             <AccordionItem value="item-1" className="border-b-0">
-                <AccordionTrigger className="p-6 hover:no-underline data-[state=open]:border-b">
-                    <div className="flex items-start justify-between w-full">
-                        <div className="text-left">
-                            <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
-                                <Sparkles className="text-primary" />
-                                Diagnóstico Inteligente
-                            </CardTitle>
-                            <CardDescription>
-                                {lastUpdated ? `Atualizado às ${format(new Date(lastUpdated), 'HH:mm')}` : (businessStartDate ? `Análise baseada nos dados desde ${format(businessStartDate, 'dd MMM yyyy', { locale: pt })}.` : `A gerar análise...`)}
-                            </CardDescription>
+                <div className="flex items-center p-6 data-[state=open]:border-b">
+                    <AccordionTrigger className="w-full text-left p-0 hover:no-underline flex-1">
+                        <div className="flex items-center gap-2">
+                            <Sparkles className="text-primary h-6 w-6" />
+                            <div>
+                                <CardTitle className="text-xl sm:text-2xl">
+                                    Diagnóstico Inteligente
+                                </CardTitle>
+                                <CardDescription>
+                                    {lastUpdated ? `Atualizado às ${format(new Date(lastUpdated), 'HH:mm')}` : (businessStartDate ? `Análise baseada nos dados desde ${format(businessStartDate, 'dd MMM yyyy', { locale: pt })}.` : `A gerar análise...`)}
+                                </CardDescription>
+                            </div>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); fetchSummary(true); }} disabled={isLoading} className="ml-4">
-                            <RotateCw className={isLoading ? "animate-spin" : ""} />
-                        </Button>
-                    </div>
-                </AccordionTrigger>
+                    </AccordionTrigger>
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); fetchSummary(true); }} disabled={isLoading} className="ml-4">
+                        <RotateCw className={isLoading ? "animate-spin" : ""} />
+                    </Button>
+                </div>
                 <AccordionContent>
                     <CardContent className="pt-4">
                         {isLoading ? (
