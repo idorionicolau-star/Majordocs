@@ -1,14 +1,13 @@
-
 'use client';
 
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sparkles, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Sparkles, TrendingUp, AlertTriangle, RotateCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryContext } from '@/context/inventory-context';
-import Link from 'next/link';
-import { format } from 'date-fns';
+import { format, isToday } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { Button } from '../ui/button';
 
 interface AISummaryData {
   geral?: string;
@@ -24,6 +23,13 @@ interface AISummaryData {
   };
   text?: string; // Fallback for plain text or error response
 }
+
+interface CachedSummary {
+  timestamp: number;
+  data: AISummaryData;
+}
+
+const STORAGE_KEY = 'majorstockx-ai-summary';
 
 export function AISummary() {
   const { 
@@ -41,53 +47,82 @@ export function AISummary() {
   };
   
   const [summary, setSummary] = useState<AISummaryData | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Only fetch if there's data to analyze
-    if (sales && sales.length > 0 && products && products.length > 0) {
-      const fetchSummary = async () => {
-        setIsLoading(true);
-        
+  const fetchSummary = useCallback(async (forceRefresh = false) => {
+    setIsLoading(true);
+
+    if (!forceRefresh) {
         try {
-          const response = await fetch('/api/ai-search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              query: "Gere um diagnóstico inteligente do negócio em formato JSON com os campos 'geral', 'oportunidade', e 'risco'.",
-              history: [], // No history for the summary
-              contextData: {
-                stats: dashboardStats,
-                recentSales: sales?.slice(0, 10),
-                inventoryProducts: products,
-                stockMovements: stockMovements,
-                businessStartDate: businessStartDate?.toISOString(),
-              }
-            }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || 'Falha ao obter o resumo.');
-          }
-
-          const data: AISummaryData = await response.json();
-          setSummary(data);
-        } catch (e: any) {
-          console.error("Erro ao gerar resumo:", e);
-          setSummary({ text: `Erro ao gerar resumo: ${e.message}` });
-        } finally {
-          setIsLoading(false);
+            const cached = localStorage.getItem(STORAGE_KEY);
+            if (cached) {
+                const { timestamp, data }: CachedSummary = JSON.parse(cached);
+                if (isToday(new Date(timestamp))) {
+                    setSummary(data);
+                    setLastUpdated(timestamp);
+                    setIsLoading(false);
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error("Failed to read from localStorage", error);
         }
-      };
-
-      fetchSummary();
-    } else {
+    }
+    
+    // Don't fetch if no data
+    if (!sales || sales.length === 0 || !products || products.length === 0) {
         setIsLoading(false);
         setSummary({ geral: "Ainda não há dados suficientes para gerar um resumo da saúde do negócio."});
+        setLastUpdated(null);
+        return;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sales, products, businessStartDate]);
+
+    try {
+      const response = await fetch('/api/ai-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: "Gere um diagnóstico inteligente do negócio em formato JSON com os campos 'geral', 'oportunidade', e 'risco'.",
+          history: [], // No history for the summary
+          contextData: {
+            stats: dashboardStats,
+            recentSales: sales?.slice(0, 10),
+            inventoryProducts: products,
+            stockMovements: stockMovements,
+            businessStartDate: businessStartDate?.toISOString(),
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Falha ao obter o resumo.');
+      }
+
+      const data: AISummaryData = await response.json();
+      const now = Date.now();
+      setSummary(data);
+      setLastUpdated(now);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ timestamp: now, data }));
+      } catch (error) {
+          console.error("Failed to write to localStorage", error);
+      }
+
+    } catch (e: any) {
+      console.error("Erro ao gerar resumo:", e);
+      setSummary({ text: `Erro ao gerar resumo: ${e.message}` });
+      setLastUpdated(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [sales, products, dashboardStats, stockMovements, businessStartDate]);
+
+
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
 
   if (!sales || sales.length === 0) {
     return null; // Don't show the card if there are no sales
@@ -95,14 +130,19 @@ export function AISummary() {
   
   return (
      <Card className="border-t-4 border-primary glass-card shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
-          <Sparkles className="text-primary" />
-          Diagnóstico Inteligente
-        </CardTitle>
-        <CardDescription>
-          {businessStartDate ? `Análise baseada nos dados desde ${format(businessStartDate, 'dd MMM yyyy', { locale: pt })}.` : `A gerar análise...`}
-        </CardDescription>
+      <CardHeader className="flex-row items-start justify-between">
+        <div>
+          <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+            <Sparkles className="text-primary" />
+            Diagnóstico Inteligente
+          </CardTitle>
+          <CardDescription>
+            {lastUpdated ? `Atualizado às ${format(new Date(lastUpdated), 'HH:mm')}` : (businessStartDate ? `Análise baseada nos dados desde ${format(businessStartDate, 'dd MMM yyyy', { locale: pt })}.` : `A gerar análise...`)}
+          </CardDescription>
+        </div>
+        <Button variant="ghost" size="icon" onClick={() => fetchSummary(true)} disabled={isLoading}>
+            <RotateCw className={isLoading ? "animate-spin" : ""} />
+        </Button>
       </CardHeader>
       <CardContent>
         {isLoading ? (
