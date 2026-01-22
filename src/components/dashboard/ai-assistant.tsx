@@ -104,6 +104,14 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery]);
 
+  useEffect(() => {
+    // Auto-generate health report on first load if chat is empty, no query is active, and there's data to analyze
+    if (!initialQuery && messages.length === 0 && sales && sales.length > 0 && !isLoading) {
+      handleAskAI("Age como um consultor e gera um relatório de saúde conciso do meu negócio num parágrafo, destacando uma oportunidade e um risco com base nos dados fornecidos.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sales, initialQuery]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && query) {
       e.preventDefault();
@@ -133,10 +141,10 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
       <CardHeader>
         <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
           <Sparkles className="text-primary" />
-          MajorAssistant
+          Análise Inteligente
         </CardTitle>
         <CardDescription>
-          Faça uma pergunta sobre o seu negócio ou peça para executar uma ação.
+          Insights automáticos e respostas sobre o seu negócio.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col gap-4">
@@ -202,7 +210,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
                  {message.role === 'user' && <Avatar className="h-8 w-8"><AvatarFallback><User /></AvatarFallback></Avatar>}
               </div>
             ))}
-             {isLoading && (
+             {isLoading && messages.length > 0 && (
                 <div className="flex items-start gap-3">
                     <Avatar className="h-8 w-8"><AvatarFallback><Bot /></AvatarFallback></Avatar>
                     <div className="p-3 rounded-2xl bg-muted rounded-bl-none">
@@ -218,7 +226,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
       <CardFooter>
          <div className="flex items-center gap-2 w-full">
             <Input 
-                placeholder="Qual foi o produto mais vendido este mês?"
+                placeholder="Peça um insight ou faça uma pergunta..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
