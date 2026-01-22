@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI, Content } from "@google/generative-ai";
+import { differenceInDays } from 'date-fns';
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,6 +16,27 @@ export async function POST(req: NextRequest) {
     const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
     const isHealthCheck = query.toLowerCase().includes('diagnóstico') || query.toLowerCase().includes('relatório de saúde');
+
+    let dataAgeContext = '';
+    if (isHealthCheck && contextData?.businessStartDate) {
+        const startDate = new Date(contextData.businessStartDate);
+        const today = new Date();
+        const businessAgeInDays = differenceInDays(today, startDate);
+
+        if (businessAgeInDays <= 1) {
+             dataAgeContext = `
+              **Nota CRÍTICA:** A empresa acabou de começar e tem apenas ${businessAgeInDays + 1} dia(s) de dados. A tua análise deve ser extremamente preliminar. Foca-te em dar as boas-vindas e encorajar o utilizador, explicando que os insights ficarão mais robustos com mais dados. Não faças julgamentos.
+            `;
+        } else if (businessAgeInDays < 15) {
+            dataAgeContext = `
+              **Nota Importante:** A empresa tem apenas ${businessAgeInDays + 1} dias de dados. A tua análise deve ser preliminar. Foca-te em tendências iniciais e evita fazer julgamentos de longo prazo. Encoraja o utilizador a continuar a inserir dados para obter insights mais robustos no futuro.
+            `;
+        } else if (businessAgeInDays < 30) {
+            dataAgeContext = `
+              **Nota:** A empresa tem menos de 30 dias de dados. A tua análise deve considerar que as tendências ainda estão a emergir e podem não ser representativas a longo prazo.
+            `;
+        }
+    }
 
     const jsonStructure = `
       \`\`\`json
@@ -46,6 +68,8 @@ export async function POST(req: NextRequest) {
           - O campo "geral" deve corresponder à [SAÚDE ATUAL].
           - O campo "oportunidade" deve corresponder aos [PONTOS DE FOCO].
           - O campo "risco" deve corresponder aos [ALERTA DE MELHORIA].
+
+      ${dataAgeContext}
 
       **Contexto dos Dados:** Você receberá um objeto JSON contendo as transações recentes, níveis de estoque e estatísticas gerais.`;
       

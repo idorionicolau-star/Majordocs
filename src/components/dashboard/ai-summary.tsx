@@ -7,6 +7,8 @@ import { Sparkles, TrendingUp, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryContext } from '@/context/inventory-context';
 import Link from 'next/link';
+import { format } from 'date-fns';
+import { pt } from 'date-fns/locale';
 
 interface AISummaryData {
   geral?: string;
@@ -38,12 +40,20 @@ export function AISummary() {
   
   const [summary, setSummary] = useState<AISummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [firstSaleDate, setFirstSaleDate] = useState<Date | null>(null);
 
   useEffect(() => {
     // Only fetch if there's data to analyze
     if (sales && sales.length > 0 && products && products.length > 0) {
       const fetchSummary = async () => {
         setIsLoading(true);
+
+        const calculatedFirstSaleDate = sales.reduce((earliest, currentSale) => {
+          const currentDate = new Date(currentSale.date);
+          return currentDate < earliest ? currentDate : earliest;
+        }, new Date(sales[0].date));
+        setFirstSaleDate(calculatedFirstSaleDate);
+        
         try {
           const response = await fetch('/api/ai-search', {
             method: 'POST',
@@ -56,6 +66,7 @@ export function AISummary() {
                 recentSales: sales?.slice(0, 10),
                 inventoryProducts: products,
                 stockMovements: stockMovements,
+                businessStartDate: calculatedFirstSaleDate.toISOString(),
               }
             }),
           });
@@ -95,7 +106,7 @@ export function AISummary() {
           Diagnóstico Inteligente
         </CardTitle>
         <CardDescription>
-          Resumo de saúde gerado hoje às {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.
+          {firstSaleDate ? `Análise com base nos dados desde ${format(firstSaleDate, 'dd MMM yyyy', { locale: pt })}.` : `A gerar análise...`}
         </CardDescription>
       </CardHeader>
       <CardContent>
