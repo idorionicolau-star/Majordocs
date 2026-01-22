@@ -219,6 +219,7 @@ export interface InventoryContextType {
   locations: Location[];
   isMultiLocation: boolean;
   companyData: Company | null;
+  businessStartDate: Date | null;
   notifications: AppNotification[];
   monthlySalesChartData: { name: string; vendas: number }[];
   dashboardStats: DashboardStats;

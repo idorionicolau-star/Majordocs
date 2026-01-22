@@ -23,13 +23,12 @@ export async function POST(req: NextRequest) {
         const today = new Date();
         const businessAgeInDays = differenceInDays(today, startDate);
 
-        if (businessAgeInDays <= 1) {
+        if (businessAgeInDays < 15) {
              dataAgeContext = `
-              **Nota CRÍTICA:** A empresa acabou de começar e tem apenas ${businessAgeInDays + 1} dia(s) de dados. A tua análise deve ser extremamente preliminar. Foca-te em dar as boas-vindas e encorajar o utilizador, explicando que os insights ficarão mais robustos com mais dados. Não faças julgamentos.
-            `;
-        } else if (businessAgeInDays < 15) {
-            dataAgeContext = `
-              **Nota Importante:** A empresa tem apenas ${businessAgeInDays + 1} dias de dados. A tua análise deve ser preliminar. Foca-te em tendências iniciais e evita fazer julgamentos de longo prazo. Encoraja o utilizador a continuar a inserir dados para obter insights mais robustos no futuro.
+              **Nota CRÍTICA para a IA:** A empresa está na fase de "Nutrição de Dados", com ${businessAgeInDays + 1} dia(s) de operação.
+              - **Foco Principal:** O teu objetivo é **validar e encorajar**, não dar conselhos financeiros profundos. Foque em verificar se os dados estão a ser inseridos corretamente.
+              - **Exemplo de Abordagem:** Mencione uma venda ou um produto recentemente adicionado. Ex: "Ótimo trabalho ao inserir as primeiras vendas! O produto X parece estar a ter um bom começo." ou "Reparei que o inventário foi atualizado. Continue a registar todos os produtos para que eu possa fazer uma análise mais precisa em breve."
+              - **Tom:** Seja um parceiro que está a "aprender" junto com o utilizador. Evite fazer previsões de longo prazo. Não faças julgamentos.
             `;
         } else if (businessAgeInDays < 30) {
             dataAgeContext = `

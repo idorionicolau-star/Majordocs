@@ -2,11 +2,11 @@
 "use client";
 
 import { StatsCards } from "@/components/dashboard/stats-cards";
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Box, ShoppingCart, Hammer, Book, Lock, BookOpen, PlusCircle } from "lucide-react";
+import { Box, ShoppingCart, Hammer, Book, Lock, BookOpen, PlusCircle, PartyPopper } from "lucide-react";
 import { InventoryContext } from "@/context/inventory-context";
 import { TopSales } from "@/components/dashboard/top-sales";
 import { MonthlySalesChart } from "@/components/dashboard/monthly-sales-chart";
@@ -18,18 +18,108 @@ import { LeastSoldProducts } from "@/components/dashboard/least-sold-products";
 import { AIAssistant } from "@/components/dashboard/ai-assistant";
 import { useSearchParams } from "next/navigation";
 import { AISummary } from "@/components/dashboard/ai-summary";
+import Confetti from 'react-confetti';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogFooter,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
+import { differenceInDays } from 'date-fns';
+
 
 const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
   ssr: false,
   loading: () => <Skeleton className="h-[350px] w-full" />,
 });
 
+// Helper hook to get window dimensions for the confetti effect
+const useWindowDimensions = () => {
+  const [windowSize, setWindowSize] = useState<{width: number | undefined, height: number | undefined}>({
+    width: undefined,
+    height: undefined,
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    function handleResize() {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    }
+    
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return windowSize;
+}
+
+// Celebration component for when user unlocks full AI capabilities
+const MaturityCelebration = () => {
+  const { width, height } = useWindowDimensions();
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+      const hasCelebrated = localStorage.getItem('majorstockx-maturity-celebrated');
+      if (!hasCelebrated) {
+          setIsOpen(true);
+          localStorage.setItem('majorstockx-maturity-celebrated', 'true');
+      }
+  }, []);
+
+  if (!width || !height || !isOpen) {
+    return null;
+  }
+
+  return (
+    <>
+      <Confetti
+        width={width}
+        height={height}
+        recycle={false}
+        numberOfPieces={400}
+        gravity={0.1}
+      />
+      <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader className="items-center text-center">
+            <PartyPopper className="h-16 w-16 text-primary animate-bounce" />
+            <AlertDialogTitle className="text-2xl mt-4">Parabéns! Desbloqueou o Modo Consultor de Elite!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Com mais de 30 dias de dados, a sua IA agora tem poder total para fornecer insights estratégicos e previsões. Explore o seu dashboard para ver a diferença!
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setIsOpen(false)}>Continuar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
+}
+
 
 export default function DashboardPage() {
-  const { user, companyData, catalogProducts, loading } = useContext(InventoryContext) || { user: null, companyData: null, catalogProducts: [], loading: true };
+  const { user, companyData, catalogProducts, loading, businessStartDate, sales } = useContext(InventoryContext) || { user: null, companyData: null, catalogProducts: [], loading: true, businessStartDate: null, sales: [] };
   const searchParams = useSearchParams();
   const aiQuery = searchParams.get('ai_query');
   
+  const [daysInOperation, setDaysInOperation] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (businessStartDate && sales && sales.length > 0) {
+      setDaysInOperation(differenceInDays(new Date(), businessStartDate));
+    }
+  }, [businessStartDate, sales]);
+
   const isPrivilegedUser = user?.role === 'Admin' || user?.role === 'Dono';
   const isManufacturer = companyData?.businessType === 'manufacturer';
   
@@ -37,6 +127,8 @@ export default function DashboardPage() {
   
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
+
+      {daysInOperation !== null && daysInOperation >= 30 && <MaturityCelebration />}
 
       {isCatalogEmpty && !loading && (
         <Card className="bg-primary/5 dark:bg-primary/10 border-primary/20">

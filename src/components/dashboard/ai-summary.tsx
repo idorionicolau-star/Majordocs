@@ -30,29 +30,24 @@ export function AISummary() {
     sales, 
     products, 
     dashboardStats,
-    stockMovements
+    stockMovements,
+    businessStartDate
   } = useContext(InventoryContext) || { 
     sales: [], 
     products: [], 
     stockMovements: [],
-    dashboardStats: {} 
+    dashboardStats: {},
+    businessStartDate: null
   };
   
   const [summary, setSummary] = useState<AISummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [firstSaleDate, setFirstSaleDate] = useState<Date | null>(null);
 
   useEffect(() => {
     // Only fetch if there's data to analyze
     if (sales && sales.length > 0 && products && products.length > 0) {
       const fetchSummary = async () => {
         setIsLoading(true);
-
-        const calculatedFirstSaleDate = sales.reduce((earliest, currentSale) => {
-          const currentDate = new Date(currentSale.date);
-          return currentDate < earliest ? currentDate : earliest;
-        }, new Date(sales[0].date));
-        setFirstSaleDate(calculatedFirstSaleDate);
         
         try {
           const response = await fetch('/api/ai-search', {
@@ -66,7 +61,7 @@ export function AISummary() {
                 recentSales: sales?.slice(0, 10),
                 inventoryProducts: products,
                 stockMovements: stockMovements,
-                businessStartDate: calculatedFirstSaleDate.toISOString(),
+                businessStartDate: businessStartDate?.toISOString(),
               }
             }),
           });
@@ -92,7 +87,7 @@ export function AISummary() {
         setSummary({ geral: "Ainda não há dados suficientes para gerar um resumo da saúde do negócio."});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sales, products]);
+  }, [sales, products, businessStartDate]);
 
   if (!sales || sales.length === 0) {
     return null; // Don't show the card if there are no sales
@@ -106,7 +101,7 @@ export function AISummary() {
           Diagnóstico Inteligente
         </CardTitle>
         <CardDescription>
-          {firstSaleDate ? `Análise com base nos dados desde ${format(firstSaleDate, 'dd MMM yyyy', { locale: pt })}.` : `A gerar análise...`}
+          {businessStartDate ? `Análise baseada nos dados desde ${format(businessStartDate, 'dd MMM yyyy', { locale: pt })}.` : `A gerar análise...`}
         </CardDescription>
       </CardHeader>
       <CardContent>

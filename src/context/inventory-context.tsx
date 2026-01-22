@@ -433,6 +433,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       return () => unsub();
     }
   }, [companyDocRef]);
+  
+  const businessStartDate = useMemo(() => {
+    if (!salesData || salesData.length === 0) return null;
+    return salesData.reduce((earliest, currentSale) => {
+      const currentDate = new Date(currentSale.date);
+      return currentDate < earliest ? currentDate : earliest;
+    }, new Date(salesData[0].date));
+  }, [salesData]);
 
   useEffect(() => {
     const end = new Date();
@@ -1078,6 +1086,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], stockMovements: stockMovementsData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
     locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
+    businessStartDate,
     chatHistory, setChatHistory,
     addProduct, updateProduct, deleteProduct, clearProductsCollection,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
