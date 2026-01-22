@@ -198,6 +198,8 @@ export default function DashboardPage() {
               </div>
             </div>
 
+            {isPrivilegedUser && <TopSales />}
+
            {isPrivilegedUser ? (
              <>
               <AIAssistant initialQuery={aiQuery || undefined} />
@@ -225,7 +227,6 @@ export default function DashboardPage() {
           {isPrivilegedUser && (
             <>
               <StockAlerts />
-              <TopSales />
             </>
           )}
           <StockChart />
