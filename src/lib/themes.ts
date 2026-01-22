@@ -24,7 +24,7 @@ export const themes: Theme[] = [
   { name: 'Turquoise', primary: { light: '174 72% 56%', dark: '174 62% 46%' } },
   { name: 'Cyan', primary: { light: '188 82% 44%', dark: '188 72% 39%' } },
   { name: 'Sky', primary: { light: '199 98% 54%', dark: '199 88% 49%' } },
-  { name: 'Blue', primary: { light: '217 91% 60%', dark: '217 91% 55%' } },
+  { name: 'Blue', primary: { light: '217 82% 55%', dark: '217 82% 60%' } },
   { name: 'Navy', primary: { light: '240 35% 25%', dark: '240 25% 15%' } },
   { name: 'Indigo', primary: { light: '243 93% 63%', dark: '243 83% 58%' } },
   { name: 'Violet', primary: { light: '250 84% 60%', dark: '250 74% 55%' } },

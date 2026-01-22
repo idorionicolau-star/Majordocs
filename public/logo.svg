@@ -1,15 +1,21 @@
-<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <radialGradient id="grad1" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-            <stop offset="0%" style="stop-color:#00A1FF;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#007ACC;stop-opacity:1" />
+        <radialGradient id="background_gradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+            <stop offset="0%" style="stop-color:#2D9CDB" />
+            <stop offset="100%" style="stop-color:#2F80ED" />
         </radialGradient>
-        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.3"/>
+        <filter id="dropshadow" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="3"/> 
+            <feOffset dx="0" dy="4" result="offsetblur"/>
+            <feComponentTransfer>
+                <feFuncA type="linear" slope="0.5"/>
+            </feComponentTransfer>
+            <feMerge> 
+                <feMergeNode/>
+                <feMergeNode in="SourceGraphic"/> 
+            </feMerge>
         </filter>
     </defs>
-    <rect width="256" height="256" rx="40" fill="url(#grad1)"/>
-    <g filter="url(#shadow)">
-        <path d="M54.5 206 L54.5 70 C54.5 59.7228 62.7228 51.5 73 51.5 L128 51.5 L183 51.5 C193.277 51.5 201.5 59.7228 201.5 70 L201.5 206 L171.5 206 L171.5 110 L128 160 L84.5 110 L84.5 206 L54.5 206 Z" fill="white"/>
-    </g>
+    <rect width="512" height="512" rx="90" fill="url(#background_gradient)"/>
+    <path d="M106.333 400.667V152.933L256 302.4L405.667 152.933V400.667H335.333V226.933L256 297.067L176.667 226.933V400.667H106.333Z" fill="white" filter="url(#dropshadow)"/>
 </svg>
