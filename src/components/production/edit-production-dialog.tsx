@@ -126,7 +126,7 @@ function EditProductionDialogContent({ production, onUpdate, setOpen }: EditProd
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Unidade</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione..." />
@@ -152,7 +152,7 @@ function EditProductionDialogContent({ production, onUpdate, setOpen }: EditProd
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Localização</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Selecione uma localização" />
