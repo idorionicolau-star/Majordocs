@@ -203,6 +203,7 @@ export default function DashboardPage() {
            {isPrivilegedUser ? (
              <>
               <AIAssistant initialQuery={aiQuery || undefined} />
+              <StockAlerts />
               <MonthlySalesChart />
              </>
            ) : (
@@ -224,11 +225,6 @@ export default function DashboardPage() {
 
         {/* Right Column (or below on mobile) */}
         <div className="flex flex-col gap-6">
-          {isPrivilegedUser && (
-            <>
-              <StockAlerts />
-            </>
-          )}
           <StockChart />
           {isPrivilegedUser && <LeastSoldProducts />}
         </div>
