@@ -27,7 +27,7 @@ type Period = '7d' | '30d' | 'month' | 'year';
 
 export function TopSales() {
   const { sales, loading } = useContext(InventoryContext) || { sales: [], loading: true };
-  const [period, setPeriod] = useState<Period>('7d');
+  const [period, setPeriod] = useState<Period>('month');
 
   const topProducts = useMemo(() => {
     if (!sales) return [];
@@ -69,7 +69,7 @@ export function TopSales() {
     return Object.entries(productStats)
       .map(([name, stats]) => ({ name, ...stats }))
       .sort((a, b) => b.quantity - a.quantity) // Sort by quantity sold
-      .slice(0, 3); // Get top 3
+      .slice(0, 5); // Get top 5
 
   }, [sales, period]);
 
@@ -79,7 +79,7 @@ export function TopSales() {
         <div>
           <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
             <Trophy />
-            Top 3 Produtos Mais Vendidos
+            Top 5 Produtos Mais Vendidos
           </CardTitle>
           <CardDescription>
             Os campeões de vendas no período selecionado.
@@ -99,8 +99,8 @@ export function TopSales() {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[...Array(3)].map((_, i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {[...Array(5)].map((_, i) => (
               <div key={i} className="p-4 rounded-xl bg-muted/50 space-y-2">
                   <Skeleton className="h-8 w-8 rounded-full mx-auto" />
                   <Skeleton className="h-4 w-full" />
@@ -110,7 +110,7 @@ export function TopSales() {
             ))}
           </div>
         ) : topProducts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {topProducts.map((product, index) => (
               <div key={product.name} className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted/50 text-center">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background font-bold text-primary mb-2">

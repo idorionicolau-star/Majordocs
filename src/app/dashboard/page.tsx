@@ -6,10 +6,10 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Box, ShoppingCart, Hammer, Book, Lock, BookOpen, PlusCircle } from "lucide-react";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { InventoryContext } from "@/context/inventory-context";
 import { TopSales } from "@/components/dashboard/top-sales";
-import { SalesActivity } from "@/components/dashboard/sales-activity";
+import { MonthlySalesChart } from "@/components/dashboard/monthly-sales-chart";
+import { StockAlerts } from "@/components/dashboard/stock-alerts";
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,29 +75,29 @@ export default function DashboardPage() {
               <h3 className="font-semibold text-lg text-center">Atalhos</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
-                      <Link href="/settings#catalog">
-                          <Book className="h-6 w-6" />
-                          <span>Catálogo</span>
+                      <Link href="/inventory?action=add">
+                          <PlusCircle className="h-5 w-5" />
+                          <span>Adicionar Produto</span>
                       </Link>
                   </Button>
                   <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
-                      <Link href="/sales">
-                          <ShoppingCart className="h-6 w-6" />
-                          <span>Vendas</span>
+                      <Link href="/sales?action=add">
+                          <ShoppingCart className="h-5 w-5" />
+                          <span>Registar Venda</span>
                       </Link>
                   </Button>
                   {isManufacturer && (
                     <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
-                        <Link href="/production">
-                            <Hammer className="h-6 w-6" />
-                            <span>Produção</span>
+                        <Link href="/production?action=add">
+                            <Hammer className="h-5 w-5" />
+                            <span>Nova Produção</span>
                         </Link>
                     </Button>
                   )}
                   <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
-                      <Link href="/inventory">
-                          <Box className="h-6 w-6" />
-                          <span>Inventário</span>
+                      <Link href="/settings#catalog">
+                          <Book className="h-5 w-5" />
+                          <span>Gerir Catálogo</span>
                       </Link>
                   </Button>
               </div>
@@ -106,7 +106,7 @@ export default function DashboardPage() {
            {isPrivilegedUser ? (
              <>
               <AIAssistant initialQuery={aiQuery || undefined} />
-              <SalesActivity />
+              <MonthlySalesChart />
              </>
            ) : (
              <Card className="glass-card shadow-sm h-full flex flex-col justify-center">
@@ -127,7 +127,12 @@ export default function DashboardPage() {
 
         {/* Right Column (or below on mobile) */}
         <div className="flex flex-col gap-6">
-          {isPrivilegedUser && <TopSales />}
+          {isPrivilegedUser && (
+            <>
+              <StockAlerts />
+              <TopSales />
+            </>
+          )}
           <StockChart />
           {isPrivilegedUser && <LeastSoldProducts />}
         </div>

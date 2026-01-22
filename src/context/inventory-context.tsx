@@ -482,13 +482,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const totalInventoryValue = products?.reduce((sum, p) => sum + (p.stock * p.price), 0) || 0;
     const totalItemsInStock = products?.reduce((sum, p) => sum + p.stock, 0) || 0;
 
+    const pendingOrders = ordersData?.filter(o => o.status === 'Pendente').length || 0;
+    const inProductionOrders = ordersData?.filter(o => o.status === 'Em produção').length || 0;
+
     return {
       monthlySalesValue,
       averageTicket,
       totalInventoryValue,
       totalItemsInStock,
+      pendingOrders,
+      inProductionOrders,
     };
-  }, [salesData, products]);
+  }, [salesData, products, ordersData]);
 
 
   const checkStockAndNotify = useCallback(async (product: Product) => {

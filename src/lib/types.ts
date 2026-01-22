@@ -176,6 +176,8 @@ export type DashboardStats = {
   averageTicket: number;
   totalInventoryValue: number;
   totalItemsInStock: number;
+  pendingOrders: number;
+  inProductionOrders: number;
 };
 
 export interface ModelInfo {
@@ -219,12 +221,7 @@ export interface InventoryContextType {
   companyData: Company | null;
   notifications: AppNotification[];
   monthlySalesChartData: { name: string; vendas: number }[];
-  dashboardStats: {
-    monthlySalesValue: number;
-    averageTicket: number;
-    totalInventoryValue: number;
-    totalItemsInStock: number;
-  };
+  dashboardStats: DashboardStats;
   chatHistory: ChatMessage[];
   setChatHistory: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
 
