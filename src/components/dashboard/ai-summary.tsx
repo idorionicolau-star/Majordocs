@@ -138,9 +138,9 @@ export function AISummary() {
      <Card className="border-t-4 border-primary glass-card shadow-sm">
         <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
             <AccordionItem value="item-1" className="border-b-0">
-                <div className="flex items-center p-6 data-[state=open]:border-b">
-                    <AccordionTrigger className="w-full text-left p-0 hover:no-underline flex-1">
-                        <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between p-6 data-[state=open]:border-b">
+                    <AccordionTrigger className="p-0 text-left hover:no-underline">
+                         <div className="flex items-center gap-2">
                             <Sparkles className="text-primary h-6 w-6" />
                             <div>
                                 <CardTitle className="text-xl sm:text-2xl">
@@ -152,7 +152,7 @@ export function AISummary() {
                             </div>
                         </div>
                     </AccordionTrigger>
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); fetchSummary(true); }} disabled={isLoading} className="ml-4">
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); fetchSummary(true); }} disabled={isLoading}>
                         <RotateCw className={isLoading ? "animate-spin" : ""} />
                     </Button>
                 </div>
