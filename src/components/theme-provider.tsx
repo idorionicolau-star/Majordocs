@@ -58,6 +58,15 @@ export function ThemeProvider({
     root.style.setProperty('--primary', colors);
     root.style.setProperty('--ring', colors); // Sync ring color
 
+    const [h, s] = colors.split(" ").map(val => val.replace('%', ''));
+    if (h && s) {
+        if (effectiveMode === 'light') {
+            root.style.setProperty('--accent', `${h} ${s}% 95%`);
+        } else {
+            root.style.setProperty('--accent', `${h} ${s}% 20%`);
+        }
+    }
+
   }, [mode, colorTheme])
 
 
