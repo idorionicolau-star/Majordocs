@@ -1,9 +1,7 @@
-
-
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
 import { Header } from './header';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -99,7 +97,13 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ type: 'spring', stiffness: 260, damping: 20 }}
                 >
-                    {children}
+                    <Suspense fallback={
+                      <div className="flex h-full w-full items-center justify-center">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                      </div>
+                    }>
+                      {children}
+                    </Suspense>
                 </motion.div>
                 </AnimatePresence>
             </main>
