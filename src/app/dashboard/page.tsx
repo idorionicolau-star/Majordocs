@@ -197,8 +197,10 @@ export default function DashboardPage() {
            {isPrivilegedUser ? (
              <>
               <AIAssistant initialQuery={aiQuery || undefined} />
-              <StockAlerts />
-              <MonthlySalesChart />
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <StockAlerts />
+                <MonthlySalesChart />
+              </div>
               {isPrivilegedUser && <LeastSoldProducts />}
              </>
            ) : (
