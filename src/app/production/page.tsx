@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from "react";
@@ -130,7 +131,7 @@ export default function ProductionPage() {
     if (dateFilter) {
       result = result.filter(p => isSameDay(new Date(p.date), dateFilter));
     }
-    return result;
+    return result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [productions, nameFilter, locationFilter, isMultiLocation, dateFilter]);
   
   const handleClear = async () => {
