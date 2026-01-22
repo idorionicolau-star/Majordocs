@@ -135,7 +135,7 @@ export function AISummary() {
   }
   
   return (
-     <Card className="border-t-4 border-primary glass-card shadow-sm overflow-hidden">
+     <Card className="border-t-4 border-primary glass-card shadow-sm">
         <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
             <AccordionItem value="item-1" className="border-b-0">
                 <div className="flex items-center p-6 data-[state=open]:border-b">
