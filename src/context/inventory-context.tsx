@@ -13,8 +13,7 @@ import {
 import { usePathname, useRouter } from 'next/navigation';
 import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification, DashboardStats, InventoryContextType, ChatMessage } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useMemoFirebase, getFirebaseAuth } from '@/firebase/provider';
-import { useCollection } from '@/firebase/firestore/use-collection';
+import { useCollection, useFirestore, useMemoFirebase, getFirebaseAuth } from '@/firebase';
 import {
   getAuth,
   onAuthStateChanged,

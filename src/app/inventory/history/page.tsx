@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useContext, useEffect } from "react";
@@ -6,8 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { StockMovement } from "@/lib/types";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { useCollection } from "@/firebase/firestore/use-collection";
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, Timestamp } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
