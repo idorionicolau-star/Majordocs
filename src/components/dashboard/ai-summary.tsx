@@ -8,6 +8,12 @@ import { InventoryContext } from '@/context/inventory-context';
 import { format, isToday } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { Button } from '../ui/button';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface AISummaryData {
   geral?: string;
@@ -129,58 +135,66 @@ export function AISummary() {
   }
   
   return (
-     <Card className="border-t-4 border-primary glass-card shadow-sm">
-      <CardHeader className="flex-row items-start justify-between">
-        <div>
-          <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
-            <Sparkles className="text-primary" />
-            Diagnóstico Inteligente
-          </CardTitle>
-          <CardDescription>
-            {lastUpdated ? `Atualizado às ${format(new Date(lastUpdated), 'HH:mm')}` : (businessStartDate ? `Análise baseada nos dados desde ${format(businessStartDate, 'dd MMM yyyy', { locale: pt })}.` : `A gerar análise...`)}
-          </CardDescription>
-        </div>
-        <Button variant="ghost" size="icon" onClick={() => fetchSummary(true)} disabled={isLoading}>
-            <RotateCw className={isLoading ? "animate-spin" : ""} />
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-          </div>
-        ) : summary ? (
-          summary.text ? (
-             <p className="text-sm text-destructive">{summary.text}</p>
-          ) : (
-            <div className="space-y-4">
-              {summary.geral && <p className="text-center text-muted-foreground font-medium">{summary.geral}</p>}
-              <div className="grid gap-4 md:grid-cols-2">
-                {summary.oportunidade && (
-                  <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-500/30">
-                    <h4 className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-2"><TrendingUp /> {summary.oportunidade.titulo}</h4>
-                    <p className="text-sm mt-2">{summary.oportunidade.descricao}</p>
-                    <p className="text-sm font-semibold mt-2 text-emerald-800 dark:text-emerald-200">{summary.oportunidade.sugestao}</p>
-                  </div>
-                )}
-                {summary.risco && (
-                   <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-500/30">
-                    <h4 className="font-bold text-red-700 dark:text-red-300 flex items-center gap-2"><AlertTriangle /> {summary.risco.titulo}</h4>
-                    <p className="text-sm mt-2">{summary.risco.descricao}</p>
-                     <p className="text-sm font-semibold mt-2 text-red-800 dark:text-red-200">{summary.risco.sugestao}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )
-        ) : (
-          <div className="text-center text-muted-foreground p-4">
-            Não foi possível gerar um diagnóstico neste momento.
-          </div>
-        )}
-      </CardContent>
+     <Card className="border-t-4 border-primary glass-card shadow-sm overflow-hidden">
+        <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
+            <AccordionItem value="item-1" className="border-b-0">
+                <AccordionTrigger className="p-6 hover:no-underline data-[state=open]:border-b">
+                    <div className="flex items-start justify-between w-full">
+                        <div className="text-left">
+                            <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+                                <Sparkles className="text-primary" />
+                                Diagnóstico Inteligente
+                            </CardTitle>
+                            <CardDescription>
+                                {lastUpdated ? `Atualizado às ${format(new Date(lastUpdated), 'HH:mm')}` : (businessStartDate ? `Análise baseada nos dados desde ${format(businessStartDate, 'dd MMM yyyy', { locale: pt })}.` : `A gerar análise...`)}
+                            </CardDescription>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); fetchSummary(true); }} disabled={isLoading} className="ml-4">
+                            <RotateCw className={isLoading ? "animate-spin" : ""} />
+                        </Button>
+                    </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                    <CardContent className="pt-4">
+                        {isLoading ? (
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-3/4" />
+                        </div>
+                        ) : summary ? (
+                        summary.text ? (
+                            <p className="text-sm text-destructive">{summary.text}</p>
+                        ) : (
+                            <div className="space-y-4">
+                            {summary.geral && <p className="text-center text-muted-foreground font-medium">{summary.geral}</p>}
+                            <div className="grid gap-4 md:grid-cols-2">
+                                {summary.oportunidade && (
+                                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-500/30">
+                                    <h4 className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-2"><TrendingUp /> {summary.oportunidade.titulo}</h4>
+                                    <p className="text-sm mt-2">{summary.oportunidade.descricao}</p>
+                                    <p className="text-sm font-semibold mt-2 text-emerald-800 dark:text-emerald-200">{summary.oportunidade.sugestao}</p>
+                                </div>
+                                )}
+                                {summary.risco && (
+                                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-500/30">
+                                    <h4 className="font-bold text-red-700 dark:text-red-300 flex items-center gap-2"><AlertTriangle /> {summary.risco.titulo}</h4>
+                                    <p className="text-sm mt-2">{summary.risco.descricao}</p>
+                                    <p className="text-sm font-semibold mt-2 text-red-800 dark:text-red-200">{summary.risco.sugestao}</p>
+                                </div>
+                                )}
+                            </div>
+                            </div>
+                        )
+                        ) : (
+                        <div className="text-center text-muted-foreground p-4">
+                            Não foi possível gerar um diagnóstico neste momento.
+                        </div>
+                        )}
+                    </CardContent>
+                </AccordionContent>
+            </AccordionItem>
+        </Accordion>
     </Card>
   );
 }
