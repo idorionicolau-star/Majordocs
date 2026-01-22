@@ -1,3 +1,4 @@
+
 "use client";
 
 import { StatsCards } from "@/components/dashboard/stats-cards";
@@ -16,6 +17,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { LeastSoldProducts } from "@/components/dashboard/least-sold-products";
 import { AIAssistant } from "@/components/dashboard/ai-assistant";
 import { useSearchParams } from "next/navigation";
+import { AISummary } from "@/components/dashboard/ai-summary";
 
 const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
   ssr: false,
@@ -68,6 +70,7 @@ export default function DashboardPage() {
         
         {/* Left Column (or full width on mobile) */}
         <div className="lg:col-span-2 flex flex-col gap-6">
+           {isPrivilegedUser && <AISummary />}
            {isPrivilegedUser && <StatsCards />}
 
             {/* Quick Access */}

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useContext, useEffect, useRef } from 'react';
@@ -104,14 +105,6 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery]);
 
-  useEffect(() => {
-    // Auto-generate health report on first load if chat is empty, no query is active, and there's data to analyze
-    if (!initialQuery && messages.length === 0 && sales && sales.length > 0 && !isLoading) {
-      handleAskAI("Age como um consultor e gera um relatório de saúde conciso do meu negócio num parágrafo, destacando uma oportunidade e um risco com base nos dados fornecidos.");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sales, initialQuery]);
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && query) {
       e.preventDefault();
@@ -140,11 +133,11 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
      <Card className="glass-card shadow-sm flex flex-col h-full">
       <CardHeader>
         <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
-          <Sparkles className="text-primary" />
-          Análise Inteligente
+          <Bot className="text-primary" />
+          MajorAssistant
         </CardTitle>
         <CardDescription>
-          Insights automáticos e respostas sobre o seu negócio.
+          Faça uma pergunta sobre seus dados de negócio.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col gap-4">
@@ -153,7 +146,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
              {messages.length === 0 && !isLoading && (
               <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6 border-2 border-dashed rounded-xl h-full">
                   <Bot size={40} className="mb-4" />
-                  <p>A resposta do assistente aparecerá aqui.</p>
+                  <p>Faça uma pergunta para começar.</p>
               </div>
             )}
             {messages.map((message, index) => (
