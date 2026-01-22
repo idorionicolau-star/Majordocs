@@ -10,7 +10,8 @@ import { AddEmployeeDialog } from "@/components/users/add-employee-dialog";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Employee, ModulePermission, PermissionLevel } from "@/lib/types";
-import { useCollection, useFirestore, getFirebaseAuth, useMemoFirebase } from '@/firebase';
+import { useFirestore, getFirebaseAuth, useMemoFirebase } from '@/firebase/provider';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, addDoc, doc, deleteDoc, getDocs, query, where, updateDoc, setDoc, runTransaction } from "firebase/firestore";
 import { allPermissions } from "@/lib/data";
 import {

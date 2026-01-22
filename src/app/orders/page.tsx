@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useFirestore } from '@/firebase';
+import { useFirestore } from '@/firebase/provider';
 import { collection, addDoc, doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
 import {

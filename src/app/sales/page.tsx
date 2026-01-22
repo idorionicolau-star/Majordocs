@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { doc, updateDoc } from "firebase/firestore";
-import { useFirestore } from '@/firebase';
+import { useFirestore } from '@/firebase/provider';
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
