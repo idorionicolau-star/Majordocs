@@ -3,27 +3,40 @@
 
 import React, { useState, useContext, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, TrendingUp, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryContext } from '@/context/inventory-context';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
+
+interface AISummaryData {
+  geral?: string;
+  oportunidade?: {
+    titulo: string;
+    descricao: string;
+    sugestao: string;
+  };
+  risco?: {
+    titulo: string;
+    descricao: string;
+    sugestao: string;
+  };
+  text?: string; // Fallback for plain text or error response
+}
 
 export function AISummary() {
   const { 
-      sales, 
-      products, 
-      dashboardStats,
-      stockMovements
+    sales, 
+    products, 
+    dashboardStats,
+    stockMovements
   } = useContext(InventoryContext) || { 
-      sales: [], 
-      products: [], 
-      stockMovements: [],
-      dashboardStats: {} 
+    sales: [], 
+    products: [], 
+    stockMovements: [],
+    dashboardStats: {} 
   };
   
-  const [summary, setSummary] = useState('');
+  const [summary, setSummary] = useState<AISummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -36,7 +49,7 @@ export function AISummary() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              query: "Age como um consultor e gera um relatório de saúde conciso do meu negócio num parágrafo, destacando uma oportunidade e um risco com base nos dados fornecidos.",
+              query: "Gere um diagnóstico inteligente do negócio em formato JSON com os campos 'geral', 'oportunidade', e 'risco'.",
               history: [], // No history for the summary
               contextData: {
                 stats: dashboardStats,
@@ -48,14 +61,15 @@ export function AISummary() {
           });
 
           if (!response.ok) {
-            throw new Error('Falha ao obter o resumo.');
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Falha ao obter o resumo.');
           }
 
-          const data = await response.json();
-          setSummary(data.text);
+          const data: AISummaryData = await response.json();
+          setSummary(data);
         } catch (e: any) {
           console.error("Erro ao gerar resumo:", e);
-          setSummary(`Erro ao gerar resumo: ${e.message}`);
+          setSummary({ text: `Erro ao gerar resumo: ${e.message}` });
         } finally {
           setIsLoading(false);
         }
@@ -64,7 +78,7 @@ export function AISummary() {
       fetchSummary();
     } else {
         setIsLoading(false);
-        setSummary("Ainda não há dados suficientes para gerar um resumo da saúde do negócio.");
+        setSummary({ geral: "Ainda não há dados suficientes para gerar um resumo da saúde do negócio."});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sales, products]);
@@ -74,14 +88,14 @@ export function AISummary() {
   }
   
   return (
-     <Card className="glass-card shadow-sm">
+     <Card className="border-t-4 border-primary glass-card shadow-sm">
       <CardHeader>
         <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
           <Sparkles className="text-primary" />
-          Saúde do Negócio
+          Diagnóstico Inteligente
         </CardTitle>
         <CardDescription>
-          Um resumo inteligente gerado pela IA com base nos seus dados.
+          Resumo de saúde gerado hoje às {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -91,22 +105,33 @@ export function AISummary() {
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-3/4" />
           </div>
+        ) : summary ? (
+          summary.text ? (
+             <p className="text-sm text-destructive">{summary.text}</p>
+          ) : (
+            <div className="space-y-4">
+              {summary.geral && <p className="text-center text-muted-foreground font-medium">{summary.geral}</p>}
+              <div className="grid gap-4 md:grid-cols-2">
+                {summary.oportunidade && (
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-500/30">
+                    <h4 className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-2"><TrendingUp /> {summary.oportunidade.titulo}</h4>
+                    <p className="text-sm mt-2">{summary.oportunidade.descricao}</p>
+                    <p className="text-sm font-semibold mt-2 text-emerald-800 dark:text-emerald-200">{summary.oportunidade.sugestao}</p>
+                  </div>
+                )}
+                {summary.risco && (
+                   <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-500/30">
+                    <h4 className="font-bold text-red-700 dark:text-red-300 flex items-center gap-2"><AlertTriangle /> {summary.risco.titulo}</h4>
+                    <p className="text-sm mt-2">{summary.risco.descricao}</p>
+                     <p className="text-sm font-semibold mt-2 text-red-800 dark:text-red-200">{summary.risco.sugestao}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
         ) : (
-          <div className="prose dark:prose-invert prose-sm max-w-none">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                a: ({ node, ...props }) => {
-                  const href = props.href || '';
-                  if (href.startsWith('/')) {
-                      return <Link href={href} {...props} className="text-primary hover:underline font-bold" />;
-                  }
-                  return <a {...props} className="text-primary hover:underline font-bold" target="_blank" rel="noopener noreferrer" />;
-                },
-              }}
-            >
-              {summary}
-            </ReactMarkdown>
+          <div className="text-center text-muted-foreground p-4">
+            Não foi possível gerar um diagnóstico neste momento.
           </div>
         )}
       </CardContent>

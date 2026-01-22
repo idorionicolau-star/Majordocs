@@ -137,7 +137,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
           MajorAssistant
         </CardTitle>
         <CardDescription>
-          Faça uma pergunta sobre seus dados de negócio.
+          Faça uma pergunta sobre seus dados de negócio para obter uma resposta detalhada.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col gap-4">
