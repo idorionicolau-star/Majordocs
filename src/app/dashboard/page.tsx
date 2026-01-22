@@ -156,11 +156,11 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Main content: single column on mobile, multi-column on desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main content */}
+      <div className="grid grid-cols-1 gap-6">
         
-        {/* Left Column (or full width on mobile) */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
+        {/* Main Column */}
+        <div className="flex flex-col gap-6">
            {isPrivilegedUser && <AISummary />}
            {isPrivilegedUser && <StatsCards />}
 
@@ -222,10 +222,6 @@ export default function DashboardPage() {
                 </CardContent>
             </Card>
           )}
-        </div>
-
-        {/* Right Column (or below on mobile) */}
-        <div className="flex flex-col gap-6">
         </div>
 
       </div>
