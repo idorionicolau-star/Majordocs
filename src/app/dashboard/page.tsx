@@ -30,11 +30,6 @@ import {
 import { differenceInDays } from 'date-fns';
 
 
-const StockChart = dynamic(() => import("@/components/dashboard/stock-chart").then(mod => mod.StockChart), {
-  ssr: false,
-  loading: () => <Skeleton className="h-[350px] w-full" />,
-});
-
 // Helper hook to get window dimensions for the confetti effect
 const useWindowDimensions = () => {
   const [windowSize, setWindowSize] = useState<{width: number | undefined, height: number | undefined}>({
@@ -204,7 +199,6 @@ export default function DashboardPage() {
               <AIAssistant initialQuery={aiQuery || undefined} />
               <StockAlerts />
               <MonthlySalesChart />
-              <StockChart />
               {isPrivilegedUser && <LeastSoldProducts />}
              </>
            ) : (
