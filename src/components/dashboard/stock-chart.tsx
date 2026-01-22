@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useContext } from "react";
@@ -16,9 +15,8 @@ export function StockChart() {
     if (!acc[product.category]) {
       acc[product.category] = 0;
     }
-    // Use available stock for a more accurate representation
-    const availableStock = product.stock - product.reservedStock;
-    acc[product.category] += availableStock > 0 ? availableStock : 0;
+    // Use total stock for a more accurate representation of owned inventory
+    acc[product.category] += product.stock > 0 ? product.stock : 0;
     return acc;
   }, {} as Record<string, number>);
 
