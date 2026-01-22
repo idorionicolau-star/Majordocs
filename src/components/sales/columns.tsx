@@ -4,7 +4,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Sale, Company } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import { Edit, Printer, FileSearch, CheckCircle, PackageCheck } from "lucide-react"
+import { Edit, Printer, FileSearch, CheckCircle, PackageCheck, Download } from "lucide-react"
 import { useState, useContext } from "react"
 import { SaleDetailsDialogContent } from "./sale-details-dialog"
 import { formatCurrency, downloadSaleDocument } from "@/lib/utils"
@@ -33,7 +33,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
     const { companyData } = inventoryContext || {};
         
     return (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-1">
             <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
                 <TooltipProvider>
                     <Tooltip>
@@ -94,6 +94,17 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
             </Dialog>}
             
             <TooltipProvider>
+                 <Tooltip>
+                    <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => downloadSaleDocument(sale, companyData || null)}>
+                        <Download className="h-4 w-4" />
+                        <span className="sr-only">Baixar Documento</span>
+                    </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                    <p>Baixar {sale.documentType} como PDF</p>
+                    </TooltipContent>
+                </Tooltip>
                 <Tooltip>
                     <TooltipTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => downloadSaleDocument(sale, companyData || null)}>

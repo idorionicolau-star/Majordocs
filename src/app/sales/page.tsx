@@ -168,7 +168,7 @@ export default function SalesPage() {
     if (dateFilter) {
       result = result.filter(s => isSameDay(new Date(s.date), dateFilter));
     }
-    return result;
+    return [...result].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [sales, nameFilter, statusFilter, isMultiLocation, locationFilter, dateFilter]);
   
   const handleClearSales = async () => {
