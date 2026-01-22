@@ -14,6 +14,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { cn } from '@/lib/utils';
 
 interface AISummaryData {
   geral?: string;
@@ -133,6 +134,8 @@ export function AISummary() {
   if (!sales || sales.length === 0) {
     return null; // Don't show the card if there are no sales
   }
+
+  const hasBothBoxes = summary?.oportunidade && summary?.risco;
   
   return (
      <Card className="border-t-4 border-primary glass-card shadow-sm">
@@ -170,7 +173,7 @@ export function AISummary() {
                         ) : (
                             <div className="space-y-4">
                             {summary.geral && <p className="text-center text-muted-foreground font-medium">{summary.geral}</p>}
-                            <div className="grid gap-4 md:grid-cols-2">
+                            <div className={cn("grid gap-4", hasBothBoxes ? "md:grid-cols-2" : "md:grid-cols-1")}>
                                 {summary.oportunidade && (
                                 <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-500/30">
                                     <h4 className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-2"><TrendingUp /> {summary.oportunidade.titulo}</h4>
