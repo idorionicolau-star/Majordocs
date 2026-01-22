@@ -45,6 +45,7 @@ import { allPermissions } from '@/lib/data';
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
 import { format, eachMonthOfInterval, subMonths } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { downloadSaleDocument } from '@/lib/utils';
 
 type CatalogProduct = Omit<
   Product,
@@ -869,6 +870,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         transaction.update(productDoc.ref, { reservedStock: newReservedStock });
         transaction.set(newSaleRef, { ...newSaleData, guideNumber });
     });
+
+    const createdSale: Sale = {
+      ...newSaleData,
+      id: newSaleRef.id,
+      guideNumber: guideNumber,
+    };
+    downloadSaleDocument(createdSale, companyData);
 
     await triggerEmailAlert({
         type: 'SALE',
