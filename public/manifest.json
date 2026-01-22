@@ -1,24 +1,16 @@
 {
-    "name": "MajorStockX",
-    "short_name": "MajorStockX",
-    "description": "Sistema de gestão de estoque e produção para materiais de construção.",
-    "start_url": "/",
-    "display": "standalone",
-    "orientation": "portrait",
-    "background_color": "#D93025",
-    "theme_color": "#D93025",
-    "icons": [
-        {
-            "src": "/logo.png",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "any"
-        },
-        {
-            "src": "/logo.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "maskable"
-        }
-    ]
+  "name": "MajorStockX",
+  "short_name": "MajorStockX",
+  "description": "Sistema de gestão de estoque e produção para materiais de construção.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#007ACC",
+  "theme_color": "#007ACC",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "48x48 72x72 96x96 128x128 256x256 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
 }
