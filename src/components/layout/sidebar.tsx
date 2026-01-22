@@ -37,7 +37,7 @@ export function Sidebar({ isCollapsed, onToggleCollapse }: DesktopSidebarProps) 
     )}>
         <div className="flex h-16 items-center justify-center border-b px-4">
             <Link href="/dashboard" className="flex items-center gap-2.5 font-semibold">
-                <Image src="/logo.svg" alt="MajorStockX Logo" width={28} height={28} className="dark:invert" />
+                <Image src="/logo.svg" alt="MajorStockX Logo" width={28} height={28} />
                 {!isCollapsed && <span className="text-xl font-headline font-bold">MajorStockX</span>}
             </Link>
         </div>

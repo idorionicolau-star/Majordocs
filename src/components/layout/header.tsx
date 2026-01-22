@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -33,7 +34,7 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
       {/* Logo for mobile, hidden on desktop */}
       <div className="flex items-center gap-3 md:hidden">
         <Link href="/dashboard" className="flex items-center gap-2.5 font-semibold">
-            <Image src="/logo.svg" alt="MajorStockX Logo" width={28} height={28} className="invert" />
+            <Image src="/logo.svg" alt="MajorStockX Logo" width={28} height={28} />
         </Link>
       </div>
 

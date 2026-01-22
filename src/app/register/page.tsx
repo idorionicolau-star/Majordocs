@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useContext } from 'react';
@@ -81,7 +80,7 @@ export default function RegisterPage() {
        <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-                <Image src="/logo.svg" alt="MajorStockX Logo" width={48} height={48} className="dark:invert" />
+                <Image src="/logo.svg" alt="MajorStockX Logo" width={48} height={48} />
             </div>
             <CardTitle className="text-2xl font-bold">Crie a sua Conta</CardTitle>
             <CardDescription>Registe a sua empresa para começar a usar o MajorStockX.</CardDescription>
