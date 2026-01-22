@@ -205,6 +205,7 @@ export default function DashboardPage() {
               <StockAlerts />
               <MonthlySalesChart />
               <StockChart />
+              {isPrivilegedUser && <LeastSoldProducts />}
              </>
            ) : (
              <Card className="glass-card shadow-sm h-full flex flex-col justify-center">
@@ -225,7 +226,6 @@ export default function DashboardPage() {
 
         {/* Right Column (or below on mobile) */}
         <div className="flex flex-col gap-6">
-          {isPrivilegedUser && <LeastSoldProducts />}
         </div>
 
       </div>
