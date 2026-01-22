@@ -1,4 +1,3 @@
-
 "use client";
 
 import { StatsCards } from "@/components/dashboard/stats-cards";
@@ -205,6 +204,7 @@ export default function DashboardPage() {
               <AIAssistant initialQuery={aiQuery || undefined} />
               <StockAlerts />
               <MonthlySalesChart />
+              <StockChart />
              </>
            ) : (
              <Card className="glass-card shadow-sm h-full flex flex-col justify-center">
@@ -225,7 +225,6 @@ export default function DashboardPage() {
 
         {/* Right Column (or below on mobile) */}
         <div className="flex flex-col gap-6">
-          <StockChart />
           {isPrivilegedUser && <LeastSoldProducts />}
         </div>
 
