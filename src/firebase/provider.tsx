@@ -4,7 +4,6 @@ import React, { DependencyList, createContext, useContext, ReactNode, useMemo } 
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
 import { Firestore, getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { Auth, getAuth } from 'firebase/auth';
-import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 import { firebaseConfig } from '@/firebase/config';
 
 // --- Start of logic moved from index.ts ---
@@ -89,7 +88,6 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({
 
   return (
     <FirebaseContext.Provider value={contextValue}>
-      <FirebaseErrorListener />
       {children}
     </FirebaseContext.Provider>
   );
