@@ -138,7 +138,7 @@ export function AISummary() {
   const hasBothBoxes = summary?.oportunidade && summary?.risco;
   
   return (
-     <Card className="border-t-4 border-primary glass-card shadow-sm">
+     <Card className="border-t-4 border-primary glass-card shadow-lg">
         <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
             <AccordionItem value="item-1" className="border-b-0">
                 <div className="flex items-center justify-between p-6 data-[state=open]:border-b">
@@ -177,7 +177,7 @@ export function AISummary() {
                             {summary.geral && <p className="text-center text-muted-foreground font-medium">{summary.geral}</p>}
                             <div className={cn("grid gap-4", hasBothBoxes ? "md:grid-cols-2" : "grid-cols-1")}>
                                 {summary.oportunidade && (
-                                    <Card className="bg-emerald-500/10 border-emerald-500/30">
+                                    <Card className="bg-emerald-500/10 border-emerald-500/30 shadow-md">
                                         <CardHeader className="p-4 pb-2">
                                             <CardTitle className="text-base text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
                                                 <TrendingUp className="h-5 w-5" />
@@ -191,7 +191,7 @@ export function AISummary() {
                                     </Card>
                                 )}
                                 {summary.risco && (
-                                    <Card className="bg-destructive/10 border-destructive/30">
+                                    <Card className="bg-destructive/10 border-destructive/30 shadow-md">
                                         <CardHeader className="p-4 pb-2">
                                             <CardTitle className="text-base text-destructive flex items-center gap-2">
                                                 <AlertTriangle className="h-5 w-5" />
