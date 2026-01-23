@@ -65,11 +65,11 @@ export default {
         sm: 'calc(var(--radius) - 8px)',
       },
       boxShadow: {
-        'sm': '0 4px 10px 0 rgb(0 0 0 / 0.15)',
-        'lg': '0 15px 30px -5px rgb(0 0 0 / 0.25), 0 8px 15px -6px rgb(0 0 0 / 0.25)',
-        'xl': '0 25px 55px -12px rgb(0 0 0 / 0.35)',
-        '2xl': '0 40px 90px -20px rgb(0 0 0 / 0.5)',
-        'inner': 'inset 0 2px 4px 0 rgb(0 0 0 / 0.06)',
+        'sm': '0 4px 12px 0 rgb(0 0 0 / 0.2)',
+        'lg': '0 15px 35px -5px rgb(0 0 0 / 0.3), 0 8px 20px -6px rgb(0 0 0 / 0.3)',
+        'xl': '0 25px 60px -12px rgb(0 0 0 / 0.45)',
+        '2xl': '0 40px 100px -20px rgb(0 0 0 / 0.6)',
+        'inner': 'inset 0 2px 4px 0 rgb(0 0 0 / 0.08)',
       },
       keyframes: {
         'accordion-down': {
