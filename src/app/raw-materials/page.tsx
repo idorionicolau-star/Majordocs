@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useContext, useMemo, useCallback } from 'react';
@@ -59,6 +58,7 @@ import { RawMaterial, Recipe, Product } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatCurrency } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Schemas
 const rawMaterialSchema = z.object({
@@ -370,18 +370,88 @@ const ProductionFromRecipe = () => {
     );
 }
 
-// Costs Manager Component (Placeholder)
+// Costs Manager Component
 const CostsManager = () => {
+    const { recipes, rawMaterials, loading } = useContext(InventoryContext)!;
+    const { toast } = useToast();
+
+    const recipeCosts = useMemo(() => {
+        if (!recipes || !rawMaterials) return [];
+
+        return recipes.map(recipe => {
+            let totalCost = 0;
+            let isCalculable = true;
+            let missingMaterials: string[] = [];
+
+            recipe.ingredients.forEach(ingredient => {
+                const material = rawMaterials.find(rm => rm.id === ingredient.rawMaterialId);
+                if (material && material.cost !== undefined) {
+                    totalCost += ingredient.quantity * material.cost;
+                } else {
+                    isCalculable = false;
+                    if (material) {
+                        missingMaterials.push(material.name);
+                    }
+                }
+            });
+
+            return {
+                ...recipe,
+                totalCost,
+                isCalculable,
+                missingMaterialsTooltip: `Custo não definido para: ${missingMaterials.join(', ')}`
+            };
+        });
+    }, [recipes, rawMaterials]);
+
+    if (loading) return <Skeleton className="h-64 w-full" />;
+
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Gestão de Custos</CardTitle>
-                <CardDescription>Analise os custos de produção e matérias-primas.</CardDescription>
+                <CardTitle>Análise de Custos de Produção</CardTitle>
+                <CardDescription>Custo por unidade para cada produto com base nas suas receitas e no custo da matéria-prima.</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="text-center py-12 text-muted-foreground">
-                    <p className="font-semibold">Funcionalidade em desenvolvimento.</p>
-                    <p className="text-sm">Em breve, poderá visualizar os custos detalhados aqui.</p>
+                <div className="rounded-md border">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Produto Final</TableHead>
+                                <TableHead className="text-right">Custo de Produção / Unidade</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {recipes.length > 0 ? recipeCosts.map((recipe) => (
+                                <TableRow key={recipe.id}>
+                                    <TableCell className="font-medium">{recipe.productName}</TableCell>
+                                    <TableCell className="text-right">
+                                        {recipe.isCalculable ? (
+                                            <span className="font-bold">{formatCurrency(recipe.totalCost)}</span>
+                                        ) : (
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger>
+                                                        <span className="text-muted-foreground flex items-center justify-end gap-1 cursor-help">
+                                                            <AlertTriangle className="h-3 w-3" />
+                                                            Incalculável
+                                                        </span>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>{recipe.missingMaterialsTooltip}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={2} className="text-center h-24">Nenhuma receita cadastrada.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
                 </div>
             </CardContent>
         </Card>
