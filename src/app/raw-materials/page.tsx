@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useContext, useMemo, useCallback } from 'react';
@@ -36,8 +37,7 @@ import {
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogFooter,
+  AlertDialogFooter
 } from "@/components/ui/alert-dialog";
 import {
   Select,
@@ -47,6 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { PlusCircle, Trash2, Edit, AlertTriangle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -241,7 +242,7 @@ const RecipesManager = () => {
         setIsDialogOpen(false);
     };
     
-    if(loading) return <Skeleton className="h-64 w-full" />
+    if(loading) return <Skeleton className="h-64 w-full" />;
 
     return (
         <Card>
