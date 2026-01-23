@@ -65,11 +65,11 @@ export default {
         sm: 'calc(var(--radius) - 8px)',
       },
       boxShadow: {
-        'sm': '0 4px 12px 0 rgb(0 0 0 / 0.2)',
-        'lg': '0 15px 35px -5px rgb(0 0 0 / 0.3), 0 8px 20px -6px rgb(0 0 0 / 0.3)',
-        'xl': '0 25px 60px -12px rgb(0 0 0 / 0.45)',
-        '2xl': '0 40px 100px -20px rgb(0 0 0 / 0.6)',
-        'inner': 'inset 0 2px 4px 0 rgb(0 0 0 / 0.08)',
+        'sm': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+        'lg': '0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05)',
+        'xl': '0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05)',
+        '2xl': '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+        'inner': 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
       },
       keyframes: {
         'accordion-down': {
@@ -124,12 +124,12 @@ export default {
         },
         'shake': {
           '0%, 100%': { transform: 'rotate(0deg)' },
-          '25%': { transform: 'rotate(0.625deg)' },
-          '75%': { transform: 'rotate(-0.625deg)' },
+          '25%': { transform: 'rotate(1.25deg)' },
+          '75%': { transform: 'rotate(-1.25deg)' },
         },
         'bounce-down': {
           '0%, 100%': {
-            transform: 'translateY(-40%)',
+            transform: 'translateY(-25%)',
             animationTimingFunction: 'cubic-bezier(0.8, 0, 1, 1)',
           },
           '50%': {
@@ -139,17 +139,17 @@ export default {
         },
       },
       animation: {
-        'accordion-down': 'accordion-down 0.8s ease-out',
-        'accordion-up': 'accordion-up 0.8s ease-out',
-        'in': 'fade-in 0.8s ease-out, slide-in-from-bottom-4 0.8s ease-out',
+        'accordion-down': 'accordion-down 0.4s ease-out',
+        'accordion-up': 'accordion-up 0.4s ease-out',
+        'in': 'fade-in 0.4s ease-out, slide-in-from-bottom-4 0.4s ease-out',
         'peek': 'peek 2.5s ease-in-out 1s',
         'slide-in-from-right': 'slide-in-from-right 0.6s ease-out',
         'slide-out-to-left': 'slide-out-to-left 0.6s ease-in',
         'slide-in-from-left': 'slide-in-from-left 0.6s ease-out',
         'slide-out-to-right': 'slide-out-to-right 0.6s ease-in',
-        'shake': 'shake 2s ease-in-out infinite',
-        'fade-in-out': 'fade-in-out 0.8s ease-in-out infinite',
-        'bounce-down': 'bounce-down 1.2s infinite',
+        'shake': 'shake 1.0s ease-in-out infinite',
+        'fade-in-out': 'fade-in-out 2.0s ease-in-out infinite',
+        'bounce-down': 'bounce-down 1.5s infinite',
       },
     },
   },
