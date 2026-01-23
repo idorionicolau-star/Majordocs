@@ -50,10 +50,19 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                     <span className="text-[10px] sm:text-xs font-bold text-muted-foreground">/{product.unit || 'un'}</span>
                 </div>
                 {product.reservedStock > 0 && (
-                  <div className="flex items-center justify-center gap-1.5 text-xs text-primary font-semibold">
-                    <PackageCheck className="h-3 w-3" />
-                    <span>{product.reservedStock} Reservado(s)</span>
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center justify-center gap-1.5 text-xs text-primary font-semibold cursor-help">
+                          <PackageCheck className="h-3 w-3" />
+                          <span>{product.reservedStock} Reservado(s)</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Stock vendido e pago, aguardando levantamento pelo cliente.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
                 <div className="text-center">
                     <p className={cn("font-bold", isCondensed ? "text-sm" : "text-base")}>{formatCurrency(product.price)}</p>
