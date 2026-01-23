@@ -1102,6 +1102,61 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, toast]);
 
+  const recalculateReservedStock = useCallback(async () => {
+    if (!firestore || !companyId || !productsData) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta para esta operação.' });
+        return;
+    }
+
+    toast({ title: 'A recalcular stock reservado...', description: 'Isto pode demorar um momento.' });
+
+    try {
+        // 1. Fetch all 'Paid' sales directly from Firestore
+        const salesRef = collection(firestore, `companies/${companyId}/sales`);
+        const q = query(salesRef, where("status", "==", "Pago"));
+        const paidSalesSnapshot = await getDocs(q);
+        const paidSales = paidSalesSnapshot.docs.map(doc => doc.data() as Sale);
+
+        // 2. Calculate the correct reserved stock for each product instance (name + location)
+        const correctReservedMap = new Map<string, number>(); // Key: 'productName|locationId'
+        paidSales.forEach(sale => {
+            // Use an empty string for undefined location to ensure consistency
+            const locationKey = sale.location || '';
+            const key = `${sale.productName}|${locationKey}`;
+            const currentReserved = correctReservedMap.get(key) || 0;
+            correctReservedMap.set(key, currentReserved + sale.quantity);
+        });
+
+        // 3. Compare with existing data and prepare batch update
+        const batch = writeBatch(firestore);
+        let updatesCount = 0;
+
+        productsData.forEach(product => {
+            const locationKey = product.location || '';
+            const key = `${product.name}|${locationKey}`;
+            const correctReserved = correctReservedMap.get(key) || 0;
+
+            if (product.reservedStock !== correctReserved) {
+                const productRef = doc(firestore, `companies/${companyId}/products`, product.id);
+                batch.update(productRef, { reservedStock: correctReserved });
+                updatesCount++;
+            }
+        });
+
+        // 4. Commit batch if needed
+        if (updatesCount > 0) {
+            await batch.commit();
+            toast({ title: 'Sucesso!', description: `${updatesCount} registo(s) de stock reservado foram corrigidos.` });
+        } else {
+            toast({ title: 'Tudo certo!', description: 'Nenhuma inconsistência encontrada no stock reservado.' });
+        }
+
+    } catch (error: any) {
+        console.error("Error recalculating reserved stock:", error);
+        toast({ variant: 'destructive', title: 'Erro ao Recalcular', description: 'Não foi possível completar a operação.' });
+    }
+  }, [firestore, companyId, productsData, toast]);
+
   const deleteProduction = useCallback(async (productionId: string) => {
     if (!productionsCollectionRef) return;
     await deleteDoc(doc(productionsCollectionRef, productionId));
@@ -1139,6 +1194,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     deleteSale, deleteProduction, deleteOrder,
     clearSales, clearProductions, clearOrders, clearStockMovements,
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
+    recalculateReservedStock,
     addCatalogProduct, addCatalogCategory,
   };
 

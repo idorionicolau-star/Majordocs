@@ -265,6 +265,7 @@ export interface InventoryContextType {
   markAllAsRead: () => void;
   clearNotifications: () => void;
   addNotification: (notification: Omit<AppNotification, 'id' | 'date' | 'read'>) => void;
+  recalculateReservedStock: () => Promise<void>;
   addCatalogProduct: (productData: Omit<CatalogProduct, 'id'>) => Promise<void>;
   addCatalogCategory: (categoryName: string) => Promise<void>;
 }

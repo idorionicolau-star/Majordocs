@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useEffect, useState, useContext, useRef } from "react";
+import { useEffect, useState, useContext } from "react";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Check } from "lucide-react";
+import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Check, Code, RefreshCw, Trash2 } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { LocationsManager } from "@/components/settings/locations-manager";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 
 
 const colorOptions = [
@@ -182,6 +183,7 @@ export default function SettingsPage() {
     { value: 'company', label: 'Empresa', icon: Building, permission: hasPermission('settings') },
     { value: 'locations', label: 'Localizações', icon: MapPin, permission: hasPermission('settings') },
     { value: 'catalog', label: 'Catálogo', icon: Book, permission: hasPermission('settings') },
+    { value: 'advanced', label: 'Avançado', icon: Code, permission: hasPermission('settings') }
   ].filter(tab => tab.permission);
 
   useEffect(() => {
@@ -541,6 +543,40 @@ export default function SettingsPage() {
                   <CardContent>
                     <CatalogManager />
                   </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="advanced">
+                 <Card className="glass-card">
+                  <CardHeader>
+                    <CardTitle>Ferramentas Avançadas</CardTitle>
+                    <CardDescription>Ações de manutenção para corrigir inconsistências nos dados. Use com cuidado.</CardDescription>
+                  </CardHeader>
+                   <CardContent className="space-y-6">
+                      <div className="space-y-2">
+                        <h3 className="font-semibold">Recalcular Stock Reservado</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Sincroniza o stock reservado de todos os produtos com base nas vendas "Pagas" existentes. Útil para corrigir "reservas fantasma".
+                        </p>
+                        <Button onClick={() => inventoryContext?.recalculateReservedStock()} disabled={inventoryContext?.loading}>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Executar Recálculo
+                        </Button>
+                      </div>
+                      
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <h3 className="font-semibold text-destructive">Limpar Inventário</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Atenção: Apaga permanentemente todos os produtos do inventário. Utilize apenas se quiser recomeçar do zero.
+                        </p>
+                         <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Limpar Produtos do Firestore
+                         </Button>
+                      </div>
+                   </CardContent>
                 </Card>
               </TabsContent>
             </>
