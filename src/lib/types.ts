@@ -7,6 +7,7 @@ export type ModulePermission =
   | 'inventory'
   | 'sales'
   | 'production'
+  | 'raw-materials'
   | 'orders'
   | 'reports'
   | 'users'
@@ -68,6 +69,26 @@ export type Product = {
   lastUpdated: string;
   location?: string;
   unit?: 'un' | 'm²' | 'm' | 'cj' | 'outro';
+};
+
+export type RawMaterial = {
+  id: string;
+  name: string;
+  stock: number;
+  unit: 'kg' | 'm³' | 'un' | 'L' | 'saco';
+  lowStockThreshold: number;
+};
+
+export type RecipeIngredient = {
+  rawMaterialId: string;
+  rawMaterialName: string;
+  quantity: number;
+};
+
+export type Recipe = {
+  id: string;
+  productName: string;
+  ingredients: RecipeIngredient[];
 };
 
 export type Sale = {
@@ -216,6 +237,8 @@ export interface InventoryContextType {
   stockMovements: StockMovement[];
   catalogProducts: CatalogProduct[];
   catalogCategories: CatalogCategory[];
+  rawMaterials: RawMaterial[];
+  recipes: Recipe[];
   locations: Location[];
   isMultiLocation: boolean;
   companyData: Company | null;
@@ -268,6 +291,15 @@ export interface InventoryContextType {
   recalculateReservedStock: () => Promise<void>;
   addCatalogProduct: (productData: Omit<CatalogProduct, 'id'>) => Promise<void>;
   addCatalogCategory: (categoryName: string) => Promise<void>;
+
+  // Raw Materials & Recipes
+  addRawMaterial: (material: Omit<RawMaterial, 'id'>) => Promise<void>;
+  updateRawMaterial: (materialId: string, data: Partial<RawMaterial>) => Promise<void>;
+  deleteRawMaterial: (materialId: string) => Promise<void>;
+  addRecipe: (recipe: Omit<Recipe, 'id'>) => Promise<void>;
+  updateRecipe: (recipeId: string, data: Partial<Recipe>) => Promise<void>;
+  deleteRecipe: (recipeId: string) => Promise<void>;
+  produceFromRecipe: (recipeId: string, quantityToProduce: number) => Promise<void>;
 }
 
 type CatalogProduct = Omit<

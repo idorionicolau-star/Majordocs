@@ -124,6 +124,39 @@
       },
       "required": ["name", "category", "stock", "price", "lastUpdated"]
     },
+    "RawMaterial": {
+      "title": "Raw Material",
+      "type": "object",
+      "description": "Represents a raw material used in production.",
+      "properties": {
+        "name": { "type": "string" },
+        "stock": { "type": "number" },
+        "unit": { "type": "string", "enum": ["kg", "m³", "un", "L", "saco"] },
+        "lowStockThreshold": { "type": "number" }
+      },
+      "required": ["name", "stock", "unit"]
+    },
+    "Recipe": {
+      "title": "Recipe",
+      "type": "object",
+      "description": "Defines the ingredients for producing a catalog product.",
+      "properties": {
+        "productName": { "type": "string" },
+        "ingredients": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "rawMaterialId": { "type": "string" },
+              "rawMaterialName": { "type": "string" },
+              "quantity": { "type": "number" }
+            },
+            "required": ["rawMaterialId", "rawMaterialName", "quantity"]
+          }
+        }
+      },
+      "required": ["productName", "ingredients"]
+    },
     "Sale": {
       "title": "Sale",
       "type": "object",
@@ -259,6 +292,20 @@
         "definition": {
           "schema": { "$ref": "#/entities/Product" },
           "description": "Stores inventory items for a company."
+        }
+      },
+      {
+        "path": "/companies/{companyId}/rawMaterials/{rawMaterialId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/RawMaterial" },
+          "description": "Stores raw materials for a company's inventory."
+        }
+      },
+      {
+        "path": "/companies/{companyId}/recipes/{recipeId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/Recipe" },
+          "description": "Stores production recipes for a company."
         }
       },
       {

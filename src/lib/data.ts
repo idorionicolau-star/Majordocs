@@ -10,6 +10,7 @@ import {
   Users,
   FileText,
   History,
+  Layers, // Using Layers for raw materials
 } from 'lucide-react';
 
 export const mainNavItems: NavItem[] = [
@@ -17,6 +18,7 @@ export const mainNavItems: NavItem[] = [
   { title: 'Inventário', href: '/inventory', id: 'inventory', icon: Box },
   { title: 'Histórico', href: '/inventory/history', id: 'inventory', icon: History, isSubItem: true },
   { title: 'Vendas', href: '/sales', id: 'sales', icon: ShoppingCart },
+  { title: 'Matéria-Prima', href: '/raw-materials', id: 'raw-materials', icon: Layers },
   { title: 'Produção', href: '/production', id: 'production', icon: Hammer },
   { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList },
   { title: 'Relatórios', href: '/reports', id: 'reports', icon: FileText },
@@ -28,6 +30,7 @@ export const allPermissions: Readonly<{ id: ModulePermission; label: string; adm
   { id: "inventory", label: "Inventário", adminOnly: false },
   { id: "sales", label: "Vendas", adminOnly: false },
   { id: "production", label: "Produção", adminOnly: false },
+  { id: "raw-materials", label: "Matéria-Prima", adminOnly: false},
   { id: "orders", label: "Encomendas", adminOnly: false },
   { id: "reports", label: "Relatórios", adminOnly: false },
   { id: "users", label: "Funcionários", adminOnly: true },
