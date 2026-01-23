@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from 'react';
@@ -261,63 +262,6 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
         <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4 pr-2">
-                
-                <div className="space-y-4 rounded-lg border p-4">
-                    <h3 className="font-semibold leading-none tracking-tight">Detalhes do Documento</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <FormField
-                        control={form.control}
-                        name="clientName"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Nome do Cliente</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Nome do cliente" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                        <FormField
-                        control={form.control}
-                        name="documentType"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Tipo de Documento</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecione o tipo de documento" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                <SelectItem value="Factura Proforma">Factura Proforma</SelectItem>
-                                <SelectItem value="Guia de Remessa">Guia de Remessa</SelectItem>
-                                <SelectItem value="Factura">Factura</SelectItem>
-                                <SelectItem value="Recibo">Recibo</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                    </div>
-                    <FormField
-                        control={form.control}
-                        name="date"
-                        render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                            <FormLabel>Data da Venda</FormLabel>
-                            <DatePicker
-                            date={field.value}
-                            setDate={field.onChange}
-                            />
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                </div>
-
                 <div className="space-y-4 rounded-lg border p-4">
                     <h3 className="font-semibold leading-none tracking-tight">Itens</h3>
                      {isMultiLocation && (
@@ -396,6 +340,62 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                             )}
                         />
                     </div>
+                </div>
+
+                <div className="space-y-4 rounded-lg border p-4">
+                    <h3 className="font-semibold leading-none tracking-tight">Detalhes do Documento</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                        control={form.control}
+                        name="clientName"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Nome do Cliente</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Nome do cliente" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="documentType"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Tipo de Documento</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecione o tipo de documento" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                <SelectItem value="Factura Proforma">Factura Proforma</SelectItem>
+                                <SelectItem value="Guia de Remessa">Guia de Remessa</SelectItem>
+                                <SelectItem value="Factura">Factura</SelectItem>
+                                <SelectItem value="Recibo">Recibo</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </div>
+                    <FormField
+                        control={form.control}
+                        name="date"
+                        render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Data da Venda</FormLabel>
+                            <DatePicker
+                            date={field.value}
+                            setDate={field.onChange}
+                            />
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
                 </div>
 
                 <Accordion type="multiple" className="w-full space-y-4">
@@ -545,3 +545,5 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
     </Dialog>
   );
 }
+
+    
