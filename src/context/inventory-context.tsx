@@ -856,7 +856,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       }
   }, [companyDocRef]);
   
-  const addSale = useCallback(async (newSaleData: Omit<Sale, 'id' | 'guideNumber'>) => {
+  const addSale = useCallback(async (newSaleData: Omit<Sale, 'id' | 'guideNumber'>, reserveStock = true) => {
     if (!firestore || !companyId || !productsCollectionRef) throw new Error("Firestore não está pronto.");
 
     const settings = companyData?.notificationSettings;
@@ -881,11 +881,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     let guideNumberForOuterScope: string | null = null;
     
     // This is a read outside the transaction to get the document reference.
-    const productSnapshot = await getDocs(productQuery);
-    if (productSnapshot.empty) {
+    const productSnapshot = reserveStock ? await getDocs(productQuery) : null;
+    if (reserveStock && productSnapshot && productSnapshot.empty) {
         throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque para a localização selecionada.`);
     }
-    const productDocRef = productSnapshot.docs[0].ref;
+    const productDocRef = productSnapshot ? productSnapshot.docs[0].ref : null;
 
     await runTransaction(firestore, async (transaction) => {
         const companyDoc = await transaction.get(companyDocRef);
@@ -898,19 +898,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         const guideNumber = `GT-${String(newSaleCounter).padStart(6, '0')}`;
         guideNumberForOuterScope = guideNumber;
 
-        const productDoc = await transaction.get(productDocRef);
-        if (!productDoc.exists()) {
-          throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque.`);
-        }
-        const productData = productDoc.data() as Product;
-        const availableStock = productData.stock - productData.reservedStock;
+        if (reserveStock && productDocRef) {
+          const productDoc = await transaction.get(productDocRef);
+          if (!productDoc.exists()) {
+            throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque.`);
+          }
+          const productData = productDoc.data() as Product;
+          const availableStock = productData.stock - productData.reservedStock;
 
-        if (availableStock < newSaleData.quantity) {
-            throw new Error(`Estoque insuficiente. Disponível: ${availableStock}.`);
-        }
+          if (availableStock < newSaleData.quantity) {
+              throw new Error(`Estoque insuficiente. Disponível: ${availableStock}.`);
+          }
 
-        const newReservedStock = productData.reservedStock + newSaleData.quantity;
-        transaction.update(productDoc.ref, { reservedStock: newReservedStock });
+          const newReservedStock = productData.reservedStock + newSaleData.quantity;
+          transaction.update(productDoc.ref, { reservedStock: newReservedStock });
+        }
+        
         transaction.update(companyDocRef, { saleCounter: newSaleCounter });
         transaction.set(newSaleRef, { ...newSaleData, guideNumber });
     });

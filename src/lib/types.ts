@@ -93,6 +93,7 @@ export type Recipe = {
 
 export type Sale = {
   id: string;
+  orderId?: string;
   date: string;
   productId: string;
   productName: string;
@@ -107,7 +108,7 @@ export type Sale = {
   guideNumber: string;
   location?: string;
   status: 'Pago' | 'Levantado';
-  documentType: 'Guia de Remessa' | 'Factura' | 'Factura Proforma' | 'Recibo';
+  documentType: 'Guia de Remessa' | 'Factura' | 'Factura Proforma' | 'Recibo' | 'Encomenda';
   clientName?: string;
   notes?: string;
 };
@@ -137,6 +138,8 @@ export type Order = {
   productName: string;
   quantity: number;
   unit: 'un' | 'm²' | 'm' | 'cj' | 'outro';
+  unitPrice?: number;
+  totalValue?: number;
   clientName?: string;
   deliveryDate?: string;
   location?: string;
@@ -273,7 +276,7 @@ export interface InventoryContextType {
     locationId?: string
   ) => void;
   updateCompany: (details: Partial<Company>) => Promise<void>;
-  addSale: (newSaleData: Omit<Sale, 'id' | 'guideNumber'>) => Promise<void>;
+  addSale: (newSaleData: Omit<Sale, 'id' | 'guideNumber'>, reserveStock?: boolean) => Promise<void>;
   confirmSalePickup: (sale: Sale) => void;
   deleteSale: (saleId: string) => void;
   addProductionLog: (orderId: string, logData: { quantity: number; notes?: string; }) => void;

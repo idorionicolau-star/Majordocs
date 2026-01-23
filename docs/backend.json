@@ -163,6 +163,7 @@
       "type": "object",
       "description": "Represents a sale transaction or related document like an invoice or quote.",
       "properties": {
+        "orderId": { "type": "string" },
         "date": { "type": "string", "format": "date-time" },
         "clientName": { "type": "string" },
         "productId": { "type": "string" },
@@ -178,7 +179,7 @@
         "guideNumber": { "type": "string" },
         "location": { "type": "string" },
         "status": { "type": "string", "enum": ["Pago", "Levantado"] },
-        "documentType": { "type": "string", "enum": ["Guia de Remessa", "Factura", "Factura Proforma", "Recibo"] },
+        "documentType": { "type": "string", "enum": ["Guia de Remessa", "Factura", "Factura Proforma", "Recibo", "Encomenda"] },
         "notes": { "type": "string" }
       },
       "required": ["date", "productId", "productName", "quantity", "unitPrice", "subtotal", "totalValue", "soldBy", "guideNumber", "status", "documentType"]
@@ -206,6 +207,8 @@
         "productName": { "type": "string" },
         "quantity": { "type": "number" },
         "unit": { "type": "string", "enum": ["un", "m²", "m", "cj", "outro"] },
+        "unitPrice": { "type": "number" },
+        "totalValue": { "type": "number" },
         "clientName": { "type": "string" },
         "deliveryDate": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["Pendente", "Em produção", "Concluída"] },

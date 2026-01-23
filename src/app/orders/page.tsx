@@ -4,7 +4,7 @@
 
 import { useState, useMemo, useContext, useEffect } from "react";
 import { useSearchParams } from 'next/navigation';
-import type { Order, Product, ProductionLog, ModulePermission } from "@/lib/types";
+import type { Order, Sale, ProductionLog, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Filter, List, LayoutGrid, ChevronDown, Lock, Trash2, PlusCircle, Plus } from "lucide-react";
 import { AddOrderDialog } from "@/components/orders/add-order-dialog";
@@ -17,7 +17,7 @@ import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/comp
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFirestore } from '@/firebase/provider';
-import { collection, addDoc, doc, updateDoc, arrayUnion } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc, arrayUnion, runTransaction } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -42,7 +42,7 @@ export default function OrdersPage() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { orders, companyId, loading: inventoryLoading, updateProductStock, user, canEdit, deleteOrder, clearOrders, addNotification, addProductionLog } = inventoryContext || { orders: [], companyId: null, loading: true, updateProductStock: () => {}, user: null, canEdit: () => false, deleteOrder: () => {}, clearOrders: async () => {}, addNotification: () => {}, addProductionLog: () => {} };
+  const { orders, companyId, loading: inventoryLoading, user, canEdit, deleteOrder, clearOrders, addNotification, addProductionLog } = inventoryContext || { orders: [], companyId: null, loading: true, user: null, canEdit: () => false, deleteOrder: () => {}, clearOrders: async () => {}, addNotification: () => {}, addProductionLog: () => {} };
 
   const canEditOrders = canEdit('orders');
   const isAdmin = user?.role === 'Admin';
@@ -55,34 +55,82 @@ export default function OrdersPage() {
   }, [searchParams, canEditOrders]);
 
 
-  const handleAddOrder = (newOrderData: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'>) => {
-    if (!firestore || !companyId) return;
+  const handleAddOrder = async (formData: { productName: string; quantity: number; unit?: 'un' | 'm²' | 'm' | 'cj' | 'outro'; clientName?: string; deliveryDate?: Date; location?: string; unitPrice: number; }) => {
+    if (!firestore || !companyId || !user) return;
 
-    const order: Omit<Order, 'id'> = {
-      ...newOrderData,
-      productId: newOrderData.productName, // Temporarily use name as ID-like ref
-      status: 'Pendente',
-      quantityProduced: 0,
-      productionLogs: [],
-      productionStartDate: null,
-    };
-    
-    const ordersCollectionRef = collection(firestore, `companies/${companyId}/orders`);
-    addDoc(ordersCollectionRef, order).then(docRef => {
-        if(addNotification) {
+    try {
+        const orderRef = doc(collection(firestore, `companies/${companyId}/orders`));
+        const saleRef = doc(collection(firestore, `companies/${companyId}/sales`));
+        const companyRef = doc(firestore, `companies/${companyId}`);
+
+        await runTransaction(firestore, async (transaction) => {
+            // 1. Create the Order
+            const newOrder: Omit<Order, 'id'> = {
+                productId: formData.productName,
+                productName: formData.productName,
+                quantity: formData.quantity,
+                unit: formData.unit!,
+                clientName: formData.clientName,
+                deliveryDate: formData.deliveryDate?.toISOString(),
+                location: formData.location,
+                unitPrice: formData.unitPrice,
+                totalValue: formData.unitPrice * formData.quantity,
+                status: 'Pendente',
+                quantityProduced: 0,
+                productionLogs: [],
+                productionStartDate: null,
+            };
+            transaction.set(orderRef, newOrder);
+
+            // 2. Create the associated Sale
+            const companyDoc = await transaction.get(companyRef);
+            if (!companyDoc.exists()) throw new Error("Empresa não encontrada.");
+            const newSaleCounter = (companyDoc.data().saleCounter || 0) + 1;
+            const guideNumber = `ENC-${String(newSaleCounter).padStart(6, '0')}`;
+            transaction.update(companyRef, { saleCounter: newSaleCounter });
+
+            const newSale: Omit<Sale, 'id'> = {
+                orderId: orderRef.id,
+                date: new Date().toISOString(),
+                productId: formData.productName, // Simplified
+                productName: formData.productName,
+                quantity: formData.quantity,
+                unit: formData.unit,
+                unitPrice: formData.unitPrice,
+                subtotal: formData.unitPrice * formData.quantity,
+                totalValue: formData.unitPrice * formData.quantity,
+                soldBy: user.username,
+                guideNumber: guideNumber,
+                location: formData.location,
+                status: 'Pago',
+                documentType: 'Encomenda',
+                clientName: formData.clientName,
+            };
+            transaction.set(saleRef, newSale);
+        });
+
+        toast({
+            title: "Encomenda Registada",
+            description: `A encomenda de ${formData.quantity} ${formData.unit} de ${formData.productName} foi registada e uma venda foi criada.`,
+        });
+        
+        if (addNotification) {
             addNotification({
                 type: 'order',
-                message: `Nova encomenda para ${order.productName} registada.`,
-                href: `/orders?id=${docRef.id}`,
+                message: `Nova encomenda para ${formData.productName} registada.`,
+                href: `/orders?id=${orderRef.id}`,
             });
         }
-    });
+    } catch (error: any) {
+        console.error("Error creating order and sale:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro ao Registar Encomenda",
+            description: error.message || "Não foi possível criar a encomenda e a venda associada.",
+        });
+    }
+};
 
-    toast({
-        title: "Encomenda Registrada",
-        description: `A encomenda de ${order.quantity} ${order.unit} de ${order.productName} foi registrada.`,
-    })
-  };
   
   const handleUpdateOrderStatus = (orderId: string, newStatus: 'Pendente' | 'Em produção' | 'Concluída') => {
     if (!firestore || !companyId) return;

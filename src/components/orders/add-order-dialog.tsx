@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useContext, useEffect } from 'react';
@@ -42,6 +43,7 @@ const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   quantity: z.coerce.number().min(0.01, { message: "A quantidade deve ser maior que zero." }),
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']),
+  unitPrice: z.coerce.number().min(0, "O preço não pode ser negativo."),
   clientName: z.string().optional(),
   deliveryDate: z.date().optional(),
   location: z.string().optional(),
@@ -52,7 +54,7 @@ type AddOrderFormValues = z.infer<typeof formSchema>;
 interface AddOrderDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onAddOrder: (order: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'>) => void;
+    onAddOrder: (order: AddOrderFormValues) => void;
 }
 
 export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialogProps) {
@@ -67,6 +69,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
       clientName: "",
       deliveryDate: new Date(),
       location: "",
+      unitPrice: 0,
     },
   });
   
@@ -83,9 +86,18 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
         clientName: "",
         deliveryDate: new Date(),
         location: finalLocation,
+        unitPrice: 0,
       });
     }
   }, [open, form, locations]);
+
+  const handleProductSelect = (productName: string, product?: CatalogProduct) => {
+    form.setValue('productName', productName);
+    if (product) {
+      form.setValue('unit', product.unit || 'un');
+      form.setValue('unitPrice', product.price);
+    }
+  };
 
 
   function onSubmit(values: AddOrderFormValues) {
@@ -98,15 +110,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
       localStorage.setItem('majorstockx-last-product-location', values.location);
     }
     
-    const newOrder: Omit<Order, 'id' | 'status' | 'quantityProduced' | 'productionLogs' | 'productionStartDate' | 'productId'> = {
-      productName: values.productName,
-      quantity: values.quantity,
-      unit: values.unit,
-      clientName: values.clientName,
-      deliveryDate: values.deliveryDate ? values.deliveryDate.toISOString() : undefined,
-      location: values.location
-    };
-    onAddOrder(newOrder);
+    onAddOrder(values);
 
     onOpenChange(false);
   }
@@ -136,7 +140,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
                           products={catalogProducts || []}
                           categories={catalogCategories || []}
                           selectedValue={field.value}
-                          onValueChange={field.onChange}
+                          onValueChange={handleProductSelect}
                       />
                     </FormControl>
                     <FormMessage />
@@ -178,6 +182,19 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
                   )}
                 />
               </div>
+               <FormField
+                control={form.control}
+                name="unitPrice"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Preço Unitário</FormLabel>
+                    <FormControl>
+                        <Input type="number" step="0.01" {...field} placeholder="0.00" />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
               {isMultiLocation && (
                   <FormField
                     control={form.control}
