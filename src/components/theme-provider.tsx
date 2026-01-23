@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -9,6 +8,8 @@ type ThemeProviderState = {
   setMode: (mode: string) => void
   colorTheme: string
   setColorTheme: (themeName: string) => void
+  borderRadius: number
+  setBorderRadius: (radius: number) => void
 }
 
 const initialState: ThemeProviderState = {
@@ -16,6 +17,8 @@ const initialState: ThemeProviderState = {
   setMode: () => null,
   colorTheme: "Red",
   setColorTheme: () => null,
+  borderRadius: 2.0,
+  setBorderRadius: () => null,
 }
 
 const ThemeProviderContext = React.createContext<ThemeProviderState>(initialState)
@@ -26,6 +29,7 @@ export function ThemeProvider({
   defaultColorTheme = "Red",
   storageKeyMode = "majorstockx-mode",
   storageKeyColor = "majorstockx-color-theme",
+  storageKeyRadius = "majorstockx-border-radius",
   ...props
 }: {
   children: React.ReactNode
@@ -33,6 +37,7 @@ export function ThemeProvider({
   defaultColorTheme?: string
   storageKeyMode?: string
   storageKeyColor?: string
+  storageKeyRadius?: string
 }) {
   const [mode, setMode] = React.useState(
     () => (typeof window !== 'undefined' && localStorage.getItem(storageKeyMode)) || defaultMode
@@ -41,6 +46,13 @@ export function ThemeProvider({
   const [colorTheme, setColorTheme] = React.useState(
     () => (typeof window !== 'undefined' && localStorage.getItem(storageKeyColor)) || defaultColorTheme
   )
+  
+  const [borderRadius, setBorderRadiusState] = React.useState(() => {
+    if (typeof window === 'undefined') return 2.0;
+    const storedRadius = localStorage.getItem(storageKeyRadius);
+    return storedRadius ? parseFloat(storedRadius) : 2.0;
+  });
+
 
   React.useEffect(() => {
     const root = window.document.documentElement
@@ -68,6 +80,12 @@ export function ThemeProvider({
     }
 
   }, [mode, colorTheme])
+  
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      document.documentElement.style.setProperty('--radius', `${borderRadius}rem`);
+    }
+  }, [borderRadius])
 
 
   const value = {
@@ -84,6 +102,13 @@ export function ThemeProvider({
         localStorage.setItem(storageKeyColor, themeName)
       }
       setColorTheme(themeName)
+    },
+    borderRadius,
+    setBorderRadius: (radius: number) => {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(storageKeyRadius, radius.toString())
+      }
+      setBorderRadiusState(radius)
     }
   }
 

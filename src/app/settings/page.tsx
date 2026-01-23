@@ -131,14 +131,13 @@ function ProfileTab() {
 
 export default function SettingsPage() {
   const [isClient, setIsClient] = useState(false);
-  const [borderRadius, setBorderRadius] = useState(2);
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
   const { user, clearProductsCollection } = inventoryContext || {};
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState("profile");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const { colorTheme, setColorTheme } = useTheme();
+  const { colorTheme, setColorTheme, borderRadius, setBorderRadius } = useTheme();
 
   const [companyDetails, setCompanyDetails] = useState({
     name: '',
@@ -211,19 +210,8 @@ export default function SettingsPage() {
       if (hash) {
           setActiveTab(hash);
       }
-
-      const storedRadius = localStorage.getItem('majorstockx-border-radius');
-      if (storedRadius) {
-        setBorderRadius(parseFloat(storedRadius));
-      }
     }
   }, []);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && isClient) {
-      document.documentElement.style.setProperty('--radius', `${borderRadius}rem`);
-    }
-  }, [borderRadius, isClient]);
   
    useEffect(() => {
     const activeLink = document.getElementById(`tab-trigger-${activeTab}`);
@@ -244,9 +232,6 @@ export default function SettingsPage() {
   const handleBorderRadiusChange = (value: number[]) => {
     const newRadius = value[0];
     setBorderRadius(newRadius);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('majorstockx-border-radius', newRadius.toString());
-    }
   };
 
   const handleCompanyUpdate = async (e: React.FormEvent) => {
