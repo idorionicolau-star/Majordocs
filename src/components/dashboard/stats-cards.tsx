@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useContext } from "react";
@@ -78,7 +79,7 @@ export function StatsCards() {
                     <CardTitle className="text-sm font-semibold">{stat.title}</CardTitle>
                     <stat.icon className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
+                <CardContent className="text-center">
                     <div className="text-2xl font-bold bg-gradient-to-br from-chart-1 to-chart-2 bg-clip-text text-transparent">{String(stat.value)}</div>
                 </CardContent>
             </Card>
