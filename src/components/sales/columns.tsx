@@ -1,11 +1,10 @@
-
 "use client"
 
+import * as React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { Sale, Company } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Edit, Printer, FileSearch, CheckCircle, PackageCheck, Download } from "lucide-react"
-import { useState, useContext } from "react"
 import { SaleDetailsDialogContent } from "./sale-details-dialog"
 import { formatCurrency, downloadSaleDocument } from "@/lib/utils"
 import { EditSaleDialog } from "./edit-sale-dialog"
@@ -25,11 +24,11 @@ interface ColumnsOptions {
 }
 
 const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) => {
-    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
+    const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
     const sale = row.original as Sale;
     const { canEdit } = options;
-    const inventoryContext = useContext(InventoryContext);
+    const inventoryContext = React.useContext(InventoryContext);
     const { companyData } = inventoryContext || {};
         
     return (

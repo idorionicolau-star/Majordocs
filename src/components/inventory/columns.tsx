@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table"
 import { Product, Location } from "@/lib/types"
 import { AlertCircle, MapPin, History, Trash2, Edit2 } from "lucide-react"

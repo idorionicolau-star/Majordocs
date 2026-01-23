@@ -1,6 +1,6 @@
-
 "use client"
 
+import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table"
 import { Employee, ModulePermission, PermissionLevel } from "@/lib/types"
 import { Button } from "../ui/button"
