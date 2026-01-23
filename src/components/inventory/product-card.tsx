@@ -53,13 +53,13 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <div className="flex items-center justify-center gap-1.5 text-xs text-primary font-semibold cursor-help">
+                        <Link href={`/sales?nameFilter=${encodeURIComponent(product.name)}&statusFilter=Pago`} className="flex items-center justify-center gap-1.5 text-xs text-primary font-semibold cursor-pointer hover:underline">
                           <PackageCheck className="h-3 w-3" />
                           <span>{product.reservedStock} Reservado(s)</span>
-                        </div>
+                        </Link>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Stock vendido e pago, aguardando levantamento pelo cliente.</p>
+                        <p>Stock vendido e pago, aguardando levantamento. Clique para ver as vendas.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

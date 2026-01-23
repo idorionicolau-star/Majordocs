@@ -86,6 +86,14 @@ export default function SalesPage() {
     if (searchParams.get('action') === 'add' && canEditSales) {
       setAddDialogOpen(true);
     }
+    const nameQuery = searchParams.get('nameFilter');
+    if (nameQuery) {
+      setNameFilter(nameQuery);
+    }
+    const statusQuery = searchParams.get('statusFilter');
+    if (statusQuery) {
+      setStatusFilter(statusQuery);
+    }
   }, [searchParams, canEditSales]);
 
   useEffect(() => {
