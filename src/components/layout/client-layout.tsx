@@ -78,7 +78,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   }
   
   return (
-    <div className="flex min-h-screen w-full bg-muted/40">
+    <div className="flex min-h-screen w-full bg-muted/40 bg-pattern">
         <Sidebar 
             isCollapsed={isSidebarCollapsed} 
             onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}

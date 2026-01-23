@@ -85,7 +85,7 @@
 
   /* Glassmorphism Effect */
   .glass-card {
-    @apply bg-card/80 dark:bg-card/60 backdrop-blur-xl border-white/10 dark:border-slate-800/50;
+    @apply bg-card/80 dark:bg-card/60 backdrop-blur-xl border-white/10 dark:border-slate-800/50 shadow-sm;
   }
 
   /* Header and Nav with Glassmorphism */
@@ -104,7 +104,7 @@
   }
 
   .toast {
-    @apply shadow-2xl;
+    @apply shadow-lg;
   }
 
   /* Animations */
@@ -119,5 +119,9 @@
     }
     body {
         overflow-x: hidden;
+    }
+    .bg-pattern {
+      background-image: radial-gradient(hsl(var(--border) / 0.3) 0.5px, transparent 0);
+      background-size: 10px 10px;
     }
 }
