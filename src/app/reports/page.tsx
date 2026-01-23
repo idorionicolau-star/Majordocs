@@ -42,33 +42,44 @@ import { useToast } from '@/hooks/use-toast';
 
 type Period = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
-const SaleReportCard = ({ sale }: { sale: Sale }) => (
-    <Card className="glass-card">
-        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-            <div>
-                <CardTitle className="text-base font-bold">{sale.productName}</CardTitle>
-                <CardDescription className="text-xs">Guia: {sale.guideNumber}</CardDescription>
-            </div>
-            <div className="text-lg font-bold font-mono text-primary">
-                {formatCurrency(sale.totalValue)}
-            </div>
-        </CardHeader>
-        <CardContent className="space-y-2 text-xs pt-2">
-            <div className="flex items-center gap-2 text-sm">
-                <Hash className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">{sale.quantity} unidades</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">{sale.soldBy}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">{format(new Date(sale.date), 'dd/MM/yy')}</span>
-            </div>
-        </CardContent>
-    </Card>
-);
+const SaleReportCard = ({ sale }: { sale: Sale }) => {
+    const isPartiallyPaid = sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue;
+
+    return (
+        <Card className="glass-card">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                <div>
+                    <CardTitle className="text-base font-bold">{sale.productName}</CardTitle>
+                    <CardDescription className="text-xs">Guia: {sale.guideNumber}</CardDescription>
+                </div>
+                <div className="text-right">
+                    <div className="text-lg font-bold font-mono text-primary">
+                        {formatCurrency(sale.totalValue)}
+                    </div>
+                     {isPartiallyPaid && (
+                        <div className="text-xs font-semibold text-amber-600 -mt-1">
+                            ({formatCurrency(sale.amountPaid || 0)} pagos)
+                        </div>
+                    )}
+                </div>
+            </CardHeader>
+            <CardContent className="space-y-2 text-xs pt-2">
+                <div className="flex items-center gap-2 text-sm">
+                    <Hash className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">{sale.quantity} unidades</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">{sale.soldBy}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">{format(new Date(sale.date), 'dd/MM/yy')}</span>
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
 
 export default function ReportsPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -431,7 +442,14 @@ export default function ReportsPage() {
                         <TableCell className="font-medium">{sale.guideNumber}</TableCell>
                         <TableCell>{sale.productName}</TableCell>
                         <TableCell className="text-right">{sale.quantity}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(sale.totalValue)}</TableCell>
+                        <TableCell className="text-right">
+                           <div className="font-medium">{formatCurrency(sale.totalValue)}</div>
+                            {sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue && (
+                                <div className="text-xs text-amber-600">
+                                    ({formatCurrency(sale.amountPaid || 0)} pagos)
+                                </div>
+                            )}
+                        </TableCell>
                         <TableCell>{sale.soldBy}</TableCell>
                         </TableRow>
                     ))

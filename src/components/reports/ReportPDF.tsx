@@ -226,16 +226,26 @@ export function ReportPDF({ sales, summary, company, date, aiSummary, period }: 
                         <Text style={[styles.tableColHeader, styles.colValue]}>Valor Total</Text>
                         <Text style={[styles.tableColHeader, styles.colSeller]}>Vendedor</Text>
                     </View>
-                    {sales.map(sale => (
-                        <View key={sale.id} style={styles.tableRow} wrap={false}>
-                            <Text style={[styles.tableCell, styles.colDate]}>{format(new Date(sale.date), 'dd/MM/yy')}</Text>
-                            <Text style={[styles.tableCell, styles.colGuide]}>{sale.guideNumber}</Text>
-                            <Text style={[styles.tableCell, styles.colProduct]}>{sale.productName}</Text>
-                            <Text style={[styles.tableCell, styles.colQty]}>{sale.quantity}</Text>
-                            <Text style={[styles.tableCell, styles.colValue]}>{formatCurrency(sale.totalValue)}</Text>
-                            <Text style={[styles.tableCell, styles.colSeller]}>{sale.soldBy}</Text>
-                        </View>
-                    ))}
+                    {sales.map(sale => {
+                        const isPartiallyPaid = sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue;
+                        return (
+                            <View key={sale.id} style={styles.tableRow} wrap={false}>
+                                <Text style={[styles.tableCell, styles.colDate]}>{format(new Date(sale.date), 'dd/MM/yy')}</Text>
+                                <Text style={[styles.tableCell, styles.colGuide]}>{sale.guideNumber}</Text>
+                                <Text style={[styles.tableCell, styles.colProduct]}>{sale.productName}</Text>
+                                <Text style={[styles.tableCell, styles.colQty]}>{sale.quantity}</Text>
+                                <View style={[styles.tableCell, styles.colValue]}>
+                                    <Text>{formatCurrency(sale.totalValue)}</Text>
+                                    {isPartiallyPaid && (
+                                        <Text style={{ fontSize: 7, color: '#94a3b8' }}>
+                                            ({formatCurrency(sale.amountPaid || 0)} pago)
+                                        </Text>
+                                    )}
+                                </View>
+                                <Text style={[styles.tableCell, styles.colSeller]}>{sale.soldBy}</Text>
+                            </View>
+                        );
+                    })}
                     {sales.length === 0 && (
                         <View style={styles.tableRow}>
                             <Text style={[styles.tableCell, {textAlign: 'center', width: '100%', padding: 20}]}>Nenhuma venda encontrada para este período.</Text>
