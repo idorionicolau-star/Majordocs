@@ -162,10 +162,12 @@ export function AISummary() {
                 <AccordionContent>
                     <CardContent className="pt-4">
                         {isLoading ? (
-                        <div className="space-y-2">
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-3/4" />
+                        <div className="space-y-4">
+                            <Skeleton className="h-4 w-3/4 mx-auto" />
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <Skeleton className="h-28 w-full" />
+                                <Skeleton className="h-28 w-full" />
+                            </div>
                         </div>
                         ) : summary ? (
                         summary.text ? (
@@ -173,20 +175,34 @@ export function AISummary() {
                         ) : (
                             <div className="space-y-4">
                             {summary.geral && <p className="text-center text-muted-foreground font-medium">{summary.geral}</p>}
-                            <div className={cn("grid gap-4", hasBothBoxes ? "md:grid-cols-2" : "md:grid-cols-1")}>
+                            <div className={cn("grid gap-4", hasBothBoxes ? "md:grid-cols-2" : "grid-cols-1")}>
                                 {summary.oportunidade && (
-                                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-500/30">
-                                    <h4 className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-2"><TrendingUp /> {summary.oportunidade.titulo}</h4>
-                                    <p className="text-sm mt-2">{summary.oportunidade.descricao}</p>
-                                    <p className="text-sm font-semibold mt-2 text-emerald-800 dark:text-emerald-200">{summary.oportunidade.sugestao}</p>
-                                </div>
+                                    <Card className="bg-emerald-500/10 border-emerald-500/30">
+                                        <CardHeader className="p-4 pb-2">
+                                            <CardTitle className="text-base text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                                                <TrendingUp className="h-5 w-5" />
+                                                {summary.oportunidade.titulo}
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 pt-0 space-y-2">
+                                            <p className="text-sm text-muted-foreground">{summary.oportunidade.descricao}</p>
+                                            <p className="text-sm font-semibold text-foreground">{summary.oportunidade.sugestao}</p>
+                                        </CardContent>
+                                    </Card>
                                 )}
                                 {summary.risco && (
-                                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-500/30">
-                                    <h4 className="font-bold text-red-700 dark:text-red-300 flex items-center gap-2"><AlertTriangle /> {summary.risco.titulo}</h4>
-                                    <p className="text-sm mt-2">{summary.risco.descricao}</p>
-                                    <p className="text-sm font-semibold mt-2 text-red-800 dark:text-red-200">{summary.risco.sugestao}</p>
-                                </div>
+                                    <Card className="bg-destructive/10 border-destructive/30">
+                                        <CardHeader className="p-4 pb-2">
+                                            <CardTitle className="text-base text-destructive flex items-center gap-2">
+                                                <AlertTriangle className="h-5 w-5" />
+                                                {summary.risco.titulo}
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 pt-0 space-y-2">
+                                            <p className="text-sm text-muted-foreground">{summary.risco.descricao}</p>
+                                            <p className="text-sm font-semibold text-foreground">{summary.risco.sugestao}</p>
+                                        </CardContent>
+                                    </Card>
                                 )}
                             </div>
                             </div>
