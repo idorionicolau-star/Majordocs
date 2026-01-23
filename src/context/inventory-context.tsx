@@ -496,7 +496,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
     }) || [];
 
-    const monthlySalesValue = monthlySales.reduce((sum, sale) => sum + sale.totalValue, 0);
+    const monthlySalesValue = monthlySales.reduce((sum, sale) => {
+      return sum + (sale.amountPaid ?? sale.totalValue);
+    }, 0);
     const monthlySalesCount = monthlySales.length;
     const averageTicket = monthlySalesCount > 0 ? monthlySalesValue / monthlySalesCount : 0;
 
@@ -1321,3 +1323,5 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
+
+    

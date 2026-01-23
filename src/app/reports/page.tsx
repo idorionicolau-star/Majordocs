@@ -43,6 +43,7 @@ import { useToast } from '@/hooks/use-toast';
 type Period = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 const SaleReportCard = ({ sale }: { sale: Sale }) => {
+    const valueToDisplay = sale.amountPaid ?? sale.totalValue;
     const isPartiallyPaid = sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue;
 
     return (
@@ -54,11 +55,11 @@ const SaleReportCard = ({ sale }: { sale: Sale }) => {
                 </div>
                 <div className="text-right">
                     <div className="text-lg font-bold font-mono text-primary">
-                        {formatCurrency(sale.totalValue)}
+                        {formatCurrency(valueToDisplay)}
                     </div>
                      {isPartiallyPaid && (
-                        <div className="text-xs font-semibold text-amber-600 -mt-1">
-                            ({formatCurrency(sale.amountPaid || 0)} pagos)
+                        <div className="text-xs font-semibold text-muted-foreground -mt-1">
+                            (de {formatCurrency(sale.totalValue)})
                         </div>
                     )}
                 </div>
@@ -125,7 +126,9 @@ export default function ReportsPage() {
 
   const reportSummary = useMemo(() => {
     const totalSales = salesForPeriod.length;
-    const totalValue = salesForPeriod.reduce((sum, sale) => sum + sale.totalValue, 0);
+    const totalValue = salesForPeriod.reduce((sum, sale) => {
+      return sum + (sale.amountPaid ?? sale.totalValue);
+    }, 0);
     const totalItems = salesForPeriod.reduce((sum, sale) => sum + sale.quantity, 0);
     const averageTicket = totalSales > 0 ? totalValue / totalSales : 0;
     
@@ -384,14 +387,14 @@ export default function ReportsPage() {
             <StatCard icon={Hash} title="Total de Vendas" value={reportSummary.totalSales} />
             {isPrivilegedUser ? (
                 <>
-                    <StatCard icon={DollarSign} title="Valor Total" value={formatCurrency(reportSummary.totalValue)} />
-                    <StatCard icon={TrendingUp} title="Ticket Médio" value={formatCurrency(reportSummary.averageTicket)} />
+                    <StatCard icon={DollarSign} title="Valor Recebido" value={formatCurrency(reportSummary.totalValue)} />
+                    <StatCard icon={TrendingUp} title="Ticket Médio (Recebido)" value={formatCurrency(reportSummary.averageTicket)} />
                 </>
             ) : (
                  <>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
+                            <CardTitle className="text-sm font-medium">Valor Recebido</CardTitle>
                             <Lock className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -401,7 +404,7 @@ export default function ReportsPage() {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Ticket Médio</CardTitle>
+                            <CardTitle className="text-sm font-medium">Ticket Médio (Recebido)</CardTitle>
                             <Lock className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -430,7 +433,7 @@ export default function ReportsPage() {
                     <TableHead>Guia N.º</TableHead>
                     <TableHead>Produto</TableHead>
                     <TableHead className="text-right">Quantidade</TableHead>
-                    <TableHead className="text-right">Valor Total</TableHead>
+                    <TableHead className="text-right">Valor Pago</TableHead>
                     <TableHead>Vendedor</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -443,10 +446,10 @@ export default function ReportsPage() {
                         <TableCell>{sale.productName}</TableCell>
                         <TableCell className="text-right">{sale.quantity}</TableCell>
                         <TableCell className="text-right">
-                           <div className="font-medium">{formatCurrency(sale.totalValue)}</div>
+                           <div className="font-medium">{formatCurrency(sale.amountPaid ?? sale.totalValue)}</div>
                             {sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue && (
-                                <div className="text-xs text-amber-600">
-                                    ({formatCurrency(sale.amountPaid || 0)} pagos)
+                                <div className="text-xs text-muted-foreground">
+                                    de {formatCurrency(sale.totalValue)}
                                 </div>
                             )}
                         </TableCell>
@@ -515,5 +518,7 @@ const StatCard = ({ icon: Icon, title, value, subValue }: StatCardProps) => (
         </CardContent>
     </Card>
 );
+
+    
 
     

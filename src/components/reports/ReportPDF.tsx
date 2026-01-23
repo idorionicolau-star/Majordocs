@@ -208,11 +208,11 @@ export function ReportPDF({ sales, summary, company, date, aiSummary, period }: 
                   </View>
                 )}
                 
-                <Text style={styles.sectionTitle}>Resumo do Mês</Text>
+                <Text style={styles.sectionTitle}>Resumo do Período</Text>
                 <View style={styles.summaryGrid}>
                     <View style={styles.summaryCard}><Text style={styles.summaryLabel}>Total de Vendas</Text><Text style={styles.summaryValue}>{summary.totalSales}</Text></View>
-                    <View style={styles.summaryCard}><Text style={styles.summaryLabel}>Valor Total</Text><Text style={styles.summaryValue}>{formatCurrency(summary.totalValue)}</Text></View>
-                    <View style={styles.summaryCard}><Text style={styles.summaryLabel}>Ticket Médio</Text><Text style={styles.summaryValue}>{formatCurrency(summary.averageTicket)}</Text></View>
+                    <View style={styles.summaryCard}><Text style={styles.summaryLabel}>Valor Recebido</Text><Text style={styles.summaryValue}>{formatCurrency(summary.totalValue)}</Text></View>
+                    <View style={styles.summaryCard}><Text style={styles.summaryLabel}>Ticket Médio (Recebido)</Text><Text style={styles.summaryValue}>{formatCurrency(summary.averageTicket)}</Text></View>
                     <View style={styles.summaryCard}><Text style={styles.summaryLabel}>Mais Vendido</Text><Text style={styles.summaryValue}>{summary.bestSellingProduct.name} ({summary.bestSellingProduct.quantity} un)</Text></View>
                 </View>
 
@@ -223,7 +223,7 @@ export function ReportPDF({ sales, summary, company, date, aiSummary, period }: 
                         <Text style={[styles.tableColHeader, styles.colGuide]}>Guia N.º</Text>
                         <Text style={[styles.tableColHeader, styles.colProduct]}>Produto</Text>
                         <Text style={[styles.tableColHeader, styles.colQty]}>Qtd</Text>
-                        <Text style={[styles.tableColHeader, styles.colValue]}>Valor Total</Text>
+                        <Text style={[styles.tableColHeader, styles.colValue]}>Valor Pago</Text>
                         <Text style={[styles.tableColHeader, styles.colSeller]}>Vendedor</Text>
                     </View>
                     {sales.map(sale => {
@@ -235,10 +235,10 @@ export function ReportPDF({ sales, summary, company, date, aiSummary, period }: 
                                 <Text style={[styles.tableCell, styles.colProduct]}>{sale.productName}</Text>
                                 <Text style={[styles.tableCell, styles.colQty]}>{sale.quantity}</Text>
                                 <View style={[styles.tableCell, styles.colValue]}>
-                                    <Text>{formatCurrency(sale.totalValue)}</Text>
+                                    <Text>{formatCurrency(sale.amountPaid ?? sale.totalValue)}</Text>
                                     {isPartiallyPaid && (
                                         <Text style={{ fontSize: 7, color: '#94a3b8' }}>
-                                            ({formatCurrency(sale.amountPaid || 0)} pago)
+                                            de {formatCurrency(sale.totalValue)}
                                         </Text>
                                     )}
                                 </View>
@@ -260,5 +260,7 @@ export function ReportPDF({ sales, summary, company, date, aiSummary, period }: 
         </Document>
     );
 }
+
+    
 
     
