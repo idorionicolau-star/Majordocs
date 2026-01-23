@@ -52,7 +52,7 @@ const formSchema = z.object({
   location: z.string().optional(),
   discountType: z.enum(['fixed', 'percentage']).default('fixed'),
   discountValue: z.coerce.number().min(0, "O desconto não pode ser negativo.").optional(),
-  applyVat: z.boolean().default(true),
+  applyVat: z.boolean().default(false),
   vatPercentage: z.coerce.number().min(0, "O IVA deve ser um valor positivo.").max(100).optional(),
   documentType: z.enum(['Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo']),
   clientName: z.string().optional(),
@@ -88,7 +88,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
       unit: 'un',
       discountType: 'fixed',
       discountValue: 0,
-      applyVat: true,
+      applyVat: false,
       vatPercentage: 17, // Default VAT
       documentType: 'Factura Proforma',
       clientName: '',
@@ -112,7 +112,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
         location: finalLocation,
         discountType: 'fixed',
         discountValue: 0,
-        applyVat: true,
+        applyVat: false,
         vatPercentage: 17,
         documentType: 'Factura Proforma',
         clientName: '',
@@ -519,4 +519,3 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
     </Dialog>
   );
 }
-    
