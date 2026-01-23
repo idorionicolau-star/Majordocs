@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from 'react';
@@ -44,6 +45,7 @@ const formSchema = z.object({
   quantity: z.coerce.number().min(0.01, { message: "A quantidade deve ser maior que zero." }),
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
   unitPrice: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
+  amountPaid: z.coerce.number().min(0, "O valor pago não pode ser negativo.").optional(),
   documentType: z.enum(['Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo']),
   clientName: z.string().optional(),
   notes: z.string().optional(),
@@ -69,6 +71,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
       productName: sale.productName,
       quantity: sale.quantity,
       unitPrice: sale.unitPrice,
+      amountPaid: sale.amountPaid,
       unit: sale.unit || 'un',
       documentType: sale.documentType,
       clientName: sale.clientName || '',
@@ -241,19 +244,34 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
                     )}
                   />
               </div>
-              <FormField
-                  control={form.control}
-                  name="unitPrice"
-                  render={({ field }) => (
-                      <FormItem>
-                      <FormLabel>Preço Unitário</FormLabel>
-                      <FormControl>
-                          <Input type="number" step="0.01" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                      </FormItem>
-                  )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                      control={form.control}
+                      name="unitPrice"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Preço Unitário</FormLabel>
+                          <FormControl>
+                              <Input type="number" step="0.01" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="amountPaid"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Valor Pago</FormLabel>
+                          <FormControl>
+                              <Input type="number" step="0.01" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+              </div>
                 <FormField
                     control={form.control}
                     name="notes"

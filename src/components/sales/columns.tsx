@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -148,8 +149,18 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
       accessorKey: "totalValue",
       header: "Valor Total",
       cell: ({ row }) => {
-        const formatted = formatCurrency(row.original.totalValue);
-        return <div className="text-right font-medium">{formatted}</div>
+        const sale = row.original;
+        const isPartiallyPaid = sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue;
+        return (
+            <div className="text-right">
+                <div className="font-medium">{formatCurrency(sale.totalValue)}</div>
+                {isPartiallyPaid && (
+                    <div className="text-xs text-amber-600">
+                        ({formatCurrency(sale.amountPaid || 0)} pagos)
+                    </div>
+                )}
+            </div>
+        )
       }
     },
     {

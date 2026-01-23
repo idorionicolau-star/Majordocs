@@ -71,6 +71,20 @@ export function SaleDetailsDialogContent({ sale }: SaleDetailsDialogProps) {
                 <span className="font-bold">Total</span>
                 <span className="font-bold">{formattedTotalValue}</span>
             </div>
+            {sale.amountPaid !== undefined && (
+                <>
+                    <div className="flex justify-between items-center text-sm pt-1 border-t mt-2">
+                        <span className="text-muted-foreground font-medium">Valor Pago</span>
+                        <span className="font-medium text-green-600">{formatCurrency(sale.amountPaid)}</span>
+                    </div>
+                    {(sale.totalValue - sale.amountPaid) > 0.01 &&
+                        <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground font-semibold">Valor Pendente</span>
+                            <span className="font-bold text-destructive">{formatCurrency(sale.totalValue - sale.amountPaid)}</span>
+                        </div>
+                    }
+                </>
+            )}
         </div>
         {sale.notes && (
             <div>

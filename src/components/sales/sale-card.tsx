@@ -44,6 +44,8 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, vi
         onDeleteSale(sale.id);
         setShowDeleteConfirm(false);
     }
+    
+    const isPartiallyPaid = sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue;
 
     return (
         <>
@@ -84,6 +86,13 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, vi
                     )}>
                     <span className={cn("font-black text-primary", isCondensed ? "text-lg" : "text-2xl")}>{formatCurrency(sale.totalValue)}</span>
                 </div>
+                 {isPartiallyPaid && (
+                    <div className="text-center -mt-1">
+                        <span className="text-[10px] font-bold text-amber-500">
+                            {formatCurrency(sale.amountPaid || 0)} pagos
+                        </span>
+                    </div>
+                )}
                  
                  <div className={cn("text-xs text-muted-foreground space-y-1", isCondensed && "text-center")}>
                     <div className="flex items-center gap-1.5 justify-center">

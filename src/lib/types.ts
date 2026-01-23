@@ -104,6 +104,7 @@ export type Sale = {
   discount?: number;
   vat?: number;
   totalValue: number;
+  amountPaid?: number;
   soldBy: string;
   guideNumber: string;
   location?: string;

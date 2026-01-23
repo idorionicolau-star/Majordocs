@@ -175,6 +175,7 @@
         "discount": { "type": "number" },
         "vat": { "type": "number" },
         "totalValue": { "type": "number" },
+        "amountPaid": { "type": "number", "description": "The amount paid by the client." },
         "soldBy": { "type": "string" },
         "guideNumber": { "type": "string" },
         "location": { "type": "string" },

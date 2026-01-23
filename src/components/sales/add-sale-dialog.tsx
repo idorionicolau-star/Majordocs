@@ -65,6 +65,9 @@ const formSchema = z.object({
   clientName: z.string().optional(),
   notes: z.string().optional(),
   date: z.date(),
+  paymentOption: z.enum(['full', 'partial']).default('full'),
+  partialPaymentType: z.enum(['fixed', 'percentage']).default('fixed'),
+  partialPaymentValue: z.coerce.number().min(0).optional(),
 });
 
 type AddSaleFormValues = z.infer<typeof formSchema>;
@@ -101,6 +104,9 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
       clientName: '',
       notes: '',
       date: new Date(),
+      paymentOption: 'full',
+      partialPaymentType: 'fixed',
+      partialPaymentValue: 0,
     },
   });
   
@@ -125,6 +131,9 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
         clientName: '',
         notes: '',
         date: new Date(),
+        paymentOption: 'full',
+        partialPaymentType: 'fixed',
+        partialPaymentValue: 0,
       });
     }
   }, [open, form, locations]);
@@ -137,6 +146,10 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
   const watchedDiscountValue = useWatch({ control: form.control, name: 'discountValue' });
   const watchedVatPercentage = useWatch({ control: form.control, name: 'vatPercentage' });
   const watchedApplyVat = useWatch({ control: form.control, name: 'applyVat' });
+  const watchedPaymentOption = useWatch({ control: form.control, name: 'paymentOption' });
+  const watchedPartialPaymentType = useWatch({ control: form.control, name: 'partialPaymentType' });
+  const watchedPartialPaymentValue = useWatch({ control: form.control, name: 'partialPaymentValue' });
+
 
   const subtotal = (watchedUnitPrice || 0) * (watchedQuantity || 0);
 
@@ -153,6 +166,20 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
   const vatAmount = watchedApplyVat ? totalAfterDiscount * (vatPercentage / 100) : 0;
   const totalValue = totalAfterDiscount + vatAmount;
   
+    const amountPaid = useMemo(() => {
+    if (watchedPaymentOption === 'partial') {
+        const value = watchedPartialPaymentValue || 0;
+        if (watchedPartialPaymentType === 'percentage') {
+            const percentageValue = totalValue * (value / 100);
+            return Math.min(percentageValue, totalValue);
+        }
+        return Math.min(value, totalValue);
+    }
+    return totalValue;
+    }, [watchedPaymentOption, watchedPartialPaymentType, watchedPartialPaymentValue, totalValue]);
+
+  const balanceDue = totalValue - amountPaid;
+
   const productsInStock = useMemo(() => {
     if (!products || !catalogProducts) return [];
 
@@ -235,6 +262,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
       discount: discountAmount,
       vat: vatAmount,
       totalValue: totalValue,
+      amountPaid: amountPaid,
       soldBy: user.username,
       status: 'Pago',
       location: values.location,
@@ -399,6 +427,92 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                 </div>
 
                 <Accordion type="multiple" className="w-full space-y-4">
+                    <AccordionItem value="payment-details" className="border rounded-lg">
+                        <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                             <h3 className="font-semibold leading-none tracking-tight">Detalhes de Pagamento (Opcional)</h3>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-4 pt-0">
+                            <div className="space-y-4">
+                               <FormField
+                                    control={form.control}
+                                    name="paymentOption"
+                                    render={({ field }) => (
+                                    <FormItem className="space-y-3">
+                                        <FormLabel>Opção de Pagamento</FormLabel>
+                                        <FormControl>
+                                        <RadioGroup
+                                            onValueChange={field.onChange}
+                                            defaultValue={field.value}
+                                            className="flex items-center space-x-4 pt-1"
+                                        >
+                                            <FormItem className="flex items-center space-x-2 space-y-0">
+                                            <FormControl>
+                                                <RadioGroupItem value="full" id="p-full" />
+                                            </FormControl>
+                                            <FormLabel htmlFor="p-full" className="font-normal">Pagamento Integral</FormLabel>
+                                            </FormItem>
+                                            <FormItem className="flex items-center space-x-2 space-y-0">
+                                            <FormControl>
+                                                <RadioGroupItem value="partial" id="p-partial" />
+                                            </FormControl>
+                                            <FormLabel htmlFor="p-partial" className="font-normal">Pagamento Parcial</FormLabel>
+                                            </FormItem>
+                                        </RadioGroup>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                {watchedPaymentOption === 'partial' && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="partialPaymentType"
+                                            render={({ field }) => (
+                                            <FormItem className="space-y-3">
+                                                <FormLabel>Tipo de Valor</FormLabel>
+                                                <FormControl>
+                                                <RadioGroup
+                                                    onValueChange={field.onChange}
+                                                    defaultValue={field.value}
+                                                    className="flex items-center space-x-4 pt-1"
+                                                >
+                                                    <FormItem className="flex items-center space-x-2 space-y-0">
+                                                    <FormControl>
+                                                        <RadioGroupItem value="fixed" id="pp-fixed" />
+                                                    </FormControl>
+                                                    <FormLabel htmlFor="pp-fixed" className="font-normal">Valor Fixo</FormLabel>
+                                                    </FormItem>
+                                                    <FormItem className="flex items-center space-x-2 space-y-0">
+                                                    <FormControl>
+                                                        <RadioGroupItem value="percentage" id="pp-percentage" />
+                                                    </FormControl>
+                                                    <FormLabel htmlFor="pp-percentage" className="font-normal">%</FormLabel>
+                                                    </FormItem>
+                                                </RadioGroup>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                        control={form.control}
+                                        name="partialPaymentValue"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Valor Parcial</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" min="0" {...field} placeholder="0.00" />
+                                            </FormControl>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
                     <AccordionItem value="financials" className="border rounded-lg">
                         <AccordionTrigger className="px-4 py-3 hover:no-underline">
                              <h3 className="font-semibold leading-none tracking-tight">Detalhes Financeiros (Opcional)</h3>
@@ -532,6 +646,17 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                       <span className='font-bold'>Total</span>
                       <span className='font-bold'>{formatCurrency(totalValue)}</span>
                   </div>
+                  <Separator className='my-2 bg-border/50' />
+                  <div className='flex justify-between items-center text-sm'>
+                      <span className='text-muted-foreground'>Valor Pago</span>
+                      <span className='font-medium'>{formatCurrency(amountPaid)}</span>
+                  </div>
+                  {balanceDue > 0.01 && (
+                    <div className='flex justify-between items-center text-sm text-destructive'>
+                        <span className='font-semibold'>Valor Pendente</span>
+                        <span className='font-bold'>{formatCurrency(balanceDue)}</span>
+                    </div>
+                  )}
               </div>
 
               <DialogFooter className="pt-4">
@@ -545,5 +670,3 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
     </Dialog>
   );
 }
-
-    
