@@ -40,6 +40,7 @@ import {
   serverTimestamp,
   arrayUnion,
   type CollectionReference,
+  DocumentReference,
 } from 'firebase/firestore';
 import { allPermissions } from '@/lib/data';
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
@@ -1053,10 +1054,53 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [catalogCategoriesCollectionRef, catalogCategoriesData]);
 
   const deleteSale = useCallback(async (saleId: string) => {
-    if (!salesCollectionRef) return;
-    await deleteDoc(doc(salesCollectionRef, saleId));
-    toast({ title: 'Venda Apagada' });
-  }, [salesCollectionRef, toast]);
+    if (!firestore || !companyId || !productsCollectionRef) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta.' });
+        return;
+    }
+    const saleRef = doc(firestore, `companies/${companyId}/sales`, saleId);
+
+    try {
+        const saleDoc = await getDoc(saleRef);
+        if (!saleDoc.exists()) {
+            throw new Error("Venda não encontrada.");
+        }
+        const saleData = saleDoc.data() as Sale;
+
+        let productDocRef: DocumentReference | null = null;
+        if (saleData.status === 'Pago') {
+            const productQuery = query(
+                productsCollectionRef,
+                where("name", "==", saleData.productName),
+                where("location", "==", saleData.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
+            );
+            const productSnapshot = await getDocs(productQuery);
+            if (!productSnapshot.empty) {
+                productDocRef = productSnapshot.docs[0].ref;
+            } else {
+                console.warn(`Product '${saleData.productName}' for sale '${saleId}' not found during deletion. Could not adjust reserved stock.`);
+            }
+        }
+        
+        await runTransaction(firestore, async (transaction) => {
+            if (productDocRef) {
+                const productDoc = await transaction.get(productDocRef);
+                if (productDoc.exists()) {
+                    const productData = productDoc.data() as Product;
+                    const newReservedStock = productData.reservedStock - saleData.quantity;
+                    transaction.update(productDocRef, { reservedStock: Math.max(0, newReservedStock) });
+                }
+            }
+            transaction.delete(saleRef);
+        });
+
+        toast({ title: 'Venda Apagada', description: 'A venda e a reserva de stock associada foram removidas.' });
+
+    } catch (error: any) {
+        console.error("Error deleting sale: ", error);
+        toast({ variant: 'destructive', title: 'Erro ao Apagar Venda', description: error.message });
+    }
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, toast]);
 
   const deleteProduction = useCallback(async (productionId: string) => {
     if (!productionsCollectionRef) return;
