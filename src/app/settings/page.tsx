@@ -131,7 +131,7 @@ function ProfileTab() {
 
 export default function SettingsPage() {
   const [isClient, setIsClient] = useState(false);
-  const [borderRadius, setBorderRadius] = useState(0.8);
+  const [borderRadius, setBorderRadius] = useState(2);
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
   const { user, clearProductsCollection } = inventoryContext || {};
