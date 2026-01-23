@@ -77,6 +77,7 @@ export type RawMaterial = {
   stock: number;
   unit: 'kg' | 'm³' | 'un' | 'L' | 'saco';
   lowStockThreshold: number;
+  cost?: number;
 };
 
 export type RecipeIngredient = {

@@ -132,7 +132,8 @@
         "name": { "type": "string" },
         "stock": { "type": "number" },
         "unit": { "type": "string", "enum": ["kg", "m³", "un", "L", "saco"] },
-        "lowStockThreshold": { "type": "number" }
+        "lowStockThreshold": { "type": "number" },
+        "cost": { "type": "number", "description": "Cost per unit of the raw material." }
       },
       "required": ["name", "stock", "unit"]
     },

@@ -37,8 +37,8 @@ import {
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogHeader,
-  AlertDialogFooter,
-  AlertDialogTitle
+  AlertDialogTitle,
+  AlertDialogFooter
 } from "@/components/ui/alert-dialog";
 import {
   Select,
@@ -58,6 +58,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { RawMaterial, Recipe, Product } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { formatCurrency } from '@/lib/utils';
 
 // Schemas
 const rawMaterialSchema = z.object({
@@ -65,6 +66,7 @@ const rawMaterialSchema = z.object({
   stock: z.coerce.number().min(0, "O stock não pode ser negativo."),
   unit: z.enum(['kg', 'm³', 'un', 'L', 'saco']),
   lowStockThreshold: z.coerce.number().min(0, "O limite deve ser um número positivo."),
+  cost: z.coerce.number().min(0, "O custo não pode ser negativo.").optional(),
 });
 type RawMaterialFormValues = z.infer<typeof rawMaterialSchema>;
 
@@ -95,12 +97,12 @@ const RawMaterialsManager = () => {
 
     const form = useForm<RawMaterialFormValues>({
         resolver: zodResolver(rawMaterialSchema),
-        defaultValues: { name: '', stock: 0, unit: 'kg', lowStockThreshold: 0 },
+        defaultValues: { name: '', stock: 0, unit: 'kg', lowStockThreshold: 0, cost: 0 },
     });
 
     const handleOpenDialog = (material: RawMaterial | null = null) => {
         setMaterialToEdit(material);
-        form.reset(material ? { ...material, stock: material.stock } : { name: '', stock: 0, unit: 'kg', lowStockThreshold: 10 });
+        form.reset(material ? { ...material, cost: material.cost || 0 } : { name: '', stock: 0, unit: 'kg', lowStockThreshold: 10, cost: 0 });
         setIsDialogOpen(true);
     };
 
@@ -133,6 +135,7 @@ const RawMaterialsManager = () => {
                             <TableRow>
                                 <TableHead>Nome</TableHead>
                                 <TableHead>Stock Atual</TableHead>
+                                <TableHead>Custo Unit.</TableHead>
                                 <TableHead>Unidade</TableHead>
                                 <TableHead>Nível Mínimo</TableHead>
                                 <TableHead><span className="sr-only">Ações</span></TableHead>
@@ -143,6 +146,7 @@ const RawMaterialsManager = () => {
                                 <TableRow key={material.id}>
                                     <TableCell className="font-medium">{material.name}</TableCell>
                                     <TableCell>{material.stock}</TableCell>
+                                    <TableCell>{material.cost ? formatCurrency(material.cost) : 'N/A'}</TableCell>
                                     <TableCell>{material.unit}</TableCell>
                                     <TableCell>{material.lowStockThreshold}</TableCell>
                                     <TableCell className="text-right">
@@ -152,7 +156,7 @@ const RawMaterialsManager = () => {
                                 </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24">Nenhuma matéria-prima cadastrada.</TableCell>
+                                    <TableCell colSpan={6} className="text-center h-24">Nenhuma matéria-prima cadastrada.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
@@ -171,9 +175,14 @@ const RawMaterialsManager = () => {
                             <FormField control={form.control} name="name" render={({ field }) => (
                                 <FormItem><FormLabel>Nome</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
-                            <FormField control={form.control} name="stock" render={({ field }) => (
-                                <FormItem><FormLabel>Stock Inicial</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={form.control} name="stock" render={({ field }) => (
+                                    <FormItem><FormLabel>Stock Inicial</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                 <FormField control={form.control} name="cost" render={({ field }) => (
+                                    <FormItem><FormLabel>Custo Unitário</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                            </div>
                             <FormField control={form.control} name="unit" render={({ field }) => (
                                 <FormItem><FormLabel>Unidade</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>
                                     <SelectItem value="kg">kg</SelectItem><SelectItem value="m³">m³</SelectItem><SelectItem value="un">un</SelectItem><SelectItem value="L">L</SelectItem><SelectItem value="saco">saco</SelectItem>
@@ -361,6 +370,25 @@ const ProductionFromRecipe = () => {
     );
 }
 
+// Costs Manager Component (Placeholder)
+const CostsManager = () => {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Gestão de Custos</CardTitle>
+                <CardDescription>Analise os custos de produção e matérias-primas.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="text-center py-12 text-muted-foreground">
+                    <p className="font-semibold">Funcionalidade em desenvolvimento.</p>
+                    <p className="text-sm">Em breve, poderá visualizar os custos detalhados aqui.</p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
+
 export default function RawMaterialsPage() {
     const { canView, loading } = useContext(InventoryContext) || { canView: () => false, loading: true };
     const canViewPage = canView('raw-materials');
@@ -391,10 +419,11 @@ export default function RawMaterialsPage() {
             </p>
         </div>
       <Tabs defaultValue="materials">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="materials">Insumos</TabsTrigger>
           <TabsTrigger value="recipes">Receitas</TabsTrigger>
           <TabsTrigger value="production">Produção</TabsTrigger>
+          <TabsTrigger value="costs">Custos</TabsTrigger>
         </TabsList>
         <TabsContent value="materials" className="mt-4">
             <RawMaterialsManager />
@@ -405,9 +434,10 @@ export default function RawMaterialsPage() {
         <TabsContent value="production" className="mt-4">
             <ProductionFromRecipe />
         </TabsContent>
+        <TabsContent value="costs" className="mt-4">
+            <CostsManager />
+        </TabsContent>
       </Tabs>
     </div>
   );
 }
-
-    
