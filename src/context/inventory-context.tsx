@@ -11,7 +11,7 @@ import {
   useMemo,
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification, DashboardStats, InventoryContextType, ChatMessage } from '@/lib/types';
+import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification, DashboardStats, InventoryContextType, ChatMessage, RawMaterial, Recipe } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase, getFirebaseAuth } from '@/firebase/provider';
@@ -389,6 +389,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     return collection(firestore, `companies/${companyId}/catalogCategories`);
   }, [firestore, companyId]);
   
+  const rawMaterialsCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `companies/${companyId}/rawMaterials`);
+  }, [firestore, companyId]);
+
+  const recipesCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `companies/${companyId}/recipes`);
+  }, [firestore, companyId]);
+
   const companyDocRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
     return doc(firestore, `companies`, companyId);
@@ -402,6 +412,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const { data: stockMovementsData, isLoading: stockMovementsLoading } = useCollection<StockMovement>(stockMovementsCollectionRef);
   const { data: catalogProductsData, isLoading: catalogProductsLoading } = useCollection<CatalogProduct>(catalogProductsCollectionRef);
   const { data: catalogCategoriesData, isLoading: catalogCategoriesLoading } = useCollection<CatalogCategory>(catalogCategoriesCollectionRef);
+  const { data: rawMaterialsData, isLoading: rawMaterialsLoading } = useCollection<RawMaterial>(rawMaterialsCollectionRef);
+  const { data: recipesData, isLoading: recipesLoading } = useCollection<Recipe>(recipesCollectionRef);
 
   const products = useMemo(() => {
     if (!productsData) return [];
@@ -1176,8 +1188,101 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Encomenda Apagada' });
   }, [ordersCollectionRef, toast]);
 
+  const addRawMaterial = useCallback(async (material: Omit<RawMaterial, 'id'>) => {
+    if (!rawMaterialsCollectionRef) return;
+    await addDoc(rawMaterialsCollectionRef, material);
+    toast({ title: 'Matéria-Prima Adicionada' });
+  }, [rawMaterialsCollectionRef, toast]);
 
-  const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || stockMovementsLoading || catalogProductsLoading || catalogCategoriesLoading;
+  const updateRawMaterial = useCallback(async (materialId: string, data: Partial<RawMaterial>) => {
+    if (!rawMaterialsCollectionRef) return;
+    const docRef = doc(rawMaterialsCollectionRef, materialId);
+    await updateDoc(docRef, data);
+    toast({ title: 'Matéria-Prima Atualizada' });
+  }, [rawMaterialsCollectionRef, toast]);
+
+  const deleteRawMaterial = useCallback(async (materialId: string) => {
+    if (!rawMaterialsCollectionRef) return;
+    await deleteDoc(doc(rawMaterialsCollectionRef, materialId));
+    toast({ title: 'Matéria-Prima Removida' });
+  }, [rawMaterialsCollectionRef, toast]);
+
+  const addRecipe = useCallback(async (recipe: Omit<Recipe, 'id'>) => {
+    if (!recipesCollectionRef) return;
+    await addDoc(recipesCollectionRef, recipe);
+    toast({ title: 'Receita Adicionada' });
+  }, [recipesCollectionRef, toast]);
+
+  const updateRecipe = useCallback(async (recipeId: string, data: Partial<Recipe>) => {
+    if (!recipesCollectionRef) return;
+    const docRef = doc(recipesCollectionRef, recipeId);
+    await updateDoc(docRef, data);
+    toast({ title: 'Receita Atualizada' });
+  }, [recipesCollectionRef, toast]);
+
+  const deleteRecipe = useCallback(async (recipeId: string) => {
+    if (!recipesCollectionRef) return;
+    await deleteDoc(doc(recipesCollectionRef, recipeId));
+    toast({ title: 'Receita Removida' });
+  }, [recipesCollectionRef, toast]);
+
+  const produceFromRecipe = useCallback(async (recipeId: string, quantityToProduce: number) => {
+    if (!firestore || !companyId || !user || !recipesData || !rawMaterialsData) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Dados de produção indisponíveis.' });
+      return;
+    }
+
+    const recipe = recipesData.find(r => r.id === recipeId);
+    if (!recipe) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Receita não encontrada.' });
+      return;
+    }
+    
+    // Check if there are enough raw materials
+    for (const ingredient of recipe.ingredients) {
+      const material = rawMaterialsData.find(m => m.id === ingredient.rawMaterialId);
+      const requiredQty = ingredient.quantity * quantityToProduce;
+      if (!material || material.stock < requiredQty) {
+        toast({ variant: 'destructive', title: 'Matéria-Prima Insuficiente', description: `Falta ${material ? material.name : 'um ingrediente'} para completar a produção.` });
+        throw new Error('Matéria-prima insuficiente');
+      }
+    }
+
+    try {
+      const batch = writeBatch(firestore);
+
+      // Deduct raw materials
+      for (const ingredient of recipe.ingredients) {
+        const material = rawMaterialsData.find(m => m.id === ingredient.rawMaterialId)!;
+        const requiredQty = ingredient.quantity * quantityToProduce;
+        const materialRef = doc(firestore, `companies/${companyId}/rawMaterials`, material.id);
+        batch.update(materialRef, { stock: material.stock - requiredQty });
+      }
+
+      // Add to production records
+      const productionRef = doc(collection(firestore, `companies/${companyId}/productions`));
+      const newProduction: Omit<Production, 'id'> = {
+        date: new Date().toISOString().split('T')[0],
+        productName: recipe.productName,
+        quantity: quantityToProduce,
+        unit: catalogProductsData?.find(p => p.name === recipe.productName)?.unit || 'un',
+        registeredBy: user.username,
+        status: 'Concluído'
+      };
+      batch.set(productionRef, newProduction);
+      
+      await batch.commit();
+
+      toast({ title: 'Produção Registada', description: `Produção de ${quantityToProduce} ${recipe.productName} registada com sucesso. O stock de insumos foi atualizado.` });
+      
+    } catch (e: any) {
+       toast({ variant: 'destructive', title: 'Erro na Produção', description: e.message });
+       throw e;
+    }
+  }, [firestore, companyId, user, recipesData, rawMaterialsData, catalogProductsData, toast]);
+
+
+  const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || stockMovementsLoading || catalogProductsLoading || catalogCategoriesLoading || rawMaterialsLoading || recipesLoading;
 
   const value: InventoryContextType = {
     user, firebaseUser, companyId, loading: isDataLoading,
@@ -1185,6 +1290,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     canView, canEdit,
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], stockMovements: stockMovementsData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
+    rawMaterials: rawMaterialsData || [],
+    recipes: recipesData || [],
     locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
     businessStartDate,
     chatHistory, setChatHistory,
@@ -1196,6 +1303,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
     recalculateReservedStock,
     addCatalogProduct, addCatalogCategory,
+    addRawMaterial,
+    updateRawMaterial,
+    deleteRawMaterial,
+    addRecipe,
+    updateRecipe,
+    deleteRecipe,
+    produceFromRecipe,
   };
 
   return (
