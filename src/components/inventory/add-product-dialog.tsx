@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useContext } from 'react';
@@ -120,11 +121,6 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       }
     } else {
       setIsCatalogProductSelected(false);
-      form.setValue('price', 0);
-      form.setValue('lowStockThreshold', 10);
-      form.setValue('criticalStockThreshold', 5);
-      form.setValue('category', '');
-      form.setValue('unit', 'un');
     }
   };
   
@@ -424,3 +420,5 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
     </Dialog>
   );
 }
+
+    
