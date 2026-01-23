@@ -71,7 +71,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
       productName: sale.productName,
       quantity: sale.quantity,
       unitPrice: sale.unitPrice,
-      amountPaid: sale.amountPaid,
+      amountPaid: sale.amountPaid ?? 0,
       unit: sale.unit || 'un',
       documentType: sale.documentType,
       clientName: sale.clientName || '',
@@ -113,13 +113,15 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
   const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
 
   function onSubmit(values: EditSaleFormValues) {
+    const total = (values.unitPrice || 0) * (values.quantity || 0);
     onUpdateSale({
       ...sale,
       ...values,
       date: values.date.toISOString(),
       // Recalculate totals
-      subtotal: (values.unitPrice || 0) * (values.quantity || 0),
-      totalValue: (values.unitPrice || 0) * (values.quantity || 0), // Note: Simplified, doesn't re-apply discount/VAT logic from add dialog
+      subtotal: total,
+      totalValue: total, // Note: Simplified, doesn't re-apply discount/VAT logic from add dialog
+      amountPaid: values.amountPaid ?? 0,
     });
     onOpenChange(false);
   }
