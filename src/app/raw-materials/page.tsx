@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useContext, useMemo, useCallback } from 'react';
+import React, { useState, useContext, useMemo, useCallback } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
