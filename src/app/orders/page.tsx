@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import type { Order, Sale, ProductionLog, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Filter, List, LayoutGrid, ChevronDown, Lock, Trash2, PlusCircle, Plus } from "lucide-react";
-import { AddOrderDialog } from "@/components/orders/add-order-dialog";
+import { AddOrderDialog, AddOrderFormValues } from "@/components/orders/add-order-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -55,8 +55,23 @@ export default function OrdersPage() {
   }, [searchParams, canEditOrders]);
 
 
-  const handleAddOrder = async (formData: { productName: string; quantity: number; unit?: 'un' | 'm²' | 'm' | 'cj' | 'outro'; clientName?: string; deliveryDate?: Date; location?: string; unitPrice: number; }) => {
+  const handleAddOrder = async (formData: AddOrderFormValues) => {
     if (!firestore || !companyId || !user) return;
+
+    const subtotal = formData.unitPrice * formData.quantity;
+    const totalValue = subtotal; // Simplified total for an order
+
+    let amountPaid = totalValue;
+    if (formData.paymentOption === 'partial') {
+        const value = formData.partialPaymentValue || 0;
+        if (formData.partialPaymentType === 'percentage') {
+            const percentageValue = totalValue * (value / 100);
+            amountPaid = Math.min(percentageValue, totalValue);
+        } else {
+            amountPaid = Math.min(value, totalValue);
+        }
+    }
+
 
     try {
         const orderRef = doc(collection(firestore, `companies/${companyId}/orders`));
@@ -82,7 +97,7 @@ export default function OrdersPage() {
                 deliveryDate: formData.deliveryDate?.toISOString(),
                 location: formData.location,
                 unitPrice: formData.unitPrice,
-                totalValue: formData.unitPrice * formData.quantity,
+                totalValue: totalValue,
                 status: 'Pendente',
                 quantityProduced: 0,
                 productionLogs: [],
@@ -102,12 +117,13 @@ export default function OrdersPage() {
                 quantity: formData.quantity,
                 unit: formData.unit,
                 unitPrice: formData.unitPrice,
-                subtotal: formData.unitPrice * formData.quantity,
-                totalValue: formData.unitPrice * formData.quantity,
+                subtotal: subtotal,
+                totalValue: totalValue,
+                amountPaid: amountPaid,
                 soldBy: user.username,
                 guideNumber: guideNumber,
                 location: formData.location,
-                status: 'Pago',
+                status: 'Pago', // Marked as paid to reserve, but not yet 'picked up'
                 documentType: 'Encomenda',
                 clientName: formData.clientName,
             };
