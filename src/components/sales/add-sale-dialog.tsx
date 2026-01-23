@@ -41,6 +41,12 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Textarea } from '../ui/textarea';
 import { Switch } from '../ui/switch';
 import { DatePicker } from '../ui/date-picker';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -254,235 +260,255 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
         </DialogHeader>
         <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="clientName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome do Cliente</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nome do cliente" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="documentType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de Documento</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o tipo de documento" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Factura Proforma">Factura Proforma</SelectItem>
-                          <SelectItem value="Guia de Remessa">Guia de Remessa</SelectItem>
-                          <SelectItem value="Factura">Factura</SelectItem>
-                          <SelectItem value="Recibo">Recibo</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-               <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Data da Venda</FormLabel>
-                    <DatePicker
-                      date={field.value}
-                      setDate={field.onChange}
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {isMultiLocation && (
-                  <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Localização da Venda</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione uma localização" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {locations.map((location: Location) => (
-                              <SelectItem key={location.id} value={location.id}>
-                                {location.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-              <FormField
-                control={form.control}
-                name="productName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Produto</FormLabel>
-                    <FormControl>
-                      <CatalogProductSelector
-                          products={productsInStock}
-                          categories={catalogCategories || []}
-                          selectedValue={field.value}
-                          onValueChange={handleProductSelect}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                  control={form.control}
-                  name="quantity"
-                  render={({ field }) => (
-                      <FormItem>
-                      <div className="flex justify-between items-baseline">
-                          <FormLabel>Quantidade</FormLabel>
-                          {selectedProductInstance && <p className="text-xs text-muted-foreground">Disponível: {availableStock}</p>}
-                      </div>
-                      <FormControl>
-                          <Input type="number" step="any" min="0.01" {...field} placeholder="0.0" />
-                      </FormControl>
-                      <FormMessage />
-                      </FormItem>
-                  )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name="unitPrice"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Preço Unitário</FormLabel>
-                          <FormControl>
-                              <Input type="number" step="0.01" {...field} placeholder="0.00" />
-                          </FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                  />
-              </div>
-
-               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="discountType"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormLabel>Tipo de Desconto</FormLabel>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="flex items-center space-x-4"
-                          >
-                            <FormItem className="flex items-center space-x-2 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="fixed" id="d-fixed" />
-                              </FormControl>
-                              <FormLabel htmlFor="d-fixed" className="font-normal">Valor Fixo</FormLabel>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4 pr-2">
+                
+                <div className="space-y-4 rounded-lg border p-4">
+                    <h3 className="font-semibold leading-none tracking-tight">Detalhes do Documento</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                        control={form.control}
+                        name="clientName"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Nome do Cliente</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Nome do cliente" {...field} />
+                            </FormControl>
+                            <FormMessage />
                             </FormItem>
-                            <FormItem className="flex items-center space-x-2 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="percentage" id="d-percentage" />
-                              </FormControl>
-                              <FormLabel htmlFor="d-percentage" className="font-normal">Percentagem</FormLabel>
-                            </FormItem>
-                          </RadioGroup>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                  control={form.control}
-                  name="discountValue"
-                  render={({ field }) => (
-                      <FormItem>
-                      <FormLabel>Valor do Desconto</FormLabel>
-                      <FormControl>
-                          <Input type="number" min="0" {...field} placeholder="0.00" />
-                      </FormControl>
-                      <FormMessage />
-                      </FormItem>
-                  )}
-                  />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notas (Opcional)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Adicione notas ou termos..."
-                          {...field}
+                        )}
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="applyVat"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm h-full">
-                        <div className="space-y-0.5">
-                          <FormLabel className="cursor-pointer">Aplicar IVA</FormLabel>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  {watchedApplyVat && (
+                        <FormField
+                        control={form.control}
+                        name="documentType"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Tipo de Documento</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecione o tipo de documento" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                <SelectItem value="Factura Proforma">Factura Proforma</SelectItem>
+                                <SelectItem value="Guia de Remessa">Guia de Remessa</SelectItem>
+                                <SelectItem value="Factura">Factura</SelectItem>
+                                <SelectItem value="Recibo">Recibo</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </div>
                     <FormField
-                      control={form.control}
-                      name="vatPercentage"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>IVA (%)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="1" {...field} placeholder="17" />
-                          </FormControl>
-                          <FormMessage />
+                        control={form.control}
+                        name="date"
+                        render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Data da Venda</FormLabel>
+                            <DatePicker
+                            date={field.value}
+                            setDate={field.onChange}
+                            />
+                            <FormMessage />
                         </FormItem>
-                      )}
+                        )}
                     />
-                  )}
                 </div>
-              </div>
+
+                <div className="space-y-4 rounded-lg border p-4">
+                    <h3 className="font-semibold leading-none tracking-tight">Itens</h3>
+                     {isMultiLocation && (
+                        <FormField
+                            control={form.control}
+                            name="location"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Localização da Venda</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                    <SelectValue placeholder="Selecione uma localização" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {locations.map((location: Location) => (
+                                    <SelectItem key={location.id} value={location.id}>
+                                        {location.name}
+                                    </SelectItem>
+                                    ))}
+                                </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    )}
+                    <FormField
+                        control={form.control}
+                        name="productName"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Produto</FormLabel>
+                            <FormControl>
+                            <CatalogProductSelector
+                                products={productsInStock}
+                                categories={catalogCategories || []}
+                                selectedValue={field.value}
+                                onValueChange={handleProductSelect}
+                            />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                        control={form.control}
+                        name="quantity"
+                        render={({ field }) => (
+                            <FormItem>
+                            <div className="flex justify-between items-baseline">
+                                <FormLabel>Quantidade</FormLabel>
+                                {selectedProductInstance && <p className="text-xs text-muted-foreground">Disponível: {availableStock}</p>}
+                            </div>
+                            <FormControl>
+                                <Input type="number" step="any" min="0.01" {...field} placeholder="0.0" />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="unitPrice"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Preço Unitário</FormLabel>
+                                <FormControl>
+                                    <Input type="number" step="0.01" {...field} placeholder="0.00" />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                </div>
+
+                <Accordion type="multiple" className="w-full space-y-4">
+                    <AccordionItem value="financials" className="border rounded-lg">
+                        <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                             <h3 className="font-semibold leading-none tracking-tight">Detalhes Financeiros (Opcional)</h3>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-4 pt-0">
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="discountType"
+                                        render={({ field }) => (
+                                        <FormItem className="space-y-3">
+                                            <FormLabel>Tipo de Desconto</FormLabel>
+                                            <FormControl>
+                                            <RadioGroup
+                                                onValueChange={field.onChange}
+                                                defaultValue={field.value}
+                                                className="flex items-center space-x-4 pt-1"
+                                            >
+                                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                                <FormControl>
+                                                    <RadioGroupItem value="fixed" id="d-fixed" />
+                                                </FormControl>
+                                                <FormLabel htmlFor="d-fixed" className="font-normal">Valor Fixo</FormLabel>
+                                                </FormItem>
+                                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                                <FormControl>
+                                                    <RadioGroupItem value="percentage" id="d-percentage" />
+                                                </FormControl>
+                                                <FormLabel htmlFor="d-percentage" className="font-normal">%</FormLabel>
+                                                </FormItem>
+                                            </RadioGroup>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                    control={form.control}
+                                    name="discountValue"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Valor do Desconto</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" min="0" {...field} placeholder="0.00" />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                    />
+                                </div>
+                                 <FormField
+                                    control={form.control}
+                                    name="applyVat"
+                                    render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                        <div className="space-y-0.5">
+                                        <FormLabel className="cursor-pointer">Aplicar IVA</FormLabel>
+                                        </div>
+                                        <FormControl>
+                                        <Switch
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
+                                        </FormControl>
+                                    </FormItem>
+                                    )}
+                                />
+                                {watchedApplyVat && (
+                                    <FormField
+                                    control={form.control}
+                                    name="vatPercentage"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>IVA (%)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="1" {...field} placeholder="17" />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                )}
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="notes" className="border rounded-lg">
+                         <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                              <h3 className="font-semibold leading-none tracking-tight">Notas Adicionais (Opcional)</h3>
+                         </AccordionTrigger>
+                         <AccordionContent className="p-4 pt-0">
+                             <FormField
+                                control={form.control}
+                                name="notes"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormControl>
+                                        <Textarea
+                                        placeholder="Adicione notas, termos ou condições..."
+                                        {...field}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                         </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+                
               
               <div className="rounded-lg bg-muted p-4 space-y-2 mt-4">
                   <div className='flex justify-between items-center text-sm'>
