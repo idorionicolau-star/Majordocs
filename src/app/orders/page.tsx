@@ -64,6 +64,14 @@ export default function OrdersPage() {
         const companyRef = doc(firestore, `companies/${companyId}`);
 
         await runTransaction(firestore, async (transaction) => {
+            // --- READS FIRST ---
+            const companyDoc = await transaction.get(companyRef);
+            if (!companyDoc.exists()) {
+                throw new Error("Empresa não encontrada.");
+            }
+
+            // --- All WRITES after ---
+
             // 1. Create the Order
             const newOrder: Omit<Order, 'id'> = {
                 productId: formData.productName,
@@ -83,16 +91,13 @@ export default function OrdersPage() {
             transaction.set(orderRef, newOrder);
 
             // 2. Create the associated Sale
-            const companyDoc = await transaction.get(companyRef);
-            if (!companyDoc.exists()) throw new Error("Empresa não encontrada.");
             const newSaleCounter = (companyDoc.data().saleCounter || 0) + 1;
             const guideNumber = `ENC-${String(newSaleCounter).padStart(6, '0')}`;
-            transaction.update(companyRef, { saleCounter: newSaleCounter });
 
             const newSale: Omit<Sale, 'id'> = {
                 orderId: orderRef.id,
                 date: new Date().toISOString(),
-                productId: formData.productName, // Simplified
+                productId: formData.productName,
                 productName: formData.productName,
                 quantity: formData.quantity,
                 unit: formData.unit,
@@ -107,6 +112,9 @@ export default function OrdersPage() {
                 clientName: formData.clientName,
             };
             transaction.set(saleRef, newSale);
+
+            // 3. Update company saleCounter
+            transaction.update(companyRef, { saleCounter: newSaleCounter });
         });
 
         toast({
