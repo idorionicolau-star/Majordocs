@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useContext, useMemo, useCallback } from 'react';
@@ -35,9 +36,9 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogFooter
 } from "@/components/ui/alert-dialog";
 import {
   Select,
@@ -142,7 +143,7 @@ const RawMaterialsManager = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {rawMaterials.length > 0 ? rawMaterials.map((material) => (
+                            {rawMaterials && rawMaterials.length > 0 ? rawMaterials.map((material) => (
                                 <TableRow key={material.id}>
                                     <TableCell className="font-medium">{material.name}</TableCell>
                                     <TableCell>{material.stock}</TableCell>
@@ -362,7 +363,7 @@ const ProductionFromRecipe = () => {
                         <FormField control={form.control} name="quantity" render={({ field }) => (
                             <FormItem><FormLabel>Quantidade a Produzir</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                        <Button type="submit" disabled={form.formState.isSubmitting}>Registrar Produção</Button>
+                        <Button type="submit" disabled={form.formState.isSubmitting} className="w-full border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))] hover:shadow-[2px_2px_0px_hsl(var(--foreground))] active:shadow-[1px_1px_0px_hsl(var(--foreground))] transition-all">Registrar Produção</Button>
                     </form>
                 </Form>
             </CardContent>
@@ -422,7 +423,7 @@ const CostsManager = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {recipes.length > 0 ? recipeCosts.map((recipe) => (
+                            {recipes && recipes.length > 0 ? recipeCosts.map((recipe) => (
                                 <TableRow key={recipe.id}>
                                     <TableCell className="font-medium">{recipe.productName}</TableCell>
                                     <TableCell className="text-right">

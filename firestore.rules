@@ -145,6 +145,16 @@ service cloud.firestore {
         allow create, update, delete: if can('production', 'write');
       }
       
+      match /rawMaterials/{materialId} {
+        allow get, list: if can('raw-materials', 'read');
+        allow create, update, delete: if can('raw-materials', 'write');
+      }
+      
+      match /recipes/{recipeId} {
+        allow get, list: if can('raw-materials', 'read');
+        allow create, update, delete: if can('raw-materials', 'write');
+      }
+      
       match /orders/{orderId} {
         allow get, list: if can('orders', 'read');
         allow create, update, delete: if can('orders', 'write');
