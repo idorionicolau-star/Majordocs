@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from 'react';
@@ -112,6 +111,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
   };
 
   const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
+  const isFromOrder = sale.documentType === 'Encomenda';
 
   function onSubmit(values: EditSaleFormValues) {
     const total = (values.unitPrice || 0) * (values.quantity || 0);
@@ -269,10 +269,18 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
                           <FormItem>
                           <FormLabel>Valor Total Pago</FormLabel>
                           <FormControl>
-                              <Input type="number" step="0.01" {...field} />
+                              <Input 
+                                type="number" 
+                                step="0.01" 
+                                {...field} 
+                                disabled={!isFromOrder}
+                              />
                           </FormControl>
                           <FormDescription>
-                            Atualize este campo para registar pagamentos adicionais do cliente.
+                            {isFromOrder
+                              ? "Atualize este campo para registar pagamentos adicionais do cliente."
+                              : "Este valor não pode ser editado para este tipo de documento."
+                            }
                           </FormDescription>
                           <FormMessage />
                           </FormItem>
