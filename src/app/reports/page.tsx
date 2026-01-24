@@ -67,7 +67,7 @@ const SaleReportCard = ({ sale }: { sale: Sale }) => {
             <CardContent className="space-y-2 text-xs pt-2">
                 <div className="flex items-center gap-2 text-sm">
                     <Hash className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{sale.quantity} unidades</span>
+                    <span className="text-muted-foreground">{sale.quantity} {sale.unit || 'un.'} x {formatCurrency(sale.unitPrice)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                     <User className="h-4 w-4 text-muted-foreground" />
@@ -433,6 +433,7 @@ export default function ReportsPage() {
                     <TableHead>Guia N.º</TableHead>
                     <TableHead>Produto</TableHead>
                     <TableHead className="text-right">Quantidade</TableHead>
+                    <TableHead className="text-right">Preço Unit.</TableHead>
                     <TableHead className="text-right">Valor Pago</TableHead>
                     <TableHead>Vendedor</TableHead>
                     </TableRow>
@@ -445,6 +446,7 @@ export default function ReportsPage() {
                         <TableCell className="font-medium">{sale.guideNumber}</TableCell>
                         <TableCell>{sale.productName}</TableCell>
                         <TableCell className="text-right">{sale.quantity}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(sale.unitPrice)}</TableCell>
                         <TableCell className="text-right">
                            <div className="font-medium">{formatCurrency(sale.amountPaid ?? sale.totalValue)}</div>
                             {sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue && (
@@ -458,7 +460,7 @@ export default function ReportsPage() {
                     ))
                     ) : (
                     <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">
+                        <TableCell colSpan={7} className="h-24 text-center">
                         Nenhuma venda encontrada para este período.
                         </TableCell>
                     </TableRow>
@@ -518,7 +520,3 @@ const StatCard = ({ icon: Icon, title, value, subValue }: StatCardProps) => (
         </CardContent>
     </Card>
 );
-
-    
-
-    

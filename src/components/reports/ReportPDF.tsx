@@ -138,12 +138,13 @@ const styles = StyleSheet.create({
   tableCell: {
     padding: 6,
   },
-  colDate: { width: '15%' },
-  colGuide: { width: '15%' },
-  colProduct: { width: '25%' },
-  colQty: { width: '10%', textAlign: 'right' },
+  colDate: { width: '12%' },
+  colGuide: { width: '13%' },
+  colProduct: { width: '20%' },
+  colQty: { width: '8%', textAlign: 'right' },
+  colUnitPrice: { width: '15%', textAlign: 'right' },
   colValue: { width: '15%', textAlign: 'right' },
-  colSeller: { width: '20%' },
+  colSeller: { width: '17%' },
   footer: {
     position: 'absolute',
     bottom: 30,
@@ -223,6 +224,7 @@ export function ReportPDF({ sales, summary, company, date, aiSummary, period }: 
                         <Text style={[styles.tableColHeader, styles.colGuide]}>Guia N.º</Text>
                         <Text style={[styles.tableColHeader, styles.colProduct]}>Produto</Text>
                         <Text style={[styles.tableColHeader, styles.colQty]}>Qtd</Text>
+                        <Text style={[styles.tableColHeader, styles.colUnitPrice]}>Preço Unit.</Text>
                         <Text style={[styles.tableColHeader, styles.colValue]}>Valor Pago</Text>
                         <Text style={[styles.tableColHeader, styles.colSeller]}>Vendedor</Text>
                     </View>
@@ -234,6 +236,7 @@ export function ReportPDF({ sales, summary, company, date, aiSummary, period }: 
                                 <Text style={[styles.tableCell, styles.colGuide]}>{sale.guideNumber}</Text>
                                 <Text style={[styles.tableCell, styles.colProduct]}>{sale.productName}</Text>
                                 <Text style={[styles.tableCell, styles.colQty]}>{sale.quantity}</Text>
+                                <Text style={[styles.tableCell, styles.colUnitPrice]}>{formatCurrency(sale.unitPrice)}</Text>
                                 <View style={[styles.tableCell, styles.colValue]}>
                                     <Text>{formatCurrency(sale.amountPaid ?? sale.totalValue)}</Text>
                                     {isPartiallyPaid && (
@@ -260,7 +263,3 @@ export function ReportPDF({ sales, summary, company, date, aiSummary, period }: 
         </Document>
     );
 }
-
-    
-
-    
