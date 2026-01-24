@@ -27,6 +27,7 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import { differenceInDays } from 'date-fns';
+import { StrategicSummary } from "@/components/dashboard/strategic-summary";
 
 
 // Helper hook to get window dimensions for the confetti effect
@@ -120,6 +121,8 @@ export default function DashboardPage() {
   
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
+
+      {isPrivilegedUser && <StrategicSummary />}
 
       {daysInOperation !== null && daysInOperation >= 30 && <MaturityCelebration />}
 
