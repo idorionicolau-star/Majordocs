@@ -12,7 +12,7 @@ import remarkGfm from 'remark-gfm';
 export function StrategicSummary() {
   const [summary, setSummary] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { sales, products, dashboardStats, stockMovements, user } = useContext(InventoryContext) || {};
+  const { sales, products, dashboardStats, stockMovements, user, companyData } = useContext(InventoryContext) || {};
 
   const generateSummary = async () => {
     setIsLoading(true);
@@ -28,6 +28,7 @@ export function StrategicSummary() {
             inventoryProducts: products,
             stockMovements: stockMovements?.slice(0, 20),
             user,
+            company: companyData,
           }
         }),
       });

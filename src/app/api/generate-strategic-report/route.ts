@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
 
 **Instruções de Estrutura e Tom:**
 *   **Tom:** Profissional, analítico e focado em soluções. Seja conciso e direto ao assunto.
+*   **Análise Multi-Localização:** Se a empresa tiver múltiplas localizações (verifique 'company.isMultiLocation' e a lista 'company.locations'), as tuas análises devem levar isso em conta. Ao mencionar produtos ou vendas, especifique a localização se for relevante para o insight (ex: "O produto X está com stock crítico na Loja Central", "As vendas na Loja da Baixa aumentaram 20%").
 *   **Estrutura do Resumo:**
 1.  **Parágrafo 1: Resumo Executivo.** Comece com uma ou duas frases que resumam a saúde geral do negócio, mencionando os principais indicadores (Vendas Mensais, Valor do Inventário).
 2.  **Parágrafo 2: Oportunidade Principal.** Identifique a maior oportunidade ou ponto positivo nos dados (ex: um produto em alta, uma boa margem).
