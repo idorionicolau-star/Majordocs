@@ -11,10 +11,12 @@ import {
   FileText,
   History,
   Layers, // Using Layers for raw materials
+  BrainCircuit,
 } from 'lucide-react';
 
 export const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', id: 'dashboard', icon: LayoutDashboard },
+  { title: 'Diagnóstico', href: '/diagnostico', id: 'diagnostico', icon: BrainCircuit },
   { title: 'Inventário', href: '/inventory', id: 'inventory', icon: Box },
   { title: 'Histórico', href: '/inventory/history', id: 'inventory', icon: History, isSubItem: true },
   { title: 'Vendas', href: '/sales', id: 'sales', icon: ShoppingCart },
@@ -27,6 +29,7 @@ export const mainNavItems: NavItem[] = [
 
 export const allPermissions: Readonly<{ id: ModulePermission; label: string; adminOnly: boolean; }[]> = [
   { id: "dashboard", label: "Dashboard" , adminOnly: false},
+  { id: "diagnostico", label: "Diagnóstico", adminOnly: false },
   { id: "inventory", label: "Inventário", adminOnly: false },
   { id: "sales", label: "Vendas", adminOnly: false },
   { id: "production", label: "Produção", adminOnly: false },

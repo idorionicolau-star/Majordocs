@@ -3,6 +3,7 @@ export type PermissionLevel = 'none' | 'read' | 'write';
 
 export type ModulePermission = 
   | 'dashboard'
+  | 'diagnostico'
   | 'inventory'
   | 'sales'
   | 'production'

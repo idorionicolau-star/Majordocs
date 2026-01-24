@@ -56,7 +56,7 @@ interface AddEmployeeDialogProps {
 
 function AddEmployeeDialogContent({ onAddEmployee, setOpen }: AddEmployeeDialogProps & { setOpen: (open: boolean) => void }) {
   const defaultPermissions = allPermissions.reduce((acc, perm) => {
-    acc[perm.id] = (['dashboard'].includes(perm.id)) ? 'read' : 'none';
+    acc[perm.id] = (['dashboard', 'diagnostico'].includes(perm.id)) ? 'read' : 'none';
     return acc;
   }, {} as Record<ModulePermission, PermissionLevel>);
   
