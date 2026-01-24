@@ -17,6 +17,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import {
   Select,
@@ -46,7 +47,7 @@ const formSchema = z.object({
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
   unitPrice: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
   amountPaid: z.coerce.number().min(0, "O valor pago não pode ser negativo.").optional(),
-  documentType: z.enum(['Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo']),
+  documentType: z.enum(['Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo', 'Encomenda']),
   clientName: z.string().optional(),
   notes: z.string().optional(),
   date: z.date(),
@@ -168,6 +169,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
                           <SelectItem value="Guia de Remessa">Guia de Remessa</SelectItem>
                           <SelectItem value="Factura">Factura</SelectItem>
                           <SelectItem value="Recibo">Recibo</SelectItem>
+                          <SelectItem value="Encomenda">Encomenda</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -265,10 +267,13 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
                       name="amountPaid"
                       render={({ field }) => (
                           <FormItem>
-                          <FormLabel>Valor Pago</FormLabel>
+                          <FormLabel>Valor Total Pago</FormLabel>
                           <FormControl>
                               <Input type="number" step="0.01" {...field} />
                           </FormControl>
+                          <FormDescription>
+                            Atualize este campo para registar pagamentos adicionais do cliente.
+                          </FormDescription>
                           <FormMessage />
                           </FormItem>
                       )}
