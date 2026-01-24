@@ -16,7 +16,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { LeastSoldProducts } from "@/components/dashboard/least-sold-products";
 import { AIAssistant } from "@/components/dashboard/ai-assistant";
 import { useSearchParams } from "next/navigation";
-import { AISummary } from "@/components/dashboard/ai-summary";
 import Confetti from 'react-confetti';
 import {
   AlertDialog,
@@ -156,7 +155,6 @@ export default function DashboardPage() {
         
         {/* Main Column */}
         <div className="flex flex-col gap-6">
-           {isPrivilegedUser && <AISummary />}
            {isPrivilegedUser && <StatsCards />}
 
             {/* Quick Access */}
