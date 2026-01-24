@@ -51,7 +51,7 @@ export default function ProductionPage() {
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const { productions, companyData, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation, deleteProduction, updateProduction, clearProductions } = inventoryContext || { productions: [], companyData: null, updateProductStock: () => {}, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false, deleteProduction: () => {}, updateProduction: () => {}, clearProductions: async () => {} };
+  const { productions, companyId, companyData, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation, deleteProduction, updateProduction, clearProductions } = inventoryContext || { productions: [], companyId: null, companyData: null, updateProductStock: () => {}, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false, deleteProduction: () => {}, updateProduction: () => {}, clearProductions: async () => {} };
 
   const canEditProduction = canEdit('production');
   const canViewProduction = canView('production');
@@ -156,12 +156,12 @@ export default function ProductionPage() {
                     body { font-family: 'PT Sans', sans-serif; line-height: 1.6; color: #333; margin: 2rem; }
                     .container { max-width: 1000px; margin: auto; padding: 2rem; border: 1px solid #eee; border-radius: 8px; }
                     .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 1rem; margin-bottom: 2rem; }
-                    .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: #3498db; margin: 0; }
+                    .header h1 { font-family: 'Space+Grotesk', sans-serif; font-size: 2rem; color: #3498db; margin: 0; }
                     .logo { display: flex; flex-direction: column; align-items: flex-start; }
-                    .logo span { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: bold; color: #3498db; }
+                    .logo span { font-family: 'Space+Grotesk', sans-serif; font-size: 1.5rem; font-weight: bold; color: #3498db; }
                     table { width: 100%; border-collapse: collapse; margin-top: 2rem; font-size: 10px; }
                     th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                    th { background-color: #f9fafb; font-family: 'Space Grotesk', sans-serif; }
+                    th { background-color: #f9fafb; font-family: 'Space+Grotesk', sans-serif; }
                     .footer { text-align: center; margin-top: 3rem; font-size: 0.8rem; color: #999; }
                     @page { size: A4 landscape; margin: 0.5in; }
                     @media print {
@@ -469,3 +469,5 @@ export default function ProductionPage() {
     </>
   );
 }
+
+    
