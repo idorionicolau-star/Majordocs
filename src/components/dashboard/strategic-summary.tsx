@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useContext, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sparkles, RefreshCw } from 'lucide-react';
@@ -9,6 +9,12 @@ import { InventoryContext } from '@/context/inventory-context';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { isToday } from 'date-fns';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const STORAGE_KEY = 'majorstockx-strategic-summary';
 
@@ -80,40 +86,47 @@ export function StrategicSummary() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sales, products, dashboardStats]);
 
-  const handleRefresh = () => {
+  const handleRefresh = (e: React.MouseEvent) => {
+    e.stopPropagation();
     generateSummary(true);
   };
 
   return (
-    <Card className="glass-card shadow-sm">
-      <CardHeader className="flex flex-row items-start justify-between">
-        <div>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="text-primary" />
-            Relatório de Operações Estratégico
-          </CardTitle>
-          <CardDescription>Análise da IA com base nos dados atuais.</CardDescription>
-        </div>
-        <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isLoading}>
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {isLoading && (
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-          </div>
-        )}
-        {summary && (
-          <div className="prose dark:prose-invert prose-sm max-w-none">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {summary}
-            </ReactMarkdown>
-          </div>
-        )}
-      </CardContent>
+    <Card className="glass-card shadow-sm p-0">
+        <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
+            <AccordionItem value="item-1" className="border-b-0">
+                <AccordionTrigger className="hover:no-underline p-4 sm:p-6">
+                    <div className="flex flex-row items-center justify-between w-full">
+                        <div className="text-left">
+                        <h3 className="font-semibold text-lg flex items-center gap-2">
+                            <Sparkles className="text-primary" />
+                            Relatório de Operações Estratégico
+                        </h3>
+                        <p className="text-sm text-muted-foreground">Análise da IA com base nos dados atuais.</p>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isLoading} className="mr-2">
+                        <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                        </Button>
+                    </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+                    {isLoading && (
+                    <div className="space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                    </div>
+                    )}
+                    {summary && (
+                    <div className="prose dark:prose-invert prose-sm max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {summary}
+                        </ReactMarkdown>
+                    </div>
+                    )}
+                </AccordionContent>
+            </AccordionItem>
+        </Accordion>
     </Card>
   );
 }
