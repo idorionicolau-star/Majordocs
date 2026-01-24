@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect, useContext } from "react";
@@ -6,7 +7,7 @@ import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle, Plus, FileCheck, ChevronsUpDown } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle, Plus, FileCheck, ChevronsUpDown, Printer, Download } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -42,6 +43,8 @@ import Link from "next/link";
 import { DatePicker } from "@/components/ui/date-picker";
 import { isSameDay } from "date-fns";
 import { Card } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/utils";
+
 
 export default function InventoryPage() {
   const inventoryContext = useContext(InventoryContext);
@@ -71,7 +74,8 @@ export default function InventoryPage() {
     canView,
     user,
     clearProductsCollection,
-  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, canEdit: () => false, canView: () => false, user: null, clearProductsCollection: async () => {} };
+    companyData,
+  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true, canEdit: () => false, canView: () => false, user: null, clearProductsCollection: async () => {}, companyData: null };
   
   const canEditInventory = canEdit('inventory');
   const canViewInventory = canView('inventory');
@@ -364,6 +368,101 @@ export default function InventoryPage() {
     setShowClearConfirm(false);
   };
   
+    const reportTitle = useMemo(() => {
+        if (selectedLocation === 'all' || !isMultiLocation) {
+            return "Relatório de Inventário Geral";
+        }
+        const locationName = locations.find(l => l.id === selectedLocation)?.name;
+        return `Relatório de Inventário: ${locationName || 'Desconhecida'}`;
+    }, [selectedLocation, isMultiLocation, locations]);
+
+    const handlePrintReport = () => {
+        const printWindow = window.open('', '', 'height=800,width=800');
+        if (printWindow) {
+            printWindow.document.write('<!DOCTYPE html><html><head><title>' + reportTitle + '</title>');
+            printWindow.document.write(`
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+            `);
+            printWindow.document.write(`
+                <style>
+                    body { font-family: 'PT Sans', sans-serif; line-height: 1.6; color: #333; margin: 2rem; }
+                    .container { max-width: 1000px; margin: auto; padding: 2rem; border: 1px solid #eee; border-radius: 8px; }
+                    .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 1rem; margin-bottom: 2rem; }
+                    .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: #3498db; margin: 0; }
+                    .logo { display: flex; flex-direction: column; align-items: flex-start; }
+                    .logo span { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: bold; color: #3498db; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 2rem; font-size: 10px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f9fafb; font-family: 'Space Grotesk', sans-serif; }
+                    .footer { text-align: center; margin-top: 3rem; font-size: 0.8rem; color: #999; }
+                    @page { size: A4 landscape; margin: 0.5in; }
+                    @media print {
+                      body { margin: 0; -webkit-print-color-adjust: exact; }
+                      .no-print { display: none; }
+                      .container { border: none; box-shadow: none; }
+                    }
+                </style>
+            `);
+            printWindow.document.write('</head><body><div class="container">');
+            printWindow.document.write(`
+                <div class="header">
+                     <div class="logo">
+                        <span>${companyData?.name || 'MajorStockX'}</span>
+                    </div>
+                    <h1>${reportTitle}</h1>
+                </div>
+                <h2>Data: ${new Date().toLocaleDateString('pt-BR')}</h2>
+            `);
+
+            printWindow.document.write('<table><thead><tr><th>Produto</th><th>Categoria</th><th>Stock Disp.</th><th>Preço Unit.</th><th>Valor Stock</th></tr></thead><tbody>');
+            
+            let totalValue = 0;
+            filteredProducts.forEach(product => {
+                const availableStock = product.stock - product.reservedStock;
+                const stockValue = availableStock * product.price;
+                totalValue += stockValue;
+                printWindow.document.write(`
+                    <tr>
+                        <td>${product.name}</td>
+                        <td>${product.category}</td>
+                        <td>${availableStock} ${product.unit || 'un.'}</td>
+                        <td>${formatCurrency(product.price)}</td>
+                        <td>${formatCurrency(stockValue)}</td>
+                    </tr>
+                `);
+            });
+            
+            printWindow.document.write(`
+                <tr>
+                    <td colspan="4" style="text-align: right; font-weight: bold;">Valor Total do Inventário:</td>
+                    <td style="font-weight: bold;">${formatCurrency(totalValue)}</td>
+                </tr>
+            `);
+
+            printWindow.document.write('</tbody></table>');
+            
+            printWindow.document.write(`<div class="footer"><p>${companyData?.name || 'MajorStockX'} &copy; ${new Date().getFullYear()}</p></div>`);
+            printWindow.document.write('</div></body></html>');
+            printWindow.document.close();
+            
+            setTimeout(() => {
+              printWindow.focus();
+              printWindow.print();
+            }, 500);
+        }
+    };
+
+    const handleDownloadPdfReport = () => {
+        toast({
+          title: "Como Guardar o Relatório em PDF",
+          description: "Na janela de impressão que vai abrir, por favor mude o destino para 'Guardar como PDF' para descarregar o ficheiro.",
+          duration: 8000,
+        });
+        handlePrintReport();
+    };
+
     if (inventoryLoading) {
     return (
       <div className="space-y-4">
@@ -415,6 +514,16 @@ export default function InventoryPage() {
 
       <div className="flex flex-col gap-6">
           <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+            <div className="flex items-center gap-2">
+              <Button onClick={handleDownloadPdfReport} variant="outline" className="h-12">
+                <Download className="mr-2 h-4 w-4" />
+                Baixar PDF
+              </Button>
+              <Button onClick={handlePrintReport} variant="outline" className="h-12">
+                <Printer className="mr-2 h-4 w-4" />
+                Imprimir Relatório
+              </Button>
+            </div>
           </div>
           <div className="py-4 space-y-4">
              <div className="flex flex-col sm:flex-row items-center gap-2">

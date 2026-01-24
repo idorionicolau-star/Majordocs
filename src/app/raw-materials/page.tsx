@@ -50,7 +50,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { PlusCircle, Trash2, Edit, AlertTriangle } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, AlertTriangle, Printer, Download } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -91,10 +91,11 @@ type ProductionFormValues = z.infer<typeof productionSchema>;
 
 // Raw Materials Manager Component
 const RawMaterialsManager = () => {
-    const { rawMaterials, addRawMaterial, updateRawMaterial, deleteRawMaterial, loading } = useContext(InventoryContext)!;
+    const { rawMaterials, addRawMaterial, updateRawMaterial, deleteRawMaterial, loading, companyData } = useContext(InventoryContext)!;
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [materialToEdit, setMaterialToEdit] = useState<RawMaterial | null>(null);
     const [materialToDelete, setMaterialToDelete] = useState<RawMaterial | null>(null);
+    const { toast } = useToast();
 
     const form = useForm<RawMaterialFormValues>({
         resolver: zodResolver(rawMaterialSchema),
@@ -116,6 +117,39 @@ const RawMaterialsManager = () => {
         setIsDialogOpen(false);
     };
 
+    const handlePrint = () => {
+        const printWindow = window.open('', '', 'height=800,width=800');
+        if (printWindow) {
+            printWindow.document.write('<!DOCTYPE html><html><head><title>Relatório de Matérias-Primas</title>');
+            printWindow.document.write(`
+                <style>
+                    body { font-family: sans-serif; padding: 2rem; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f2f2f2; }
+                </style>
+            `);
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(`<h1>Relatório de Matérias-Primas - ${companyData?.name || ''}</h1>`);
+            printWindow.document.write('<table><thead><tr><th>Nome</th><th>Stock</th><th>Custo Unit.</th><th>Unidade</th><th>Nível Mínimo</th></tr></thead><tbody>');
+            (rawMaterials || []).forEach(material => {
+                printWindow.document.write(`<tr><td>${material.name}</td><td>${material.stock}</td><td>${material.cost ? formatCurrency(material.cost) : 'N/A'}</td><td>${material.unit}</td><td>${material.lowStockThreshold}</td></tr>`);
+            });
+            printWindow.document.write('</tbody></table></body></html>');
+            printWindow.document.close();
+            setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
+        }
+    };
+    
+    const handleDownload = () => {
+        toast({
+            title: "Como Guardar o Relatório em PDF",
+            description: "Na janela de impressão que vai abrir, por favor mude o destino para 'Guardar como PDF' para descarregar o ficheiro.",
+            duration: 8000,
+        });
+        handlePrint();
+    };
+
     if (loading) return <Skeleton className="h-64 w-full" />;
 
     return (
@@ -125,7 +159,9 @@ const RawMaterialsManager = () => {
                 <CardDescription>Adicione e gira o stock das suas matérias-primas.</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="flex justify-end mb-4">
+                <div className="flex justify-end mb-4 gap-2">
+                    <Button onClick={handleDownload} variant="outline"><Download className="mr-2 h-4 w-4" /> Baixar PDF</Button>
+                    <Button onClick={handlePrint} variant="outline"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
                     <Button onClick={() => handleOpenDialog()}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Matéria-Prima
                     </Button>
@@ -216,9 +252,10 @@ const RawMaterialsManager = () => {
 
 // Recipes Manager Component
 const RecipesManager = () => {
-    const { recipes, catalogProducts, rawMaterials, addRecipe, updateRecipe, deleteRecipe, loading } = useContext(InventoryContext)!;
+    const { recipes, catalogProducts, rawMaterials, addRecipe, updateRecipe, deleteRecipe, loading, companyData } = useContext(InventoryContext)!;
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
+    const { toast } = useToast();
 
     const form = useForm<RecipeFormValues>({
         resolver: zodResolver(recipeSchema),
@@ -252,6 +289,36 @@ const RecipesManager = () => {
         }
         setIsDialogOpen(false);
     };
+
+    const handlePrint = () => {
+        const printWindow = window.open('', '', 'height=800,width=800');
+        if (printWindow) {
+            printWindow.document.write('<!DOCTYPE html><html><head><title>Relatório de Receitas</title>');
+             printWindow.document.write(`<style>body { font-family: sans-serif; padding: 2rem; } h2 { border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-top: 2rem; } ul { list-style: none; padding-left: 0; } </style>`);
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(`<h1>Relatório de Receitas - ${companyData?.name || ''}</h1>`);
+            recipes.forEach(recipe => {
+                printWindow.document.write(`<h2>${recipe.productName}</h2>`);
+                printWindow.document.write('<ul>');
+                recipe.ingredients.forEach(ing => {
+                    printWindow.document.write(`<li>${ing.quantity} ${rawMaterials.find(rm => rm.id === ing.rawMaterialId)?.unit || ''} de ${ing.rawMaterialName}</li>`);
+                });
+                printWindow.document.write('</ul>');
+            });
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
+        }
+    };
+    
+    const handleDownload = () => {
+        toast({
+            title: "Como Guardar o Relatório em PDF",
+            description: "Na janela de impressão que vai abrir, por favor mude o destino para 'Guardar como PDF' para descarregar o ficheiro.",
+            duration: 8000,
+        });
+        handlePrint();
+    };
     
     if(loading) return <Skeleton className="h-64 w-full" />;
 
@@ -259,7 +326,9 @@ const RecipesManager = () => {
         <Card>
             <CardHeader><CardTitle>Receitas de Produção</CardTitle><CardDescription>Defina os componentes para cada produto final.</CardDescription></CardHeader>
             <CardContent>
-                 <div className="flex justify-end mb-4">
+                 <div className="flex justify-end mb-4 gap-2">
+                    <Button onClick={handleDownload} variant="outline"><Download className="mr-2 h-4 w-4" /> Baixar PDF</Button>
+                    <Button onClick={handlePrint} variant="outline"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
                     <Button onClick={() => handleOpenDialog()}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Receita
                     </Button>
@@ -373,7 +442,7 @@ const ProductionFromRecipe = () => {
 
 // Costs Manager Component
 const CostsManager = () => {
-    const { recipes, rawMaterials, loading } = useContext(InventoryContext)!;
+    const { recipes, rawMaterials, loading, companyData } = useContext(InventoryContext)!;
     const { toast } = useToast();
 
     const recipeCosts = useMemo(() => {
@@ -405,6 +474,32 @@ const CostsManager = () => {
         });
     }, [recipes, rawMaterials]);
 
+    const handlePrint = () => {
+        const printWindow = window.open('', '', 'height=800,width=800');
+        if (printWindow) {
+            printWindow.document.write('<!DOCTYPE html><html><head><title>Relatório de Custos</title>');
+            printWindow.document.write(`<style>body { font-family: sans-serif; padding: 2rem; } table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #ddd; padding: 8px; text-align: left; } th { background-color: #f2f2f2; }</style>`);
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(`<h1>Relatório de Custos de Produção - ${companyData?.name || ''}</h1>`);
+            printWindow.document.write('<table><thead><tr><th>Produto Final</th><th>Custo de Produção / Unidade</th></tr></thead><tbody>');
+            recipeCosts.forEach(recipe => {
+                printWindow.document.write(`<tr><td>${recipe.productName}</td><td>${recipe.isCalculable ? formatCurrency(recipe.totalCost) : 'Incalculável'}</td></tr>`);
+            });
+            printWindow.document.write('</tbody></table></body></html>');
+            printWindow.document.close();
+            setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
+        }
+    };
+
+    const handleDownload = () => {
+        toast({
+            title: "Como Guardar o Relatório em PDF",
+            description: "Na janela de impressão que vai abrir, por favor mude o destino para 'Guardar como PDF' para descarregar o ficheiro.",
+            duration: 8000,
+        });
+        handlePrint();
+    };
+
     if (loading) return <Skeleton className="h-64 w-full" />;
 
     return (
@@ -412,6 +507,10 @@ const CostsManager = () => {
             <CardHeader>
                 <CardTitle>Análise de Custos de Produção</CardTitle>
                 <CardDescription>Custo por unidade para cada produto com base nas suas receitas e no custo da matéria-prima.</CardDescription>
+                <div className="flex justify-end pt-2 gap-2">
+                    <Button onClick={handleDownload} variant="outline" size="sm"><Download className="mr-2 h-4 w-4" /> Baixar PDF</Button>
+                    <Button onClick={handlePrint} variant="outline" size="sm"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
+                </div>
             </CardHeader>
             <CardContent>
                 <div className="rounded-md border">

@@ -6,7 +6,7 @@ import { useState, useMemo, useContext, useEffect } from "react";
 import { useSearchParams } from 'next/navigation';
 import type { Order, Sale, ProductionLog, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Filter, List, LayoutGrid, ChevronDown, Lock, Trash2, PlusCircle, Plus } from "lucide-react";
+import { Filter, List, LayoutGrid, ChevronDown, Lock, Trash2, PlusCircle, Plus, Printer, Download } from "lucide-react";
 import { AddOrderDialog, AddOrderFormValues } from "@/components/orders/add-order-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -30,6 +30,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/utils";
+import { format } from "date-fns";
+
 
 export default function OrdersPage() {
   const searchParams = useSearchParams();
@@ -42,7 +45,7 @@ export default function OrdersPage() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { orders, companyId, loading: inventoryLoading, user, canEdit, deleteOrder, clearOrders, addNotification, addProductionLog } = inventoryContext || { orders: [], companyId: null, loading: true, user: null, canEdit: () => false, deleteOrder: () => {}, clearOrders: async () => {}, addNotification: () => {}, addProductionLog: () => {} };
+  const { orders, companyId, loading: inventoryLoading, user, canEdit, deleteOrder, clearOrders, addNotification, addProductionLog, companyData } = inventoryContext || { orders: [], companyId: null, loading: true, user: null, canEdit: () => false, deleteOrder: () => {}, clearOrders: async () => {}, addNotification: () => {}, addProductionLog: () => {}, companyData: null };
 
   const canEditOrders = canEdit('orders');
   const isAdmin = user?.role === 'Admin';
@@ -207,6 +210,81 @@ export default function OrdersPage() {
     setShowClearConfirm(false);
   };
 
+    const handlePrintReport = () => {
+        const printWindow = window.open('', '', 'height=800,width=800');
+        if (printWindow) {
+            printWindow.document.write('<!DOCTYPE html><html><head><title>Relatório de Encomendas</title>');
+            printWindow.document.write(`
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+            `);
+            printWindow.document.write(`
+                <style>
+                    body { font-family: 'PT Sans', sans-serif; line-height: 1.6; color: #333; margin: 2rem; }
+                    .container { max-width: 1000px; margin: auto; padding: 2rem; border: 1px solid #eee; border-radius: 8px; }
+                    .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 1rem; margin-bottom: 2rem; }
+                    .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: #3498db; margin: 0; }
+                    .logo { display: flex; flex-direction: column; align-items: flex-start; }
+                    .logo span { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: bold; color: #3498db; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 2rem; font-size: 10px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f9fafb; font-family: 'Space Grotesk', sans-serif; }
+                    .footer { text-align: center; margin-top: 3rem; font-size: 0.8rem; color: #999; }
+                    @page { size: A4 landscape; margin: 0.5in; }
+                    @media print {
+                      body { margin: 0; -webkit-print-color-adjust: exact; }
+                      .no-print { display: none; }
+                      .container { border: none; box-shadow: none; }
+                    }
+                </style>
+            `);
+            printWindow.document.write('</head><body><div class="container">');
+            printWindow.document.write(`
+                <div class="header">
+                     <div class="logo">
+                        <span>${companyData?.name || 'MajorStockX'}</span>
+                    </div>
+                    <h1>Relatório de Encomendas</h1>
+                </div>
+                <h2>Data: ${new Date().toLocaleDateString('pt-BR')}</h2>
+            `);
+
+            printWindow.document.write('<table><thead><tr><th>Produto</th><th>Cliente</th><th>Data Entrega</th><th>Qtd.</th><th>Valor Total</th><th>Status</th></tr></thead><tbody>');
+            filteredOrders.forEach(order => {
+                printWindow.document.write(`
+                    <tr>
+                        <td>${order.productName}</td>
+                        <td>${order.clientName || 'N/A'}</td>
+                        <td>${order.deliveryDate ? format(new Date(order.deliveryDate), 'dd/MM/yyyy') : 'N/A'}</td>
+                        <td>${order.quantity} ${order.unit}</td>
+                        <td>${order.totalValue ? formatCurrency(order.totalValue) : 'N/A'}</td>
+                        <td>${order.status}</td>
+                    </tr>
+                `);
+            });
+            printWindow.document.write('</tbody></table>');
+            
+            printWindow.document.write(`<div class="footer"><p>${companyData?.name || 'MajorStockX'} &copy; ${new Date().getFullYear()}</p></div>`);
+            printWindow.document.write('</div></body></html>');
+            printWindow.document.close();
+            
+            setTimeout(() => {
+              printWindow.focus();
+              printWindow.print();
+            }, 500);
+        }
+    };
+
+    const handleDownloadPdfReport = () => {
+        toast({
+          title: "Como Guardar o Relatório em PDF",
+          description: "Na janela de impressão que vai abrir, por favor mude o destino para 'Guardar como PDF' para descarregar o ficheiro.",
+          duration: 8000,
+        });
+        handlePrintReport();
+    };
+
   if (inventoryLoading) {
     return (
       <div className="space-y-4">
@@ -244,6 +322,16 @@ export default function OrdersPage() {
           <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
               <div>
                   <h1 className="text-2xl md:text-3xl font-headline font-bold">Encomendas de Produção</h1>
+              </div>
+              <div className="flex items-center gap-2">
+                  <Button onClick={handleDownloadPdfReport} variant="outline" className="h-12">
+                      <Download className="mr-2 h-4 w-4" />
+                      Baixar PDF
+                  </Button>
+                  <Button onClick={handlePrintReport} variant="outline" className="h-12">
+                      <Printer className="mr-2 h-4 w-4" />
+                      Imprimir
+                  </Button>
               </div>
           </div>
           

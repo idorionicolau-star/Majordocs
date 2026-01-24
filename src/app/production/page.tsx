@@ -8,7 +8,7 @@ import { ProductionDataTable } from "@/components/production/data-table";
 import { AddProductionDialog } from "@/components/production/add-production-dialog";
 import type { Production, Location, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronDown, Lock, MapPin, Trash2, PlusCircle, Plus } from "lucide-react";
+import { List, LayoutGrid, ChevronDown, Lock, MapPin, Trash2, PlusCircle, Plus, Printer, Download } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,7 @@ import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
-import { isSameDay } from "date-fns";
+import { isSameDay, format } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { columns } from "@/components/production/columns";
 
@@ -51,7 +51,7 @@ export default function ProductionPage() {
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const { productions, companyId, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation, deleteProduction, updateProduction, clearProductions } = inventoryContext || { productions: [], companyId: null, updateProductStock: () => {}, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false, deleteProduction: () => {}, updateProduction: () => {}, clearProductions: async () => {} };
+  const { productions, companyData, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation, deleteProduction, updateProduction, clearProductions } = inventoryContext || { productions: [], companyData: null, updateProductStock: () => {}, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false, deleteProduction: () => {}, updateProduction: () => {}, clearProductions: async () => {} };
 
   const canEditProduction = canEdit('production');
   const canViewProduction = canView('production');
@@ -142,6 +142,82 @@ export default function ProductionPage() {
     setShowClearConfirm(false);
   };
 
+    const handlePrintReport = () => {
+        const printWindow = window.open('', '', 'height=800,width=800');
+        if (printWindow) {
+            printWindow.document.write('<!DOCTYPE html><html><head><title>Relatório de Produção</title>');
+            printWindow.document.write(`
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+            `);
+            printWindow.document.write(`
+                <style>
+                    body { font-family: 'PT Sans', sans-serif; line-height: 1.6; color: #333; margin: 2rem; }
+                    .container { max-width: 1000px; margin: auto; padding: 2rem; border: 1px solid #eee; border-radius: 8px; }
+                    .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 1rem; margin-bottom: 2rem; }
+                    .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: #3498db; margin: 0; }
+                    .logo { display: flex; flex-direction: column; align-items: flex-start; }
+                    .logo span { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: bold; color: #3498db; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 2rem; font-size: 10px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f9fafb; font-family: 'Space Grotesk', sans-serif; }
+                    .footer { text-align: center; margin-top: 3rem; font-size: 0.8rem; color: #999; }
+                    @page { size: A4 landscape; margin: 0.5in; }
+                    @media print {
+                      body { margin: 0; -webkit-print-color-adjust: exact; }
+                      .no-print { display: none; }
+                      .container { border: none; box-shadow: none; }
+                    }
+                </style>
+            `);
+            printWindow.document.write('</head><body><div class="container">');
+            printWindow.document.write(`
+                <div class="header">
+                     <div class="logo">
+                        <span>${companyData?.name || 'MajorStockX'}</span>
+                    </div>
+                    <h1>Relatório de Produção</h1>
+                </div>
+                <h2>Data: ${new Date().toLocaleDateString('pt-BR')}</h2>
+            `);
+
+            printWindow.document.write('<table><thead><tr><th>Data</th><th>Produto</th><th>Qtd.</th><th>Unidade</th><th>Localização</th><th>Registado por</th><th>Status</th></tr></thead><tbody>');
+            filteredProductions.forEach(prod => {
+                printWindow.document.write(`
+                    <tr>
+                        <td>${format(new Date(prod.date), 'dd/MM/yyyy')}</td>
+                        <td>${prod.productName}</td>
+                        <td>${prod.quantity}</td>
+                        <td>${prod.unit || 'un.'}</td>
+                        <td>${locations.find(l => l.id === prod.location)?.name || 'N/A'}</td>
+                        <td>${prod.registeredBy}</td>
+                        <td>${prod.status}</td>
+                    </tr>
+                `);
+            });
+            printWindow.document.write('</tbody></table>');
+            
+            printWindow.document.write(`<div class="footer"><p>${companyData?.name || 'MajorStockX'} &copy; ${new Date().getFullYear()}</p></div>`);
+            printWindow.document.write('</div></body></html>');
+            printWindow.document.close();
+            
+            setTimeout(() => {
+              printWindow.focus();
+              printWindow.print();
+            }, 500);
+        }
+    };
+
+    const handleDownloadPdfReport = () => {
+        toast({
+          title: "Como Guardar o Relatório em PDF",
+          description: "Na janela de impressão que vai abrir, por favor mude o destino para 'Guardar como PDF' para descarregar o ficheiro.",
+          duration: 8000,
+        });
+        handlePrintReport();
+    };
+
   if (inventoryLoading) {
     return (
       <div className="space-y-4">
@@ -194,6 +270,16 @@ export default function ProductionPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h1 className="text-2xl md:text-3xl font-headline font-bold">Produção</h1>
+            </div>
+             <div className="flex items-center gap-2">
+                <Button onClick={handleDownloadPdfReport} variant="outline" className="h-12">
+                    <Download className="mr-2 h-4 w-4" />
+                    Baixar PDF
+                </Button>
+                <Button onClick={handlePrintReport} variant="outline" className="h-12">
+                    <Printer className="mr-2 h-4 w-4" />
+                    Imprimir
+                </Button>
             </div>
         </div>
 
