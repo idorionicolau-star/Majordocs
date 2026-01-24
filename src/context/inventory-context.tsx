@@ -179,18 +179,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-        await signOut(auth);
-        setUser(null);
-        setCompanyId(null);
-        setFirebaseUser(null);
-        setNotifications([]); // Explicitly clear notifications
-        setChatHistory([]); // Clear chat history on logout
-        router.push('/login');
-        toast({ title: "Sessão terminada" });
+      await signOut(auth);
+      // onAuthStateChanged will handle the state updates (setUser, setFirebaseUser etc.)
+      // and ClientLayout will handle the redirect.
+      toast({ title: 'Sessão terminada' });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Erro ao sair' });
+      toast({ variant: 'destructive', title: 'Erro ao sair' });
     }
-  }, [auth, router, toast]);
+  }, [auth, toast]);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
@@ -1336,3 +1332,4 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 }
 
     
+
