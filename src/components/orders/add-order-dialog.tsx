@@ -81,7 +81,6 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
       clientName: "",
       deliveryDate: new Date(),
       location: "",
-      unitPrice: 0,
       paymentOption: 'full',
       partialPaymentType: 'fixed',
       partialPaymentValue: 0,
@@ -103,11 +102,12 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
         
       form.reset({
         productName: "",
+        quantity: undefined,
         unit: 'un',
         clientName: "",
         deliveryDate: new Date(),
         location: finalLocation,
-        unitPrice: 0,
+        unitPrice: undefined,
         paymentOption: 'full',
         partialPaymentType: 'fixed',
         partialPaymentValue: 0,
@@ -120,6 +120,8 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
     if (product) {
       form.setValue('unit', product.unit || 'un');
       form.setValue('unitPrice', product.price);
+    } else {
+        form.setValue('unitPrice', undefined);
     }
   };
   
@@ -195,7 +197,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Quantidade</FormLabel>
-                      <FormControl><Input type="number" step="any" min="0.01" {...field} placeholder="0.0" /></FormControl>
+                      <FormControl><Input type="number" step="any" min="0.01" {...field} placeholder="0" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

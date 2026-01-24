@@ -73,8 +73,6 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
     defaultValues: {
       category: "",
       name: "",
-      price: 0,
-      stock: 0,
       unit: "un",
       lowStockThreshold: 10,
       criticalStockThreshold: 5,
@@ -97,8 +95,8 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       form.reset({
         category: "",
         name: "",
-        price: 0,
-        stock: 0,
+        price: undefined,
+        stock: undefined,
         unit: 'un',
         lowStockThreshold: 10,
         criticalStockThreshold: 5,
@@ -121,6 +119,9 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       }
     } else {
       setIsCatalogProductSelected(false);
+      // Reset fields if it's a new product
+      form.setValue('price', undefined);
+      form.setValue('category', '');
     }
   };
   
@@ -336,7 +337,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
                       <FormItem>
                       <FormLabel>Preço Unitário (MT)</FormLabel>
                       <FormControl>
-                          <Input type="number" step="0.01" {...field} />
+                          <Input type="number" step="0.01" {...field} placeholder="0.00" />
                       </FormControl>
                       <FormMessage />
                       </FormItem>
@@ -350,7 +351,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
                       <FormItem>
                       <FormLabel>Estoque Inicial</FormLabel>
                       <FormControl>
-                          <Input type="number" step="any" {...field} />
+                          <Input type="number" step="any" {...field} placeholder="0" />
                       </FormControl>
                       <FormMessage />
                       </FormItem>
@@ -420,5 +421,3 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
     </Dialog>
   );
 }
-
-    
