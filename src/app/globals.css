@@ -79,10 +79,6 @@
 }
 
 @layer components {
-  .main-content {
-      padding-bottom: 96px; /* Space for the bottom nav */
-  }
-
   /* Glassmorphism Effect */
   .glass-card {
     @apply bg-card/80 dark:bg-card/60 backdrop-blur-xl border-white/10 dark:border-slate-800/50 shadow-sm;
@@ -114,9 +110,6 @@
 }
 
 @layer utilities {
-    .main-content {
-        @apply pb-24 md:pb-0;
-    }
     body {
         overflow-x: hidden;
     }

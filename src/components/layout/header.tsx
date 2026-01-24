@@ -7,8 +7,9 @@ import { usePathname } from "next/navigation";
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { UserNav } from "@/components/user-nav";
 import { Button } from "@/components/ui/button";
-import { Settings, Search } from "lucide-react";
+import { Settings, Search, Menu } from "lucide-react";
 import { mainNavItems } from "@/lib/data";
+import { SheetTrigger } from "../ui/sheet";
 
 export function Header({ onSearchClick }: { onSearchClick: () => void }) {
   const pathname = usePathname();
@@ -31,11 +32,14 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b px-4 sm:px-6 bg-primary text-primary-foreground">
       
-      {/* Logo for mobile, hidden on desktop */}
+      {/* Hamburger menu for mobile, hidden on desktop */}
       <div className="flex items-center gap-3 md:hidden">
-        <Link href="/dashboard" className="flex items-center gap-2.5 font-semibold">
-            <Image src="/logo.svg" alt="MajorStockX Logo" width={28} height={28} />
-        </Link>
+        <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Abrir menu</span>
+            </Button>
+        </SheetTrigger>
       </div>
 
       {/* Centered Page Title on mobile */}

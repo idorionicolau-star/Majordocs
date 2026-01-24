@@ -24,7 +24,7 @@ export function Sidebar({ isCollapsed, onToggleCollapse }: DesktopSidebarProps) 
   const navItems = mainNavItems.filter(item => {
     if (!canView(item.id as ModulePermission)) return false;
     if (item.isSubItem) return false;
-    if (companyData?.businessType === 'reseller' && (item.id === 'production' || item.id === 'orders')) {
+    if (companyData?.businessType === 'reseller' && (item.id === 'production' || item.id === 'orders' || item.id === 'raw-materials')) {
         return false;
     }
     return true;

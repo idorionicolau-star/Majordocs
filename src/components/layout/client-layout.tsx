@@ -5,10 +5,11 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
 import { Header } from './header';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BottomNav } from './bottom-nav';
 import { Sidebar } from './sidebar';
 import { cn } from '@/lib/utils';
 import { CommandMenu } from '@/components/command-menu';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { MobileNav } from './mobile-nav';
 
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -19,6 +20,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [openCommandMenu, setOpenCommandMenu] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -78,38 +80,42 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   }
   
   return (
-    <div className="flex min-h-screen w-full bg-muted/40 bg-pattern">
-        <Sidebar 
-            isCollapsed={isSidebarCollapsed} 
-            onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
-        />
-        <div className={cn(
-            "flex flex-col flex-1 transition-all duration-300 ease-in-out",
-            isSidebarCollapsed ? "md:ml-20" : "md:ml-64"
-        )}>
-            <Header onSearchClick={() => setOpenCommandMenu(true)} />
-            <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto main-content">
-                <AnimatePresence mode="wait">
-                <motion.div
-                    key={pathname}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-                >
-                    <Suspense fallback={
-                      <div className="flex h-full w-full items-center justify-center">
-                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-                      </div>
-                    }>
-                      {children}
-                    </Suspense>
-                </motion.div>
-                </AnimatePresence>
-            </main>
+    <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
+        <div className="flex min-h-screen w-full bg-muted/40 bg-pattern">
+            <Sidebar 
+                isCollapsed={isSidebarCollapsed} 
+                onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
+            />
+            <div className={cn(
+                "flex flex-col flex-1 transition-all duration-300 ease-in-out",
+                isSidebarCollapsed ? "md:ml-20" : "md:ml-64"
+            )}>
+                <Header onSearchClick={() => setOpenCommandMenu(true)} />
+                <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto main-content">
+                    <AnimatePresence mode="wait">
+                    <motion.div
+                        key={pathname}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                    >
+                        <Suspense fallback={
+                        <div className="flex h-full w-full items-center justify-center">
+                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                        </div>
+                        }>
+                        {children}
+                        </Suspense>
+                    </motion.div>
+                    </AnimatePresence>
+                </main>
+            </div>
+            <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
         </div>
-      <BottomNav />
-      <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
-    </div>
+      <SheetContent side="left" className="p-0">
+        <MobileNav onLinkClick={() => setIsMobileNavOpen(false)} />
+      </SheetContent>
+    </Sheet>
   );
 }
