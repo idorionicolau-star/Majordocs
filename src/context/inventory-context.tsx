@@ -46,7 +46,7 @@ import { allPermissions } from '@/lib/data';
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
 import { format, eachMonthOfInterval, subMonths } from 'date-fns';
 import { pt } from 'date-fns/locale';
-import { downloadSaleDocument } from '@/lib/utils';
+import { downloadSaleDocument, formatCurrency } from '@/lib/utils';
 
 type CatalogProduct = Omit<
   Product,
@@ -939,7 +939,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, toast, triggerEmailAlert]);
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
-     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
+    if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
+
+    if ((sale.amountPaid ?? 0) < sale.totalValue) {
+        const amountDue = sale.totalValue - (sale.amountPaid || 0);
+        toast({
+            variant: "destructive",
+            title: 'Pagamento Incompleto',
+            description: `Não é possível confirmar o levantamento. O cliente ainda precisa de pagar ${formatCurrency(amountDue)}.`,
+            duration: 6000,
+        });
+        return;
+    }
 
     const productQuery = query(
         productsCollectionRef,
@@ -981,7 +992,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         };
         transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
     });
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user, checkStockAndNotify]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user, checkStockAndNotify, toast]);
 
   const addProductionLog = useCallback((orderId: string, logData: { quantity: number; notes?: string }) => {
     if (!firestore || !companyId || !user || !ordersData) return;
