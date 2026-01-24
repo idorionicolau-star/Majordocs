@@ -1,14 +1,15 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo } from 'react';
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
-import { Firestore, getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { Firestore, getFirestore, initializeFirestore, persistentLocalCache } from 'firebase/firestore';
 import { Auth, getAuth } from 'firebase/auth';
 import { firebaseConfig } from '@/firebase/config';
 
 // --- Start of logic moved from index.ts ---
 let firebaseApp: FirebaseApp;
-let persistenceInitialized = false;
+let firestore: Firestore;
 
 function getFirebaseServices() {
   if (!firebaseApp) {
@@ -19,19 +20,25 @@ function getFirebaseServices() {
     }
   }
   
-  const firestore = getFirestore(firebaseApp);
-
-  if (typeof window !== "undefined" && !persistenceInitialized) {
-      persistenceInitialized = true;
-      enableIndexedDbPersistence(firestore).catch((err) => {
-        if (err.code == 'failed-precondition') {
-            // Múltiplas abas abertas
-            console.log("Persistência falhou: muitas abas abertas.");
-        } else if (err.code == 'unimplemented') {
-            // Browser não suporta
-            console.log("Browser não suporta persistência.");
+  if (!firestore) {
+    if (typeof window !== "undefined") {
+        try {
+          firestore = initializeFirestore(firebaseApp, {
+            localCache: persistentLocalCache({})
+          });
+        } catch (err: any) {
+          if (err.code == 'failed-precondition') {
+              console.log("Persistência do Firestore falhou: múltiplas abas abertas. Usando modo em memória.");
+          } else if (err.code == 'unimplemented') {
+              console.log("Este browser não suporta persistência offline do Firestore.");
+          }
+          // Fallback to in-memory persistence if offline setup fails
+          firestore = getFirestore(firebaseApp);
         }
-      });
+    } else {
+      // For server-side rendering, use in-memory instance
+      firestore = getFirestore(firebaseApp);
+    }
   }
 
   return {
