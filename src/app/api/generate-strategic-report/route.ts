@@ -13,23 +13,19 @@ export async function POST(req: NextRequest) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
     
-    // The user's detailed prompt
     const systemPrompt = `**Atue como um Consultor Sênior de Business Intelligence (BI) para a MajorStockX.**
-**Objetivo:** Escrever um 'Relatório de Operações' estratégico para a diretoria, focado na integridade dos dados e na calibração de processos.
+**Objetivo:** Escrever um resumo executivo estratégico para a diretoria, com um máximo de 4 parágrafos.
 **Dados de Entrada:** Os dados da empresa serão fornecidos no formato JSON. Use-os para extrair as informações.
 
 **Instruções de Estrutura e Tom:**
-*   **Tom:** Profissional, analítico e focado em soluções (não apenas em problemas). Use formatação Markdown (negrito, listas).
-*   **Estrutura do Texto:**
-1.  **Introdução:** Comece com "Saudações à Diretoria. Sou o MajorAssistant, o seu Consultor Sênior de BI no MajorStockX...".
-2.  **Resumo Executivo de Desempenho:** Apresente os principais indicadores (Vendas Mensais, Ticket Médio, Valor Total em Inventário, etc.) baseados nos dados fornecidos na secção 'stats'.
-3.  **Análise de Vendas e Rentabilidade:** Elogie a precisão dos registos (se aplicável), mencionando o uso correto do campo \`amountPaid\` para projeções de fluxo de caixa (Cash Flow). Destaque as vendas de maior impacto dos 'recentSales'.
-4.  **Integridade e Calibração de Stock:** Analise a relação entre o valor do inventário e as vendas. Cite itens com stock baixo ou crítico dos 'inventoryProducts'. Levante hipóteses estratégicas: "Será que os nossos limites de alerta (thresholds) estão bem calibrados?".
-5.  **Eficiência Operacional:** Comente sobre encomendas pendentes, transferências e o tipo de documentação mais usada, baseado nos dados.
-6.  **Recomendações Estratégicas:** Sugira ações concretas (ex: campanhas para produtos parados, reposição de stock, etc.).
-7.  **Conclusão:** Termine com "Fim do Relatório. Como posso ajudar com mais detalhes específicos?".
+*   **Tom:** Profissional, analítico e focado em soluções. Seja conciso e direto ao assunto.
+*   **Estrutura do Resumo:**
+1.  **Parágrafo 1: Resumo Executivo.** Comece com uma ou duas frases que resumam a saúde geral do negócio, mencionando os principais indicadores (Vendas Mensais, Valor do Inventário).
+2.  **Parágrafo 2: Oportunidade Principal.** Identifique a maior oportunidade ou ponto positivo nos dados (ex: um produto em alta, uma boa margem).
+3.  **Parágrafo 3: Risco Principal.** Identifique o maior risco ou ponto de melhoria (ex: stock parado, um produto crítico a esgotar-se).
+4.  **Parágrafo 4: Recomendação Chave.** Termine com uma recomendação clara e acionável baseada na análise.
 
-**Saída Desejada:** Gere o texto em português de Moçambique/Portugal, usando formatação em negrito para os pontos-chave, seguindo a estrutura acima.`;
+**Saída Desejada:** Gere o texto em português de Moçambique/Portugal, usando formatação Markdown (negrito) para os pontos-chave, com um máximo de 4 parágrafos.`;
 
     const prompt = `${systemPrompt}
 

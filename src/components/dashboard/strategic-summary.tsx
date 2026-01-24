@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useContext } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sparkles, RefreshCw } from 'lucide-react';
@@ -53,16 +52,6 @@ export function StrategicSummary() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sales, products, dashboardStats]);
 
-  const getSummaryPreview = (fullText: string | null) => {
-    if (!fullText) return "";
-    const sections = fullText.split(/\n### /); 
-    if (sections.length > 1) {
-        // Return introduction and the first section
-        return sections.slice(0, 2).join('\n### ');
-    }
-    return fullText;
-  };
-
   return (
     <Card className="glass-card shadow-sm">
       <CardHeader className="flex flex-row items-start justify-between">
@@ -86,23 +75,11 @@ export function StrategicSummary() {
           </div>
         )}
         {summary && (
-           <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="item-1" className="border-b-0">
-              <div className="prose dark:prose-invert prose-sm max-w-none">
-                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {getSummaryPreview(summary)}
-                </ReactMarkdown>
-              </div>
-              <AccordionTrigger>Ver relatório completo</AccordionTrigger>
-              <AccordionContent>
-                <div className="prose dark:prose-invert prose-sm max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {summary}
-                    </ReactMarkdown>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+          <div className="prose dark:prose-invert prose-sm max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {summary}
+            </ReactMarkdown>
+          </div>
         )}
       </CardContent>
     </Card>
