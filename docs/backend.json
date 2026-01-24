@@ -135,7 +135,7 @@
         "lowStockThreshold": { "type": "number" },
         "cost": { "type": "number", "description": "Cost per unit of the raw material." }
       },
-      "required": ["name", "stock", "unit"]
+      "required": ["name", "stock", "unit", "lowStockThreshold"]
     },
     "Recipe": {
       "title": "Recipe",
