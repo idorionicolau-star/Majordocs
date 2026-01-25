@@ -100,7 +100,7 @@ export function MonthlySalesChart() {
 
   if (loading) {
     return (
-      <Card className="glass-card shadow-sm">
+      <Card className="glass-card">
         <CardHeader>
           <Skeleton className="h-8 w-2/3" />
           <Skeleton className="h-4 w-1/2" />
@@ -113,7 +113,7 @@ export function MonthlySalesChart() {
   }
 
   return (
-    <Card className="glass-card shadow-sm">
+    <Card className="glass-card">
       <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
             <CardTitle>Vendas ao Longo do Tempo</CardTitle>
@@ -136,12 +136,12 @@ export function MonthlySalesChart() {
           <ResponsiveContainer>
             <AreaChart data={chartData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
               <defs>
-                <linearGradient id="colorVendas" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="fillVendas" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--color-vendas)" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="var(--color-vendas)" stopOpacity={0}/>
+                    <stop offset="95%" stopColor="hsl(var(--background))" stopOpacity={0.1}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+              <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-slate-800" />
               <XAxis
                 dataKey="name"
                 tickLine={false}
@@ -160,7 +160,7 @@ export function MonthlySalesChart() {
                 cursor={true}
                 content={<ChartTooltipContent 
                     formatter={(value) => formatCurrency(value as number)}
-                    className="dark:bg-slate-900/80 dark:border-slate-700/50 backdrop-blur-md rounded-xl" 
+                    className="dark:bg-slate-950/80 dark:border-slate-700/50 backdrop-blur-md rounded-xl" 
                 />}
               />
               <Area 
@@ -169,7 +169,7 @@ export function MonthlySalesChart() {
                 stroke="var(--color-vendas)" 
                 strokeWidth={2}
                 fillOpacity={1} 
-                fill="url(#colorVendas)" 
+                fill="url(#fillVendas)" 
               />
             </AreaChart>
           </ResponsiveContainer>

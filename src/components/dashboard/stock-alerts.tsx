@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useContext, useMemo } from 'react';
@@ -6,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export function StockAlerts() {
     const { products, loading } = useContext(InventoryContext) || { products: [], loading: true };
@@ -39,7 +41,7 @@ export function StockAlerts() {
 
     if (loading) {
         return (
-            <Card className="glass-card shadow-sm">
+            <Card className="glass-card">
                 <CardHeader>
                     <Skeleton className="h-8 w-2/3" />
                     <Skeleton className="h-4 w-1/2" />
@@ -61,23 +63,23 @@ export function StockAlerts() {
     }
 
     return (
-        <Card className="glass-card shadow-sm border-amber-500/20 dark:border-amber-500/30">
+        <Card className="glass-card">
             <CardHeader>
-                <CardTitle className="text-xl sm:text-2xl flex items-center gap-2 text-amber-500 dark:text-amber-400">
+                <CardTitle className="text-xl sm:text-2xl flex items-center gap-2 text-chart-3">
                     <AlertTriangle />
                     Alertas de Stock
                 </CardTitle>
                 <CardDescription>
-                    Produtos que necessitam da sua atenção.
+                    Produtos que necessitam da sua atenção imediata.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 {criticalStockProducts.length > 0 && (
                     <div>
-                        <h4 className="font-bold text-destructive mb-2">Stock Crítico</h4>
+                        <h4 className="font-bold text-chart-4 mb-2">Stock Crítico</h4>
                         <div className="space-y-2">
                             {criticalStockProducts.map(product => (
-                                <Link href={`/inventory?filter=${encodeURIComponent(product.name)}`} key={product.instanceId} className="block hover:bg-muted p-2 rounded-lg">
+                                <Link href={`/inventory?filter=${encodeURIComponent(product.name)}`} key={product.instanceId} className="block hover:bg-muted p-2 rounded-lg transition-all shadow-neon-rose">
                                     <div className="flex items-center justify-between">
                                         <p className="text-sm font-semibold truncate" title={product.name}>{product.name}</p>
                                         <p className="text-sm font-bold text-destructive">{product.stock - product.reservedStock} <span className="text-xs text-muted-foreground">{product.unit || 'un.'}</span></p>
@@ -89,13 +91,13 @@ export function StockAlerts() {
                 )}
                  {lowStockProducts.length > 0 && (
                     <div>
-                        <h4 className="font-bold text-amber-500 dark:text-amber-400 mb-2">Stock Baixo</h4>
+                        <h4 className="font-bold text-chart-3 mb-2">Stock Baixo</h4>
                         <div className="space-y-2">
                              {lowStockProducts.map(product => (
-                                <Link href={`/inventory?filter=${encodeURIComponent(product.name)}`} key={product.instanceId} className="block hover:bg-muted p-2 rounded-lg">
+                                <Link href={`/inventory?filter=${encodeURIComponent(product.name)}`} key={product.instanceId} className="block hover:bg-muted p-2 rounded-lg transition-all">
                                     <div className="flex items-center justify-between">
                                         <p className="text-sm font-semibold truncate" title={product.name}>{product.name}</p>
-                                        <p className="text-sm font-bold text-amber-500 dark:text-amber-400">{product.stock - product.reservedStock} <span className="text-xs text-muted-foreground">{product.unit || 'un.'}</span></p>
+                                        <p className="text-sm font-bold text-chart-3">{product.stock - product.reservedStock} <span className="text-xs text-muted-foreground">{product.unit || 'un.'}</span></p>
                                     </div>
                                 </Link>
                             ))}

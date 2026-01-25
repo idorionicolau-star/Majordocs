@@ -1,21 +1,19 @@
+
 "use client";
 
 import { StatsCards } from "@/components/dashboard/stats-cards";
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, Suspense, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Box, ShoppingCart, Hammer, Book, Lock, BookOpen, PlusCircle, PartyPopper } from "lucide-react";
+import { Book, BookOpen, Hammer, Lock, PartyPopper, PlusCircle, ShoppingCart, Sparkles, Command } from "lucide-react";
 import { InventoryContext } from "@/context/inventory-context";
 import { TopSales } from "@/components/dashboard/top-sales";
 import { MonthlySalesChart } from "@/components/dashboard/monthly-sales-chart";
 import { StockAlerts } from "@/components/dashboard/stock-alerts";
-import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { LeastSoldProducts } from "@/components/dashboard/least-sold-products";
-import { AIAssistant } from "@/components/dashboard/ai-assistant";
-import { useSearchParams } from "next/navigation";
 import Confetti from 'react-confetti';
 import {
   AlertDialog,
@@ -27,8 +25,8 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import { differenceInDays } from 'date-fns';
-import { StrategicSummary } from "@/components/dashboard/strategic-summary";
-
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // Helper hook to get window dimensions for the confetti effect
 const useWindowDimensions = () => {
@@ -100,11 +98,69 @@ const MaturityCelebration = () => {
   )
 }
 
+const TacticalSummary = () => {
+  const text = `Saudações à Diretoria. Sou o MajorAssistant, o seu Consultor Sênior de BI no MajorStockX. Com base nos dados extraídos em tempo real da aplicação, apresento o Relatório de Operações Estratégico detalhando o estado atual do negócio.
+
+**1. Resumo Executivo de Desempenho**
+
+O negócio apresenta uma estrutura de ativos sólida, mas com pontos de calibração necessários na rotatividade de stock e na conversão de vendas.
+- **Vendas Mensais:** <span class="text-primary font-bold">165.489,00 MT</span>
+- **Ticket Médio:** <span class="text-primary font-bold">6.619,56 MT</span>
+- **Valor Total em Inventário:** <span class="text-chart-3 font-bold">3.641.067,00 MT</span>
+- **Volume de Itens em Stock:** 11.058,32 unidades/m²
+
+**2. Análise de Vendas e Rentabilidade**
+
+Observamos um fluxo recente concentrado em produtos de infraestrutura e acabamento. As vendas de maior impacto nos últimos dias incluem:
+- **Grelha 4 furos simples 20x20:** Gerou 13.000,00 MT (130 unidades).
+- **Pavê osso de cão branco:** Gerou 12.474,00 MT (19,8 m²).
+- **Lancil de barra:** Duas movimentações recentes totalizando 9.800,00 MT.
+- A performance de vendas está fortemente associada ao operador Adozinda Novela.
+
+**3. Integridade e Calibração de Stock**
+
+O rácio entre o Valor de Inventário (3,6M) e as Vendas Mensais (165k) sugere capital imobilizado. É crucial monitorizar os itens que atingiram níveis críticos:
+- <span class="text-chart-4">**Pé de jardim:**</span> Stock atual de 16, abaixo do nível crítico de 30. **Ação Urgente Necessária.**
+- <span class="text-chart-3">**Painel 3d Wave:**</span> Stock de 34, abaixo do alerta de 50.
+- **Passadeira pedra de praia 50x60:** Stock de 27 (Saudável, mas requer atenção).
+
+**4. Recomendações Estratégicas**
+
+- **Liquidez:** Criar campanhas para produtos com alto stock para libertar o capital imobilizado.
+- **Reposição:** Iniciar imediatamente a produção de "Pé de jardim" e "Painel 3d Wave".
+- **Ticket Médio:** Explorar pacotes combinados de "Lancil" e "Pavê".`;
+
+  return (
+    <Card className="glass-card lg:col-span-3 shadow-neon-cyan">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Sparkles className="text-primary" />
+          BI Brain: Relatório de Operações
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="bg-slate-950/70 p-4 rounded-lg font-mono text-sm border border-slate-800 text-slate-300">
+           <ReactMarkdown
+              className="prose prose-sm prose-invert max-w-none prose-p:text-slate-300 prose-strong:text-primary"
+              components={{
+                 p: ({node, ...props}) => <p {...props} className="mb-2" />,
+                 strong: ({node, ...props}) => <strong {...props} className="text-primary" />,
+                 ul: ({node, ...props}) => <ul {...props} className="list-none p-0" />,
+                 li: ({node, ...props}) => <li {...props} className="pl-4 -indent-4 before:content-['>_'] before:mr-2" />,
+                 span: ({node, ...props}) => <span {...props} />,
+              }}
+              remarkPlugins={[remarkGfm]}
+           >
+              {text.replace(/<span class="[^"]*">/g, "**").replace(/<\/span>/g, "**")}
+           </ReactMarkdown>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function DashboardPage() {
   const { user, companyData, catalogProducts, loading, businessStartDate, sales } = useContext(InventoryContext) || { user: null, companyData: null, catalogProducts: [], loading: true, businessStartDate: null, sales: [] };
-  const searchParams = useSearchParams();
-  const aiQuery = searchParams.get('ai_query');
   
   const [daysInOperation, setDaysInOperation] = useState<number | null>(null);
 
@@ -116,18 +172,16 @@ export default function DashboardPage() {
 
   const isPrivilegedUser = user?.role === 'Admin' || user?.role === 'Dono';
   const isManufacturer = companyData?.businessType === 'manufacturer';
-  
   const isCatalogEmpty = !catalogProducts || catalogProducts.length === 0;
   
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
-
-      {isPrivilegedUser && <StrategicSummary />}
+      {isPrivilegedUser && <TacticalSummary />}
 
       {daysInOperation !== null && daysInOperation >= 30 && <MaturityCelebration />}
 
       {isCatalogEmpty && !loading && (
-        <Card className="bg-primary/5 dark:bg-primary/10 border-primary/20">
+        <Card className="bg-primary/5 dark:bg-primary/10 border-primary/20 lg:col-span-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="h-6 w-6 text-primary" />
@@ -153,75 +207,39 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Main content */}
-      <div className="grid grid-cols-1 gap-6">
-        
-        {/* Main Column */}
-        <div className="flex flex-col gap-6">
-           {isPrivilegedUser && <StatsCards />}
-
-            {/* Quick Access */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-lg text-center">Atalhos</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
-                      <Link href="/inventory?action=add">
-                          <PlusCircle className="h-5 w-5" />
-                          <span>Adicionar Produto</span>
-                      </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
-                      <Link href="/sales?action=add">
-                          <ShoppingCart className="h-5 w-5" />
-                          <span>Registar Venda</span>
-                      </Link>
-                  </Button>
-                  {isManufacturer && (
-                    <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
-                        <Link href="/production?action=add">
-                            <Hammer className="h-5 w-5" />
-                            <span>Nova Produção</span>
-                        </Link>
-                    </Button>
-                  )}
-                  <Button asChild variant="outline" className="h-24 flex-col gap-2 text-center font-semibold">
-                      <Link href="/settings#catalog">
-                          <Book className="h-5 w-5" />
-                          <span>Gerir Catálogo</span>
-                      </Link>
-                  </Button>
-              </div>
-            </div>
-
-            {isPrivilegedUser && <TopSales />}
-
-           {isPrivilegedUser ? (
-             <>
-              <AIAssistant initialQuery={aiQuery || undefined} />
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <StockAlerts />
-                <MonthlySalesChart />
-              </div>
-              {isPrivilegedUser && <LeastSoldProducts />}
-             </>
-           ) : (
-             <Card className="glass-card shadow-sm h-full flex flex-col justify-center">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg text-muted-foreground">
-                    <Lock className="h-5 w-5" />
-                    Acesso Restrito
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    As estatísticas e a atividade de vendas estão disponíveis apenas para Administradores e Donos. Use os atalhos acima para navegar.
-                  </p>
-                </CardContent>
-            </Card>
-          )}
+      {isPrivilegedUser ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-3">
+            <StatsCards />
+          </div>
+          <div className="lg:col-span-2">
+             <TopSales />
+          </div>
+          <div className="lg:col-span-1">
+            <StockAlerts />
+          </div>
+           <div className="lg:col-span-2">
+            <MonthlySalesChart />
+          </div>
+           <div className="lg:col-span-1">
+             <LeastSoldProducts />
+          </div>
         </div>
-
-      </div>
+      ) : (
+         <Card className="glass-card shadow-sm h-full flex flex-col justify-center">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg text-muted-foreground">
+                <Lock className="h-5 w-5" />
+                Acesso Restrito
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                As estatísticas e a atividade de vendas estão disponíveis apenas para Administradores e Donos.
+              </p>
+            </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

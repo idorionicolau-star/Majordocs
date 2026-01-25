@@ -38,10 +38,10 @@ export function LeastSoldProducts() {
     }, [products, sales]);
 
     return (
-        <Card className="glass-card shadow-sm">
+        <Card className="glass-card">
             <CardHeader>
                 <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
-                    <AlertTriangle />
+                    <AlertTriangle className="text-chart-3" />
                     Produtos Sem Vendas
                 </CardTitle>
                 <CardDescription>
@@ -61,7 +61,7 @@ export function LeastSoldProducts() {
                 ) : unsoldProducts.length > 0 ? (
                     <div className="space-y-3">
                         {unsoldProducts.map(product => (
-                            <div key={product.name} className="flex items-center justify-between">
+                            <div key={product.name} className="flex items-center justify-between bg-muted/50 p-2 rounded-lg">
                                 <div className="flex items-center gap-2">
                                     <Package className="h-4 w-4 text-muted-foreground" />
                                     <p className="text-sm font-semibold truncate" title={product.name}>{product.name}</p>

@@ -74,11 +74,11 @@ export function TopSales() {
   }, [sales, period]);
 
   return (
-    <Card className="glass-card shadow-sm">
+    <Card className="glass-card">
       <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
-            <Trophy />
+            <Trophy className="text-chart-3"/>
             Top 5 Produtos Mais Vendidos
           </CardTitle>
           <CardDescription>
@@ -112,12 +112,12 @@ export function TopSales() {
         ) : topProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {topProducts.map((product, index) => (
-              <div key={product.name} className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted/50 text-center">
+              <div key={product.name} className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted/50 text-center border border-slate-800">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background font-bold text-primary mb-2">
                   {index + 1}
                 </div>
                 <p className="text-sm font-semibold truncate w-full" title={product.name}>{product.name}</p>
-                <p className="text-lg font-bold">{product.quantity} <span className="text-xs text-muted-foreground">un.</span></p>
+                <p className="text-lg font-bold text-chart-2">{product.quantity} <span className="text-xs text-muted-foreground">un.</span></p>
                 <p className="text-xs text-muted-foreground">{formatCurrency(product.totalValue)}</p>
               </div>
             ))}

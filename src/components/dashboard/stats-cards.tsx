@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useContext } from "react";
@@ -6,7 +7,6 @@ import { DollarSign, TrendingUp, Archive, Hash, ClipboardList, Hammer } from "lu
 import { formatCurrency } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 export function StatsCards() {
@@ -36,36 +36,42 @@ export function StatsCards() {
           value: formatCurrency(dashboardStats.monthlySalesValue),
           icon: DollarSign,
           href: "/sales",
+          color: "text-chart-2"
         },
         {
           title: "Ticket Médio",
           value: formatCurrency(dashboardStats.averageTicket),
           icon: TrendingUp,
           href: "/reports",
+          color: "text-chart-2"
         },
         {
           title: "Valor do Inventário",
           value: formatCurrency(dashboardStats.totalInventoryValue),
           icon: Archive,
           href: "/inventory",
+          color: "text-chart-3"
         },
         {
           title: "Itens em Estoque",
           value: dashboardStats.totalItemsInStock.toLocaleString('pt-BR'),
           icon: Hash,
           href: "/inventory",
+          color: "text-chart-3"
         },
         {
           title: "Encomendas Pendentes",
           value: dashboardStats.pendingOrders,
           icon: ClipboardList,
           href: "/orders",
+          color: "text-primary"
         },
         {
           title: "Pronto p/ Transferir",
           value: dashboardStats.readyForTransfer,
           icon: Hammer,
           href: "/production",
+          color: "text-primary"
         },
       ];
 
@@ -73,13 +79,14 @@ export function StatsCards() {
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
       {stats.map((stat) => (
           <Link href={stat.href} key={stat.title} className="group">
-            <Card className="shadow-lg transition-all duration-300 group-hover:scale-105 group-hover:shadow-2xl">
+            <Card className="glass-card relative transition-all duration-300 hover:shadow-neon-cyan hover:-translate-y-1">
+                <div className="absolute top-3 right-3 h-2 w-2 rounded-full bg-primary animate-pulse-indicator"></div>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-semibold">{stat.title}</CardTitle>
                     <stat.icon className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent className="text-center">
-                    <div className="text-2xl font-bold bg-gradient-to-br from-chart-1 to-chart-2 bg-clip-text text-transparent">{String(stat.value)}</div>
+                <CardContent>
+                    <div className={`text-2xl font-bold ${stat.color}`}>{String(stat.value)}</div>
                 </CardContent>
             </Card>
           </Link>

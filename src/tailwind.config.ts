@@ -70,6 +70,8 @@ export default {
         'xl': '0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05)',
         '2xl': '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
         'inner': 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
+        'neon-cyan': '0 0 15px rgba(56, 189, 248, 0.1)',
+        'neon-rose': '0 0 12px rgba(244, 63, 94, 0.25)',
       },
       keyframes: {
         'accordion-down': {
@@ -137,6 +139,10 @@ export default {
             animationTimingFunction: 'cubic-bezier(0, 0, 0.2, 1)',
           },
         },
+         'pulse-indicator': {
+          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+          '50%': { opacity: '0.4', transform: 'scale(1.2)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.4s ease-out',
@@ -150,6 +156,7 @@ export default {
         'shake': 'shake 1.0s ease-in-out infinite',
         'fade-in-out': 'fade-in-out 2.0s ease-in-out infinite',
         'bounce-down': 'bounce-down 1.5s infinite',
+        'pulse-indicator': 'pulse-indicator 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
     },
   },
