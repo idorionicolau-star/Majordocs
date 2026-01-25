@@ -66,7 +66,7 @@ const PrimaryKPIs = () => {
                         )}
                     </CardHeader>
                     <CardContent>
-                        <div className={cn("text-4xl font-bold", kpi.color)}>
+                        <div className={cn("text-3xl lg:text-4xl font-bold", kpi.color)}>
                             {kpi.value}
                         </div>
                     </CardContent>
