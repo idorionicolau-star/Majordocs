@@ -55,7 +55,10 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
             onClick={onSearchClick}
         >
           <Search className="mr-2 h-4 w-4" />
-          <span>Pesquisar...</span>
+          <span className="flex-1">Pesquisa Rápida</span>
+           <kbd className="pointer-events-none hidden h-6 select-none items-center gap-1 rounded border bg-slate-700/80 border-slate-600 px-1.5 font-mono text-[10px] font-medium text-slate-300 sm:flex">
+                Ctrl+K
+            </kbd>
         </Button>
       </div>
 

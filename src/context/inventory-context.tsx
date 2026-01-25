@@ -990,6 +990,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     });
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user, checkStockAndNotify, toast]);
 
+  const addProduction = useCallback(async (prodData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
+    if (!firestore || !companyId || !user) throw new Error("Contexto não pronto.");
+
+    const newProduction: Omit<Production, 'id'> = {
+      ...prodData,
+      date: new Date().toISOString().split('T')[0],
+      registeredBy: user.username || 'Desconhecido',
+      status: 'Concluído',
+    };
+
+    const productionsRef = collection(firestore, `companies/${companyId}/productions`);
+    await addDoc(productionsRef, newProduction);
+    
+    addNotification({
+        type: 'production',
+        message: `Produção de ${newProduction.quantity} ${newProduction.unit} de ${newProduction.productName} registada.`,
+        href: '/production',
+    });
+  }, [firestore, companyId, user, addNotification]);
+
   const addProductionLog = useCallback((orderId: string, logData: { quantity: number; notes?: string }) => {
     if (!firestore || !companyId || !user || !ordersData) return;
     
@@ -1309,8 +1329,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     chatHistory, setChatHistory,
     addProduct, updateProduct, deleteProduct, clearProductsCollection,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
-    updateProduction,
-    deleteSale, deleteProduction, deleteOrder,
+    addProduction, updateProduction, deleteProduction, deleteOrder,
     clearSales, clearProductions, clearOrders, clearStockMovements,
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
     recalculateReservedStock,
@@ -1330,6 +1349,3 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
-
-    
-

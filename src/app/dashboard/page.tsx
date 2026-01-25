@@ -1,15 +1,23 @@
+
 "use client";
 
 import { useContext, useState } from "react";
 import { InventoryContext } from "@/context/inventory-context";
 import { cn, formatCurrency } from "@/lib/utils";
-import { DollarSign, TrendingUp, Archive, Sparkles, Lock } from "lucide-react";
+import { DollarSign, TrendingUp, Archive, Sparkles, Lock, ShoppingCart, Plus, Package } from "lucide-react";
 import { MonthlySalesChart } from "@/components/dashboard/monthly-sales-chart";
 import { StockAlerts } from "@/components/dashboard/stock-alerts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Button } from "@/components/ui/button";
+import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
+import { AddProductionDialog } from "@/components/production/add-production-dialog";
+import { AddProductDialog } from "@/components/inventory/add-product-dialog";
+import { TopSales } from "@/components/dashboard/top-sales";
+import type { Sale, Product, Production } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 
 // Camada 1: KPIs Principais
 const PrimaryKPIs = () => {
@@ -107,7 +115,7 @@ O rácio entre o Valor de Inventário (3,6M) e as Vendas Mensais (165k) sugere c
 - **Reposição:** Iniciar imediatamente a produção de "Pé de jardim" e "Painel 3d Wave".`;
 
   return (
-    <Card className="bg-[#0f172a]/40 border-white/5 lg:col-span-3">
+    <Card className="bg-[#0f172a]/40 border-white/5 lg:col-span-2">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-slate-300">
           <Sparkles className="text-sky-400" strokeWidth={1.5} />
@@ -133,6 +141,62 @@ O rácio entre o Valor de Inventário (3,6M) e as Vendas Mensais (165k) sugere c
   )
 }
 
+const QuickActions = () => {
+    const context = useContext(InventoryContext);
+    const [isSaleDialogOpen, setSaleDialogOpen] = useState(false);
+    const [isProductionDialogOpen, setProductionDialogOpen] = useState(false);
+    const [isProductDialogOpen, setProductDialogOpen] = useState(false);
+    const { toast } = useToast();
+
+    if (!context) return null;
+
+    const { addSale, addProduction, addProduct, canEdit } = context;
+
+    const handleAddSale = async (saleData: Omit<Sale, 'id' | 'guideNumber'>) => {
+        try {
+            await addSale(saleData);
+            toast({ title: "Venda Registada", description: "A venda foi registada e o stock reservado." });
+            setSaleDialogOpen(false);
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: "Erro na Venda", description: e.message });
+        }
+    };
+
+    const handleAddProduction = async (prodData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
+        try {
+            await addProduction(prodData);
+            toast({ title: "Produção Registada" });
+            setProductionDialogOpen(false);
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: "Erro na Produção", description: e.message });
+        }
+    };
+
+    const handleAddProduct = (prodData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => {
+        addProduct(prodData);
+        toast({ title: "Produto Adicionado" });
+        setProductDialogOpen(false);
+    };
+
+    const canSell = canEdit('sales');
+    const canProduce = canEdit('production');
+    const canAddToInventory = canEdit('inventory');
+
+    return (
+        <>
+            <div className="flex flex-col sm:flex-row gap-2">
+                {canSell && <Button onClick={() => setSaleDialogOpen(true)} variant="outline" className="flex-1 bg-[#0f172a]/40 border-white/5 hover:bg-sky-400/10 hover:text-sky-400"><ShoppingCart className="mr-2 h-4 w-4" />Registrar Venda</Button>}
+                {canProduce && <Button onClick={() => setProductionDialogOpen(true)} variant="outline" className="flex-1 bg-[#0f172a]/40 border-white/5 hover:bg-sky-400/10 hover:text-sky-400"><Package className="mr-2 h-4 w-4" />Entrada de Estoque</Button>}
+                {canAddToInventory && <Button onClick={() => setProductDialogOpen(true)} variant="outline" className="flex-1 bg-[#0f172a]/40 border-white/5 hover:bg-sky-400/10 hover:text-sky-400"><Plus className="mr-2 h-4 w-4" />Novo Produto</Button>}
+            </div>
+
+            {canSell && <AddSaleDialog open={isSaleDialogOpen} onOpenChange={setSaleDialogOpen} onAddSale={handleAddSale} />}
+            {canProduce && <AddProductionDialog open={isProductionDialogOpen} onOpenChange={setProductionDialogOpen} onAddProduction={handleAddProduction} />}
+            {canAddToInventory && <AddProductDialog open={isProductDialogOpen} onOpenChange={setProductDialogOpen} onAddProduct={handleAddProduct} />}
+        </>
+    )
+}
+
 export default function DashboardPage() {
     const { user } = useContext(InventoryContext) || { user: null };
     const isPrivilegedUser = user?.role === 'Admin' || user?.role === 'Dono';
@@ -141,20 +205,24 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6 animate-in fade-in duration-500">
       
       {isPrivilegedUser ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-3">
-                <PrimaryKPIs />
+        <>
+            <QuickActions />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-3">
+                    <PrimaryKPIs />
+                </div>
+                <div className="lg:col-span-2">
+                    <MonthlySalesChart />
+                </div>
+                <TopSales />
+                 <div className="lg:col-span-2">
+                    <TacticalSummary />
+                </div>
+                <div className="lg:col-span-1">
+                    <StockAlerts />
+                </div>
             </div>
-            <div className="lg:col-span-2">
-                <MonthlySalesChart />
-            </div>
-            <div className="lg:col-span-1">
-                <StockAlerts />
-            </div>
-            <div className="lg:col-span-3">
-                <TacticalSummary />
-            </div>
-        </div>
+        </>
       ) : (
          <Card className="bg-[#0f172a]/40 border-white/5 h-full flex flex-col justify-center items-center">
             <CardHeader>
