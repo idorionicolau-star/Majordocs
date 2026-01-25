@@ -1,23 +1,18 @@
 "use client"
 
 import * as React from "react"
-import { themes } from "@/lib/themes"
 
 type ThemeProviderState = {
   mode: string
   setMode: (mode: string) => void
-  colorTheme: string
-  setColorTheme: (themeName: string) => void
   borderRadius: number
   setBorderRadius: (radius: number) => void
 }
 
 const initialState: ThemeProviderState = {
-  mode: "light",
+  mode: "dark",
   setMode: () => null,
-  colorTheme: "Red",
-  setColorTheme: () => null,
-  borderRadius: 2.0,
+  borderRadius: 0.8,
   setBorderRadius: () => null,
 }
 
@@ -25,32 +20,24 @@ const ThemeProviderContext = React.createContext<ThemeProviderState>(initialStat
 
 export function ThemeProvider({
   children,
-  defaultMode = "light",
-  defaultColorTheme = "Red",
+  defaultMode = "dark",
   storageKeyMode = "majorstockx-mode",
-  storageKeyColor = "majorstockx-color-theme",
   storageKeyRadius = "majorstockx-border-radius",
   ...props
 }: {
   children: React.ReactNode
   defaultMode?: string
-  defaultColorTheme?: string
   storageKeyMode?: string
-  storageKeyColor?: string
   storageKeyRadius?: string
 }) {
   const [mode, setMode] = React.useState(
     () => (typeof window !== 'undefined' && localStorage.getItem(storageKeyMode)) || defaultMode
   )
-
-  const [colorTheme, setColorTheme] = React.useState(
-    () => (typeof window !== 'undefined' && localStorage.getItem(storageKeyColor)) || defaultColorTheme
-  )
   
   const [borderRadius, setBorderRadiusState] = React.useState(() => {
-    if (typeof window === 'undefined') return 2.0;
+    if (typeof window === 'undefined') return 0.8;
     const storedRadius = localStorage.getItem(storageKeyRadius);
-    return storedRadius ? parseFloat(storedRadius) : 2.0;
+    return storedRadius ? parseFloat(storedRadius) : 0.8;
   });
 
 
@@ -63,23 +50,7 @@ export function ThemeProvider({
 
     root.classList.add(effectiveMode)
     
-    // Apply color theme
-    const theme = themes.find(t => t.name === colorTheme) || themes[0];
-    const colors = theme.primary[effectiveMode as 'light' | 'dark'];
-    
-    root.style.setProperty('--primary', colors);
-    root.style.setProperty('--ring', colors); // Sync ring color
-
-    const [h, s] = colors.split(" ").map(val => val.replace('%', ''));
-    if (h && s) {
-        if (effectiveMode === 'light') {
-            root.style.setProperty('--accent', `${h} ${s}% 95%`);
-        } else {
-            root.style.setProperty('--accent', `${h} ${s}% 25%`);
-        }
-    }
-
-  }, [mode, colorTheme])
+  }, [mode])
   
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -95,13 +66,6 @@ export function ThemeProvider({
         localStorage.setItem(storageKeyMode, newMode)
       }
       setMode(newMode)
-    },
-    colorTheme,
-    setColorTheme: (themeName: string) => {
-       if (typeof window !== 'undefined') {
-        localStorage.setItem(storageKeyColor, themeName)
-      }
-      setColorTheme(themeName)
     },
     borderRadius,
     setBorderRadius: (radius: number) => {

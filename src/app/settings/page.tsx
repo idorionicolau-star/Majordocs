@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { useEffect, useState, useContext, useRef } from "react";
@@ -14,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Check, Code, RefreshCw, Trash2 } from "lucide-react";
+import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Code, RefreshCw, Trash2 } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { LocationsManager } from "@/components/settings/locations-manager";
 import { Button } from "@/components/ui/button";
@@ -37,8 +35,6 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTheme } from "@/components/theme-provider";
-import { themes } from "@/lib/themes";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Accordion,
   AccordionContent,
@@ -137,7 +133,7 @@ export default function SettingsPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState("profile");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const { colorTheme, setColorTheme, borderRadius, setBorderRadius } = useTheme();
+  const { borderRadius, setBorderRadius } = useTheme();
 
   const [companyDetails, setCompanyDetails] = useState({
     name: '',
@@ -356,47 +352,6 @@ export default function SettingsPage() {
                     <Label htmlFor="theme">Modo de Cor</Label>
                     <ThemeSwitcher />
                   </div>
-
-                   <Accordion type="single" collapsible className="w-full">
-                    <AccordionItem value="color-theme" className="border-b-0">
-                      <AccordionTrigger>
-                          <Label>Cor do Tema</Label>
-                      </AccordionTrigger>
-                      <AccordionContent className="space-y-2">
-                        <p className="text-sm text-muted-foreground">
-                          Selecione a cor primária para a aplicação.
-                        </p>
-                        <div className="grid grid-cols-7 sm:grid-cols-10 gap-2 pt-2">
-                          {themes.map((theme) => {
-                            const isActive = colorTheme === theme.name;
-                            return (
-                              <TooltipProvider key={theme.name} delayDuration={0}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button
-                                      onClick={() => setColorTheme(theme.name)}
-                                      className={cn(
-                                        "h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all",
-                                        isActive ? "border-foreground" : "border-transparent"
-                                      )}
-                                      style={{
-                                        backgroundColor: `hsl(${theme.primary.light})`,
-                                      }}
-                                    >
-                                      {isActive && <Check className="h-5 w-5 text-white" />}
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{theme.name}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            );
-                          })}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
 
                   <div className="space-y-2">
                     <Label htmlFor="border-radius">Arredondamento dos Cantos</Label>
