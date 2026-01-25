@@ -70,8 +70,9 @@ export default {
         'xl': '0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05)',
         '2xl': '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
         'inner': 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
-        'neon-cyan': '0 0 15px rgba(56, 189, 248, 0.1)',
-        'neon-rose': '0 0 12px rgba(244, 63, 94, 0.25)',
+        'neon-sky': '0 0 15px rgba(56, 189, 248, 0.15)',
+        'neon-emerald': '0 0 15px rgba(74, 222, 128, 0.2)',
+        'neon-rose': '0 0 15px rgba(244, 63, 94, 0.2)',
       },
       keyframes: {
         'accordion-down': {
@@ -160,5 +161,5 @@ export default {
       },
     },
   },
-  plugins: [require('tailwindcss-animate'), require("@tailwindcss/typography")],
+  plugins: [require('tailwindcss-animate'), require("@tailwindcss/typography"), require('tailwind-scrollbar'),],
 } satisfies Config;

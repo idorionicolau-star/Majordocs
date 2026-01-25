@@ -1,29 +1,16 @@
-
 'use client';
 
-import { useContext, useMemo } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 export function StockAlerts() {
     const { products, loading } = useContext(InventoryContext) || { products: [], loading: true };
-
-    const lowStockProducts = useMemo(() => {
-        if (!products) return [];
-
-        return products
-            .filter(p => {
-                const availableStock = p.stock - p.reservedStock;
-                return availableStock > 0 && availableStock <= p.lowStockThreshold && availableStock > p.criticalStockThreshold;
-            })
-            .sort((a, b) => (a.stock - a.reservedStock) - (b.stock - b.reservedStock))
-            .slice(0, 5);
-
-    }, [products]);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const criticalStockProducts = useMemo(() => {
         if (!products) return [];
@@ -33,78 +20,77 @@ export function StockAlerts() {
                  const availableStock = p.stock - p.reservedStock;
                  return availableStock <= p.criticalStockThreshold;
             })
-            .sort((a, b) => (a.stock - a.reservedStock) - (b.stock - b.reservedStock))
-            .slice(0, 5);
+            .sort((a, b) => (a.stock - a.reservedStock) - (b.stock - b.reservedStock));
 
     }, [products]);
 
+    const displayProducts = isExpanded ? criticalStockProducts : criticalStockProducts.slice(0, 3);
 
     if (loading) {
         return (
-            <Card className="glass-card">
+            <Card className="bg-[#0f172a]/40 border-white/5 h-full">
                 <CardHeader>
-                    <Skeleton className="h-8 w-2/3" />
+                    <Skeleton className="h-6 w-3/4" />
                     <Skeleton className="h-4 w-1/2" />
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    {[...Array(3)].map((_, i) => (
-                        <div key={i} className="flex items-center justify-between">
-                            <Skeleton className="h-4 w-2/3" />
-                            <Skeleton className="h-4 w-1/4" />
-                        </div>
-                    ))}
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
                 </CardContent>
             </Card>
         );
     }
     
-    if (lowStockProducts.length === 0 && criticalStockProducts.length === 0) {
-        return null;
+    if (criticalStockProducts.length === 0) {
+        return (
+             <Card className="bg-[#0f172a]/40 border-white/5 flex flex-col justify-center items-center h-full">
+                <CardHeader className="items-center">
+                    <CardTitle className="flex items-center gap-2 text-slate-300">
+                        <AlertTriangle className="text-emerald-400" strokeWidth={1.5}/>
+                        Alertas de Stock
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-slate-400">Nenhum alerta crítico.</p>
+                </CardContent>
+            </Card>
+        );
     }
 
     return (
-        <Card className="glass-card">
+        <Card className="bg-[#0f172a]/40 border-white/5">
             <CardHeader>
-                <CardTitle className="text-xl sm:text-2xl flex items-center gap-2 text-chart-3">
-                    <AlertTriangle />
-                    Alertas de Stock
+                <CardTitle className="flex items-center gap-2 text-slate-300">
+                    <AlertTriangle className="text-rose-500" strokeWidth={1.5} />
+                    Stock Crítico
                 </CardTitle>
-                <CardDescription>
-                    Produtos que necessitam da sua atenção imediata.
+                <CardDescription className="text-slate-500">
+                    Produtos que necessitam de atenção imediata.
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-                {criticalStockProducts.length > 0 && (
-                    <div>
-                        <h4 className="font-bold text-chart-4 mb-2">Stock Crítico</h4>
-                        <div className="space-y-2">
-                            {criticalStockProducts.map(product => (
-                                <Link href={`/inventory?filter=${encodeURIComponent(product.name)}`} key={product.instanceId} className="block hover:bg-muted p-2 rounded-lg transition-all shadow-neon-rose">
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-sm font-semibold truncate" title={product.name}>{product.name}</p>
-                                        <p className="text-sm font-bold text-destructive">{product.stock - product.reservedStock} <span className="text-xs text-muted-foreground">{product.unit || 'un.'}</span></p>
-                                    </div>
-                                </Link>
-                            ))}
+            <CardContent className="space-y-1">
+                {displayProducts.map(product => (
+                    <Link 
+                        href={`/inventory?filter=${encodeURIComponent(product.name)}`} 
+                        key={product.instanceId} 
+                        className="block group"
+                    >
+                        <div className="flex items-center justify-between p-2 rounded-md hover:bg-slate-800/50 transition-colors">
+                            <span className="text-sm font-medium text-slate-300 group-hover:text-sky-400">{product.name}</span>
+                            <div className="font-bold text-rose-500 text-right">
+                                {product.stock - product.reservedStock}
+                                <span className="text-xs text-slate-500 ml-1">{product.unit || 'un.'}</span>
+                            </div>
                         </div>
-                    </div>
-                )}
-                 {lowStockProducts.length > 0 && (
-                    <div>
-                        <h4 className="font-bold text-chart-3 mb-2">Stock Baixo</h4>
-                        <div className="space-y-2">
-                             {lowStockProducts.map(product => (
-                                <Link href={`/inventory?filter=${encodeURIComponent(product.name)}`} key={product.instanceId} className="block hover:bg-muted p-2 rounded-lg transition-all">
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-sm font-semibold truncate" title={product.name}>{product.name}</p>
-                                        <p className="text-sm font-bold text-chart-3">{product.stock - product.reservedStock} <span className="text-xs text-muted-foreground">{product.unit || 'un.'}</span></p>
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                    </Link>
+                ))}
             </CardContent>
+            {criticalStockProducts.length > 3 && (
+                <CardFooter>
+                    <Button variant="link" className="text-sky-400 p-0 h-auto text-sm" onClick={() => setIsExpanded(!isExpanded)}>
+                        {isExpanded ? 'Mostrar menos' : `Mostrar todos os ${criticalStockProducts.length} itens`}
+                    </Button>
+                </CardFooter>
+            )}
         </Card>
     );
 }

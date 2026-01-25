@@ -32,7 +32,7 @@
   }
 
   .dark {
-    --background: 222 83% 5%;
+    --background: 222 83% 4%;
     --foreground: 210 40% 98%;
     --card: 222 47% 11%;
     --card-foreground: 210 40% 98%;
@@ -103,9 +103,9 @@
     @apply shadow-lg;
   }
 
-  /* Animations */
-   .animate-in {
-     animation: fade-in 0.5s ease-out, slide-in-from-bottom-4 0.5s ease-out;
+  .scrollbar-thin {
+      scrollbar-width: thin;
+      scrollbar-color: hsl(var(--muted)) hsl(var(--background));
   }
 }
 
