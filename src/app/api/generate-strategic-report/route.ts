@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     **Dados Atuais da Empresa:**
     \`\`\`json
-    ${JSON.stringify(contextData, null, 2)}
+    ${JSON.stringify(contextData, null, 2).substring(0, 8000)}
     \`\`\`
     `;
 
