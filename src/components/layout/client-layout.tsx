@@ -27,7 +27,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   const bind = useDrag(
     ({ down, movement: [mx], direction: [xDir], velocity: [vx], initial: [ix] }) => {
-      if (isMobile && !isMobileNavOpen && ix < 50 && xDir > 0 && vx > 0.5) {
+      if (isMobile && !isMobileNavOpen && ix < 100 && xDir > 0 && vx > 0.5) {
         setIsMobileNavOpen(true);
       }
     },
