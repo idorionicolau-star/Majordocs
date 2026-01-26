@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useContext, useMemo, Suspense } from 'react';
@@ -153,7 +152,7 @@ function DiagnosticoPage() {
 
             <InsightCard title="Capital Parado (Oportunidade)" icon={CircleDollarSign} alertType="warning">
                <div className="flex flex-col items-center justify-center h-full text-center">
-                    <p className="text-5xl font-mono font-bold text-amber-400">{formatCurrency(deadStock.totalValue, {notation: 'compact'})}</p>
+                    <p className="text-2xl md:text-5xl font-mono font-bold text-amber-400">{formatCurrency(deadStock.totalValue)}</p>
                     <p className="text-sm mt-1 text-slate-400">em {deadStock.items.length} itens sem vendas há +90 dias.</p>
                     <p className="text-xs text-slate-500 mt-1">Representa {deadStock.percentageOfInventory}% do valor total em armazém.</p>
                     <Button variant="outline" size="sm" asChild className="mt-4 bg-amber-500/10 border-amber-500/20 text-amber-300 hover:bg-amber-500/20 hover:text-amber-200 hover:shadow-[0_0_10px_rgba(251,191,36,0.3)] transition-all">
