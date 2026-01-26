@@ -4,7 +4,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import React, { useState, useEffect, Suspense } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
 import { Header } from './header';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Sidebar } from './sidebar';
 import { cn } from '@/lib/utils';
 import { CommandMenu } from '@/components/command-menu';
@@ -77,17 +76,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   
   if (isAuthPage) {
     return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={pathname}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-         {children}
-        </motion.div>
-      </AnimatePresence>
+         <div>
+            {children}
+         </div>
     );
   }
   
@@ -104,23 +95,13 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             )}>
                 <Header onSearchClick={() => setOpenCommandMenu(true)} />
                 <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto main-content">
-                    <AnimatePresence mode="wait">
-                    <motion.div
-                        key={pathname}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-                    >
-                        <Suspense fallback={
-                        <div className="flex h-full w-full items-center justify-center">
-                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-                        </div>
-                        }>
-                        {children}
-                        </Suspense>
-                    </motion.div>
-                    </AnimatePresence>
+                    <Suspense fallback={
+                    <div className="flex h-full w-full items-center justify-center">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                    </div>
+                    }>
+                    {children}
+                    </Suspense>
                 </main>
             </div>
             <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
