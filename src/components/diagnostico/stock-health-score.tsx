@@ -3,6 +3,7 @@
 
 import { PolarAngleAxis, RadialBar, RadialBarChart, ResponsiveContainer } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface StockHealthScoreProps {
   score: number;
@@ -10,7 +11,7 @@ interface StockHealthScoreProps {
 
 export function StockHealthScore({ score }: StockHealthScoreProps) {
   const chartData = [{ name: "score", value: score }];
-  const color = score > 80 ? "hsl(var(--chart-2))" : score > 50 ? "hsl(var(--chart-4))" : "hsl(var(--destructive))";
+  const color = "hsl(var(--chart-2))"; // Emerald-400 for success/health
 
   return (
     <div className="relative w-40 h-40">
@@ -29,16 +30,18 @@ export function StockHealthScore({ score }: StockHealthScoreProps) {
                     dataKey="value"
                     cornerRadius={6}
                     fill={color}
-                    className="[&_.recharts-radial-bar-background-sector]:fill-muted"
+                    className="[&_.recharts-radial-bar-background-sector]:fill-slate-800"
                 />
             </RadialBarChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-4xl font-bold font-mono" style={{ color: color }}>
+            <p className={cn(
+              "text-4xl font-mono font-bold text-emerald-400 drop-shadow-[0_0_8px_hsl(var(--chart-2)/0.8)]"
+              )}>
                 {score}
-                <span className="text-lg font-sans text-muted-foreground">%</span>
+                <span className="text-lg font-sans text-slate-400">%</span>
             </p>
-             <p className="text-xs font-bold text-muted-foreground">SAÚDE DO STOCK</p>
+             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">SAÚDE DO STOCK</p>
         </div>
     </div>
   );
