@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from "react";
@@ -343,9 +341,6 @@ export default function ProductionPage() {
                 </div>
                  <ScrollArea 
                     className="w-full md:w-auto pb-2"
-                    onTouchStart={e => e.stopPropagation()}
-                    onTouchMove={e => e.stopPropagation()}
-                    onTouchEnd={e => e.stopPropagation()}
                   >
                     <div className="flex items-center gap-2">
                         {isMultiLocation && canViewProduction && (
@@ -469,5 +464,3 @@ export default function ProductionPage() {
     </>
   );
 }
-
-    

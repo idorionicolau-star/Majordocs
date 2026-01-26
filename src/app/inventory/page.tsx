@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, useContext } from "react";
@@ -602,9 +601,6 @@ export default function InventoryPage() {
 
                 <ScrollArea 
                   className="w-full md:w-auto pb-2"
-                  onTouchStart={e => e.stopPropagation()}
-                  onTouchMove={e => e.stopPropagation()}
-                  onTouchEnd={e => e.stopPropagation()}
                 >
                   <div className="flex items-center gap-2">
                      <TooltipProvider>

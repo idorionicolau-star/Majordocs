@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useContext } from 'react';
@@ -54,9 +53,6 @@ export default function CalendarPage() {
         </div>
       <Card 
         className="shadow-lg"
-        onTouchStart={e => e.stopPropagation()}
-        onTouchMove={e => e.stopPropagation()}
-        onTouchEnd={e => e.stopPropagation()}
       >
         <CardContent className="p-4 sm:p-6">
           <CustomCalendar events={filteredOrders} />
