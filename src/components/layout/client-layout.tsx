@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 import { CommandMenu } from '@/components/command-menu';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { MobileNav } from './mobile-nav';
+import { useDrag } from '@use-gesture/react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -21,6 +23,16 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [openCommandMenu, setOpenCommandMenu] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const isMobile = useIsMobile();
+
+  const bind = useDrag(
+    ({ down, movement: [mx], direction: [xDir], velocity: [vx], initial: [ix] }) => {
+      if (isMobile && !isMobileNavOpen && ix < 50 && xDir > 0 && vx > 0.5) {
+        setIsMobileNavOpen(true);
+      }
+    },
+    { axis: 'x', filterTaps: true, preventDefault: true }
+  );
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -81,7 +93,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   
   return (
     <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
-        <div className="flex min-h-screen w-full bg-muted/40 bg-pattern">
+        <div className="flex min-h-screen w-full bg-muted/40 bg-pattern" {...(isMobile ? bind() : {})}>
             <Sidebar 
                 isCollapsed={isSidebarCollapsed} 
                 onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
