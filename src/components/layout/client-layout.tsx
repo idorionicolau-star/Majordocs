@@ -85,6 +85,11 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
     <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
         <div className="flex min-h-screen w-full bg-muted/40 bg-pattern" {...(isMobile ? bind() : {})}>
+            {isMobile && !isMobileNavOpen && (
+              <div className="pointer-events-none fixed left-0 top-1/2 z-10 -translate-y-1/2 md:hidden">
+                <div className="h-24 w-1.5 rounded-r-full bg-primary animate-peek" />
+              </div>
+            )}
             <Sidebar 
                 isCollapsed={isSidebarCollapsed} 
                 onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
