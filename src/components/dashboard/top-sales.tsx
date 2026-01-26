@@ -13,7 +13,6 @@ import { InventoryContext } from "@/context/inventory-context";
 import { Trophy } from 'lucide-react';
 import { formatCurrency } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
-import { Progress } from "../ui/progress";
 import {
   Select,
   SelectContent,
@@ -21,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 
 export function TopSales() {
@@ -40,13 +40,13 @@ export function TopSales() {
       return acc;
     }, {} as Record<string, { quantity: number; totalValue: number; unit: string; }>);
     
-    const totalRevenue = Object.values(productStats).reduce((sum, { totalValue }) => sum + totalValue, 0);
+    const totalValue = Object.values(productStats).reduce((sum, { totalValue }) => sum + totalValue, 0);
 
     const allProducts = Object.entries(productStats)
       .map(([name, stats]) => ({
         name,
         ...stats,
-        percentage: totalRevenue > 0 ? (stats.totalValue / totalRevenue) * 100 : 0,
+        percentage: totalValue > 0 ? (stats.totalValue / totalValue) * 100 : 0,
       }));
       
     if (sortBy === 'revenue') {
@@ -59,8 +59,10 @@ export function TopSales() {
 
   }, [sales, sortBy]);
 
+  const barColors = ["bg-chart-1", "bg-chart-2", "bg-chart-3", "bg-chart-4", "bg-chart-5"];
+
   return (
-    <Card className="bg-[#0f172a]/40 border-white/5 lg:col-span-1 shadow-[0_0_15px_rgba(56,189,248,0.1)]">
+    <Card className="bg-[#0f172a]/50 border-slate-800 lg:col-span-1 shadow-[0_0_15px_rgba(56,189,248,0.1)]">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <div>
                 <CardTitle className="flex items-center gap-2 text-slate-300">
@@ -87,10 +89,10 @@ export function TopSales() {
                     {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
                 </div>
             ) : topProducts.length > 0 ? (
-                topProducts.map((product) => (
+                topProducts.map((product, index) => (
                     <div key={product.name}>
                         <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm font-medium text-slate-300 truncate" title={product.name}>
+                            <span className="text-base font-medium text-slate-300 truncate" title={product.name}>
                                 {product.name}
                             </span>
                             <span className="text-sm font-bold text-sky-400">
@@ -100,7 +102,12 @@ export function TopSales() {
                                 }
                             </span>
                         </div>
-                        <Progress value={product.percentage} className="h-2 bg-slate-700/50 [&>div]:bg-sky-400" />
+                        <div className="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full", barColors[index % barColors.length])}
+                            style={{ width: `${product.percentage}%` }}
+                          />
+                        </div>
                     </div>
                 ))
             ) : (

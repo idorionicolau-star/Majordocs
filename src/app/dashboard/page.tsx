@@ -25,10 +25,10 @@ const PrimaryKPIs = () => {
 
     if (loading || !dashboardStats) {
         return (
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Skeleton className="h-32 bg-[#0f172a]/40" />
-                <Skeleton className="h-32 bg-[#0f172a]/40" />
-                <Skeleton className="h-32 bg-[#0f172a]/40" />
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <Skeleton className="h-32 bg-[#0f172a]/50" />
+                <Skeleton className="h-32 bg-[#0f172a]/50" />
+                <Skeleton className="h-32 bg-[#0f172a]/50" />
             </div>
         )
     }
@@ -41,14 +41,16 @@ const PrimaryKPIs = () => {
             color: "text-emerald-400",
             glow: "shadow-neon-emerald",
             pingColor: "bg-emerald-400",
+            size: "text-3xl lg:text-5xl",
         },
         {
             title: "Capital Imobilizado",
             value: formatCurrency(dashboardStats.totalInventoryValue),
             icon: Archive,
-            color: "text-rose-500",
-            glow: "shadow-neon-rose",
-            pingColor: "bg-rose-400",
+            color: "text-slate-400",
+            glow: "shadow-neon-slate",
+            pingColor: "bg-slate-500",
+            size: "text-2xl lg:text-4xl",
         },
         {
             title: "Ticket Médio",
@@ -57,13 +59,14 @@ const PrimaryKPIs = () => {
             color: "text-sky-400",
             glow: "shadow-neon-sky",
             pingColor: null,
+            size: "text-2xl lg:text-4xl",
         },
     ];
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {kpis.map((kpi) => (
-                <Card key={kpi.title} className={cn("bg-[#0f172a]/40 border-white/5", kpi.glow)}>
+                <Card key={kpi.title} className={cn("bg-[#0f172a]/50 border-slate-800", kpi.glow)}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-slate-400">{kpi.title}</CardTitle>
                         {kpi.pingColor && (
@@ -74,7 +77,7 @@ const PrimaryKPIs = () => {
                         )}
                     </CardHeader>
                     <CardContent>
-                        <div className={cn("text-2xl lg:text-4xl font-bold", kpi.color)}>
+                        <div className={cn("font-bold", kpi.color, kpi.size)}>
                             {kpi.value}
                         </div>
                     </CardContent>
@@ -92,7 +95,7 @@ const TacticalSummary = () => {
 **1. Resumo Executivo de Desempenho**
 
 O negócio apresenta uma estrutura de ativos sólida, mas com pontos de calibração necessários na rotatividade de stock e na conversão de vendas.
-- **Vendas Mensais:** **165.489,00 MT**
+- **Vendas Mensais:** <span class="text-emerald-400">**165.489,00 MT**</span>
 - **Ticket Médio:** **6.619,56 MT**
 - **Valor Total em Inventário:** <span class="text-rose-500">3.641.067,00 MT</span>
 - **Volume de Itens em Stock:** 11.058,32 unidades/m²
@@ -115,10 +118,10 @@ O rácio entre o Valor de Inventário (3,6M) e as Vendas Mensais (165k) sugere c
 - **Reposição:** Iniciar imediatamente a produção de "Pé de jardim" e "Painel 3d Wave".`;
 
   return (
-    <Card className="bg-[#0f172a]/40 border-white/5 lg:col-span-2">
+    <Card className="bg-[#0f172a]/50 border-slate-800 lg:col-span-2">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-slate-300">
-          <Sparkles className="text-sky-400" strokeWidth={1.5} />
+          <Sparkles className="text-sky-400 shadow-neon-sky" strokeWidth={1.5} />
           Insights da IA
         </CardTitle>
       </CardHeader>
@@ -133,7 +136,7 @@ O rácio entre o Valor de Inventário (3,6M) e as Vendas Mensais (165k) sugere c
               }}
               remarkPlugins={[remarkGfm]}
            >
-              {text.replace(/<span class="[^"]*">/g, "**").replace(/<\/span>/g, "**")}
+              {text}
            </ReactMarkdown>
         </div>
       </CardContent>
@@ -167,7 +170,7 @@ const QuickActions = () => {
             await addProduction(prodData);
             toast({ title: "Produção Registada" });
             setProductionDialogOpen(false);
-        } catch (e: any) {
+        } catch (e: any) => {
             toast({ variant: 'destructive', title: "Erro na Produção", description: e.message });
         }
     };
@@ -182,13 +185,19 @@ const QuickActions = () => {
     const canProduce = canEdit('production');
     const canAddToInventory = canEdit('inventory');
 
+    const hasAnyAction = canSell || canProduce || canAddToInventory;
+
+    if (!hasAnyAction) return null;
+
     return (
         <>
-            <div className="flex flex-col sm:flex-row gap-2">
-                {canSell && <Button onClick={() => setSaleDialogOpen(true)} variant="outline" className="flex-1 bg-[#0f172a]/40 border-white/5 hover:bg-sky-400/10 hover:text-sky-400"><ShoppingCart className="mr-2 h-4 w-4" />Registrar Venda</Button>}
-                {canProduce && <Button onClick={() => setProductionDialogOpen(true)} variant="outline" className="flex-1 bg-[#0f172a]/40 border-white/5 hover:bg-sky-400/10 hover:text-sky-400"><Package className="mr-2 h-4 w-4" />Entrada de Estoque</Button>}
-                {canAddToInventory && <Button onClick={() => setProductDialogOpen(true)} variant="outline" className="flex-1 bg-[#0f172a]/40 border-white/5 hover:bg-sky-400/10 hover:text-sky-400"><Plus className="mr-2 h-4 w-4" />Novo Produto</Button>}
-            </div>
+            <Card className="bg-[#0f172a]/50 border-slate-800 p-2">
+                <div className="flex flex-col sm:flex-row gap-2">
+                    {canSell && <Button onClick={() => setSaleDialogOpen(true)} variant="outline" className="flex-1 bg-transparent border-white/5 hover:bg-primary/20 hover:text-primary hover:shadow-lg hover:shadow-primary/40"><ShoppingCart className="mr-2 h-4 w-4" />Registrar Venda</Button>}
+                    {canProduce && <Button onClick={() => setProductionDialogOpen(true)} variant="outline" className="flex-1 bg-transparent border-white/5 hover:bg-primary/20 hover:text-primary hover:shadow-lg hover:shadow-primary/40"><Package className="mr-2 h-4 w-4" />Entrada de Estoque</Button>}
+                    {canAddToInventory && <Button onClick={() => setProductDialogOpen(true)} variant="outline" className="flex-1 bg-transparent border-white/5 hover:bg-primary/20 hover:text-primary hover:shadow-lg hover:shadow-primary/40"><Plus className="mr-2 h-4 w-4" />Novo Produto</Button>}
+                </div>
+            </Card>
 
             {canSell && <AddSaleDialog open={isSaleDialogOpen} onOpenChange={setSaleDialogOpen} onAddSale={handleAddSale} />}
             {canProduce && <AddProductionDialog open={isProductionDialogOpen} onOpenChange={setProductionDialogOpen} onAddProduction={handleAddProduction} />}
@@ -202,13 +211,13 @@ export default function DashboardPage() {
     const isPrivilegedUser = user?.role === 'Admin' || user?.role === 'Dono';
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-8 animate-in fade-in duration-500">
       
       <QuickActions />
       
       {isPrivilegedUser ? (
         <>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-3">
                     <PrimaryKPIs />
                 </div>
@@ -225,7 +234,7 @@ export default function DashboardPage() {
             </div>
         </>
       ) : (
-         <Card className="bg-[#0f172a]/40 border-white/5 h-full flex flex-col justify-center items-center">
+         <Card className="bg-[#0f172a]/50 border-slate-800 h-full flex flex-col justify-center items-center">
             <CardHeader>
               <CardTitle className="text-lg text-slate-400 flex items-center gap-2">
                 <Lock strokeWidth={1.5}/>

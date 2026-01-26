@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useContext, useMemo, useState } from 'react';
@@ -28,7 +29,7 @@ export function StockAlerts() {
 
     if (loading) {
         return (
-            <Card className="bg-[#0f172a]/40 border-white/5 h-full">
+            <Card className="bg-[#0f172a]/50 border-slate-800 h-full">
                 <CardHeader>
                     <Skeleton className="h-6 w-3/4" />
                     <Skeleton className="h-4 w-1/2" />
@@ -42,7 +43,7 @@ export function StockAlerts() {
     
     if (criticalStockProducts.length === 0) {
         return (
-             <Card className="bg-[#0f172a]/40 border-white/5 flex flex-col justify-center items-center h-full">
+             <Card className="bg-[#0f172a]/50 border-slate-800 flex flex-col justify-center items-center h-full">
                 <CardHeader className="items-center">
                     <CardTitle className="flex items-center gap-2 text-slate-300">
                         <AlertTriangle className="text-emerald-400" strokeWidth={1.5}/>
@@ -57,10 +58,10 @@ export function StockAlerts() {
     }
 
     return (
-        <Card className="bg-[#0f172a]/40 border-white/5">
+        <Card className="bg-[#0f172a]/50 border-slate-800">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-slate-300">
-                    <AlertTriangle className="text-rose-500" strokeWidth={1.5} />
+                    <AlertTriangle className="text-rose-500 h-5 w-5" strokeWidth={2} />
                     Stock Crítico
                 </CardTitle>
                 <CardDescription className="text-slate-500">
@@ -74,7 +75,7 @@ export function StockAlerts() {
                         key={product.instanceId} 
                         className="block group"
                     >
-                        <div className="flex items-center justify-between p-2 rounded-md hover:bg-slate-800/50 transition-colors">
+                        <div className="flex items-center justify-between p-2 rounded-md hover:bg-slate-800/50 transition-colors group-hover:shadow-neon-rose">
                             <span className="text-sm font-medium text-slate-300 group-hover:text-sky-400">{product.name}</span>
                             <div className="font-bold text-rose-500 text-right">
                                 {product.stock - product.reservedStock}

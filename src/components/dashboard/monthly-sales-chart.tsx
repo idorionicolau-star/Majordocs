@@ -100,7 +100,7 @@ export function MonthlySalesChart() {
 
   if (loading) {
     return (
-      <Card className="glass-card">
+      <Card className="bg-[#0f172a]/50 border-slate-800">
         <CardHeader>
           <Skeleton className="h-8 w-2/3" />
           <Skeleton className="h-4 w-1/2" />
@@ -113,7 +113,7 @@ export function MonthlySalesChart() {
   }
 
   return (
-    <Card className="glass-card">
+    <Card className="bg-[#0f172a]/50 border-slate-800">
       <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
             <CardTitle>Vendas ao Longo do Tempo</CardTitle>
@@ -137,7 +137,7 @@ export function MonthlySalesChart() {
             <AreaChart data={chartData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
               <defs>
                 <linearGradient id="fillVendas" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-vendas)" stopOpacity={0.8}/>
+                    <stop offset="5%" stopColor="var(--color-vendas)" stopOpacity={0.4}/>
                     <stop offset="95%" stopColor="hsl(var(--background))" stopOpacity={0.1}/>
                 </linearGradient>
               </defs>
