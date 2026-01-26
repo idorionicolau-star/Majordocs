@@ -40,7 +40,7 @@ const PrimaryKPIs = () => {
             color: "text-emerald-400",
             glow: "shadow-neon-emerald",
             pingColor: "bg-emerald-400",
-            size: "text-3xl lg:text-5xl",
+            size: "text-2xl md:text-2xl lg:text-4xl",
         },
         {
             title: "Capital Imobilizado",
@@ -49,7 +49,7 @@ const PrimaryKPIs = () => {
             color: "text-slate-400",
             glow: "shadow-neon-slate",
             pingColor: "bg-slate-500",
-            size: "text-2xl lg:text-4xl",
+            size: "text-2xl md:text-2xl lg:text-4xl",
         },
         {
             title: "Ticket Médio",
@@ -58,7 +58,7 @@ const PrimaryKPIs = () => {
             color: "text-sky-400",
             glow: "shadow-neon-sky",
             pingColor: null,
-            size: "text-2xl lg:text-4xl",
+            size: "text-2xl md:text-2xl lg:text-4xl",
         },
     ];
 
@@ -190,7 +190,7 @@ const QuickActions = () => {
 
     return (
         <>
-            <Card className="bg-[#0f172a]/50 border-slate-800 p-2">
+            <Card className="border-none bg-transparent p-0 shadow-none">
                 <div className="flex flex-col sm:flex-row gap-2">
                     {canSell && <Button onClick={() => setSaleDialogOpen(true)} variant="outline" className="flex-1 bg-transparent border-white/5 hover:bg-primary/20 hover:text-primary hover:shadow-lg hover:shadow-primary/40"><ShoppingCart className="mr-2 h-4 w-4" />Registrar Venda</Button>}
                     {canProduce && <Button onClick={() => setProductionDialogOpen(true)} variant="outline" className="flex-1 bg-transparent border-white/5 hover:bg-primary/20 hover:text-primary hover:shadow-lg hover:shadow-primary/40"><Package className="mr-2 h-4 w-4" />Entrada de Estoque</Button>}

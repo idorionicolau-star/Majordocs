@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -30,7 +29,7 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
   const pageTitle = getPageTitle();
   
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b px-4 sm:px-6 bg-primary text-primary-foreground">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-slate-800/60 bg-slate-950/50 px-4 backdrop-blur-xl sm:px-6">
       
       {/* Hamburger menu for mobile, hidden on desktop */}
       <div className="flex items-center gap-3 md:hidden">
@@ -51,7 +50,7 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
       <div className="hidden md:flex flex-1">
         <Button
             variant="outline"
-            className="relative w-full max-w-sm px-4 py-2 h-11 justify-start items-center text-left font-normal bg-white/10 text-primary-foreground/60 hover:bg-white/20 border-white/20 focus-visible:ring-offset-primary focus-visible:bg-white/20 hover:text-primary-foreground/80"
+            className="relative w-full max-w-sm px-4 py-2 h-11 justify-start items-center text-left font-normal bg-slate-800/50 text-slate-400 hover:bg-slate-800/80 border-slate-700"
             onClick={onSearchClick}
         >
           <Search className="mr-2 h-4 w-4" />
