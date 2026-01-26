@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useContext, useState } from "react";
@@ -170,7 +169,7 @@ const QuickActions = () => {
             await addProduction(prodData);
             toast({ title: "Produção Registada" });
             setProductionDialogOpen(false);
-        } catch (e: any) => {
+        } catch (e: any) {
             toast({ variant: 'destructive', title: "Erro na Produção", description: e.message });
         }
     };
