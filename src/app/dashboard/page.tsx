@@ -204,9 +204,10 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-500">
       
+      <QuickActions />
+      
       {isPrivilegedUser ? (
         <>
-            <QuickActions />
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-3">
                     <PrimaryKPIs />
