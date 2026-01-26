@@ -30,7 +30,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         setIsMobileNavOpen(true);
       }
     },
-    { axis: 'x', filterTaps: true, preventDefault: true }
+    { axis: 'x', filterTaps: true }
   );
 
   useEffect(() => {
