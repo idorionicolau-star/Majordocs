@@ -2,6 +2,10 @@ import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { Sale, Company } from "./types";
 
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
 export function formatCurrency(value: number, options?: Intl.NumberFormatOptions) {
   return new Intl.NumberFormat('pt-MZ', {
     style: 'currency',
