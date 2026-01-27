@@ -55,11 +55,11 @@ export const PrimaryKPIs = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <TooltipProvider>
                 {kpis.map((kpi) => (
-                    <Card key={kpi.title} className={cn("bg-[#0f172a]/50 border-slate-800", kpi.glow)}>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <Card key={kpi.title} className={cn("bg-[#0f172a]/50 border-slate-800 text-center", kpi.glow)}>
+                        <CardHeader className="flex flex-row items-center justify-center space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium text-slate-400">{kpi.title}</CardTitle>
                             {kpi.pingColor && (
-                                <span className="relative flex h-2 w-2">
+                                <span className="relative flex h-2 w-2 ml-2">
                                     <span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", kpi.pingColor)}></span>
                                     <span className={cn("relative inline-flex rounded-full h-2 w-2", kpi.pingColor)}></span>
                                 </span>
