@@ -411,7 +411,7 @@ export function CatalogManager() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteCategory}>Apagar</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDeleteCategory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Apagar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -426,7 +426,7 @@ export function CatalogManager() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteProduct}>Apagar</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDeleteProduct} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Apagar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -441,7 +441,7 @@ export function CatalogManager() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteSelectedProducts} variant="destructive">Sim, Apagar</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteSelectedProducts} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sim, Apagar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -456,7 +456,7 @@ export function CatalogManager() {
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteSelectedCategories} variant="destructive">Sim, Apagar</AlertDialogAction>
+                <AlertDialogAction onClick={handleDeleteSelectedCategories} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sim, Apagar</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
        </AlertDialog>

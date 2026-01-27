@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { Sale } from "@/lib/types";
@@ -59,7 +60,7 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, vi
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} variant="destructive">
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                         Apagar
                     </AlertDialogAction>
                 </AlertDialogFooter>
