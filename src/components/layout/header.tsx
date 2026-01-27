@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -10,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Settings, Search, Menu } from "lucide-react";
 import { mainNavItems } from "@/lib/data";
 import { SheetTrigger } from "../ui/sheet";
+import { ConnectionStatus } from "../connection-status";
 
 export function Header({ onSearchClick }: { onSearchClick: () => void }) {
   const pathname = usePathname();
@@ -64,6 +64,7 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
 
       {/* Right side icons */}
       <div className="flex items-center gap-1 md:gap-4">
+        <ConnectionStatus />
         <NotificationsDropdown />
         <Button asChild variant="ghost" size="icon">
           <Link href="/settings">

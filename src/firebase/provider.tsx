@@ -28,9 +28,9 @@ function getFirebaseServices() {
           });
         } catch (err: any) {
           if (err.code == 'failed-precondition') {
-              console.log("Persistência do Firestore falhou: múltiplas abas abertas. Usando modo em memória.");
+              console.warn("Persistência do Firestore falhou: múltiplas abas abertas. Usando modo em memória.");
           } else if (err.code == 'unimplemented') {
-              console.log("Este browser não suporta persistência offline do Firestore.");
+              console.warn("Este browser não suporta persistência offline do Firestore.");
           }
           // Fallback to in-memory persistence if offline setup fails
           firestore = getFirestore(firebaseApp);
