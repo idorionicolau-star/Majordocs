@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Production } from "@/lib/types";
@@ -61,14 +60,6 @@ export function ProductionCard({ production, onTransfer, onDelete, onUpdate, vie
         </AlertDialog>
 
         <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 relative shadow-sm">
-            {isTransferred && (
-                <div className="absolute inset-0 bg-background/50 backdrop-blur-[2px] z-10 rounded-xl flex items-center justify-center">
-                    <div className="flex items-center gap-2 text-[hsl(var(--chart-2))] bg-[hsl(var(--chart-2))]/10 px-4 py-2 rounded-full border border-[hsl(var(--chart-2))]/20">
-                        <CheckCircle className="h-5 w-5" />
-                        <span className="font-bold text-sm">Transferido</span>
-                    </div>
-                </div>
-            )}
             <CardHeader className="p-1 sm:p-2">
                  <div className="flex items-start justify-between">
                     <div className="flex items-start gap-2">
@@ -78,7 +69,7 @@ export function ProductionCard({ production, onTransfer, onDelete, onUpdate, vie
                             <CardDescription className={cn("text-[10px]", isCondensed && "hidden")}>ID: {production.id.slice(-6)}</CardDescription>
                         </div>
                     </div>
-                    {canEdit && (
+                    {canEdit && !isTransferred && (
                          <div className="flex items-center">
                             <EditProductionDialog production={production} onUpdate={onUpdate} />
                             <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={() => setShowDeleteConfirm(true)}>
@@ -131,6 +122,14 @@ export function ProductionCard({ production, onTransfer, onDelete, onUpdate, vie
                 </TooltipProvider>
                )}
             </CardFooter>}
+            {isTransferred && (
+                <div className="absolute bottom-2 right-2 z-10">
+                    <div className="flex items-center gap-1.5 text-[hsl(var(--chart-2))] bg-emerald-50 dark:bg-emerald-950/70 px-2 py-1 rounded-md border border-emerald-200 dark:border-emerald-800">
+                        <CheckCircle className="h-3 w-3" />
+                        <span className="font-bold text-[10px]">Transferido</span>
+                    </div>
+                </div>
+            )}
         </Card>
         </>
     );
