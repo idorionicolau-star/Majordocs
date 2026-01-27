@@ -19,7 +19,6 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Order } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { useDrag } from '@use-gesture/react';
 import { useRouter } from 'next/navigation';
 
 interface CustomCalendarProps {
@@ -66,14 +65,9 @@ export function CustomCalendar({ events = [] }: CustomCalendarProps) {
     }),
   };
   
-  const bind = useDrag(({ swipe: [swipeX] }) => {
-    if (swipeX === -1) nextMonth();
-    if (swipeX === 1) prevMonth();
-  }, { axis: 'x', filterTaps: true, preventDefault: true });
-
 
   return (
-    <div className="bg-background rounded-xl p-4 touch-none">
+    <div className="bg-background rounded-xl p-4">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-bold capitalize">
           {format(currentMonth, 'MMMM yyyy', { locale: pt })}
@@ -96,7 +90,7 @@ export function CustomCalendar({ events = [] }: CustomCalendarProps) {
         ))}
       </div>
       
-      <div className="relative overflow-hidden" {...bind()}>
+      <div className="relative overflow-hidden">
         <AnimatePresence initial={false} custom={direction}>
           <motion.div
             key={currentMonth.toString()}
