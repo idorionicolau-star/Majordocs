@@ -9,6 +9,7 @@ import {
   ReactNode,
   useCallback,
   useMemo,
+  useRef,
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification, DashboardStats, InventoryContextType, ChatMessage, RawMaterial, Recipe } from '@/lib/types';
@@ -47,6 +48,12 @@ import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage"
 import { format, eachMonthOfInterval, subMonths } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { downloadSaleDocument, formatCurrency } from '@/lib/utils';
+import { 
+  addDocumentNonBlocking,
+  deleteDocumentNonBlocking,
+  updateDocumentNonBlocking
+} from '@/firebase/non-blocking-updates';
+
 
 type CatalogProduct = Omit<
   Product,
@@ -71,6 +78,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const auth = getFirebaseAuth();
+  const wasSyncing = useRef(false);
   
   const [companyData, setCompanyData] = useState<Company | null>(null);
 
@@ -111,7 +119,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     try {
         const userDocRef = doc(firestore, `companies/${user.companyId}/employees`, user.id);
-        await updateDoc(userDocRef, { profilePictureUrl: pictureUrl });
+        updateDocumentNonBlocking(userDocRef, { profilePictureUrl: pictureUrl });
         setProfilePicture(pictureUrl);
         
         toast({ title: 'Sucesso!', description: 'A sua foto de perfil foi atualizada.' });
@@ -399,6 +407,27 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!firestore || !companyId) return null;
     return doc(firestore, `companies`, companyId);
   }, [firestore, companyId]);
+
+  useEffect(() => {
+    if (!productsCollectionRef) return;
+  
+    const unsubscribe = onSnapshot(productsCollectionRef, (snapshot) => {
+      const isSyncing = snapshot.metadata.hasPendingWrites;
+  
+      if (wasSyncing.current && !isSyncing) {
+        toast({
+          title: 'Sincronizado!',
+          description: 'As suas alterações foram guardadas no servidor.',
+        });
+      }
+  
+      wasSyncing.current = isSyncing;
+    }, (error) => {
+      console.error("Sync listener error:", error);
+    });
+  
+    return () => unsubscribe();
+  }, [productsCollectionRef, toast]);
 
 
   const { data: productsData, isLoading: productsLoading } = useCollection<Product>(productsCollectionRef);
@@ -848,9 +877,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       });
     }, [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast, user, checkStockAndNotify, addNotification]);
 
-  const updateCompany = useCallback(async (details: Partial<Company>) => {
+  const updateCompany = useCallback((details: Partial<Company>) => {
       if(companyDocRef) {
-         await updateDoc(companyDocRef, details);
+         updateDocumentNonBlocking(companyDocRef, details);
       }
   }, [companyDocRef]);
   
@@ -938,11 +967,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
 
     if ((sale.amountPaid ?? 0) < sale.totalValue) {
-        const amountDue = sale.totalValue - (sale.amountPaid || 0);
         toast({
             variant: "destructive",
             title: 'Pagamento Incompleto',
-            description: `Não é possível confirmar o levantamento. O cliente ainda precisa de pagar ${formatCurrency(amountDue)}.`,
+            description: `Não é possível confirmar o levantamento. O cliente ainda precisa de pagar ${formatCurrency(sale.totalValue - (sale.amountPaid || 0))}.`,
             duration: 6000,
         });
         return;
@@ -1001,7 +1029,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     };
 
     const productionsRef = collection(firestore, `companies/${companyId}/productions`);
-    await addDoc(productionsRef, newProduction);
+    addDocumentNonBlocking(productionsRef, newProduction);
     
     addNotification({
         type: 'production',
@@ -1072,7 +1100,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       throw new Error("Referência da coleção do catálogo não disponível.");
     }
     try {
-        await addDoc(catalogProductsCollectionRef, productData);
+        addDocumentNonBlocking(catalogProductsCollectionRef, productData);
     } catch(e) {
         console.error("Error adding catalog product:", e);
         throw new Error("Não foi possível adicionar o produto ao catálogo.");
@@ -1090,7 +1118,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
       
     try {
-      await addDoc(catalogCategoriesCollectionRef, { name: trimmedName });
+      addDocumentNonBlocking(catalogCategoriesCollectionRef, { name: trimmedName });
     } catch (e) {
       console.error("Error adding catalog category:", e);
       throw new Error("Não foi possível adicionar a nova categoria.");
@@ -1201,60 +1229,60 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [firestore, companyId, productsData, toast]);
 
-  const deleteProduction = useCallback(async (productionId: string) => {
+  const deleteProduction = useCallback((productionId: string) => {
     if (!productionsCollectionRef) return;
-    await deleteDoc(doc(productionsCollectionRef, productionId));
+    deleteDocumentNonBlocking(doc(productionsCollectionRef, productionId));
     toast({ title: 'Registo de Produção Apagado' });
   }, [productionsCollectionRef, toast]);
   
-  const updateProduction = useCallback(async (productionId: string, data: Partial<Production>) => {
+  const updateProduction = useCallback((productionId: string, data: Partial<Production>) => {
     if (!productionsCollectionRef) return;
     const docRef = doc(productionsCollectionRef, productionId);
-    await updateDoc(docRef, data);
+    updateDocumentNonBlocking(docRef, data);
     toast({ title: 'Registo de Produção Atualizado' });
   }, [productionsCollectionRef, toast]);
 
-  const deleteOrder = useCallback(async (orderId: string) => {
+  const deleteOrder = useCallback((orderId: string) => {
     if (!ordersCollectionRef) return;
-    await deleteDoc(doc(ordersCollectionRef, orderId));
+    deleteDocumentNonBlocking(doc(ordersCollectionRef, orderId));
     toast({ title: 'Encomenda Apagada' });
   }, [ordersCollectionRef, toast]);
 
-  const addRawMaterial = useCallback(async (material: Omit<RawMaterial, 'id'>) => {
+  const addRawMaterial = useCallback((material: Omit<RawMaterial, 'id'>) => {
     if (!rawMaterialsCollectionRef) return;
-    await addDoc(rawMaterialsCollectionRef, material);
+    addDocumentNonBlocking(rawMaterialsCollectionRef, material);
     toast({ title: 'Matéria-Prima Adicionada' });
   }, [rawMaterialsCollectionRef, toast]);
 
-  const updateRawMaterial = useCallback(async (materialId: string, data: Partial<RawMaterial>) => {
+  const updateRawMaterial = useCallback((materialId: string, data: Partial<RawMaterial>) => {
     if (!rawMaterialsCollectionRef) return;
     const docRef = doc(rawMaterialsCollectionRef, materialId);
-    await updateDoc(docRef, data);
+    updateDocumentNonBlocking(docRef, data);
     toast({ title: 'Matéria-Prima Atualizada' });
   }, [rawMaterialsCollectionRef, toast]);
 
-  const deleteRawMaterial = useCallback(async (materialId: string) => {
+  const deleteRawMaterial = useCallback((materialId: string) => {
     if (!rawMaterialsCollectionRef) return;
-    await deleteDoc(doc(rawMaterialsCollectionRef, materialId));
+    deleteDocumentNonBlocking(doc(rawMaterialsCollectionRef, materialId));
     toast({ title: 'Matéria-Prima Removida' });
   }, [rawMaterialsCollectionRef, toast]);
 
-  const addRecipe = useCallback(async (recipe: Omit<Recipe, 'id'>) => {
+  const addRecipe = useCallback((recipe: Omit<Recipe, 'id'>) => {
     if (!recipesCollectionRef) return;
-    await addDoc(recipesCollectionRef, recipe);
+    addDocumentNonBlocking(recipesCollectionRef, recipe);
     toast({ title: 'Receita Adicionada' });
   }, [recipesCollectionRef, toast]);
 
-  const updateRecipe = useCallback(async (recipeId: string, data: Partial<Recipe>) => {
+  const updateRecipe = useCallback((recipeId: string, data: Partial<Recipe>) => {
     if (!recipesCollectionRef) return;
     const docRef = doc(recipesCollectionRef, recipeId);
-    await updateDoc(docRef, data);
+    updateDocumentNonBlocking(docRef, data);
     toast({ title: 'Receita Atualizada' });
   }, [recipesCollectionRef, toast]);
 
-  const deleteRecipe = useCallback(async (recipeId: string) => {
+  const deleteRecipe = useCallback((recipeId: string) => {
     if (!recipesCollectionRef) return;
-    await deleteDoc(doc(recipesCollectionRef, recipeId));
+    deleteDocumentNonBlocking(doc(recipesCollectionRef, recipeId));
     toast({ title: 'Receita Removida' });
   }, [recipesCollectionRef, toast]);
 

@@ -1,35 +1,16 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  /* config options here */
-  typescript: {
-    // Mantemos isto para evitar que erros de tipos travem o seu progresso
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'picsum.photos',
-        port: '',
-        pathname: '/**',
-      },
-    ],
-  },
+import withPWA from 'next-pwa';
+
+const pwaConfig = {
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
 };
+
+const nextConfig = withPWA(pwaConfig)({
+  // Your Next.js config options here
+  reactStrictMode: true,
+});
 
 export default nextConfig;
