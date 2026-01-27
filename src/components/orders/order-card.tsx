@@ -132,7 +132,7 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
                 </div>
 
                 <p className="text-center text-sm font-semibold text-muted-foreground">
-                    Faltam {remainingQuantity} {order.unit}
+                    Faltam {Number(remainingQuantity.toFixed(2))} {order.unit}
                 </p>
                  
                  <div className="text-sm text-muted-foreground space-y-1.5">
