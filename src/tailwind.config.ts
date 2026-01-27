@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -73,6 +74,9 @@ export default {
         'neon-emerald': '0 0 25px hsl(var(--chart-2) / 0.35)',
         'neon-rose': '0 0 20px hsl(var(--chart-4) / 0.3)',
         'neon-slate': '0 0 15px hsl(var(--muted-foreground) / 0.2)',
+      },
+      transitionTimingFunction: {
+        'overshoot': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
       keyframes: {
         'accordion-down': {
