@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useContext, useMemo, useState } from 'react';
@@ -8,6 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 export function StockAlerts() {
     const { products, loading } = useContext(InventoryContext) || { products: [], loading: true };
@@ -69,21 +70,42 @@ export function StockAlerts() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-1">
-                {displayProducts.map(product => (
-                    <Link 
-                        href={`/inventory?filter=${encodeURIComponent(product.name)}`} 
-                        key={product.instanceId} 
-                        className="block group"
-                    >
-                        <div className="flex items-center justify-between p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
-                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-primary">{product.name}</span>
-                            <div className="font-bold text-rose-500 text-right">
-                                {Math.floor(Math.max(0, product.stock - product.reservedStock))}
-                                <span className="text-xs text-slate-500 dark:text-slate-500 ml-1">{product.unit || 'un.'}</span>
+                {displayProducts.map(product => {
+                    const availableStock = product.stock - product.reservedStock;
+                    const isFullyReserved = availableStock <= 0 && product.reservedStock > 0;
+
+                    return (
+                        <Link 
+                            href={`/inventory?filter=${encodeURIComponent(product.name)}`} 
+                            key={product.instanceId} 
+                            className="block group"
+                        >
+                            <div className="flex items-center justify-between p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-primary">{product.name}</span>
+                                <div className="font-bold text-rose-500 text-right flex items-center">
+                                    {isFullyReserved ? (
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <div className="cursor-help flex items-center justify-end" onClick={(e) => e.preventDefault()}>
+                                                        {Math.floor(product.stock)}
+                                                        <span className="text-xs font-bold ml-1 text-amber-500">(R)</span>
+                                                    </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>{product.reservedStock} unidade(s) reservada(s) para vendas.</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    ) : (
+                                        Math.floor(Math.max(0, availableStock))
+                                    )}
+                                    <span className="text-xs text-slate-500 dark:text-slate-500 ml-1">{product.unit || 'un.'}</span>
+                                </div>
                             </div>
-                        </div>
-                    </Link>
-                ))}
+                        </Link>
+                    )
+                })}
             </CardContent>
             {criticalStockProducts.length > 3 && (
                 <CardFooter>
