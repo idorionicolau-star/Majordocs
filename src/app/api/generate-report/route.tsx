@@ -59,7 +59,12 @@ export async function POST(req: NextRequest) {
     const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
     const fileName = `Relatorio_${companyClean}_${timestamp}.pdf`;
 
-    return new NextResponse(pdfBuffer, {
+    // FIX: Explicitly convert the Node.js Buffer to a Uint8Array.
+    // This resolves a TypeScript type conflict that can occur in Vercel's build environment
+    // by ensuring the body is a universally accepted binary format for NextResponse.
+    const responseBody = new Uint8Array(pdfBuffer);
+
+    return new NextResponse(responseBody, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${fileName}"`,
@@ -71,5 +76,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-
-    
