@@ -6,7 +6,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatCurrency(value: number, options?: Intl.NumberFormatOptions) {
+export function formatCurrency(value: number, options?: Intl.NumberFormatOptions & { compact?: boolean }) {
+  if (options?.compact) {
+    if (value >= 1_000_000) {
+      return `${(value / 1_000_000).toFixed(2)}M`;
+    }
+    if (value >= 10000) {
+      return `${(value / 1000).toFixed(0)}K`;
+    }
+  }
+
   return new Intl.NumberFormat('pt-MZ', {
     style: 'currency',
     currency: 'MZN',

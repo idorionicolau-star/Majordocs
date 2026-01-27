@@ -23,7 +23,7 @@ export const PrimaryKPIs = () => {
     const kpis = [
         {
             title: "Faturamento Mensal",
-            value: formatCurrency(dashboardStats.monthlySalesValue),
+            value: formatCurrency(dashboardStats.monthlySalesValue, { compact: true }),
             icon: DollarSign,
             color: "text-emerald-400",
             glow: "shadow-neon-emerald",
@@ -32,7 +32,7 @@ export const PrimaryKPIs = () => {
         },
         {
             title: "Capital Imobilizado",
-            value: formatCurrency(dashboardStats.totalInventoryValue),
+            value: formatCurrency(dashboardStats.totalInventoryValue, { compact: true }),
             icon: Archive,
             color: "text-slate-400",
             glow: "shadow-neon-slate",
@@ -41,7 +41,7 @@ export const PrimaryKPIs = () => {
         },
         {
             title: "Ticket Médio",
-            value: formatCurrency(dashboardStats.averageTicket),
+            value: formatCurrency(dashboardStats.averageTicket, { compact: true }),
             icon: TrendingUp,
             color: "text-sky-400",
             glow: "shadow-neon-sky",

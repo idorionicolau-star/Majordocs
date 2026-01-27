@@ -33,21 +33,21 @@ export function StatsCards() {
     const stats = [
         {
           title: "Vendas (Mês)",
-          value: formatCurrency(dashboardStats.monthlySalesValue),
+          value: formatCurrency(dashboardStats.monthlySalesValue, { compact: true }),
           icon: DollarSign,
           href: "/sales",
           color: "text-chart-2"
         },
         {
           title: "Ticket Médio",
-          value: formatCurrency(dashboardStats.averageTicket),
+          value: formatCurrency(dashboardStats.averageTicket, { compact: true }),
           icon: TrendingUp,
           href: "/reports",
           color: "text-chart-2"
         },
         {
           title: "Valor do Inventário",
-          value: formatCurrency(dashboardStats.totalInventoryValue),
+          value: formatCurrency(dashboardStats.totalInventoryValue, { compact: true }),
           icon: Archive,
           href: "/inventory",
           color: "text-chart-3"
