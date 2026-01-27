@@ -29,7 +29,7 @@ export function StockAlerts() {
 
     if (loading) {
         return (
-            <Card className="bg-[#0f172a]/50 border-slate-800 h-full">
+            <Card className="bg-white/70 dark:bg-[#0f172a]/50 h-full">
                 <CardHeader>
                     <Skeleton className="h-6 w-3/4" />
                     <Skeleton className="h-4 w-1/2" />
@@ -43,28 +43,28 @@ export function StockAlerts() {
     
     if (criticalStockProducts.length === 0) {
         return (
-             <Card className="bg-[#0f172a]/50 border-slate-800 flex flex-col justify-center items-center h-full">
+             <Card className="bg-white/70 dark:bg-[#0f172a]/50 backdrop-blur-lg flex flex-col justify-center items-center h-full border-white dark:border-slate-800 shadow-sm shadow-slate-200/50 dark:shadow-none">
                 <CardHeader className="items-center">
-                    <CardTitle className="flex items-center gap-2 text-slate-300">
-                        <AlertTriangle className="text-emerald-400" strokeWidth={1.5}/>
+                    <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-300">
+                        <AlertTriangle className="text-emerald-500 dark:text-emerald-400" strokeWidth={1.5}/>
                         Alertas de Stock
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-sm text-slate-400">Nenhum alerta crítico.</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Nenhum alerta crítico.</p>
                 </CardContent>
             </Card>
         );
     }
 
     return (
-        <Card className="bg-[#0f172a]/50 border-slate-800">
+        <Card className="bg-white/70 dark:bg-[#0f172a]/50 backdrop-blur-lg border-white dark:border-slate-800 shadow-sm shadow-slate-200/50 dark:shadow-none">
             <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-slate-300">
+                <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-300">
                     <AlertTriangle className="text-rose-500 h-5 w-5" strokeWidth={2} />
                     Stock Crítico
                 </CardTitle>
-                <CardDescription className="text-slate-500">
+                <CardDescription className="text-slate-500 dark:text-slate-500">
                     Produtos que necessitam de atenção imediata.
                 </CardDescription>
             </CardHeader>
@@ -75,11 +75,11 @@ export function StockAlerts() {
                         key={product.instanceId} 
                         className="block group"
                     >
-                        <div className="flex items-center justify-between p-2 rounded-md hover:bg-slate-800/50 transition-colors group-hover:shadow-neon-rose">
-                            <span className="text-sm font-medium text-slate-300 group-hover:text-sky-400">{product.name}</span>
+                        <div className="flex items-center justify-between p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-primary">{product.name}</span>
                             <div className="font-bold text-rose-500 text-right">
                                 {product.stock - product.reservedStock}
-                                <span className="text-xs text-slate-500 ml-1">{product.unit || 'un.'}</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-500 ml-1">{product.unit || 'un.'}</span>
                             </div>
                         </div>
                     </Link>
@@ -87,7 +87,7 @@ export function StockAlerts() {
             </CardContent>
             {criticalStockProducts.length > 3 && (
                 <CardFooter>
-                    <Button variant="link" className="text-sky-400 p-0 h-auto text-sm" onClick={() => setIsExpanded(!isExpanded)}>
+                    <Button variant="link" className="text-primary dark:text-sky-400 p-0 h-auto text-sm" onClick={() => setIsExpanded(!isExpanded)}>
                         {isExpanded ? 'Mostrar menos' : `Mostrar todos os ${criticalStockProducts.length} itens`}
                     </Button>
                 </CardFooter>

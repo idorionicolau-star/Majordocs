@@ -62,19 +62,19 @@ export function TopSales() {
   const barColors = ["bg-chart-1", "bg-chart-2", "bg-chart-3", "bg-chart-4", "bg-chart-5"];
 
   return (
-    <Card className="bg-[#0f172a]/50 border-slate-800 lg:col-span-1 shadow-[0_0_15px_rgba(56,189,248,0.1)]">
+    <Card className="bg-white/70 dark:bg-[#0f172a]/50 backdrop-blur-lg border-white dark:border-slate-800 shadow-sm shadow-slate-200/50 dark:shadow-[0_0_15px_rgba(56,189,248,0.1)] lg:col-span-1">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <div>
-                <CardTitle className="flex items-center gap-2 text-slate-300">
-                    <Trophy className="text-sky-400" strokeWidth={1.5} />
+                <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-300">
+                    <Trophy className="text-cyan-600 dark:text-sky-400" strokeWidth={1.5} />
                     Líderes de Vendas
                 </CardTitle>
-                <CardDescription className="text-slate-500 mt-1">
+                <CardDescription className="text-slate-500 dark:text-slate-500 mt-1">
                     Top 5 produtos por {sortBy === 'revenue' ? 'faturamento' : 'volume'}.
                 </CardDescription>
             </div>
              <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'revenue' | 'quantity')}>
-                <SelectTrigger className="w-full sm:w-[150px] bg-slate-800/50 border-slate-700 h-9">
+                <SelectTrigger className="w-full sm:w-[150px] bg-slate-100 dark:bg-slate-800/50 border-slate-300 dark:border-slate-700 h-9">
                     <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -92,17 +92,17 @@ export function TopSales() {
                 topProducts.map((product, index) => (
                     <div key={product.name}>
                         <div className="flex justify-between items-center mb-1">
-                            <span className="text-base font-medium text-slate-300 truncate" title={product.name}>
+                            <span className="text-base font-medium text-slate-800 dark:text-slate-300 truncate" title={product.name}>
                                 {product.name}
                             </span>
-                            <span className="text-sm font-bold text-sky-400">
+                            <span className="text-sm font-bold text-cyan-600 dark:text-sky-400">
                                 {sortBy === 'revenue' 
                                     ? formatCurrency(product.totalValue)
                                     : `${product.quantity} ${product.unit}`
                                 }
                             </span>
                         </div>
-                        <div className="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden">
+                        <div className="h-2 w-full bg-slate-200 dark:bg-slate-700/50 rounded-full overflow-hidden">
                           <div
                             className={cn("h-full rounded-full", barColors[index % barColors.length])}
                             style={{ width: `${product.percentage}%` }}
@@ -111,7 +111,7 @@ export function TopSales() {
                     </div>
                 ))
             ) : (
-                <div className="text-center py-8 text-slate-500">
+                <div className="text-center py-8 text-slate-500 dark:text-slate-500">
                     <p>Nenhuma venda registada ainda.</p>
                 </div>
             )}

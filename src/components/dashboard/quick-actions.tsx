@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useContext, useState } from "react";
@@ -60,9 +61,9 @@ export const QuickActions = () => {
         <>
             <Card className="border-none bg-transparent p-0 shadow-none">
                 <div className="flex flex-col sm:flex-row gap-2">
-                    {canSell && <Button onClick={() => setSaleDialogOpen(true)} variant="outline" className="flex-1 bg-transparent border-white/5 hover:bg-primary/20 hover:text-primary hover:shadow-lg hover:shadow-primary/40"><ShoppingCart className="mr-2 h-4 w-4" />Registrar Venda</Button>}
-                    {canProduce && <Button onClick={() => setProductionDialogOpen(true)} variant="outline" className="flex-1 bg-transparent border-white/5 hover:bg-primary/20 hover:text-primary hover:shadow-lg hover:shadow-primary/40"><Package className="mr-2 h-4 w-4" />Entrada de Estoque</Button>}
-                    {canAddToInventory && <Button onClick={() => setProductDialogOpen(true)} variant="outline" className="flex-1 bg-transparent border-white/5 hover:bg-primary/20 hover:text-primary hover:shadow-lg hover:shadow-primary/40"><Plus className="mr-2 h-4 w-4" />Novo Produto</Button>}
+                    {canSell && <Button onClick={() => setSaleDialogOpen(true)} variant="secondary" className="flex-1 group hover:shadow-lg hover:shadow-cyan-500/20"><ShoppingCart className="mr-2 h-4 w-4 text-cyan-600" />Registrar Venda</Button>}
+                    {canProduce && <Button onClick={() => setProductionDialogOpen(true)} variant="secondary" className="flex-1 group hover:shadow-lg hover:shadow-purple-500/20"><Package className="mr-2 h-4 w-4 text-purple-600" />Entrada de Estoque</Button>}
+                    {canAddToInventory && <Button onClick={() => setProductDialogOpen(true)} variant="secondary" className="flex-1 group hover:shadow-lg hover:shadow-emerald-500/20"><Plus className="mr-2 h-4 w-4 text-emerald-600" />Novo Produto</Button>}
                 </div>
             </Card>
 

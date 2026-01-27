@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useContext } from "react";
@@ -14,9 +15,9 @@ export const PrimaryKPIs = () => {
     if (loading || !dashboardStats) {
         return (
              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <Skeleton className="h-32 bg-[#0f172a]/50" />
-                <Skeleton className="h-32 bg-[#0f172a]/50" />
-                <Skeleton className="h-32 bg-[#0f172a]/50" />
+                <Skeleton className="h-32 bg-white/70 dark:bg-[#0f172a]/50" />
+                <Skeleton className="h-32 bg-white/70 dark:bg-[#0f172a]/50" />
+                <Skeleton className="h-32 bg-white/70 dark:bg-[#0f172a]/50" />
             </div>
         )
     }
@@ -26,17 +27,19 @@ export const PrimaryKPIs = () => {
             title: "Faturamento Mensal",
             value: dashboardStats.monthlySalesValue,
             icon: DollarSign,
-            color: "text-emerald-400",
-            glow: "shadow-neon-emerald",
-            pingColor: "bg-emerald-400",
+            lightColor: "text-emerald-600",
+            darkColor: "dark:text-emerald-400",
+            glow: "dark:shadow-neon-emerald",
+            pingColor: "bg-emerald-500",
             size: "text-2xl md:text-2xl lg:text-4xl",
         },
         {
             title: "Capital Imobilizado",
             value: dashboardStats.totalInventoryValue,
             icon: Archive,
-            color: "text-slate-400",
-            glow: "shadow-neon-slate",
+            lightColor: "text-slate-700",
+            darkColor: "dark:text-slate-400",
+            glow: "dark:shadow-neon-slate",
             pingColor: "bg-slate-500",
             size: "text-2xl md:text-2xl lg:text-4xl",
         },
@@ -44,8 +47,9 @@ export const PrimaryKPIs = () => {
             title: "Ticket Médio",
             value: dashboardStats.averageTicket,
             icon: TrendingUp,
-            color: "text-sky-400",
-            glow: "shadow-neon-sky",
+            lightColor: "text-cyan-600",
+            darkColor: "dark:text-sky-400",
+            glow: "dark:shadow-neon-sky",
             pingColor: null,
             size: "text-2xl md:text-2xl lg:text-4xl",
         },
@@ -55,9 +59,9 @@ export const PrimaryKPIs = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <TooltipProvider>
                 {kpis.map((kpi) => (
-                    <Card key={kpi.title} className={cn("bg-[#0f172a]/50 border-slate-800 text-center", kpi.glow)}>
+                    <Card key={kpi.title} className={cn("bg-white/70 dark:bg-[#0f172a]/50 backdrop-blur-lg border-white dark:border-slate-800 shadow-sm shadow-slate-200/50 text-center dark:shadow-none", kpi.glow)}>
                         <CardHeader className="flex flex-row items-center justify-center space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-slate-400">{kpi.title}</CardTitle>
+                            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">{kpi.title}</CardTitle>
                             {kpi.pingColor && (
                                 <span className="relative flex h-2 w-2 ml-2">
                                     <span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", kpi.pingColor)}></span>
@@ -68,7 +72,7 @@ export const PrimaryKPIs = () => {
                         <CardContent>
                            <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <div className={cn("font-bold cursor-pointer", kpi.color, kpi.size)}>
+                                     <div className={cn("font-bold cursor-pointer", kpi.lightColor, kpi.darkColor, kpi.size)}>
                                         <span className="md:hidden">{formatCurrency(kpi.value)}</span>
                                         <span className="hidden md:inline">{formatCurrency(kpi.value, { compact: true })}</span>
                                     </div>

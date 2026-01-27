@@ -100,7 +100,7 @@ export function MonthlySalesChart() {
 
   if (loading) {
     return (
-      <Card className="bg-[#0f172a]/50 border-slate-800">
+      <Card className="bg-white/70 dark:bg-[#0f172a]/50">
         <CardHeader>
           <Skeleton className="h-8 w-2/3" />
           <Skeleton className="h-4 w-1/2" />
@@ -113,7 +113,7 @@ export function MonthlySalesChart() {
   }
 
   return (
-    <Card className="bg-[#0f172a]/50 border-slate-800">
+    <Card className="bg-white/70 dark:bg-[#0f172a]/50 backdrop-blur-lg border-white dark:border-slate-800 shadow-sm shadow-slate-200/50 dark:shadow-none">
       <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
             <CardTitle>Vendas ao Longo do Tempo</CardTitle>
@@ -138,10 +138,10 @@ export function MonthlySalesChart() {
               <defs>
                 <linearGradient id="fillVendas" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--color-vendas)" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="hsl(var(--background))" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="var(--color-vendas)" stopOpacity={0.05}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-slate-800" />
+              <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-800" />
               <XAxis
                 dataKey="name"
                 tickLine={false}
@@ -160,7 +160,7 @@ export function MonthlySalesChart() {
                 cursor={true}
                 content={<ChartTooltipContent 
                     formatter={(value) => formatCurrency(value as number)}
-                    className="dark:bg-slate-950/80 dark:border-slate-700/50 backdrop-blur-md rounded-xl" 
+                    className="bg-background/80 dark:bg-slate-950/80 dark:border-slate-700/50 backdrop-blur-md rounded-xl" 
                 />}
               />
               <Area 

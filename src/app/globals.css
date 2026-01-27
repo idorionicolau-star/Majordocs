@@ -5,40 +5,50 @@
 
 @layer base {
   :root {
-    --background: 260 30% 97%;
-    --foreground: 260 15% 15%;
-    --card: 260 15% 100%;
-    --card-foreground: 260 15% 15%;
-    --popover: 260 15% 100%;
-    --popover-foreground: 260 15% 15%;
-    --primary: 258 83% 65%;
-    --primary-foreground: 260 15% 98%;
-    --secondary: 260 20% 94%;
-    --secondary-foreground: 260 15% 15%;
-    --muted: 260 20% 90%;
-    --muted-foreground: 260 10% 45%;
-    --accent: 258 83% 95%;
-    --accent-foreground: 260 15% 15%;
+    --background: 210 40% 98%; /* slate-50 */
+    --foreground: 222 47% 11%; /* slate-900 */
+
+    --card: 0 0% 100%; /* white */
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 222 47% 11%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 215 20% 94%; /* slate-100 */
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 215 20% 90%; /* slate-200 */
+    --muted-foreground: 215 14% 34%; /* slate-600 */
+
+    --accent: 215 20% 94%; /* slate-100 */
+    --accent-foreground: 222 47% 11%;
+
     --destructive: 0 84% 60%;
-    --destructive-foreground: 260 15% 98%;
-    --border: 260 20% 87%;
-    --input: 260 20% 87%;
-    --ring: 258 83% 65%;
-    --chart-1: 258 83% 65%;
-    --chart-2: 340 82% 52%;
-    --chart-3: 35 92% 55%;
-    --chart-4: 220 80% 60%;
-    --chart-5: 150 70% 45%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 215 20% 85%; /* slate-300 */
+    --input: 215 28% 93%; /* slate-100 */
+    --ring: 222 47% 11%;
+
+    /* Vertex Frost Chart Colors */
+    --chart-1: 190 75% 38%; /* cyan-600 */
+    --chart-2: 152 63% 31%; /* emerald-600 */
+    --chart-3: 35 92% 55%;  /* amber-500 */
+    --chart-4: 0 84% 60%;   /* destructive/rose-500 */
+    --chart-5: 258 75% 65%; /* violet-500 */
   }
 
   .dark {
-    --background: 222 47% 8%; /* slate-950 */
+    --background: 222 47% 8%;
     --foreground: 210 40% 98%;
     --card: 222 47% 11%;
     --card-foreground: 210 40% 98%;
     --popover: 222 47% 8%;
     --popover-foreground: 210 40% 98%;
-    --primary: 199 91% 60%; /* sky-400 */
+    --primary: 199 91% 60%;
     --primary-foreground: 222 47% 11%;
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
@@ -46,16 +56,16 @@
     --muted-foreground: 215 20% 65%;
     --accent: 217 33% 17%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 350 90% 60%; /* rose-500 */
+    --destructive: 350 90% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 222 47% 21%; /* slate-800 */
+    --border: 222 47% 21%;
     --input: 217 33% 17%;
     --ring: 199 91% 60%;
-    --chart-1: 199 91% 60%; /* sky-400 */
-    --chart-2: 145 63% 59%; /* emerald-400 */
-    --chart-3: 45 96% 57%;  /* amber-400 */
-    --chart-4: 350 90% 60%; /* rose-500 */
-    --chart-5: 258 75% 70%; /* violet-400 */
+    --chart-1: 199 91% 60%;
+    --chart-2: 145 63% 59%;
+    --chart-3: 45 96% 57%;
+    --chart-4: 350 90% 60%;
+    --chart-5: 258 75% 70%;
   }
 }
 
@@ -79,21 +89,6 @@
 }
 
 @layer components {
-  /* Glassmorphism Effect */
-  .glass-card {
-    @apply bg-card/50 backdrop-blur-md border border-slate-800;
-  }
-
-  /* Header and Nav with Glassmorphism */
-  .glass-header, .glass-nav {
-    @apply bg-background/80 dark:bg-background/80 backdrop-blur-lg;
-    border-color: hsl(var(--border) / 0.5);
-  }
-  
-  .dark .glass-header, .dark .glass-nav {
-     border-color: hsl(var(--border) / 0.8);
-  }
-
   /* Dialogs / Modals with Glassmorphism Overlay */
   .dialog-overlay {
     @apply bg-background/80 backdrop-blur-sm;
@@ -114,7 +109,7 @@
         overflow-x: hidden;
     }
     .bg-pattern {
-      background-image: radial-gradient(hsl(var(--border) / 0.3) 0.5px, transparent 0);
+      background-image: radial-gradient(hsl(var(--muted)) 0.5px, transparent 0);
       background-size: 10px 10px;
     }
 }

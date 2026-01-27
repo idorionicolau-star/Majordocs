@@ -11,7 +11,7 @@ interface StockHealthScoreProps {
 
 export function StockHealthScore({ score }: StockHealthScoreProps) {
   const chartData = [{ name: "score", value: score }];
-  const color = "hsl(var(--chart-2))"; // Emerald-400 for success/health
+  const color = "hsl(var(--chart-2))"; // Emerald-600 light, emerald-400 dark
 
   return (
     <div className="relative w-40 h-40">
@@ -30,18 +30,18 @@ export function StockHealthScore({ score }: StockHealthScoreProps) {
                     dataKey="value"
                     cornerRadius={6}
                     fill={color}
-                    className="[&_.recharts-radial-bar-background-sector]:fill-slate-800"
+                    className="[&_.recharts-radial-bar-background-sector]:fill-slate-200 dark:[&_.recharts-radial-bar-background-sector]:fill-slate-800"
                 />
             </RadialBarChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
             <p className={cn(
-              "text-4xl font-mono font-bold text-emerald-400 drop-shadow-[0_0_8px_hsl(var(--chart-2)/0.8)]"
+              "text-4xl font-mono font-bold text-emerald-600 drop-shadow-[0_0_8px_rgba(34,197,94,0.3)] dark:text-emerald-400 dark:drop-shadow-[0_0_8px_hsl(var(--chart-2)/0.8)]"
               )}>
                 {score}
-                <span className="text-lg font-sans text-slate-400">%</span>
+                <span className="text-lg font-sans text-slate-500 dark:text-slate-400">%</span>
             </p>
-             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">SAÚDE DO STOCK</p>
+             <p className="text-xs font-bold text-slate-500 dark:text-slate-500 uppercase tracking-wider">SAÚDE DO STOCK</p>
         </div>
     </div>
   );

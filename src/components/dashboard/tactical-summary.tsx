@@ -1,3 +1,4 @@
+
 "use client";
 
 import ReactMarkdown from 'react-markdown';
@@ -11,7 +12,7 @@ export const TacticalSummary = () => {
 **1. Resumo Executivo de Desempenho**
 
 O negócio apresenta uma estrutura de ativos sólida, mas com pontos de calibração necessários na rotatividade de stock e na conversão de vendas.
-- **Vendas Mensais:** <span class="text-emerald-400">**165.489,00 MT**</span>
+- **Vendas Mensais:** <span class="text-emerald-600 dark:text-emerald-400">**165.489,00 MT**</span>
 - **Ticket Médio:** **6.619,56 MT**
 - **Valor Total em Inventário:** <span class="text-rose-500">3.641.067,00 MT</span>
 - **Volume de Itens em Stock:** 11.058,32 unidades/m²
@@ -27,27 +28,27 @@ Observamos um fluxo recente concentrado em produtos de infraestrutura e acabamen
 
 O rácio entre o Valor de Inventário (3,6M) e as Vendas Mensais (165k) sugere capital imobilizado. É crucial monitorizar os itens que atingiram níveis críticos:
 - <span class="text-rose-500">**Pé de jardim:**</span> Stock atual de 16, abaixo do nível crítico de 30. **Ação Urgente Necessária.**
-- <span class="text-amber-400">**Painel 3d Wave:**</span> Stock de 34, abaixo do alerta de 50.
+- <span class="text-amber-500">**Painel 3d Wave:**</span> Stock de 34, abaixo do alerta de 50.
 
 **4. Recomendações Estratégicas**
 - **Liquidez:** Criar campanhas para produtos com alto stock para libertar o capital imobilizado.
 - **Reposição:** Iniciar imediatamente a produção de "Pé de jardim" e "Painel 3d Wave".`;
 
   return (
-    <Card className="bg-[#0f172a]/50 border-slate-800 lg:col-span-2">
+    <Card className="bg-white/70 dark:bg-[#0f172a]/50 backdrop-blur-lg border-white dark:border-slate-800 shadow-sm shadow-slate-200/50 dark:shadow-none lg:col-span-2">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-slate-300">
-          <Sparkles className="text-sky-400 shadow-neon-sky" strokeWidth={1.5} />
+        <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-300">
+          <Sparkles className="text-cyan-600 dark:text-sky-400 dark:shadow-neon-sky" strokeWidth={1.5} />
           Insights da IA
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-72 overflow-y-auto p-4 rounded-lg font-mono text-xs border border-slate-800 bg-slate-950/70 text-slate-400 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900">
+        <div className="h-72 overflow-y-auto p-4 rounded-lg font-mono text-xs border border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-950/70 text-slate-500 dark:text-slate-400 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-slate-100 dark:scrollbar-track-slate-900">
            <ReactMarkdown
-              className="prose prose-sm prose-invert max-w-none prose-p:text-slate-400 prose-strong:text-sky-400"
+              className="prose prose-sm dark:prose-invert max-w-none prose-p:text-slate-600 dark:prose-p:text-slate-400 prose-strong:text-cyan-600 dark:prose-strong:text-sky-400"
               components={{
                  p: ({node, ...props}) => <p {...props} className="mb-2" />,
-                 strong: ({node, ...props}) => <strong {...props} className="text-sky-400" />,
+                 strong: ({node, ...props}) => <strong {...props} className="text-cyan-600 dark:text-sky-400" />,
                  span: ({node, ...props}) => <span {...props} />, 
               }}
               remarkPlugins={[remarkGfm]}

@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -29,7 +30,7 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
   const pageTitle = getPageTitle();
   
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-slate-800/60 bg-slate-950/50 px-4 backdrop-blur-xl sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-white/40 px-4 backdrop-blur-xl dark:bg-slate-950/50 sm:px-6 border-slate-200/60 dark:border-slate-800/60">
       
       {/* Hamburger menu for mobile, hidden on desktop */}
       <div className="flex items-center gap-3 md:hidden">
@@ -50,12 +51,12 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
       <div className="hidden md:flex flex-1">
         <Button
             variant="outline"
-            className="relative w-full max-w-sm px-4 py-2 h-11 justify-start items-center text-left font-normal bg-slate-800/50 text-slate-400 hover:bg-slate-800/80 border-slate-700"
+            className="relative w-full max-w-sm px-4 py-2 h-11 justify-start items-center text-left font-normal bg-slate-100 text-slate-500 hover:bg-slate-200 border-slate-300/70 dark:bg-slate-800/50 dark:text-slate-400 dark:hover:bg-slate-800/80 dark:border-slate-700"
             onClick={onSearchClick}
         >
           <Search className="mr-2 h-4 w-4" />
           <span className="flex-1">Pesquisa Rápida</span>
-           <kbd className="pointer-events-none hidden h-6 select-none items-center gap-1 rounded border bg-slate-700/80 border-slate-600 px-1.5 font-mono text-[10px] font-medium text-slate-300 sm:flex">
+           <kbd className="pointer-events-none hidden h-6 select-none items-center gap-1 rounded border bg-slate-200 border-slate-300 px-1.5 font-mono text-[10px] font-medium text-slate-500 dark:bg-slate-700/80 dark:border-slate-600 dark:text-slate-300 sm:flex">
                 Ctrl+K
             </kbd>
         </Button>
