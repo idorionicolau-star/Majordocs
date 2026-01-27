@@ -97,10 +97,11 @@ export function StatsCards() {
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <div className={`text-2xl font-bold ${stat.color} cursor-pointer`}>
-                                    {formatCurrency(stat.value, { compact: true })}
+                                    <span className="sm:hidden">{formatCurrency(stat.value)}</span>
+                                    <span className="hidden sm:inline">{formatCurrency(stat.value, { compact: true })}</span>
                                 </div>
                             </TooltipTrigger>
-                            <TooltipContent>
+                            <TooltipContent className="hidden sm:block">
                                 <p>{formatCurrency(stat.value)}</p>
                             </TooltipContent>
                         </Tooltip>

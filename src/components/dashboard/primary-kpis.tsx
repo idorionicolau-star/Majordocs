@@ -69,10 +69,11 @@ export const PrimaryKPIs = () => {
                            <Tooltip>
                                 <TooltipTrigger asChild>
                                     <div className={cn("font-bold cursor-pointer", kpi.color, kpi.size)}>
-                                        {formatCurrency(kpi.value, { compact: true })}
+                                        <span className="md:hidden">{formatCurrency(kpi.value)}</span>
+                                        <span className="hidden md:inline">{formatCurrency(kpi.value, { compact: true })}</span>
                                     </div>
                                 </TooltipTrigger>
-                                <TooltipContent>
+                                <TooltipContent className="hidden md:block">
                                     <p>{formatCurrency(kpi.value)}</p>
                                 </TooltipContent>
                             </Tooltip>
