@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -88,12 +89,6 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
             <Button variant="ghost" size="icon" disabled />
         )}
         <NotificationsDropdown />
-        <Button asChild variant="ghost" size="icon">
-          <Link href="/settings">
-            <Settings className="h-5 w-5" />
-            <span className="sr-only">Ajustes</span>
-          </Link>
-        </Button>
         <UserNav />
       </div>
     </header>
