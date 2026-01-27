@@ -6,6 +6,7 @@ import { cn, formatCurrency } from "@/lib/utils";
 import { DollarSign, TrendingUp, Archive } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const PrimaryKPIs = () => {
     const { dashboardStats, loading } = useContext(InventoryContext) || { dashboardStats: null, loading: true };
@@ -23,7 +24,7 @@ export const PrimaryKPIs = () => {
     const kpis = [
         {
             title: "Faturamento Mensal",
-            value: formatCurrency(dashboardStats.monthlySalesValue, { compact: true }),
+            value: dashboardStats.monthlySalesValue,
             icon: DollarSign,
             color: "text-emerald-400",
             glow: "shadow-neon-emerald",
@@ -32,7 +33,7 @@ export const PrimaryKPIs = () => {
         },
         {
             title: "Capital Imobilizado",
-            value: formatCurrency(dashboardStats.totalInventoryValue, { compact: true }),
+            value: dashboardStats.totalInventoryValue,
             icon: Archive,
             color: "text-slate-400",
             glow: "shadow-neon-slate",
@@ -41,7 +42,7 @@ export const PrimaryKPIs = () => {
         },
         {
             title: "Ticket Médio",
-            value: formatCurrency(dashboardStats.averageTicket, { compact: true }),
+            value: dashboardStats.averageTicket,
             icon: TrendingUp,
             color: "text-sky-400",
             glow: "shadow-neon-sky",
@@ -52,24 +53,33 @@ export const PrimaryKPIs = () => {
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {kpis.map((kpi) => (
-                <Card key={kpi.title} className={cn("bg-[#0f172a]/50 border-slate-800", kpi.glow)}>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-slate-400">{kpi.title}</CardTitle>
-                        {kpi.pingColor && (
-                            <span className="relative flex h-2 w-2">
-                                <span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", kpi.pingColor)}></span>
-                                <span className={cn("relative inline-flex rounded-full h-2 w-2", kpi.pingColor)}></span>
-                            </span>
-                        )}
-                    </CardHeader>
-                    <CardContent>
-                        <div className={cn("font-bold", kpi.color, kpi.size)}>
-                            {kpi.value}
-                        </div>
-                    </CardContent>
-                </Card>
-            ))}
+            <TooltipProvider>
+                {kpis.map((kpi) => (
+                    <Card key={kpi.title} className={cn("bg-[#0f172a]/50 border-slate-800", kpi.glow)}>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-slate-400">{kpi.title}</CardTitle>
+                            {kpi.pingColor && (
+                                <span className="relative flex h-2 w-2">
+                                    <span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", kpi.pingColor)}></span>
+                                    <span className={cn("relative inline-flex rounded-full h-2 w-2", kpi.pingColor)}></span>
+                                </span>
+                            )}
+                        </CardHeader>
+                        <CardContent>
+                           <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className={cn("font-bold cursor-pointer", kpi.color, kpi.size)}>
+                                        {formatCurrency(kpi.value, { compact: true })}
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{formatCurrency(kpi.value)}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </CardContent>
+                    </Card>
+                ))}
+            </TooltipProvider>
         </div>
     );
 };

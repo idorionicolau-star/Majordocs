@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useContext } from "react";
@@ -8,6 +7,7 @@ import { formatCurrency } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function StatsCards() {
     const { dashboardStats, loading } = useContext(InventoryContext) || { 
@@ -33,28 +33,32 @@ export function StatsCards() {
     const stats = [
         {
           title: "Vendas (Mês)",
-          value: formatCurrency(dashboardStats.monthlySalesValue, { compact: true }),
+          value: dashboardStats.monthlySalesValue,
+          isCurrency: true,
           icon: DollarSign,
           href: "/sales",
           color: "text-chart-2"
         },
         {
           title: "Ticket Médio",
-          value: formatCurrency(dashboardStats.averageTicket, { compact: true }),
+          value: dashboardStats.averageTicket,
+          isCurrency: true,
           icon: TrendingUp,
           href: "/reports",
           color: "text-chart-2"
         },
         {
           title: "Valor do Inventário",
-          value: formatCurrency(dashboardStats.totalInventoryValue, { compact: true }),
+          value: dashboardStats.totalInventoryValue,
+          isCurrency: true,
           icon: Archive,
           href: "/inventory",
           color: "text-chart-3"
         },
         {
           title: "Itens em Estoque",
-          value: dashboardStats.totalItemsInStock.toLocaleString('pt-BR'),
+          value: dashboardStats.totalItemsInStock,
+          isCurrency: false,
           icon: Hash,
           href: "/inventory",
           color: "text-chart-3"
@@ -62,6 +66,7 @@ export function StatsCards() {
         {
           title: "Encomendas Pendentes",
           value: dashboardStats.pendingOrders,
+          isCurrency: false,
           icon: ClipboardList,
           href: "/orders",
           color: "text-primary"
@@ -69,6 +74,7 @@ export function StatsCards() {
         {
           title: "Pronto p/ Transferir",
           value: dashboardStats.readyForTransfer,
+          isCurrency: false,
           icon: Hammer,
           href: "/production",
           color: "text-primary"
@@ -77,20 +83,37 @@ export function StatsCards() {
 
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-      {stats.map((stat) => (
-          <Link href={stat.href} key={stat.title} className="group">
-            <Card className="glass-card relative transition-all duration-300 hover:shadow-neon-cyan hover:-translate-y-1">
-                <div className="absolute top-3 right-3 h-2 w-2 rounded-full bg-primary animate-pulse-indicator"></div>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-semibold">{stat.title}</CardTitle>
-                    <stat.icon className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className={`text-2xl font-bold ${stat.color}`}>{String(stat.value)}</div>
-                </CardContent>
-            </Card>
-          </Link>
-      ))}
+      <TooltipProvider>
+        {stats.map((stat) => (
+            <Link href={stat.href} key={stat.title} className="group">
+              <Card className="glass-card relative transition-all duration-300 hover:shadow-neon-cyan hover:-translate-y-1">
+                  <div className="absolute top-3 right-3 h-2 w-2 rounded-full bg-primary animate-pulse-indicator"></div>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-semibold">{stat.title}</CardTitle>
+                      <stat.icon className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    {stat.isCurrency ? (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className={`text-2xl font-bold ${stat.color} cursor-pointer`}>
+                                    {formatCurrency(stat.value, { compact: true })}
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{formatCurrency(stat.value)}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    ) : (
+                        <div className={`text-2xl font-bold ${stat.color}`}>
+                            {typeof stat.value === 'number' ? stat.value.toLocaleString('pt-BR') : stat.value}
+                        </div>
+                    )}
+                  </CardContent>
+              </Card>
+            </Link>
+        ))}
+      </TooltipProvider>
     </div>
   );
 }
