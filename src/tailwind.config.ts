@@ -144,16 +144,27 @@ export default {
             animationTimingFunction: 'cubic-bezier(0, 0, 0.2, 1)',
           },
         },
-         'pulse-indicator': {
-          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
-          '50%': { opacity: '0.4', transform: 'scale(1.2)' },
+        'pulse-green': {
+          '0%, 100%': {
+            boxShadow: '0 0 0 0 rgba(34, 197, 94, 0.7)',
+          },
+          '70%': {
+            boxShadow: '0 0 0 6px rgba(34, 197, 94, 0)',
+          },
+        },
+        'pulse-blue': {
+          '0%, 100%': {
+            boxShadow: '0 0 0 0 rgba(59, 130, 246, 0.7)',
+          },
+          '70%': {
+            boxShadow: '0 0 0 6px rgba(59, 130, 246, 0)',
+          },
         },
       },
       animation: {
         'accordion-down': 'accordion-down 0.4s ease-out',
         'accordion-up': 'accordion-up 0.4s ease-out',
         'in': 'fade-in 0.4s ease-out, slide-in-from-bottom-4 0.4s ease-out',
-        'peek': 'peek 2.5s ease-in-out infinite 2s',
         'slide-in-from-right': 'slide-in-from-right 0.6s ease-out',
         'slide-out-to-left': 'slide-out-to-left 0.6s ease-in',
         'slide-in-from-left': 'slide-in-from-left 0.6s ease-out',
@@ -161,7 +172,8 @@ export default {
         'shake': 'shake 1.0s ease-in-out infinite',
         'fade-in-out': 'fade-in-out 2.0s ease-in-out infinite',
         'bounce-down': 'bounce-down 1.5s infinite',
-        'pulse-indicator': 'pulse-indicator 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'pulse-green': 'pulse-green 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'pulse-blue': 'pulse-blue 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
     },
   },

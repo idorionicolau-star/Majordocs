@@ -72,7 +72,7 @@ type AddSaleFormValues = z.infer<typeof formSchema>;
 interface AddSaleDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onAddSale: (data: Omit<Sale, 'id' | 'guideNumber'>) => Promise<void>;
+    onAddSale: (data: Omit<Sale, 'id' | 'guideNumber'>) => void;
 }
 
 export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogProps) {
@@ -206,7 +206,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
   }, [watchedQuantity, availableStock, selectedProductInstance, watchedProductName, watchedLocation, form, products]);
 
 
-  async function onSubmit(values: AddSaleFormValues) {
+  function onSubmit(values: AddSaleFormValues) {
     if (!user) {
         toast({ variant: "destructive", title: "Erro de Validação", description: "Utilizador não autenticado." });
         return;
@@ -246,7 +246,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
       notes: values.notes,
     };
     
-    await onAddSale(newSale);
+    onAddSale(newSale);
     
     onOpenChange(false);
   }

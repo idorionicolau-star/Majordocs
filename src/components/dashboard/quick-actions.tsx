@@ -23,14 +23,9 @@ export const QuickActions = () => {
 
     const { addSale, addProduction, addProduct, canEdit } = context;
 
-    const handleAddSale = async (saleData: Omit<Sale, 'id' | 'guideNumber'>) => {
-        try {
-            await addSale(saleData);
-            toast({ title: "Venda Registada", description: "A venda foi registada e o stock reservado." });
-            setSaleDialogOpen(false);
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: "Erro na Venda", description: e.message });
-        }
+    const handleAddSale = (saleData: Omit<Sale, 'id' | 'guideNumber'>) => {
+        addSale(saleData);
+        setSaleDialogOpen(false);
     };
 
     const handleAddProduction = async (prodData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {

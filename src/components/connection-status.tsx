@@ -1,19 +1,28 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Wifi, WifiOff } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 export function ConnectionStatus() {
   const [isOnline, setIsOnline] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false); // Kept for potential future use (e.g., triggered by Firestore)
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.navigator !== 'undefined') {
       setIsOnline(window.navigator.onLine);
     }
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    
+    const handleOnline = () => {
+      setIsOnline(true);
+      setIsSyncing(true);
+      setTimeout(() => setIsSyncing(false), 3000); // Simulate sync time
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      setIsSyncing(false);
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -24,34 +33,35 @@ export function ConnectionStatus() {
     };
   }, []);
 
-  const status = isSyncing ? 'syncing' : isOnline ? 'online' : 'offline';
-  
+  let status: 'online' | 'offline' | 'syncing' = 'online';
+  if (!isOnline) {
+    status = 'offline';
+  } else if (isSyncing) {
+    status = 'syncing';
+  }
+
   const statusInfo = {
     online: {
-      label: 'Online',
-      icon: <Wifi className="h-4 w-4 text-green-500" />,
-      tooltip: 'Conectado e dados sincronizados.'
+      tooltip: 'Online e sincronizado.',
+      className: 'bg-emerald-500 animate-pulse-green'
     },
     offline: {
-      label: 'Offline',
-      icon: <WifiOff className="h-4 w-4 text-destructive" />,
-      tooltip: 'A trabalhar offline. As alterações serão sincronizadas quando estiver online.'
+      tooltip: 'A trabalhar offline. As suas alterações estão a ser guardadas localmente.',
+      className: 'bg-amber-500'
     },
     syncing: {
-      label: 'Sincronizando',
-      icon: <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-accent border-t-transparent" />,
-      tooltip: 'A sincronizar dados com o servidor...'
+      tooltip: 'A sincronizar dados pendentes...',
+      className: 'bg-blue-500 animate-pulse-blue'
     }
-  }
+  };
 
   return (
     <TooltipProvider>
       <div className="flex items-center">
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex items-center gap-2 text-sm p-2 rounded-md hover:bg-white/10">
-              {statusInfo[status].icon}
-              <span className="hidden lg:inline">{statusInfo[status].label}</span>
+            <div className="p-2 rounded-md">
+                <div className={cn("h-2.5 w-2.5 rounded-full transition-colors", statusInfo[status].className)} />
             </div>
           </TooltipTrigger>
           <TooltipContent>
