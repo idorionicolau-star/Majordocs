@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useContext } from 'react';
@@ -350,7 +351,7 @@ export default function ReportsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearSales} variant="destructive">
+            <AlertDialogAction onClick={handleClearSales} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Sim, apagar tudo
             </AlertDialogAction>
           </AlertDialogFooter>

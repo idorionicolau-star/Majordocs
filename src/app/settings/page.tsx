@@ -294,7 +294,7 @@ export default function SettingsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearProducts} variant="destructive">
+            <AlertDialogAction onClick={handleClearProducts} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Sim, apagar tudo
             </AlertDialogAction>
           </AlertDialogFooter>

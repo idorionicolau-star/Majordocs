@@ -257,7 +257,7 @@ export default function ProductionPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClear} variant="destructive">
+            <AlertDialogAction onClick={handleClear} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Sim, apagar tudo
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useContext, useMemo, useCallback } from 'react';
@@ -242,7 +243,7 @@ const RawMaterialsManager = () => {
                     <AlertDialogHeader><AlertDialogTitle>Tem a certeza?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription></AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => { deleteRawMaterial(materialToDelete!.id); setMaterialToDelete(null); }}>Apagar</AlertDialogAction>
+                        <AlertDialogAction onClick={() => { deleteRawMaterial(materialToDelete!.id); setMaterialToDelete(null); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Apagar</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

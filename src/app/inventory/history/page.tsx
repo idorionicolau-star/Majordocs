@@ -211,7 +211,7 @@ export default function InventoryHistoryPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearHistory} variant="destructive">
+            <AlertDialogAction onClick={handleClearHistory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Sim, apagar tudo
             </AlertDialogAction>
           </AlertDialogFooter>
