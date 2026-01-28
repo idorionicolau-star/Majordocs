@@ -7,7 +7,7 @@ import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle, Plus, FileCheck, ChevronsUpDown, Printer, Download } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle, Plus, FileCheck, ChevronsUpDown, Printer, Download, AlertCircle } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -474,6 +474,43 @@ export default function InventoryPage() {
     });
   };
 
+  const handleDownloadCriticalStock = async () => {
+    const { pdf } = await import('@react-pdf/renderer');
+    const { CriticalStockPDF } = await import('@/components/inventory/CriticalStockPDF');
+    const { getStockStatus } = await import('@/components/inventory/columns');
+
+    const criticalItems = products.filter(p => {
+      const status = getStockStatus(p);
+      return status === 'crítico' || status === 'sem-estoque';
+    });
+
+    if (criticalItems.length === 0) {
+      toast({
+        title: "Sem Stock Crítico",
+        description: "Não existem itens com stock crítico no momento.",
+      });
+      return;
+    }
+
+    const doc = <CriticalStockPDF
+      products={criticalItems}
+      company={companyData || null}
+    />;
+
+    const blob = await pdf(doc).toBlob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Stock_Critico_${new Date().toISOString().split('T')[0]}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Download Concluído",
+      description: "O relatório de stock crítico foi descarregado.",
+    });
+  };
+
   if (inventoryLoading) {
     return (
       <div className="space-y-4">
@@ -528,6 +565,10 @@ export default function InventoryPage() {
             <Button onClick={handleDownloadPdfReport} variant="outline" className="h-12">
               <Download className="mr-2 h-4 w-4" />
               Baixar PDF
+            </Button>
+            <Button onClick={handleDownloadCriticalStock} variant="destructive" className="h-12 shadow-md">
+              <AlertCircle className="mr-2 h-4 w-4" />
+              Stock Crítico
             </Button>
             <Button onClick={handlePrintReport} variant="outline" className="h-12">
               <Printer className="mr-2 h-4 w-4" />
