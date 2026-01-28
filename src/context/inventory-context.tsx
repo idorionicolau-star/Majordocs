@@ -276,7 +276,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = async (email: string): Promise<void> => {
     try {
-      await sendPasswordResetEmail(auth, email);
+      const actionCodeSettings = {
+        // URL you want to redirect back to. The domain (www.example.com) for this
+        // URL must be whitelisted in the Firebase Console.
+        url: window.location.origin + '/login',
+        // This must be true.
+        handleCodeInApp: true,
+      };
+
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
       toast({
         title: "E-mail de redefinição enviado",
         description: "Verifique a sua caixa de entrada para redefinir a sua senha.",
