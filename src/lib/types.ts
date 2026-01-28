@@ -1,7 +1,7 @@
 
 export type PermissionLevel = 'none' | 'read' | 'write';
 
-export type ModulePermission = 
+export type ModulePermission =
   | 'dashboard'
   | 'diagnostico'
   | 'inventory'
@@ -19,7 +19,7 @@ export type UserMap = {
 }
 
 export type Employee = {
-  id:string;
+  id: string;
   username: string;
   email: string; // This is the full login email
   password?: string; // Should be handled securely, never stored in plain text
@@ -36,18 +36,18 @@ export type NotificationSettings = {
 };
 
 export type Company = {
-    id: string;
-    name: string;
-    ownerId?: string; // Optional: To track the original creator
-    phone?: string;
-    address?: string;
-    taxId?: string;
-    email?: string;
-    businessType: 'manufacturer' | 'reseller';
-    notificationSettings?: NotificationSettings;
-    isMultiLocation?: boolean;
-    locations?: Location[];
-    saleCounter?: number;
+  id: string;
+  name: string;
+  ownerId?: string; // Optional: To track the original creator
+  phone?: string;
+  address?: string;
+  taxId?: string;
+  email?: string;
+  businessType: 'manufacturer' | 'reseller';
+  notificationSettings?: NotificationSettings;
+  isMultiLocation?: boolean;
+  locations?: Location[];
+  saleCounter?: number;
 };
 
 export type Location = {
@@ -165,7 +165,7 @@ export interface StockMovement {
   userId: string;          // Who performed the action
   userName: string;        // Denormalized name for quick log reading
   timestamp: any;          // Firestore serverTimestamp
-  
+
   // For Audits
   isAudit?: boolean;
   systemCountBefore?: number; // What the system thought it had before adjustment
@@ -226,6 +226,7 @@ export interface InventoryContextType {
   loading: boolean;
   login: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
+  resetPassword: (email: string) => Promise<void>;
   registerCompany: (companyName: string, adminUsername: string, adminEmail: string, adminPass: string, businessType: 'manufacturer' | 'reseller') => Promise<boolean>;
   profilePicture: string | null;
   setProfilePicture: (url: string) => void;
@@ -312,3 +313,5 @@ type CatalogProduct = Omit<
   Product,
   'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'
 >;
+
+export type CatalogCategory = { id: string; name: string };

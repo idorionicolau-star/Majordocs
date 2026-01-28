@@ -12,7 +12,7 @@ import {
   useRef,
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { Product, Location, Sale, Production, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification, DashboardStats, InventoryContextType, ChatMessage, RawMaterial, Recipe } from '@/lib/types';
+import type { Product, Location, Sale, Production, ProductionLog, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification, DashboardStats, InventoryContextType, ChatMessage, RawMaterial, Recipe } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase, getFirebaseAuth } from '@/firebase/provider';
@@ -22,6 +22,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  sendPasswordResetEmail,
   User as FirebaseAuthUser,
 } from 'firebase/auth';
 import {
@@ -48,7 +49,7 @@ import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage"
 import { format, eachMonthOfInterval, subMonths } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { downloadSaleDocument, formatCurrency } from '@/lib/utils';
-import { 
+import {
   addDocumentNonBlocking,
   deleteDocumentNonBlocking,
   updateDocumentNonBlocking
@@ -79,7 +80,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const auth = getFirebaseAuth();
   const wasSyncing = useRef(false);
-  
+
   const [companyData, setCompanyData] = useState<Company | null>(null);
 
   const locations = useMemo(() => companyData?.locations || [], [companyData]);
@@ -110,22 +111,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleSetProfilePicture = useCallback(async (pictureUrl: string) => {
-    if (!firestore || !user || !user.id ) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Utilizador não autenticado.' });
-        return;
+    if (!firestore || !user || !user.id) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Utilizador não autenticado.' });
+      return;
     }
-    
+
     toast({ title: 'A carregar...', description: 'A sua nova foto de perfil está a ser guardada.' });
 
     try {
-        const userDocRef = doc(firestore, `companies/${user.companyId}/employees`, user.id);
-        updateDocumentNonBlocking(userDocRef, { profilePictureUrl: pictureUrl });
-        setProfilePicture(pictureUrl);
-        
-        toast({ title: 'Sucesso!', description: 'A sua foto de perfil foi atualizada.' });
-    } catch(error) {
-        console.error("Error updating profile picture: ", error);
-        toast({ variant: 'destructive', title: 'Erro de Upload', description: 'Não foi possível guardar a sua foto.' });
+      const userDocRef = doc(firestore, `companies/${user.companyId}/employees`, user.id);
+      updateDocumentNonBlocking(userDocRef, { profilePictureUrl: pictureUrl });
+      setProfilePicture(pictureUrl);
+
+      toast({ title: 'Sucesso!', description: 'A sua foto de perfil foi atualizada.' });
+    } catch (error) {
+      console.error("Error updating profile picture: ", error);
+      toast({ variant: 'destructive', title: 'Erro de Upload', description: 'Não foi possível guardar a sua foto.' });
     }
   }, [firestore, user, toast]);
 
@@ -225,7 +226,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [auth, firestore, logout]);
 
   useEffect(() => {
-    let unsubscribeEmployee: () => void = () => {};
+    let unsubscribeEmployee: () => void = () => { };
 
     if (firebaseUser && companyId) {
       setNotifications([]); // Clear notifications on company change
@@ -251,12 +252,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       });
     } else if (!firebaseUser) {
-       setLoading(false);
+      setLoading(false);
     }
-    
+
     return () => unsubscribeEmployee();
   }, [firebaseUser, companyId, firestore, logout]);
-  
+
 
   const login = async (email: string, pass: string): Promise<boolean> => {
     try {
@@ -273,9 +274,27 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const resetPassword = async (email: string): Promise<void> => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({
+        title: "E-mail de redefinição enviado",
+        description: "Verifique a sua caixa de entrada para redefinir a sua senha.",
+      });
+    } catch (error: any) {
+      console.error("Firebase Auth reset password error:", error);
+      let message = "Ocorreu um erro ao enviar o e-mail de redefinição.";
+      if (error.code === 'auth/user-not-found') {
+        message = "Não encontramos nenhuma conta com este endereço de e-mail.";
+      }
+      toast({ variant: 'destructive', title: 'Erro', description: message });
+      throw error;
+    }
+  };
+
   const registerCompany = async (companyName: string, adminUsername: string, adminEmail: string, adminPass: string, businessType: 'manufacturer' | 'reseller'): Promise<boolean> => {
     if (!firestore) return false;
-  
+
     try {
       const companiesRef = collection(firestore, 'companies');
       const companyQuery = query(companiesRef, where('name', '==', companyName));
@@ -283,23 +302,23 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       if (!existingCompanySnapshot.empty) {
         throw new Error('Uma empresa com este nome já existe.');
       }
-      
+
       const userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPass);
       const newUserId = userCredential.user.uid;
-      
+
       const newCompanyRef = doc(companiesRef);
-      
+
       const adminPermissions = allPermissions.reduce((acc, p) => {
         acc[p.id] = 'write';
         return acc;
       }, {} as Record<ModulePermission, PermissionLevel>);
-      
+
       const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
       const newEmployeeRef = doc(employeesCollectionRef, newUserId);
       const userMapDocRef = doc(firestore, `users/${newUserId}`);
-      
+
       const batch = writeBatch(firestore);
-      
+
       batch.set(newEmployeeRef, {
         username: adminUsername,
         email: adminEmail,
@@ -307,7 +326,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         companyId: newCompanyRef.id,
         permissions: adminPermissions,
       });
-      
+
       batch.set(userMapDocRef, { companyId: newCompanyRef.id });
 
       batch.set(newCompanyRef, { name: companyName, ownerId: newUserId, isMultiLocation: false, locations: [], businessType, saleCounter: 0 });
@@ -333,7 +352,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       console.error('Registration error: ', error);
       let message = 'Ocorreu um erro inesperado durante o registo.';
-       if (error.code === 'auth/email-already-in-use') {
+      if (error.code === 'auth/email-already-in-use') {
         message = 'Este endereço de email já está a ser utilizado.';
       } else if (error.message.includes('Uma empresa com este nome')) {
         message = error.message;
@@ -372,7 +391,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!firestore || !companyId) return null;
     return collection(firestore, `companies/${companyId}/productions`);
   }, [firestore, companyId]);
-  
+
   const ordersCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
     return collection(firestore, `companies/${companyId}/orders`);
@@ -382,7 +401,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!firestore || !companyId) return null;
     return collection(firestore, `companies/${companyId}/stockMovements`);
   }, [firestore, companyId]);
-  
+
   const catalogProductsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
     return collection(firestore, `companies/${companyId}/catalogProducts`);
@@ -392,7 +411,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!firestore || !companyId) return null;
     return collection(firestore, `companies/${companyId}/catalogCategories`);
   }, [firestore, companyId]);
-  
+
   const rawMaterialsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
     return collection(firestore, `companies/${companyId}/rawMaterials`);
@@ -410,22 +429,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!productsCollectionRef) return;
-  
+
     const unsubscribe = onSnapshot(productsCollectionRef, (snapshot) => {
       const isSyncing = snapshot.metadata.hasPendingWrites;
-  
+
       if (wasSyncing.current && !isSyncing) {
         toast({
           title: 'Sincronizado!',
           description: 'As suas alterações foram guardadas no servidor.',
         });
       }
-  
+
       wasSyncing.current = isSyncing;
     }, (error) => {
       console.error("Sync listener error:", error);
     });
-  
+
     return () => unsubscribe();
   }, [productsCollectionRef, toast]);
 
@@ -463,16 +482,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [productsData]);
 
   useEffect(() => {
-    if(companyDocRef) {
+    if (companyDocRef) {
       const unsub = onSnapshot(companyDocRef, (doc) => {
-        if(doc.exists()) {
+        if (doc.exists()) {
           setCompanyData({ id: doc.id, ...doc.data() } as Company);
         }
       });
       return () => unsub();
     }
   }, [companyDocRef]);
-  
+
   const businessStartDate = useMemo(() => {
     if (!salesData || salesData.length === 0) return null;
     return salesData.reduce((earliest, currentSale) => {
@@ -487,25 +506,25 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const monthInterval = eachMonthOfInterval({ start, end });
 
     if (!salesData) {
-        const emptyData = monthInterval.map(d => ({
-            name: format(d, 'MMM', { locale: pt }).replace('.', ''),
-            vendas: 0,
-        }));
-        setMonthlySalesChartData(emptyData);
-        return;
+      const emptyData = monthInterval.map(d => ({
+        name: format(d, 'MMM', { locale: pt }).replace('.', ''),
+        vendas: 0,
+      }));
+      setMonthlySalesChartData(emptyData);
+      return;
     }
 
     const chartData = monthInterval.map(monthStart => {
-        const monthSales = salesData.filter(s => {
-            const saleDate = new Date(s.date);
-            return saleDate.getFullYear() === monthStart.getFullYear() && saleDate.getMonth() === monthStart.getMonth();
-        }).reduce((sum, s) => sum + s.totalValue, 0);
+      const monthSales = salesData.filter(s => {
+        const saleDate = new Date(s.date);
+        return saleDate.getFullYear() === monthStart.getFullYear() && saleDate.getMonth() === monthStart.getMonth();
+      }).reduce((sum, s) => sum + s.totalValue, 0);
 
-        const monthName = format(monthStart, 'MMM', { locale: pt });
-        return {
-            name: monthName.charAt(0).toUpperCase() + monthName.slice(1).replace('.', ''),
-            vendas: monthSales,
-        };
+      const monthName = format(monthStart, 'MMM', { locale: pt });
+      return {
+        name: monthName.charAt(0).toUpperCase() + monthName.slice(1).replace('.', ''),
+        vendas: monthSales,
+      };
     });
     setMonthlySalesChartData(chartData);
 
@@ -515,10 +534,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
-    
+
     const monthlySales = salesData?.filter(sale => {
-        const saleDate = new Date(sale.date);
-        return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
+      const saleDate = new Date(sale.date);
+      return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
     }) || [];
 
     const monthlySalesValue = monthlySales.reduce((sum, sale) => {
@@ -550,38 +569,38 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     const isCritical = availableStock <= (product.criticalStockThreshold || 0);
     if (!isCritical || !settings?.onCriticalStock) {
-        return;
+      return;
     }
 
     if (!settings.email || settings.email.trim() === '') {
-        toast({
-            variant: "destructive",
-            title: "E-mail de Notificação em Falta",
-            description: `O produto ${product.name} está com stock crítico, mas não há um e-mail de notificação configurado nos Ajustes.`,
-        });
-        return;
+      toast({
+        variant: "destructive",
+        title: "E-mail de Notificação em Falta",
+        description: `O produto ${product.name} está com stock crítico, mas não há um e-mail de notificação configurado nos Ajustes.`,
+      });
+      return;
     }
-    
-    await triggerEmailAlert({
-        type: 'CRITICAL',
-        productName: product.name,
-        quantity: availableStock,
-        location: locations.find(l => l.id === product.location)?.name || 'Principal',
-        threshold: product.criticalStockThreshold,
-    });
-}, [companyData, locations, triggerEmailAlert, toast]);
 
- const addProduct = useCallback(
+    await triggerEmailAlert({
+      type: 'CRITICAL',
+      productName: product.name,
+      quantity: availableStock,
+      location: locations.find(l => l.id === product.location)?.name || 'Principal',
+      threshold: product.criticalStockThreshold,
+    });
+  }, [companyData, locations, triggerEmailAlert, toast]);
+
+  const addProduct = useCallback(
     (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock' | 'sourceIds'>) => {
       if (!productsCollectionRef || !firestore || !user || !companyId) return;
 
       const { name, location, stock: newStock } = newProductData;
-      
+
       const processAdd = async () => {
         try {
           await runTransaction(firestore, async (transaction) => {
             const q = query(productsCollectionRef, where("name", "==", name), where("location", "==", location || ""));
-            
+
             const querySnapshot = await getDocs(q);
 
             let productId: string;
@@ -593,7 +612,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
               const existingData = existingDoc.data();
               const oldStock = existingData.stock || 0;
               const docRef = doc(productsCollectionRef, productId);
-              
+
               transaction.update(docRef, { stock: oldStock + newStock, lastUpdated: new Date().toISOString().split('T')[0] });
             } else {
               const newProduct: Omit<Product, 'id' | 'instanceId' | 'sourceIds'> = {
@@ -605,21 +624,21 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
               transaction.set(newDocRef, newProduct);
               productId = newDocRef.id;
             }
-            
-            const movement: Omit<StockMovement, 'id'|'timestamp'> = {
-                productId: productId,
-                productName: name,
-                type: 'IN',
-                quantity: newStock,
-                toLocationId: location,
-                reason: querySnapshot.empty ? `Criação de novo produto` : `Entrada de novo lote`,
-                userId: user.id,
-                userName: user.username,
+
+            const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+              productId: productId,
+              productName: name,
+              type: 'IN',
+              quantity: newStock,
+              toLocationId: location,
+              reason: querySnapshot.empty ? `Criação de novo produto` : `Entrada de novo lote`,
+              userId: user.id,
+              userName: user.username,
             };
             const movementDocRef = doc(movementsRef);
             transaction.set(movementDocRef, { ...movement, timestamp: serverTimestamp() });
           });
-          
+
           addNotification({
             type: 'production',
             message: `Inventário atualizado para: ${name}`,
@@ -640,55 +659,55 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     },
     [productsCollectionRef, firestore, user, companyId, addNotification, toast]
   );
-  
+
   const updateProduct = useCallback(async (instanceId: string, updatedData: Partial<Product>) => {
-       if (!productsCollectionRef || !instanceId || !firestore) return;
+    if (!productsCollectionRef || !instanceId || !firestore) return;
 
-      const productToUpdate = products.find(p => p.instanceId === instanceId);
-      if (!productToUpdate || !productToUpdate.sourceIds) return;
+    const productToUpdate = products.find(p => p.instanceId === instanceId);
+    if (!productToUpdate || !productToUpdate.sourceIds) return;
 
-      const batch = writeBatch(firestore);
-      const { stock, ...restOfData } = updatedData;
+    const batch = writeBatch(firestore);
+    const { stock, ...restOfData } = updatedData;
 
-      productToUpdate.sourceIds.forEach(id => {
-        const docRef = doc(productsCollectionRef, id);
-        batch.update(docRef, { ...restOfData, lastUpdated: new Date().toISOString().split('T')[0] });
-      });
+    productToUpdate.sourceIds.forEach(id => {
+      const docRef = doc(productsCollectionRef, id);
+      batch.update(docRef, { ...restOfData, lastUpdated: new Date().toISOString().split('T')[0] });
+    });
 
-      if (stock !== undefined) {
-        const firstDocRef = doc(productsCollectionRef, productToUpdate.sourceIds[0]);
-        batch.update(firstDocRef, { stock });
+    if (stock !== undefined) {
+      const firstDocRef = doc(productsCollectionRef, productToUpdate.sourceIds[0]);
+      batch.update(firstDocRef, { stock });
 
-        for(let i = 1; i < productToUpdate.sourceIds.length; i++) {
-          const otherDocRef = doc(productsCollectionRef, productToUpdate.sourceIds[i]);
-          batch.update(otherDocRef, { stock: 0, reservedStock: 0 });
-        }
+      for (let i = 1; i < productToUpdate.sourceIds.length; i++) {
+        const otherDocRef = doc(productsCollectionRef, productToUpdate.sourceIds[i]);
+        batch.update(otherDocRef, { stock: 0, reservedStock: 0 });
       }
+    }
 
-      await batch.commit();
+    await batch.commit();
 
-      const fullProduct = products.find(p => p.id === instanceId);
-      if(fullProduct) {
-          const productForNotification = { ...fullProduct, ...updatedData };
-          checkStockAndNotify(productForNotification);
-      }
-    }, [productsCollectionRef, products, checkStockAndNotify, firestore]);
+    const fullProduct = products.find(p => p.id === instanceId);
+    if (fullProduct) {
+      const productForNotification = { ...fullProduct, ...updatedData };
+      checkStockAndNotify(productForNotification);
+    }
+  }, [productsCollectionRef, products, checkStockAndNotify, firestore]);
 
   const deleteProduct = useCallback((instanceId: string) => {
-       if (!productsCollectionRef || !instanceId || !firestore) return;
-       const productToDelete = products.find(p => p.instanceId === instanceId);
-       if (!productToDelete || !productToDelete.sourceIds) return;
-       
-       const batch = writeBatch(firestore);
-       productToDelete.sourceIds.forEach(id => {
-          const docRef = doc(productsCollectionRef, id);
-          batch.delete(docRef);
-       });
-       
-       batch.commit();
+    if (!productsCollectionRef || !instanceId || !firestore) return;
+    const productToDelete = products.find(p => p.instanceId === instanceId);
+    if (!productToDelete || !productToDelete.sourceIds) return;
 
-    }, [productsCollectionRef, firestore, products]);
-    
+    const batch = writeBatch(firestore);
+    productToDelete.sourceIds.forEach(id => {
+      const docRef = doc(productsCollectionRef, id);
+      batch.delete(docRef);
+    });
+
+    batch.commit();
+
+  }, [productsCollectionRef, firestore, products]);
+
   const clearCollection = useCallback(async (collectionRef: CollectionReference | null, toastTitle: string) => {
     if (!collectionRef) {
       toast({ variant: "destructive", title: "Erro", description: "Referência da coleção não disponível." });
@@ -703,7 +722,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     await batch.commit();
     toast({ title: "Sucesso!", description: `Todos os registos de ${toastTitle} foram apagados.` });
   }, [firestore, toast]);
-    
+
   const clearProductsCollection = useCallback(() => clearCollection(productsCollectionRef, "Inventário"), [clearCollection, productsCollectionRef]);
   const clearSales = useCallback(() => clearCollection(salesCollectionRef, "Vendas"), [clearCollection, salesCollectionRef]);
   const clearProductions = useCallback(() => clearCollection(productionsCollectionRef, "Produção"), [clearCollection, productionsCollectionRef]);
@@ -715,174 +734,174 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     const productRef = doc(firestore, `companies/${companyId}/products`, product.id);
     const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
-    
+
     const systemCountBefore = product.stock;
     const adjustment = physicalCount - systemCountBefore;
 
     if (adjustment === 0) {
-        toast({ title: 'Nenhum ajuste necessário', description: 'A contagem física corresponde ao stock do sistema.' });
-        return;
+      toast({ title: 'Nenhum ajuste necessário', description: 'A contagem física corresponde ao stock do sistema.' });
+      return;
     }
 
     try {
-        await runTransaction(firestore, async (transaction) => {
-            // 1. Update the product's stock
-            transaction.update(productRef, { stock: physicalCount });
+      await runTransaction(firestore, async (transaction) => {
+        // 1. Update the product's stock
+        transaction.update(productRef, { stock: physicalCount });
 
-            // 2. Create a stock movement record for the audit adjustment
-            const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
-                productId: product.id!,
-                productName: product.name,
-                type: 'ADJUSTMENT',
-                quantity: adjustment,
-                toLocationId: product.location, // An adjustment happens AT a location
-                reason: reason,
-                userId: user.id,
-                userName: user.username,
-                isAudit: true,
-                systemCountBefore: systemCountBefore,
-                physicalCount: physicalCount,
-            };
-            transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
-        });
-        
-        toast({ title: 'Auditoria Concluída', description: `O stock de ${product.name} foi ajustado em ${adjustment > 0 ? '+' : ''}${adjustment}.` });
-        
-        // Post-transaction notification
-        checkStockAndNotify({ ...product, stock: physicalCount });
+        // 2. Create a stock movement record for the audit adjustment
+        const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+          productId: product.id!,
+          productName: product.name,
+          type: 'ADJUSTMENT',
+          quantity: adjustment,
+          toLocationId: product.location, // An adjustment happens AT a location
+          reason: reason,
+          userId: user.id,
+          userName: user.username,
+          isAudit: true,
+          systemCountBefore: systemCountBefore,
+          physicalCount: physicalCount,
+        };
+        transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+      });
+
+      toast({ title: 'Auditoria Concluída', description: `O stock de ${product.name} foi ajustado em ${adjustment > 0 ? '+' : ''}${adjustment}.` });
+
+      // Post-transaction notification
+      checkStockAndNotify({ ...product, stock: physicalCount });
 
     } catch (error) {
-        console.error('Audit transaction failed: ', error);
-        toast({ variant: 'destructive', title: 'Erro na Auditoria', description: 'Não foi possível guardar o ajuste de stock.' });
+      console.error('Audit transaction failed: ', error);
+      toast({ variant: 'destructive', title: 'Erro na Auditoria', description: 'Não foi possível guardar o ajuste de stock.' });
     }
   }, [firestore, companyId, user, toast, checkStockAndNotify]);
 
- const transferStock = useCallback(async (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => {
+  const transferStock = useCallback(async (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => {
     if (!firestore || !companyId || !user) return;
 
     const fromProduct = products.find(p => p.name === productName && p.location === fromLocationId);
     if (!fromProduct || !fromProduct.id) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Produto de origem não encontrado.' });
-        return;
+      toast({ variant: 'destructive', title: 'Erro', description: 'Produto de origem não encontrado.' });
+      return;
     }
     if (fromProduct.stock - fromProduct.reservedStock < quantity) {
-        toast({ variant: 'destructive', title: 'Stock Insuficiente', description: `Disponível: ${fromProduct.stock - fromProduct.reservedStock}`});
-        return;
+      toast({ variant: 'destructive', title: 'Stock Insuficiente', description: `Disponível: ${fromProduct.stock - fromProduct.reservedStock}` });
+      return;
     }
 
     const toProduct = products.find(p => p.name === productName && p.location === toLocationId);
-    
+
     try {
-        await runTransaction(firestore, async (transaction) => {
-            const productsRef = collection(firestore, `companies/${companyId}/products`);
-            const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+      await runTransaction(firestore, async (transaction) => {
+        const productsRef = collection(firestore, `companies/${companyId}/products`);
+        const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
-            const fromDocRef = doc(productsRef, fromProduct.id!);
-            const newFromStock = fromProduct.stock - quantity;
-            transaction.update(fromDocRef, { stock: newFromStock });
-            
-            checkStockAndNotify({ ...fromProduct, stock: newFromStock });
+        const fromDocRef = doc(productsRef, fromProduct.id!);
+        const newFromStock = fromProduct.stock - quantity;
+        transaction.update(fromDocRef, { stock: newFromStock });
 
-            if (toProduct && toProduct.id) {
-                const toDocRef = doc(productsRef, toProduct.id);
-                transaction.update(toDocRef, { stock: toProduct.stock + quantity });
-            } else {
-                const { id, instanceId, ...restOfProduct } = fromProduct;
-                const newDocRef = doc(productsRef);
-                transaction.set(newDocRef, { ...restOfProduct, location: toLocationId, stock: quantity, reservedStock: 0, lastUpdated: new Date().toISOString().split('T')[0] });
-            }
+        checkStockAndNotify({ ...fromProduct, stock: newFromStock });
 
-            const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
-                productId: fromProduct.id!,
-                productName,
-                type: 'TRANSFER',
-                quantity,
-                fromLocationId,
-                toLocationId,
-                reason: `Transferência manual`,
-                userId: user.id,
-                userName: user.username,
-            };
-            transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
-        });
+        if (toProduct && toProduct.id) {
+          const toDocRef = doc(productsRef, toProduct.id);
+          transaction.update(toDocRef, { stock: toProduct.stock + quantity });
+        } else {
+          const { id, instanceId, ...restOfProduct } = fromProduct;
+          const newDocRef = doc(productsRef);
+          transaction.set(newDocRef, { ...restOfProduct, location: toLocationId, stock: quantity, reservedStock: 0, lastUpdated: new Date().toISOString().split('T')[0] });
+        }
 
-        toast({ title: 'Transferência Concluída' });
+        const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+          productId: fromProduct.id!,
+          productName,
+          type: 'TRANSFER',
+          quantity,
+          fromLocationId,
+          toLocationId,
+          reason: `Transferência manual`,
+          userId: user.id,
+          userName: user.username,
+        };
+        transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+      });
+
+      toast({ title: 'Transferência Concluída' });
     } catch (error) {
-        console.error('Error transferring stock:', error);
-        toast({ variant: 'destructive', title: 'Erro na Transferência', description: (error as Error).message });
+      console.error('Error transferring stock:', error);
+      toast({ variant: 'destructive', title: 'Erro na Transferência', description: (error as Error).message });
     }
-}, [firestore, companyId, products, toast, user, checkStockAndNotify]);
+  }, [firestore, companyId, products, toast, user, checkStockAndNotify]);
 
   const updateProductStock = useCallback(async (productName: string, quantity: number, locationId?: string) => {
-      if (!firestore || !companyId || !user) return;
-      const targetLocation = locationId || (isMultiLocation && locations.length > 0 ? locations[0].id : 'Principal');
-      const catalogProduct = catalogProductsData?.find(p => p.name === productName);
-      const existingInstance = products.find(p => p.name === productName && p.location === targetLocation);
-      
-      const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+    if (!firestore || !companyId || !user) return;
+    const targetLocation = locationId || (isMultiLocation && locations.length > 0 ? locations[0].id : 'Principal');
+    const catalogProduct = catalogProductsData?.find(p => p.name === productName);
+    const existingInstance = products.find(p => p.name === productName && p.location === targetLocation);
 
-      if (existingInstance && existingInstance.id) {
-        const docRef = doc(firestore, `companies/${companyId}/products`, existingInstance.id);
-        const batch = writeBatch(firestore);
-        const newStock = existingInstance.stock + quantity;
-        batch.update(docRef, { stock: newStock });
-        
-        checkStockAndNotify({ ...existingInstance, stock: newStock });
-        
-        const movement: Omit<StockMovement, 'id'|'timestamp'> = {
-            productId: existingInstance.id,
-            productName: productName,
-            type: 'IN',
-            quantity: quantity,
-            toLocationId: targetLocation,
-            reason: `Produção de Lote: ${quantity} unidades`,
-            userId: user.id,
-            userName: user.username,
-        };
-        batch.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
-        await batch.commit();
+    const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
-      } else {
-        if (!catalogProduct) {
-           toast({ variant: 'destructive', title: 'Produto Base Não Encontrado', description: `Adicione "${productName}" ao catálogo primeiro.` });
-          return;
-        }
-        const { id, ...restOfCatalogProduct } = catalogProduct;
-        const productsRef = collection(firestore, `companies/${companyId}/products`);
-        
-        const batch = writeBatch(firestore);
-        const newProductRef = doc(productsRef);
-        batch.set(newProductRef, { ...restOfCatalogProduct, stock: quantity, reservedStock: 0, location: targetLocation, lastUpdated: new Date().toISOString().split('T')[0] });
-        
-        checkStockAndNotify({ ...catalogProduct, id: newProductRef.id, stock: quantity } as Product);
+    if (existingInstance && existingInstance.id) {
+      const docRef = doc(firestore, `companies/${companyId}/products`, existingInstance.id);
+      const batch = writeBatch(firestore);
+      const newStock = existingInstance.stock + quantity;
+      batch.update(docRef, { stock: newStock });
 
-        const movement: Omit<StockMovement, 'id'|'timestamp'> = {
-            productId: newProductRef.id,
-            productName: productName,
-            type: 'IN',
-            quantity: quantity,
-            toLocationId: targetLocation,
-            reason: `Produção de Lote: ${quantity} unidades`,
-            userId: user.id,
-            userName: user.username,
-        };
-        batch.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
-        await batch.commit();
+      checkStockAndNotify({ ...existingInstance, stock: newStock });
+
+      const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+        productId: existingInstance.id,
+        productName: productName,
+        type: 'IN',
+        quantity: quantity,
+        toLocationId: targetLocation,
+        reason: `Produção de Lote: ${quantity} unidades`,
+        userId: user.id,
+        userName: user.username,
+      };
+      batch.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+      await batch.commit();
+
+    } else {
+      if (!catalogProduct) {
+        toast({ variant: 'destructive', title: 'Produto Base Não Encontrado', description: `Adicione "${productName}" ao catálogo primeiro.` });
+        return;
       }
+      const { id, ...restOfCatalogProduct } = catalogProduct;
+      const productsRef = collection(firestore, `companies/${companyId}/products`);
 
-      addNotification({
-          type: 'production',
-          message: `${quantity} unidades de ${productName} foram produzidas.`,
-          href: '/production',
-      });
-    }, [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast, user, checkStockAndNotify, addNotification]);
+      const batch = writeBatch(firestore);
+      const newProductRef = doc(productsRef);
+      batch.set(newProductRef, { ...restOfCatalogProduct, stock: quantity, reservedStock: 0, location: targetLocation, lastUpdated: new Date().toISOString().split('T')[0] });
 
-  const updateCompany = useCallback((details: Partial<Company>) => {
-      if(companyDocRef) {
-         updateDocumentNonBlocking(companyDocRef, details);
-      }
+      checkStockAndNotify({ ...catalogProduct, id: newProductRef.id, stock: quantity } as Product);
+
+      const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+        productId: newProductRef.id,
+        productName: productName,
+        type: 'IN',
+        quantity: quantity,
+        toLocationId: targetLocation,
+        reason: `Produção de Lote: ${quantity} unidades`,
+        userId: user.id,
+        userName: user.username,
+      };
+      batch.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+      await batch.commit();
+    }
+
+    addNotification({
+      type: 'production',
+      message: `${quantity} unidades de ${productName} foram produzidas.`,
+      href: '/production',
+    });
+  }, [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast, user, checkStockAndNotify, addNotification]);
+
+  const updateCompany = useCallback(async (details: Partial<Company>) => {
+    if (companyDocRef) {
+      updateDocumentNonBlocking(companyDocRef, details);
+    }
   }, [companyDocRef]);
-  
+
   const addSale = useCallback(async (newSaleData: Omit<Sale, 'id' | 'guideNumber'>, reserveStock = true) => {
     if (!firestore || !companyId || !productsCollectionRef) throw new Error("Firestore não está pronto.");
 
@@ -896,9 +915,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
 
     const productQuery = query(
-        productsCollectionRef,
-        where("name", "==", newSaleData.productName),
-        where("location", "==", newSaleData.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
+      productsCollectionRef,
+      where("name", "==", newSaleData.productName),
+      where("location", "==", newSaleData.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
     );
 
     const salesCollectionRef = collection(firestore, `companies/${companyId}/sales`);
@@ -906,43 +925,43 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const companyDocRef = doc(firestore, `companies/${companyId}`);
 
     let guideNumberForOuterScope: string | null = null;
-    
+
     // This is a read outside the transaction to get the document reference.
     const productSnapshot = reserveStock ? await getDocs(productQuery) : null;
     if (reserveStock && productSnapshot && productSnapshot.empty) {
-        throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque para a localização selecionada.`);
+      throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque para a localização selecionada.`);
     }
     const productDocRef = productSnapshot ? productSnapshot.docs[0].ref : null;
 
     await runTransaction(firestore, async (transaction) => {
-        const companyDoc = await transaction.get(companyDocRef);
-        if (!companyDoc.exists()) {
-            throw new Error("Documento da empresa não encontrado.");
+      const companyDoc = await transaction.get(companyDocRef);
+      if (!companyDoc.exists()) {
+        throw new Error("Documento da empresa não encontrado.");
+      }
+      const currentCompanyData = companyDoc.data();
+      const newSaleCounter = (currentCompanyData.saleCounter || 0) + 1;
+
+      const guideNumber = `GT-${String(newSaleCounter).padStart(6, '0')}`;
+      guideNumberForOuterScope = guideNumber;
+
+      if (reserveStock && productDocRef) {
+        const productDoc = await transaction.get(productDocRef);
+        if (!productDoc.exists()) {
+          throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque.`);
         }
-        const currentCompanyData = companyDoc.data();
-        const newSaleCounter = (currentCompanyData.saleCounter || 0) + 1;
-        
-        const guideNumber = `GT-${String(newSaleCounter).padStart(6, '0')}`;
-        guideNumberForOuterScope = guideNumber;
+        const productData = productDoc.data() as Product;
+        const availableStock = productData.stock - productData.reservedStock;
 
-        if (reserveStock && productDocRef) {
-          const productDoc = await transaction.get(productDocRef);
-          if (!productDoc.exists()) {
-            throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque.`);
-          }
-          const productData = productDoc.data() as Product;
-          const availableStock = productData.stock - productData.reservedStock;
-
-          if (availableStock < newSaleData.quantity) {
-              throw new Error(`Estoque insuficiente. Disponível: ${availableStock}.`);
-          }
-
-          const newReservedStock = productData.reservedStock + newSaleData.quantity;
-          transaction.update(productDoc.ref, { reservedStock: newReservedStock });
+        if (availableStock < newSaleData.quantity) {
+          throw new Error(`Estoque insuficiente. Disponível: ${availableStock}.`);
         }
-        
-        transaction.update(companyDocRef, { saleCounter: newSaleCounter });
-        transaction.set(newSaleRef, { ...newSaleData, guideNumber });
+
+        const newReservedStock = productData.reservedStock + newSaleData.quantity;
+        transaction.update(productDoc.ref, { reservedStock: newReservedStock });
+      }
+
+      transaction.update(companyDocRef, { saleCounter: newSaleCounter });
+      transaction.set(newSaleRef, { ...newSaleData, guideNumber });
     });
 
     if (guideNumberForOuterScope) {
@@ -954,67 +973,67 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       downloadSaleDocument(createdSale, companyData);
 
       await triggerEmailAlert({
-          type: 'SALE',
-          ...newSaleData,
-          guideNumber: guideNumberForOuterScope,
-          location: locations.find(l => l.id === newSaleData.location)?.name || 'Principal',
+        type: 'SALE',
+        ...newSaleData,
+        guideNumber: guideNumberForOuterScope,
+        location: locations.find(l => l.id === newSaleData.location)?.name || 'Principal',
       });
     }
-    
+
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, toast, triggerEmailAlert]);
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
 
     if ((sale.amountPaid ?? 0) < sale.totalValue) {
-        toast({
-            variant: "destructive",
-            title: 'Pagamento Incompleto',
-            description: `Não é possível confirmar o levantamento. O cliente ainda precisa de pagar ${formatCurrency(sale.totalValue - (sale.amountPaid || 0))}.`,
-            duration: 6000,
-        });
-        return;
+      toast({
+        variant: "destructive",
+        title: 'Pagamento Incompleto',
+        description: `Não é possível confirmar o levantamento. O cliente ainda precisa de pagar ${formatCurrency(sale.totalValue - (sale.amountPaid || 0))}.`,
+        duration: 6000,
+      });
+      return;
     }
 
     const productQuery = query(
-        productsCollectionRef,
-        where("name", "==", sale.productName),
-        where("location", "==", sale.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
+      productsCollectionRef,
+      where("name", "==", sale.productName),
+      where("location", "==", sale.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
     );
     const saleRef = doc(firestore, `companies/${companyId}/sales`, sale.id);
     const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
     await runTransaction(firestore, async (transaction) => {
-        const productSnapshot = await getDocs(productQuery);
-        if (productSnapshot.empty) {
-            throw new Error(`Produto "${sale.productName}" não encontrado para atualizar estoque.`);
-        }
-        const productDoc = productSnapshot.docs[0];
-        const productData = productDoc.data() as Product;
+      const productSnapshot = await getDocs(productQuery);
+      if (productSnapshot.empty) {
+        throw new Error(`Produto "${sale.productName}" não encontrado para atualizar estoque.`);
+      }
+      const productDoc = productSnapshot.docs[0];
+      const productData = productDoc.data() as Product;
 
-        const newStock = productData.stock - sale.quantity;
-        const newReservedStock = productData.reservedStock - sale.quantity;
+      const newStock = productData.stock - sale.quantity;
+      const newReservedStock = productData.reservedStock - sale.quantity;
 
-        if (newStock < 0 || newReservedStock < 0) {
-            throw new Error("Erro de consistência de dados. O estoque ficaria negativo.");
-        }
+      if (newStock < 0 || newReservedStock < 0) {
+        throw new Error("Erro de consistência de dados. O estoque ficaria negativo.");
+      }
 
-        transaction.update(productDoc.ref, { stock: newStock, reservedStock: newReservedStock });
-        transaction.update(saleRef, { status: 'Levantado' });
+      transaction.update(productDoc.ref, { stock: newStock, reservedStock: newReservedStock });
+      transaction.update(saleRef, { status: 'Levantado' });
 
-        checkStockAndNotify({ ...productData, stock: newStock });
+      checkStockAndNotify({ ...productData, stock: newStock });
 
-        const movement: Omit<StockMovement, 'id'|'timestamp'> = {
-            productId: productDoc.id,
-            productName: sale.productName,
-            type: 'OUT',
-            quantity: -sale.quantity, // Negative for stock out
-            fromLocationId: productData.location,
-            reason: `Venda #${sale.guideNumber}`,
-            userId: user.id,
-            userName: user.username,
-        };
-        transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+      const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+        productId: productDoc.id,
+        productName: sale.productName,
+        type: 'OUT',
+        quantity: -sale.quantity, // Negative for stock out
+        fromLocationId: productData.location,
+        reason: `Venda #${sale.guideNumber}`,
+        userId: user.id,
+        userName: user.username,
+      };
+      transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
     });
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user, checkStockAndNotify, toast]);
 
@@ -1030,68 +1049,68 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     const productionsRef = collection(firestore, `companies/${companyId}/productions`);
     addDocumentNonBlocking(productionsRef, newProduction);
-    
+
     addNotification({
-        type: 'production',
-        message: `Produção de ${newProduction.quantity} ${newProduction.unit} de ${newProduction.productName} registada.`,
-        href: '/production',
+      type: 'production',
+      message: `Produção de ${newProduction.quantity} ${newProduction.unit} de ${newProduction.productName} registada.`,
+      href: '/production',
     });
   }, [firestore, companyId, user, addNotification]);
 
   const addProductionLog = useCallback((orderId: string, logData: { quantity: number; notes?: string }) => {
     if (!firestore || !companyId || !user || !ordersData) return;
-    
+
     const orderToUpdate = ordersData.find(o => o.id === orderId);
 
     if (orderToUpdate) {
-        const orderDocRef = doc(firestore, `companies/${companyId}/orders`, orderId);
-        const productionsRef = collection(firestore, `companies/${companyId}/productions`);
+      const orderDocRef = doc(firestore, `companies/${companyId}/orders`, orderId);
+      const productionsRef = collection(firestore, `companies/${companyId}/productions`);
 
-        const batch = writeBatch(firestore);
+      const batch = writeBatch(firestore);
 
-        const newLog: ProductionLog = {
-          id: `log-${Date.now()}`,
-          date: new Date().toISOString(),
-          quantity: logData.quantity,
-          notes: logData.notes,
-          registeredBy: user.username || 'Desconhecido',
-        };
-        const newQuantityProduced = orderToUpdate.quantityProduced + logData.quantity;
-        
-        batch.update(orderDocRef, {
-            quantityProduced: newQuantityProduced,
-            productionLogs: arrayUnion(newLog)
+      const newLog: ProductionLog = {
+        id: `log-${Date.now()}`,
+        date: new Date().toISOString(),
+        quantity: logData.quantity,
+        notes: logData.notes,
+        registeredBy: user.username || 'Desconhecido',
+      };
+      const newQuantityProduced = orderToUpdate.quantityProduced + logData.quantity;
+
+      batch.update(orderDocRef, {
+        quantityProduced: newQuantityProduced,
+        productionLogs: arrayUnion(newLog)
+      });
+
+      const newProduction: Omit<Production, 'id'> = {
+        date: new Date().toISOString().split('T')[0],
+        productName: orderToUpdate.productName,
+        quantity: logData.quantity,
+        unit: orderToUpdate.unit,
+        location: orderToUpdate.location,
+        registeredBy: user.username || 'Desconhecido',
+        status: 'Concluído'
+      };
+      batch.set(doc(productionsRef), newProduction);
+
+      batch.commit().then(() => {
+        toast({
+          title: "Registo de Produção Adicionado",
+          description: `${logData.quantity} unidades de "${orderToUpdate?.productName}" foram registadas.`,
         });
-
-        const newProduction: Omit<Production, 'id'> = {
-          date: new Date().toISOString().split('T')[0],
-          productName: orderToUpdate.productName,
-          quantity: logData.quantity,
-          unit: orderToUpdate.unit,
-          location: orderToUpdate.location,
-          registeredBy: user.username || 'Desconhecido',
-          status: 'Concluído'
-        };
-        batch.set(doc(productionsRef), newProduction);
-        
-        batch.commit().then(() => {
-            toast({
-              title: "Registo de Produção Adicionado",
-              description: `${logData.quantity} unidades de "${orderToUpdate?.productName}" foram registadas.`,
-            });
-            addNotification({
-              type: 'production',
-              message: `Produção de ${orderToUpdate.productName} atualizada.`,
-              href: `/orders?id=${orderId}`
-            })
-        }).catch(error => {
-            console.error("Error adding production log: ", error);
-            toast({
-              variant: "destructive",
-              title: "Erro ao Registar",
-              description: "Não foi possível guardar o registo de produção.",
-            });
+        addNotification({
+          type: 'production',
+          message: `Produção de ${orderToUpdate.productName} atualizada.`,
+          href: `/orders?id=${orderId}`
+        })
+      }).catch(error => {
+        console.error("Error adding production log: ", error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao Registar",
+          description: "Não foi possível guardar o registo de produção.",
         });
+      });
     }
   }, [firestore, companyId, user, ordersData, toast, addNotification]);
 
@@ -1100,10 +1119,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       throw new Error("Referência da coleção do catálogo não disponível.");
     }
     try {
-        addDocumentNonBlocking(catalogProductsCollectionRef, productData);
-    } catch(e) {
-        console.error("Error adding catalog product:", e);
-        throw new Error("Não foi possível adicionar o produto ao catálogo.");
+      addDocumentNonBlocking(catalogProductsCollectionRef, productData);
+    } catch (e) {
+      console.error("Error adding catalog product:", e);
+      throw new Error("Não foi possível adicionar o produto ao catálogo.");
     }
   }, [catalogProductsCollectionRef]);
 
@@ -1111,12 +1130,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!catalogCategoriesCollectionRef || !catalogCategoriesData) return;
     const trimmedName = categoryName.trim();
     if (!trimmedName) return;
-    
+
     const exists = catalogCategoriesData.some(c => c.name.toLowerCase() === trimmedName.toLowerCase());
     if (exists) {
       return;
     }
-      
+
     try {
       addDocumentNonBlocking(catalogCategoriesCollectionRef, { name: trimmedName });
     } catch (e) {
@@ -1127,105 +1146,105 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const deleteSale = useCallback(async (saleId: string) => {
     if (!firestore || !companyId || !productsCollectionRef) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta.' });
-        return;
+      toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta.' });
+      return;
     }
     const saleRef = doc(firestore, `companies/${companyId}/sales`, saleId);
 
     try {
-        const saleDoc = await getDoc(saleRef);
-        if (!saleDoc.exists()) {
-            throw new Error("Venda não encontrada.");
-        }
-        const saleData = saleDoc.data() as Sale;
+      const saleDoc = await getDoc(saleRef);
+      if (!saleDoc.exists()) {
+        throw new Error("Venda não encontrada.");
+      }
+      const saleData = saleDoc.data() as Sale;
 
-        let productDocRef: DocumentReference | null = null;
-        if (saleData.status === 'Pago') {
-            const productQuery = query(
-                productsCollectionRef,
-                where("name", "==", saleData.productName),
-                where("location", "==", saleData.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
-            );
-            const productSnapshot = await getDocs(productQuery);
-            if (!productSnapshot.empty) {
-                productDocRef = productSnapshot.docs[0].ref;
-            } else {
-                console.warn(`Product '${saleData.productName}' for sale '${saleId}' not found during deletion. Could not adjust reserved stock.`);
-            }
+      let productDocRef: DocumentReference | null = null;
+      if (saleData.status === 'Pago') {
+        const productQuery = query(
+          productsCollectionRef,
+          where("name", "==", saleData.productName),
+          where("location", "==", saleData.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
+        );
+        const productSnapshot = await getDocs(productQuery);
+        if (!productSnapshot.empty) {
+          productDocRef = productSnapshot.docs[0].ref;
+        } else {
+          console.warn(`Product '${saleData.productName}' for sale '${saleId}' not found during deletion. Could not adjust reserved stock.`);
         }
-        
-        await runTransaction(firestore, async (transaction) => {
-            if (productDocRef) {
-                const productDoc = await transaction.get(productDocRef);
-                if (productDoc.exists()) {
-                    const productData = productDoc.data() as Product;
-                    const newReservedStock = productData.reservedStock - saleData.quantity;
-                    transaction.update(productDocRef, { reservedStock: Math.max(0, newReservedStock) });
-                }
-            }
-            transaction.delete(saleRef);
-        });
+      }
 
-        toast({ title: 'Venda Apagada', description: 'A venda e a reserva de stock associada foram removidas.' });
+      await runTransaction(firestore, async (transaction) => {
+        if (productDocRef) {
+          const productDoc = await transaction.get(productDocRef);
+          if (productDoc.exists()) {
+            const productData = productDoc.data() as Product;
+            const newReservedStock = productData.reservedStock - saleData.quantity;
+            transaction.update(productDocRef, { reservedStock: Math.max(0, newReservedStock) });
+          }
+        }
+        transaction.delete(saleRef);
+      });
+
+      toast({ title: 'Venda Apagada', description: 'A venda e a reserva de stock associada foram removidas.' });
 
     } catch (error: any) {
-        console.error("Error deleting sale: ", error);
-        toast({ variant: 'destructive', title: 'Erro ao Apagar Venda', description: error.message });
+      console.error("Error deleting sale: ", error);
+      toast({ variant: 'destructive', title: 'Erro ao Apagar Venda', description: error.message });
     }
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, toast]);
 
   const recalculateReservedStock = useCallback(async () => {
     if (!firestore || !companyId || !productsData) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta para esta operação.' });
-        return;
+      toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta para esta operação.' });
+      return;
     }
 
     toast({ title: 'A recalcular stock reservado...', description: 'Isto pode demorar um momento.' });
 
     try {
-        // 1. Fetch all 'Paid' sales directly from Firestore
-        const salesRef = collection(firestore, `companies/${companyId}/sales`);
-        const q = query(salesRef, where("status", "==", "Pago"));
-        const paidSalesSnapshot = await getDocs(q);
-        const paidSales = paidSalesSnapshot.docs.map(doc => doc.data() as Sale);
+      // 1. Fetch all 'Paid' sales directly from Firestore
+      const salesRef = collection(firestore, `companies/${companyId}/sales`);
+      const q = query(salesRef, where("status", "==", "Pago"));
+      const paidSalesSnapshot = await getDocs(q);
+      const paidSales = paidSalesSnapshot.docs.map(doc => doc.data() as Sale);
 
-        // 2. Calculate the correct reserved stock for each product instance (name + location)
-        const correctReservedMap = new Map<string, number>(); // Key: 'productName|locationId'
-        paidSales.forEach(sale => {
-            // Use an empty string for undefined location to ensure consistency
-            const locationKey = sale.location || '';
-            const key = `${sale.productName}|${locationKey}`;
-            const currentReserved = correctReservedMap.get(key) || 0;
-            correctReservedMap.set(key, currentReserved + sale.quantity);
-        });
+      // 2. Calculate the correct reserved stock for each product instance (name + location)
+      const correctReservedMap = new Map<string, number>(); // Key: 'productName|locationId'
+      paidSales.forEach(sale => {
+        // Use an empty string for undefined location to ensure consistency
+        const locationKey = sale.location || '';
+        const key = `${sale.productName}|${locationKey}`;
+        const currentReserved = correctReservedMap.get(key) || 0;
+        correctReservedMap.set(key, currentReserved + sale.quantity);
+      });
 
-        // 3. Compare with existing data and prepare batch update
-        const batch = writeBatch(firestore);
-        let updatesCount = 0;
+      // 3. Compare with existing data and prepare batch update
+      const batch = writeBatch(firestore);
+      let updatesCount = 0;
 
-        productsData.forEach(product => {
-            const locationKey = product.location || '';
-            const key = `${product.name}|${locationKey}`;
-            const correctReserved = correctReservedMap.get(key) || 0;
+      productsData.forEach(product => {
+        const locationKey = product.location || '';
+        const key = `${product.name}|${locationKey}`;
+        const correctReserved = correctReservedMap.get(key) || 0;
 
-            if (product.reservedStock !== correctReserved) {
-                const productRef = doc(firestore, `companies/${companyId}/products`, product.id);
-                batch.update(productRef, { reservedStock: correctReserved });
-                updatesCount++;
-            }
-        });
-
-        // 4. Commit batch if needed
-        if (updatesCount > 0) {
-            await batch.commit();
-            toast({ title: 'Sucesso!', description: `${updatesCount} registo(s) de stock reservado foram corrigidos.` });
-        } else {
-            toast({ title: 'Tudo certo!', description: 'Nenhuma inconsistência encontrada no stock reservado.' });
+        if (product.reservedStock !== correctReserved) {
+          const productRef = doc(firestore, `companies/${companyId}/products`, product.id);
+          batch.update(productRef, { reservedStock: correctReserved });
+          updatesCount++;
         }
+      });
+
+      // 4. Commit batch if needed
+      if (updatesCount > 0) {
+        await batch.commit();
+        toast({ title: 'Sucesso!', description: `${updatesCount} registo(s) de stock reservado foram corrigidos.` });
+      } else {
+        toast({ title: 'Tudo certo!', description: 'Nenhuma inconsistência encontrada no stock reservado.' });
+      }
 
     } catch (error: any) {
-        console.error("Error recalculating reserved stock:", error);
-        toast({ variant: 'destructive', title: 'Erro ao Recalcular', description: 'Não foi possível completar a operação.' });
+      console.error("Error recalculating reserved stock:", error);
+      toast({ variant: 'destructive', title: 'Erro ao Recalcular', description: 'Não foi possível completar a operação.' });
     }
   }, [firestore, companyId, productsData, toast]);
 
@@ -1234,7 +1253,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     deleteDocumentNonBlocking(doc(productionsCollectionRef, productionId));
     toast({ title: 'Registo de Produção Apagado' });
   }, [productionsCollectionRef, toast]);
-  
+
   const updateProduction = useCallback((productionId: string, data: Partial<Production>) => {
     if (!productionsCollectionRef) return;
     const docRef = doc(productionsCollectionRef, productionId);
@@ -1248,39 +1267,39 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Encomenda Apagada' });
   }, [ordersCollectionRef, toast]);
 
-  const addRawMaterial = useCallback((material: Omit<RawMaterial, 'id'>) => {
+  const addRawMaterial = useCallback(async (material: Omit<RawMaterial, 'id'>) => {
     if (!rawMaterialsCollectionRef) return;
     addDocumentNonBlocking(rawMaterialsCollectionRef, material);
     toast({ title: 'Matéria-Prima Adicionada' });
   }, [rawMaterialsCollectionRef, toast]);
 
-  const updateRawMaterial = useCallback((materialId: string, data: Partial<RawMaterial>) => {
+  const updateRawMaterial = useCallback(async (materialId: string, data: Partial<RawMaterial>) => {
     if (!rawMaterialsCollectionRef) return;
     const docRef = doc(rawMaterialsCollectionRef, materialId);
     updateDocumentNonBlocking(docRef, data);
     toast({ title: 'Matéria-Prima Atualizada' });
   }, [rawMaterialsCollectionRef, toast]);
 
-  const deleteRawMaterial = useCallback((materialId: string) => {
+  const deleteRawMaterial = useCallback(async (materialId: string) => {
     if (!rawMaterialsCollectionRef) return;
     deleteDocumentNonBlocking(doc(rawMaterialsCollectionRef, materialId));
     toast({ title: 'Matéria-Prima Removida' });
   }, [rawMaterialsCollectionRef, toast]);
 
-  const addRecipe = useCallback((recipe: Omit<Recipe, 'id'>) => {
+  const addRecipe = useCallback(async (recipe: Omit<Recipe, 'id'>) => {
     if (!recipesCollectionRef) return;
     addDocumentNonBlocking(recipesCollectionRef, recipe);
     toast({ title: 'Receita Adicionada' });
   }, [recipesCollectionRef, toast]);
 
-  const updateRecipe = useCallback((recipeId: string, data: Partial<Recipe>) => {
+  const updateRecipe = useCallback(async (recipeId: string, data: Partial<Recipe>) => {
     if (!recipesCollectionRef) return;
     const docRef = doc(recipesCollectionRef, recipeId);
     updateDocumentNonBlocking(docRef, data);
     toast({ title: 'Receita Atualizada' });
   }, [recipesCollectionRef, toast]);
 
-  const deleteRecipe = useCallback((recipeId: string) => {
+  const deleteRecipe = useCallback(async (recipeId: string) => {
     if (!recipesCollectionRef) return;
     deleteDocumentNonBlocking(doc(recipesCollectionRef, recipeId));
     toast({ title: 'Receita Removida' });
@@ -1297,7 +1316,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Receita não encontrada.' });
       return;
     }
-    
+
     // Check if there are enough raw materials
     for (const ingredient of recipe.ingredients) {
       const material = rawMaterialsData.find(m => m.id === ingredient.rawMaterialId);
@@ -1330,14 +1349,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         status: 'Concluído'
       };
       batch.set(productionRef, newProduction);
-      
+
       await batch.commit();
 
       toast({ title: 'Produção Registada', description: `Produção de ${quantityToProduce} ${recipe.productName} registada com sucesso. O stock de insumos foi atualizado.` });
-      
+
     } catch (e: any) {
-       toast({ variant: 'destructive', title: 'Erro na Produção', description: e.message });
-       throw e;
+      toast({ variant: 'destructive', title: 'Erro na Produção', description: e.message });
+      throw e;
     }
   }, [firestore, companyId, user, recipesData, rawMaterialsData, catalogProductsData, toast]);
 
@@ -1346,7 +1365,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const value: InventoryContextType = {
     user, firebaseUser, companyId, loading: isDataLoading,
-    login, logout, registerCompany, profilePicture, setProfilePicture: handleSetProfilePicture,
+    login, logout, resetPassword, registerCompany, profilePicture, setProfilePicture: handleSetProfilePicture,
     canView, canEdit,
     companyData, products, sales: salesData || [], productions: productionsData || [],
     orders: ordersData || [], stockMovements: stockMovementsData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
