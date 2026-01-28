@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import React, { useState, useContext, useMemo, useCallback } from 'react';
@@ -7,46 +5,46 @@ import { InventoryContext } from '@/context/inventory-context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
 } from "@/components/ui/form";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,22 +62,22 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 // Schemas
 const rawMaterialSchema = z.object({
-  name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
-  stock: z.coerce.number().min(0, "O stock não pode ser negativo."),
-  unit: z.enum(['kg', 'm³', 'un', 'L', 'saco']),
-  lowStockThreshold: z.coerce.number().min(0, "O limite deve ser um número positivo."),
-  cost: z.coerce.number().min(0, "O custo não pode ser negativo.").optional(),
+    name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
+    stock: z.coerce.number().min(0, "O stock não pode ser negativo."),
+    unit: z.enum(['kg', 'm³', 'un', 'L', 'saco']),
+    lowStockThreshold: z.coerce.number().min(0, "O limite deve ser um número positivo."),
+    cost: z.coerce.number().min(0, "O custo não pode ser negativo.").optional(),
 });
 type RawMaterialFormValues = z.infer<typeof rawMaterialSchema>;
 
 const recipeIngredientSchema = z.object({
-  rawMaterialId: z.string(),
-  rawMaterialName: z.string(),
-  quantity: z.coerce.number().min(0.01, "A quantidade deve ser positiva."),
+    rawMaterialId: z.string(),
+    rawMaterialName: z.string(),
+    quantity: z.coerce.number().min(0.01, "A quantidade deve ser positiva."),
 });
 const recipeSchema = z.object({
-  productName: z.string().nonempty("Selecione um produto final."),
-  ingredients: z.array(recipeIngredientSchema).min(1, "Adicione pelo menos um ingrediente."),
+    productName: z.string().nonempty("Selecione um produto final."),
+    ingredients: z.array(recipeIngredientSchema).min(1, "Adicione pelo menos um ingrediente."),
 });
 type RecipeFormValues = z.infer<typeof recipeSchema>;
 
@@ -141,14 +139,19 @@ const RawMaterialsManager = () => {
             setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
         }
     };
-    
-    const handleDownload = () => {
-        toast({
-            title: "Como Guardar o Relatório em PDF",
-            description: "Na janela de impressão que vai abrir, por favor mude o destino para 'Guardar como PDF' para descarregar o ficheiro.",
-            duration: 8000,
-        });
-        handlePrint();
+
+    const handleDownload = async () => {
+        const { pdf } = await import('@react-pdf/renderer');
+        const { RawMaterialsPDF } = await import('@/components/raw-materials/RawMaterialsPDF');
+
+        const doc = <RawMaterialsPDF type="materials" data={rawMaterials || []} company={companyData || null} />;
+        const blob = await pdf(doc).toBlob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Materias_Primas_${new Date().toISOString().split('T')[0]}.pdf`;
+        link.click();
+        URL.revokeObjectURL(url);
     };
 
     if (loading) return <Skeleton className="h-64 w-full" />;
@@ -217,7 +220,7 @@ const RawMaterialsManager = () => {
                                 <FormField control={form.control} name="stock" render={({ field }) => (
                                     <FormItem><FormLabel>Stock Inicial</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
-                                 <FormField control={form.control} name="cost" render={({ field }) => (
+                                <FormField control={form.control} name="cost" render={({ field }) => (
                                     <FormItem><FormLabel>Custo Unitário</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
                             </div>
@@ -226,7 +229,7 @@ const RawMaterialsManager = () => {
                                     <SelectItem value="kg">kg</SelectItem><SelectItem value="m³">m³</SelectItem><SelectItem value="un">un</SelectItem><SelectItem value="L">L</SelectItem><SelectItem value="saco">saco</SelectItem>
                                 </SelectContent></Select><FormMessage /></FormItem>
                             )} />
-                             <FormField control={form.control} name="lowStockThreshold" render={({ field }) => (
+                            <FormField control={form.control} name="lowStockThreshold" render={({ field }) => (
                                 <FormItem><FormLabel>Nível Mínimo de Stock</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <DialogFooter>
@@ -276,7 +279,7 @@ const RecipesManager = () => {
             form.setValue('ingredients', [...ingredients, { rawMaterialId: firstMaterial.id, rawMaterialName: firstMaterial.name, quantity: 1 }]);
         }
     };
-    
+
     const removeIngredient = (index: number) => {
         const ingredients = form.getValues('ingredients');
         form.setValue('ingredients', ingredients.filter((_, i) => i !== index));
@@ -295,7 +298,7 @@ const RecipesManager = () => {
         const printWindow = window.open('', '', 'height=800,width=800');
         if (printWindow) {
             printWindow.document.write('<!DOCTYPE html><html><head><title>Relatório de Receitas</title>');
-             printWindow.document.write(`<style>body { font-family: sans-serif; padding: 2rem; } h2 { border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-top: 2rem; } ul { list-style: none; padding-left: 0; } </style>`);
+            printWindow.document.write(`<style>body { font-family: sans-serif; padding: 2rem; } h2 { border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-top: 2rem; } ul { list-style: none; padding-left: 0; } </style>`);
             printWindow.document.write('</head><body>');
             printWindow.document.write(`<h1>Relatório de Receitas - ${companyData?.name || ''}</h1>`);
             recipes.forEach(recipe => {
@@ -311,23 +314,28 @@ const RecipesManager = () => {
             setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
         }
     };
-    
-    const handleDownload = () => {
-        toast({
-            title: "Como Guardar o Relatório em PDF",
-            description: "Na janela de impressão que vai abrir, por favor mude o destino para 'Guardar como PDF' para descarregar o ficheiro.",
-            duration: 8000,
-        });
-        handlePrint();
+
+    const handleDownload = async () => {
+        const { pdf } = await import('@react-pdf/renderer');
+        const { RawMaterialsPDF } = await import('@/components/raw-materials/RawMaterialsPDF');
+
+        const doc = <RawMaterialsPDF type="recipes" data={recipes || []} company={companyData || null} />;
+        const blob = await pdf(doc).toBlob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Receitas_${new Date().toISOString().split('T')[0]}.pdf`;
+        link.click();
+        URL.revokeObjectURL(url);
     };
-    
-    if(loading) return <Skeleton className="h-64 w-full" />;
+
+    if (loading) return <Skeleton className="h-64 w-full" />;
 
     return (
         <Card>
             <CardHeader><CardTitle>Receitas de Produção</CardTitle><CardDescription>Defina os componentes para cada produto final.</CardDescription></CardHeader>
             <CardContent>
-                 <div className="flex justify-end mb-4 gap-2">
+                <div className="flex justify-end mb-4 gap-2">
                     <Button onClick={handleDownload} variant="outline"><Download className="mr-2 h-4 w-4" /> Baixar PDF</Button>
                     <Button onClick={handlePrint} variant="outline"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
                     <Button onClick={() => handleOpenDialog()}>
@@ -355,7 +363,7 @@ const RecipesManager = () => {
                     ))}
                 </div>
             </CardContent>
-             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="sm:max-w-lg">
                     <DialogHeader><DialogTitle>{recipeToEdit ? 'Editar' : 'Criar'} Receita</DialogTitle></DialogHeader>
                     <ScrollArea className="max-h-[60vh] p-4">
@@ -376,8 +384,8 @@ const RecipesManager = () => {
                                                     field.onChange(value);
                                                     form.setValue(`ingredients.${index}.rawMaterialName`, material?.name || '');
                                                 }} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>
-                                                    {rawMaterials.map(rm => <SelectItem key={rm.id} value={rm.id}>{rm.name}</SelectItem>)}
-                                                </SelectContent></Select></FormItem>
+                                                        {rawMaterials.map(rm => <SelectItem key={rm.id} value={rm.id}>{rm.name}</SelectItem>)}
+                                                    </SelectContent></Select></FormItem>
                                             )} />
                                             <FormField control={form.control} name={`ingredients.${index}.quantity`} render={({ field }) => (
                                                 <FormItem><FormControl><Input type="number" {...field} className="w-24" /></FormControl></FormItem>
@@ -401,11 +409,11 @@ const RecipesManager = () => {
 const ProductionFromRecipe = () => {
     const { recipes, produceFromRecipe, loading } = useContext(InventoryContext)!;
     const { toast } = useToast();
-     const form = useForm<ProductionFormValues>({
+    const form = useForm<ProductionFormValues>({
         resolver: zodResolver(productionSchema),
         defaultValues: { recipeId: '', quantity: 1 },
     });
-    
+
     const onSubmit = async (values: ProductionFormValues) => {
         try {
             await produceFromRecipe(values.recipeId, values.quantity);
@@ -413,11 +421,11 @@ const ProductionFromRecipe = () => {
             // Error is already toasted in context, but we could add more UI feedback here if needed
         }
     };
-    
+
     if (loading) return <Skeleton className="h-64 w-full" />;
 
     return (
-         <Card>
+        <Card>
             <CardHeader>
                 <CardTitle>Registrar Produção por Receita</CardTitle>
                 <CardDescription>Selecione uma receita para registrar a produção e abater a matéria-prima do stock.</CardDescription>
@@ -492,13 +500,18 @@ const CostsManager = () => {
         }
     };
 
-    const handleDownload = () => {
-        toast({
-            title: "Como Guardar o Relatório em PDF",
-            description: "Na janela de impressão que vai abrir, por favor mude o destino para 'Guardar como PDF' para descarregar o ficheiro.",
-            duration: 8000,
-        });
-        handlePrint();
+    const handleDownload = async () => {
+        const { pdf } = await import('@react-pdf/renderer');
+        const { RawMaterialsPDF } = await import('@/components/raw-materials/RawMaterialsPDF');
+
+        const doc = <RawMaterialsPDF type="costs" data={recipeCosts || []} company={companyData || null} />;
+        const blob = await pdf(doc).toBlob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Custos_Producao_${new Date().toISOString().split('T')[0]}.pdf`;
+        link.click();
+        URL.revokeObjectURL(url);
     };
 
     if (loading) return <Skeleton className="h-64 w-full" />;
@@ -567,7 +580,7 @@ export default function RawMaterialsPage() {
     if (loading) {
         return <div className="p-8"><Skeleton className="w-full h-96" /></div>;
     }
-    
+
     if (!canViewPage) {
         return (
             <div className="flex items-center justify-center h-full">
@@ -580,35 +593,35 @@ export default function RawMaterialsPage() {
             </div>
         );
     }
-    
-  return (
-    <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
-        <div>
-            <h1 className="text-2xl md:text-3xl font-headline font-bold">Matéria-Prima e Produção</h1>
-            <p className="text-muted-foreground">
-                Gira os seus insumos, receitas e registe a produção de novos itens.
-            </p>
+
+    return (
+        <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
+            <div>
+                <h1 className="text-2xl md:text-3xl font-headline font-bold">Matéria-Prima e Produção</h1>
+                <p className="text-muted-foreground">
+                    Gira os seus insumos, receitas e registe a produção de novos itens.
+                </p>
+            </div>
+            <Tabs defaultValue="materials">
+                <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="materials">Insumos</TabsTrigger>
+                    <TabsTrigger value="recipes">Receitas</TabsTrigger>
+                    <TabsTrigger value="production">Produção</TabsTrigger>
+                    <TabsTrigger value="costs">Custos</TabsTrigger>
+                </TabsList>
+                <TabsContent value="materials" className="mt-4">
+                    <RawMaterialsManager />
+                </TabsContent>
+                <TabsContent value="recipes" className="mt-4">
+                    <RecipesManager />
+                </TabsContent>
+                <TabsContent value="production" className="mt-4">
+                    <ProductionFromRecipe />
+                </TabsContent>
+                <TabsContent value="costs" className="mt-4">
+                    <CostsManager />
+                </TabsContent>
+            </Tabs>
         </div>
-      <Tabs defaultValue="materials">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="materials">Insumos</TabsTrigger>
-          <TabsTrigger value="recipes">Receitas</TabsTrigger>
-          <TabsTrigger value="production">Produção</TabsTrigger>
-          <TabsTrigger value="costs">Custos</TabsTrigger>
-        </TabsList>
-        <TabsContent value="materials" className="mt-4">
-            <RawMaterialsManager />
-        </TabsContent>
-        <TabsContent value="recipes" className="mt-4">
-            <RecipesManager />
-        </TabsContent>
-        <TabsContent value="production" className="mt-4">
-            <ProductionFromRecipe />
-        </TabsContent>
-        <TabsContent value="costs" className="mt-4">
-            <CostsManager />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
+    );
 }

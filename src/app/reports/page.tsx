@@ -44,43 +44,43 @@ import { useToast } from '@/hooks/use-toast';
 type Period = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 const SaleReportCard = ({ sale }: { sale: Sale }) => {
-    const valueToDisplay = sale.amountPaid ?? sale.totalValue;
-    const isPartiallyPaid = sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue;
+  const valueToDisplay = sale.amountPaid ?? sale.totalValue;
+  const isPartiallyPaid = sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue;
 
-    return (
-        <Card className="glass-card">
-            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                <div>
-                    <CardTitle className="text-base font-bold">{sale.productName}</CardTitle>
-                    <CardDescription className="text-xs">Guia: {sale.guideNumber}</CardDescription>
-                </div>
-                <div className="text-right">
-                    <div className="text-lg font-bold font-mono text-primary">
-                        {formatCurrency(valueToDisplay)}
-                    </div>
-                     {isPartiallyPaid && (
-                        <div className="text-xs font-semibold text-muted-foreground -mt-1">
-                            (de {formatCurrency(sale.totalValue)})
-                        </div>
-                    )}
-                </div>
-            </CardHeader>
-            <CardContent className="space-y-2 text-xs pt-2">
-                <div className="flex items-center gap-2 text-sm">
-                    <Hash className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{sale.quantity} {sale.unit || 'un.'} x {formatCurrency(sale.unitPrice)}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{sale.soldBy}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{format(new Date(sale.date), 'dd/MM/yy')}</span>
-                </div>
-            </CardContent>
-        </Card>
-    );
+  return (
+    <Card className="glass-card">
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+        <div>
+          <CardTitle className="text-base font-bold">{sale.productName}</CardTitle>
+          <CardDescription className="text-xs">Guia: {sale.guideNumber}</CardDescription>
+        </div>
+        <div className="text-right">
+          <div className="text-lg font-bold font-mono text-primary">
+            {formatCurrency(valueToDisplay)}
+          </div>
+          {isPartiallyPaid && (
+            <div className="text-xs font-semibold text-muted-foreground -mt-1">
+              (de {formatCurrency(sale.totalValue)})
+            </div>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2 text-xs pt-2">
+        <div className="flex items-center gap-2 text-sm">
+          <Hash className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">{sale.quantity} {sale.unit || 'un.'} x {formatCurrency(sale.unitPrice)}</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <User className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">{sale.soldBy}</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">{format(new Date(sale.date), 'dd/MM/yy')}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
 };
 
 export default function ReportsPage() {
@@ -89,7 +89,7 @@ export default function ReportsPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
-  const { sales, companyData, loading, user, clearSales } = inventoryContext || { sales: [], companyData: null, loading: true, user: null, clearSales: async () => {} };
+  const { sales, companyData, loading, user, clearSales } = inventoryContext || { sales: [], companyData: null, loading: true, user: null, clearSales: async () => { } };
   const isAdmin = user?.role === 'Admin';
   const isPrivilegedUser = user?.role === 'Admin' || user?.role === 'Dono';
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -118,10 +118,10 @@ export default function ReportsPage() {
         end = endOfYear(selectedDate);
         break;
     }
-    
+
     return sales.filter(sale => {
-        const saleDate = new Date(sale.date);
-        return isWithinInterval(saleDate, { start, end });
+      const saleDate = new Date(sale.date);
+      return isWithinInterval(saleDate, { start, end });
     });
   }, [selectedDate, sales, period]);
 
@@ -132,14 +132,14 @@ export default function ReportsPage() {
     }, 0);
     const totalItems = salesForPeriod.reduce((sum, sale) => sum + sale.quantity, 0);
     const averageTicket = totalSales > 0 ? totalValue / totalSales : 0;
-    
+
     const productQuantities = salesForPeriod.reduce((acc, sale) => {
-        acc[sale.productName] = (acc[sale.productName] || 0) + sale.quantity;
-        return acc;
+      acc[sale.productName] = (acc[sale.productName] || 0) + sale.quantity;
+      return acc;
     }, {} as Record<string, number>);
 
     const bestSellingProduct = Object.entries(productQuantities).reduce((best, current) => {
-        return current[1] > best.quantity ? { name: current[0], quantity: current[1] } : best;
+      return current[1] > best.quantity ? { name: current[0], quantity: current[1] } : best;
     }, { name: 'N/A', quantity: 0 });
 
 
@@ -151,20 +151,20 @@ export default function ReportsPage() {
       bestSellingProduct
     };
   }, [salesForPeriod]);
-  
+
   const handleClearSales = async () => {
     if (clearSales) {
       await clearSales();
     }
     setShowClearConfirm(false);
   };
-  
+
   const getPeriodDescription = () => {
     if (!selectedDate) return "Nenhuma data selecionada.";
 
     switch (period) {
       case 'daily':
-        return `Todas as vendas registadas em ${format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: pt } )}.`
+        return `Todas as vendas registadas em ${format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: pt })}.`
       case 'weekly':
         const start = startOfWeek(selectedDate, { locale: pt });
         const end = endOfWeek(selectedDate, { locale: pt });
@@ -215,22 +215,22 @@ export default function ReportsPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      
+
       const contentDisposition = response.headers.get('content-disposition');
       let fileName = 'relatorio.pdf';
       if (contentDisposition) {
-        const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        const fileNameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
         if (fileNameMatch && fileNameMatch.length > 1) {
-            fileName = fileNameMatch[1];
+          fileName = fileNameMatch[1];
         }
       }
       a.download = fileName;
-      
+
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      
+
       toast({ title: "Sucesso!", description: "O seu relatório em PDF foi descarregado." });
 
     } catch (error: any) {
@@ -291,20 +291,20 @@ export default function ReportsPage() {
       const blob = await response.blob();
       const fileName = `relatorio-vendas-${format(selectedDate, 'MM-yyyy')}.pdf`;
       const file = new File([blob], fileName, { type: 'application/pdf' });
-      
+
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: `Relatório de Vendas - ${format(selectedDate, 'MMMM yyyy', { locale: pt })}`,
-            text: `Aqui está o relatório de vendas para ${companyData?.name || 'a nossa empresa'}.`,
-            files: [file],
-          });
-          toast({ title: "Sucesso!", description: "O diálogo de partilha foi aberto." });
+        await navigator.share({
+          title: `Relatório de Vendas - ${format(selectedDate, 'MMMM yyyy', { locale: pt })}`,
+          text: `Aqui está o relatório de vendas para ${companyData?.name || 'a nossa empresa'}.`,
+          files: [file],
+        });
+        toast({ title: "Sucesso!", description: "O diálogo de partilha foi aberto." });
       } else {
-         toast({
-            title: "Partilha não suportada",
-            description: "O seu navegador não suporta a partilha de ficheiros. Por favor, descarregue o PDF.",
-            variant: "destructive"
-          });
+        toast({
+          title: "Partilha não suportada",
+          description: "O seu navegador não suporta a partilha de ficheiros. Por favor, descarregue o PDF.",
+          variant: "destructive"
+        });
       }
 
     } catch (error: any) {
@@ -360,62 +360,62 @@ export default function ReportsPage() {
 
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
         <div className="flex flex-col w-full items-center md:flex-row justify-between items-start gap-4">
-            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
-              <Select value={period} onValueChange={(value: Period) => setPeriod(value)}>
-                <SelectTrigger className="h-12 w-full md:w-[180px]">
-                  <SelectValue placeholder="Selecionar Período" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Diário</SelectItem>
-                  <SelectItem value="weekly">Semanal</SelectItem>
-                  <SelectItem value="monthly">Mensal</SelectItem>
-                  <SelectItem value="yearly">Anual</SelectItem>
-                </SelectContent>
-              </Select>
-              <DatePicker date={selectedDate} setDate={setSelectedDate} />
-              <Button onClick={handleGeneratePdf} variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate || isProcessing}>
-                <Download className="mr-2 h-4 w-4" />
-                {isProcessing ? 'A processar...' : 'Exportar PDF'}
-              </Button>
-              <Button onClick={handleSharePdf} variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate || isProcessing}>
-                  <Share2 className="mr-2 h-4 w-4" />
-                  {isProcessing ? 'A processar...' : 'Partilhar'}
-              </Button>
-            </div>
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+            <Select value={period} onValueChange={(value: Period) => setPeriod(value)}>
+              <SelectTrigger className="h-12 w-full md:w-[180px]">
+                <SelectValue placeholder="Selecionar Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="daily">Diário</SelectItem>
+                <SelectItem value="weekly">Semanal</SelectItem>
+                <SelectItem value="monthly">Mensal</SelectItem>
+                <SelectItem value="yearly">Anual</SelectItem>
+              </SelectContent>
+            </Select>
+            <DatePicker date={selectedDate} setDate={setSelectedDate} />
+            <Button onClick={handleGeneratePdf} variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate || isProcessing}>
+              <Download className="mr-2 h-4 w-4" />
+              {isProcessing ? 'A processar...' : 'Exportar PDF'}
+            </Button>
+            <Button onClick={handleSharePdf} variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate || isProcessing}>
+              <Share2 className="mr-2 h-4 w-4" />
+              {isProcessing ? 'A processar...' : 'Partilhar'}
+            </Button>
+          </div>
         </div>
-        
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard icon={Hash} title="Total de Vendas" value={reportSummary.totalSales} />
-            {isPrivilegedUser ? (
-                <>
-                    <StatCard icon={DollarSign} title="Valor Recebido" value={formatCurrency(reportSummary.totalValue)} />
-                    <StatCard icon={TrendingUp} title="Ticket Médio (Recebido)" value={formatCurrency(reportSummary.averageTicket)} />
-                </>
-            ) : (
-                 <>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Valor Recebido</CardTitle>
-                            <Lock className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">-</div>
-                            <p className="text-xs text-muted-foreground">Acesso Restrito</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Ticket Médio (Recebido)</CardTitle>
-                            <Lock className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">-</div>
-                            <p className="text-xs text-muted-foreground">Acesso Restrito</p>
-                        </CardContent>
-                    </Card>
-                </>
-            )}
-            <StatCard icon={Trophy} title="Mais Vendido" value={reportSummary.bestSellingProduct.name} subValue={`${reportSummary.bestSellingProduct.quantity} un.`} />
+          <StatCard icon={Hash} title="Total de Vendas" value={reportSummary.totalSales} />
+          {isPrivilegedUser ? (
+            <>
+              <StatCard icon={DollarSign} title="Valor Recebido" value={formatCurrency(reportSummary.totalValue)} />
+              <StatCard icon={TrendingUp} title="Ticket Médio (Recebido)" value={formatCurrency(reportSummary.averageTicket)} />
+            </>
+          ) : (
+            <>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Valor Recebido</CardTitle>
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">-</div>
+                  <p className="text-xs text-muted-foreground">Acesso Restrito</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Ticket Médio (Recebido)</CardTitle>
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">-</div>
+                  <p className="text-xs text-muted-foreground">Acesso Restrito</p>
+                </CardContent>
+              </Card>
+            </>
+          )}
+          <StatCard icon={Trophy} title="Mais Vendido" value={reportSummary.bestSellingProduct.name} subValue={`${reportSummary.bestSellingProduct.quantity} un.`} />
         </div>
 
         <Card>
@@ -427,9 +427,9 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="hidden md:block">
-                <Table>
+              <Table>
                 <TableHeader>
-                    <TableRow>
+                  <TableRow>
                     <TableHead className="w-[100px]">Data</TableHead>
                     <TableHead>Guia N.º</TableHead>
                     <TableHead>Produto</TableHead>
@@ -437,65 +437,65 @@ export default function ReportsPage() {
                     <TableHead className="text-right">Preço Unit.</TableHead>
                     <TableHead className="text-right">Valor Pago</TableHead>
                     <TableHead>Vendedor</TableHead>
-                    </TableRow>
+                  </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {salesForPeriod.length > 0 ? (
+                  {salesForPeriod.length > 0 ? (
                     salesForPeriod.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
-                        <TableRow key={sale.id}>
+                      <TableRow key={sale.id}>
                         <TableCell>{format(new Date(sale.date), 'dd/MM/yy')}</TableCell>
                         <TableCell className="font-medium">{sale.guideNumber}</TableCell>
                         <TableCell>{sale.productName}</TableCell>
                         <TableCell className="text-right">{sale.quantity}</TableCell>
                         <TableCell className="text-right">{formatCurrency(sale.unitPrice)}</TableCell>
                         <TableCell className="text-right">
-                           <div className="font-medium">{formatCurrency(sale.amountPaid ?? sale.totalValue)}</div>
-                            {sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue && (
-                                <div className="text-xs text-muted-foreground">
-                                    de {formatCurrency(sale.totalValue)}
-                                </div>
-                            )}
+                          <div className="font-medium">{formatCurrency(sale.amountPaid ?? sale.totalValue)}</div>
+                          {sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue && (
+                            <div className="text-xs text-muted-foreground">
+                              de {formatCurrency(sale.totalValue)}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell>{sale.soldBy}</TableCell>
-                        </TableRow>
+                      </TableRow>
                     ))
-                    ) : (
+                  ) : (
                     <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center">
+                      <TableCell colSpan={7} className="h-24 text-center">
                         Nenhuma venda encontrada para este período.
-                        </TableCell>
+                      </TableCell>
                     </TableRow>
-                    )}
+                  )}
                 </TableBody>
-                </Table>
+              </Table>
             </div>
             <div className="block md:hidden space-y-3">
-                {salesForPeriod.length > 0 ? (
-                    salesForPeriod.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
-                        <SaleReportCard key={sale.id} sale={sale} />
-                    ))
-                ) : (
-                    <div className="h-24 text-center flex items-center justify-center text-muted-foreground">
-                        Nenhuma venda encontrada para este período.
-                    </div>
-                )}
+              {salesForPeriod.length > 0 ? (
+                salesForPeriod.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
+                  <SaleReportCard key={sale.id} sale={sale} />
+                ))
+              ) : (
+                <div className="h-24 text-center flex items-center justify-center text-muted-foreground">
+                  Nenhuma venda encontrada para este período.
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
-        
+
         {isAdmin && (
-            <Card className="mt-8">
-                <div className="p-6 flex flex-col items-center text-center">
-                <h3 className="font-semibold mb-2">Zona de Administrador</h3>
-                <p className="text-sm text-muted-foreground mb-4 max-w-md">
-                    Esta ação é irreversível e irá apagar permanentemente **todas** as vendas registadas.
-                </p>
-                <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Limpar Vendas
-                </Button>
-                </div>
-            </Card>
+          <Card className="mt-8">
+            <div className="p-6 flex flex-col items-center text-center">
+              <h3 className="font-semibold mb-2">Zona de Administrador</h3>
+              <p className="text-sm text-muted-foreground mb-4 max-w-md">
+                Esta ação é irreversível e irá apagar permanentemente **todas** as vendas registadas.
+              </p>
+              <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Limpar Vendas
+              </Button>
+            </div>
+          </Card>
         )}
       </div>
     </>
@@ -503,21 +503,21 @@ export default function ReportsPage() {
 }
 
 interface StatCardProps {
-    icon: React.ElementType;
-    title: string;
-    value: string | number;
-    subValue?: string;
+  icon: React.ElementType;
+  title: string;
+  value: string | number;
+  subValue?: string;
 }
 
 const StatCard = ({ icon: Icon, title, value, subValue }: StatCardProps) => (
-    <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{title}</CardTitle>
-            <Icon className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-            <div className="text-2xl font-bold truncate">{value}</div>
-            {subValue && <p className="text-xs text-muted-foreground">{subValue}</p>}
-        </CardContent>
-    </Card>
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      <Icon className="h-4 w-4 text-muted-foreground" />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold truncate">{value}</div>
+      {subValue && <p className="text-xs text-muted-foreground">{subValue}</p>}
+    </CardContent>
+  </Card>
 );

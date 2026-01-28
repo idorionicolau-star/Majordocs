@@ -9,13 +9,26 @@ import { cn } from '@/lib/utils';
 import { CommandMenu } from '@/components/command-menu';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { MobileNav } from './mobile-nav';
+import { LoadingBar } from './loading-bar';
+import { useSearchParams } from 'next/navigation';
+
+function NavigationObserver({ onNavigate }: { onNavigate: () => void }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    onNavigate();
+  }, [pathname, searchParams, onNavigate]);
+
+  return null;
+}
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const authContext = React.useContext(InventoryContext);
   const isAuthPage = pathname === '/login' || pathname === '/register';
-  
+
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [openCommandMenu, setOpenCommandMenu] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -31,27 +44,30 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("keydown", down)
   }, []);
 
+  const handleNavigationTransition = React.useCallback(() => {
+    setIsMobileNavOpen(false);
+  }, []);
 
   React.useEffect(() => {
     if (authContext?.loading) {
-      return; 
+      return;
     }
 
     const isAuthenticated = !!authContext?.firebaseUser;
 
     if (isAuthenticated && isAuthPage) {
-        router.replace('/dashboard');
+      router.replace('/dashboard');
     }
-    
+
     if (!isAuthenticated && !isAuthPage) {
-        router.replace('/login');
+      router.replace('/login');
     }
 
   }, [authContext?.loading, authContext?.firebaseUser, pathname, router, isAuthPage]);
 
 
   if (authContext?.loading || (!authContext?.firebaseUser && !isAuthPage)) {
-     return (
+    return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
@@ -60,39 +76,43 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   if (isAuthPage) {
     return (
-         <div>
-            {children}
-         </div>
+      <div>
+        {children}
+      </div>
     );
   }
-  
+
   return (
     <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
-        <div className="flex min-h-screen w-full bg-muted/40 bg-pattern">
-            <Sidebar 
-                isCollapsed={isSidebarCollapsed} 
-                onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
-            />
-            <div className={cn(
-                "flex flex-col flex-1 transition-all duration-300 ease-in-out",
-                isSidebarCollapsed ? "md:ml-20" : "md:ml-64"
-            )}>
-                <Header onSearchClick={() => setOpenCommandMenu(true)} />
-                <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto main-content">
-                    <Suspense fallback={
-                    <div className="flex h-full w-full items-center justify-center">
-                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-                    </div>
-                    }>
-                    {children}
-                    </Suspense>
-                </main>
-            </div>
-            <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
+      <Suspense fallback={null}>
+        <LoadingBar />
+        <NavigationObserver onNavigate={handleNavigationTransition} />
+      </Suspense>
+      <div className="flex min-h-screen w-full bg-muted/40 bg-pattern">
+        <Sidebar
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
+        />
+        <div className={cn(
+          "flex flex-col flex-1 transition-all duration-300 ease-in-out",
+          isSidebarCollapsed ? "md:ml-20" : "md:ml-64"
+        )}>
+          <Header onSearchClick={() => setOpenCommandMenu(true)} />
+          <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto main-content">
+            <Suspense fallback={
+              <div className="flex h-full w-full items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+              </div>
+            }>
+              {children}
+            </Suspense>
+          </main>
         </div>
+        <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
+      </div>
       <SheetContent side="left" className="p-0">
         <MobileNav onLinkClick={() => setIsMobileNavOpen(false)} />
       </SheetContent>
