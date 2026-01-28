@@ -13,28 +13,28 @@ export async function POST(req: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+    const model = genAI.getGenerativeModel({ model: "models/gemini-3-flash-preview" });
 
     const isHealthCheck = query.toLowerCase().includes('diagnóstico') || query.toLowerCase().includes('relatório de saúde');
 
     let dataAgeContext = '';
     if (isHealthCheck && contextData?.businessStartDate) {
-        const startDate = new Date(contextData.businessStartDate);
-        const today = new Date();
-        const businessAgeInDays = differenceInDays(today, startDate);
+      const startDate = new Date(contextData.businessStartDate);
+      const today = new Date();
+      const businessAgeInDays = differenceInDays(today, startDate);
 
-        if (businessAgeInDays < 15) {
-             dataAgeContext = `
+      if (businessAgeInDays < 15) {
+        dataAgeContext = `
               **Nota CRÍTICA para a IA:** A empresa está na fase de "Nutrição de Dados", com ${businessAgeInDays + 1} dia(s) de operação.
               - **Foco Principal:** O teu objetivo é **validar e encorajar**, não dar conselhos financeiros profundos. Foque em verificar se os dados estão a ser inseridos corretamente.
               - **Exemplo de Abordagem:** Mencione uma venda ou um produto recentemente adicionado. Ex: "Ótimo trabalho ao inserir as primeiras vendas! O produto X parece estar a ter um bom começo." ou "Reparei que o inventário foi atualizado. Continue a registar todos os produtos para que eu possa fazer uma análise mais precisa em breve."
               - **Tom:** Seja um parceiro que está a "aprender" junto com o utilizador. Evite fazer previsões de longo prazo. Não faças julgamentos.
             `;
-        } else if (businessAgeInDays < 30) {
-            dataAgeContext = `
+      } else if (businessAgeInDays < 30) {
+        dataAgeContext = `
               **Nota:** A empresa tem menos de 30 dias de dados. A tua análise deve considerar que as tendências ainda estão a emergir e podem não ser representativas a longo prazo.
             `;
-        }
+      }
     }
 
     const jsonStructure = `
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       }
       \`\`\`
     `;
-    
+
     const systemPrompt = `Você é o **Consultor Sênior de Business Intelligence (BI)** integrado no software de gestão "MajorStockX". O seu objetivo é escrever um 'Relatório de Operações' estratégico, focado na integridade dos dados, análise de rentabilidade e calibração de processos para a diretoria.`;
 
     const healthCheckInstructions = `
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       ${dataAgeContext}
 
       **Contexto dos Dados:** Você receberá um objeto JSON contendo as transações recentes, níveis de estoque e estatísticas gerais.`;
-      
+
     const generalQuestionInstructions = `
       **Instruções para Perguntas Gerais:**
       1.  **Aja como o MajorAssistant:** Mantenha um tom de especialista na aplicação de gestão "MajorStockX".
@@ -120,8 +120,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(jsonObj);
       } catch (e) {
         console.error("AI JSON parsing error:", e);
-        return NextResponse.json({ 
-          text: `A IA retornou uma resposta, mas o formato JSON era inválido. Resposta: ${text}` 
+        return NextResponse.json({
+          text: `A IA retornou uma resposta, mas o formato JSON era inválido. Resposta: ${text}`
         }, { status: 500 });
       }
     }

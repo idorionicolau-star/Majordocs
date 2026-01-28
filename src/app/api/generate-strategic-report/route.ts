@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-    
+    const model = genAI.getGenerativeModel({ model: "models/gemini-3-flash-preview" });
+
     const systemPrompt = `**Atue como um Consultor Sênior de Business Intelligence (BI) para a MajorStockX.**
 **Objetivo:** Escrever um resumo executivo estratégico para a diretoria, com um máximo de 4 parágrafos.
 **Dados de Entrada:** Os dados da empresa serão fornecidos no formato JSON. Use-os para extrair as informações.
