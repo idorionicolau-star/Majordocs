@@ -101,7 +101,7 @@ export const QuickActions = () => {
                         key={index}
                         onClick={action.onClick}
                         className={cn(
-                            "group relative flex items-center p-4 md:p-6 h-20 md:h-32 rounded-2xl md:rounded-3xl transition-all duration-300",
+                            "group relative flex items-center p-3 md:p-6 h-16 md:h-32 rounded-2xl md:rounded-3xl transition-all duration-300",
                             "bg-white dark:bg-slate-800 border",
                             "border-slate-100 dark:border-slate-700/50",
                             action.border.replace("border-", "border-").replace("/50", "/30"),
@@ -116,7 +116,7 @@ export const QuickActions = () => {
                         )} />
 
                         <div className={cn(
-                            "h-10 w-10 md:h-14 md:w-14 rounded-xl md:rounded-2xl flex items-center justify-center mr-3 md:mr-5 transition-transform duration-300 group-hover:scale-110",
+                            "h-9 w-9 md:h-14 md:w-14 rounded-xl md:rounded-2xl flex items-center justify-center mr-3 md:mr-5 transition-transform duration-300 group-hover:scale-110",
                             "bg-white/80 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10",
                             action.shadow
                         )}>
