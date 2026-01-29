@@ -121,18 +121,18 @@ export const PrimaryKPIs = () => {
                     <Link href={card.href} key={index} className="block group">
                         <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 md:p-5 relative overflow-hidden shadow-lg border border-slate-100 dark:border-slate-700/50 hover:-translate-y-1 transition-transform duration-300 cursor-pointer">
                             <div className="relative z-10">
-                                <div className="flex justify-between items-start mb-2">
+                                <div className="flex flex-col items-center justify-center text-center mb-4">
+                                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded mb-2", card.badgeColor)}>{card.symbol}</span>
                                     <div>
                                         <p className="text-slate-400 text-[10px] font-bold tracking-widest uppercase">{card.title}</p>
                                         <h3 className="text-lg font-bold text-slate-800 dark:text-white mt-0.5 group-hover:text-primary transition-colors">{card.subtitle}</h3>
                                     </div>
-                                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded", card.badgeColor)}>{card.symbol}</span>
                                 </div>
-                                <div className="mt-2 mb-4 md:mb-10">
-                                    <h2 className="text-3xl font-bold text-slate-800 dark:text-white">
+                                <div className="mt-2 mb-4 md:mb-10 flex flex-col items-center">
+                                    <h2 className="text-3xl font-bold text-slate-800 dark:text-white text-center">
                                         {formatCurrency(card.value)}
                                     </h2>
-                                    <div className="flex items-center gap-2 mt-1">
+                                    <div className="flex items-center justify-center gap-2 mt-1">
                                         <span className={cn("flex items-center text-xs font-bold gap-1", trendColor)}>
                                             <TrendIcon className="h-3 w-3" />
                                             {trendText}
@@ -140,7 +140,7 @@ export const PrimaryKPIs = () => {
                                         <span className="text-slate-400 text-[10px]">{card.trendLabel}</span>
                                     </div>
                                 </div>
-                                <div className="flex justify-end items-center mt-2">
+                                <div className="flex justify-center items-center mt-2">
                                     <div className="bg-white/20 backdrop-blur-sm border border-white/40 dark:border-white/10 group-hover:bg-primary group-hover:text-white text-slate-500 dark:text-white shadow-lg rounded-full w-8 h-8 flex items-center justify-center transition-all">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                                     </div>
