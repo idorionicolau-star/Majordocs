@@ -141,7 +141,7 @@ export const PrimaryKPIs = () => {
                                     </div>
                                 </div>
                                 <div className="flex justify-center items-center mt-2">
-                                    <div className="bg-white/20 backdrop-blur-sm border border-white/40 dark:border-white/10 group-hover:bg-primary group-hover:text-white text-slate-500 dark:text-white shadow-lg rounded-full w-8 h-8 flex items-center justify-center transition-all">
+                                    <div className="bg-white/20 md:backdrop-blur-sm border border-white/40 dark:border-white/10 group-hover:bg-primary group-hover:text-white text-slate-500 dark:text-white shadow-lg rounded-full w-8 h-8 flex items-center justify-center transition-all">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                                     </div>
                                 </div>

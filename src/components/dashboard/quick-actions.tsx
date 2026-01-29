@@ -133,7 +133,7 @@ export const QuickActions = () => {
                         </div>
 
                         {/* Shine Effect */}
-                        <div className="absolute inset-0 rounded-2xl md:rounded-3xl overflow-hidden pointer-events-none">
+                        <div className="hidden md:block absolute inset-0 rounded-2xl md:rounded-3xl overflow-hidden pointer-events-none">
                             <div className="absolute top-0 left-[-100%] w-[50%] h-full bg-gradient-to-r from-transparent via-white/40 dark:via-white/10 to-transparent skew-x-12 group-hover:left-[200%] transition-all duration-1000 ease-in-out" />
                         </div>
                     </button>
