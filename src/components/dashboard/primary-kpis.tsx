@@ -110,7 +110,7 @@ export const PrimaryKPIs = () => {
     ];
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
             {cards.map((card, index) => {
                 const isPositive = (card.trend || 0) >= 0;
                 const TrendIcon = card.trend === null ? Minus : (isPositive ? TrendingUp : TrendingDown);
@@ -119,35 +119,35 @@ export const PrimaryKPIs = () => {
 
                 return (
                     <Link href={card.href} key={index} className="block group">
-                        <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 relative overflow-hidden shadow-lg border border-slate-100 dark:border-slate-700/50 hover:-translate-y-1 transition-transform duration-300 cursor-pointer">
+                        <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 relative overflow-hidden shadow-lg border border-slate-100 dark:border-slate-700/50 hover:-translate-y-1 transition-transform duration-300 cursor-pointer">
                             <div className="relative z-10">
                                 <div className="flex justify-between items-start mb-2">
                                     <div>
-                                        <p className="text-slate-400 text-xs font-bold tracking-widest uppercase">{card.title}</p>
-                                        <h3 className="text-xl font-bold text-slate-800 dark:text-white mt-1 group-hover:text-primary transition-colors">{card.subtitle}</h3>
+                                        <p className="text-slate-400 text-[10px] font-bold tracking-widest uppercase">{card.title}</p>
+                                        <h3 className="text-lg font-bold text-slate-800 dark:text-white mt-0.5 group-hover:text-primary transition-colors">{card.subtitle}</h3>
                                     </div>
-                                    <span className={cn("text-xs font-bold px-2 py-1 rounded", card.badgeColor)}>{card.symbol}</span>
+                                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded", card.badgeColor)}>{card.symbol}</span>
                                 </div>
-                                <div className="mt-4 mb-16">
-                                    <h2 className="text-4xl font-bold text-slate-800 dark:text-white">
+                                <div className="mt-2 mb-10">
+                                    <h2 className="text-3xl font-bold text-slate-800 dark:text-white">
                                         {formatCurrency(card.value)}
                                     </h2>
                                     <div className="flex items-center gap-2 mt-1">
-                                        <span className={cn("flex items-center text-sm font-bold gap-1", trendColor)}>
-                                            <TrendIcon className="h-4 w-4" />
+                                        <span className={cn("flex items-center text-xs font-bold gap-1", trendColor)}>
+                                            <TrendIcon className="h-3 w-3" />
                                             {trendText}
                                         </span>
-                                        <span className="text-slate-400 text-xs">{card.trendLabel}</span>
+                                        <span className="text-slate-400 text-[10px]">{card.trendLabel}</span>
                                     </div>
                                 </div>
-                                <div className="flex justify-between items-center mt-4">
-                                    <div className="text-slate-500 dark:text-slate-400 text-xs font-medium">Atualizado agora</div>
-                                    <div className="bg-white/20 backdrop-blur-sm border border-white/40 dark:border-white/10 group-hover:bg-primary group-hover:text-white text-slate-500 dark:text-white shadow-lg rounded-full w-10 h-10 flex items-center justify-center transition-all">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+                                <div className="flex justify-between items-center mt-2">
+                                    <div className="text-slate-500 dark:text-slate-400 text-[10px] font-medium">Atualizado agora</div>
+                                    <div className="bg-white/20 backdrop-blur-sm border border-white/40 dark:border-white/10 group-hover:bg-primary group-hover:text-white text-slate-500 dark:text-white shadow-lg rounded-full w-8 h-8 flex items-center justify-center transition-all">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                                     </div>
                                 </div>
                             </div>
-                            <div className="absolute bottom-0 left-0 w-full h-40 opacity-90 transition-opacity duration-300 group-hover:opacity-100">
+                            <div className="absolute bottom-0 left-0 w-full h-32 opacity-90 transition-opacity duration-300 group-hover:opacity-100">
                                 <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 1440 320">
                                     <defs>
                                         <linearGradient id={card.gradientId} x1="0%" x2="0%" y1="0%" y2="100%">
