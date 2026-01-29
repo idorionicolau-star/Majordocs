@@ -94,47 +94,46 @@ export const QuickActions = () => {
 
     return (
         <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6 mb-8">
                 {actions.filter(a => a.show).map((action, index) => (
                     <button
                         key={index}
                         onClick={action.onClick}
                         className={cn(
-                            "group relative flex items-center p-6 h-32 rounded-3xl transition-all duration-300",
-                            "bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border",
-                            "border-white/50 dark:border-slate-700/50",
-                            action.border.replace("border-", "border-").replace("/50", "/30"), // Adjust opacity helper if needed or just use consistent border
-                            // For border, we might want specific colors still but ensure they work on light
-                            // actually action.border is specific color e.g. border-cyan-500/50. This is fine.
+                            "group relative flex items-center p-4 md:p-6 h-20 md:h-32 rounded-2xl md:rounded-3xl transition-all duration-300",
+                            "bg-white dark:bg-slate-800 border",
+                            "border-slate-100 dark:border-slate-700/50",
+                            action.border.replace("border-", "border-").replace("/50", "/30"),
                             action.shadow,
                             "hover:scale-[1.02] hover:-translate-y-1"
                         )}
                         style={{ borderColor: '' }} // Override if needed
                     >
                         <div className={cn(
-                            "absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br",
+                            "absolute inset-0 rounded-2xl md:rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br",
                             action.gradient
                         )} />
 
                         <div className={cn(
-                            "h-14 w-14 rounded-2xl flex items-center justify-center mr-5 transition-transform duration-300 group-hover:scale-110",
+                            "h-10 w-10 md:h-14 md:w-14 rounded-xl md:rounded-2xl flex items-center justify-center mr-3 md:mr-5 transition-transform duration-300 group-hover:scale-110",
                             "bg-white/80 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10",
                             action.shadow
                         )}>
-                            <action.icon className={cn("h-7 w-7", action.iconColor)} />
+                            <action.icon className={cn("h-5 w-5 md:h-7 md:w-7", action.iconColor)} />
                         </div>
 
                         <div className="flex flex-col items-start z-10">
-                            <span className="text-xl font-bold text-foreground tracking-wide group-hover:text-glow-blue transition-all">
+                            <span className="text-sm md:text-xl font-bold text-foreground tracking-wide group-hover:text-glow-blue transition-all">
                                 {action.title}
                             </span>
-                            <span className="text-xs text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
+                            <span className="text-[10px] md:text-sm text-muted-foreground mt-0.5 md:mt-1 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 hidden md:inline">
                                 Clique para acessar
                             </span>
                         </div>
 
                         {/* Shine Effect */}
-                        <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                        <div className="absolute inset-0 rounded-2xl md:rounded-3xl overflow-hidden pointer-events-none">
                             <div className="absolute top-0 left-[-100%] w-[50%] h-full bg-gradient-to-r from-transparent via-white/40 dark:via-white/10 to-transparent skew-x-12 group-hover:left-[200%] transition-all duration-1000 ease-in-out" />
                         </div>
                     </button>

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,9 +7,8 @@
 @layer base {
   :root {
     --background: 210 40% 98%;
-    /* Light gray/white background */
+    /* Slate 50 */
     --foreground: 222 47% 11%;
-    /* Dark text */
 
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
@@ -15,9 +16,9 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 221 83% 53%;
-    /* Blue */
-    --primary-foreground: 210 40% 98%;
+    --primary: 151 55% 42%;
+    /* Emerald 600 */
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222 47% 11%;
@@ -33,79 +34,81 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221 83% 53%;
+    --ring: 151 55% 42%;
 
-    --radius: 0.5rem;
+    --radius: 1rem;
+
+    /* Sales Chart - Neon Green */
+    --sales-stroke: #10b981;
+    /* Emerald 500 */
+    --sales-gradient-start: #34d399;
+    /* Emerald 400 */
+    --sales-gradient-end: #059669;
+    /* Emerald 600 */
 
     /* Chart Colors - Light Mode */
-    --chart-1: 190 75% 38%;
-    --chart-2: 152 63% 31%;
-    --chart-3: 35 92% 55%;
+    --chart-1: 160 84% 39%;
+    /* Emerald */
+    --chart-2: 217 91% 60%;
+    /* Blue */
+    --chart-3: 271 81% 56%;
+    /* Purple */
     --chart-4: 0 84% 60%;
     --chart-5: 258 75% 65%;
-
-    --bg-gradient: radial-gradient(circle at 50% 0%, #f1f5f9 0%, #e2e8f0 70%);
-
-    /* Sales Chart - Light Mode (Neon Blue request) */
-    --sales-stroke: #06b6d4;
-    /* Cyan 500 */
-    --sales-gradient-start: #0ea5e9;
-    /* Sky 500 */
-    --sales-gradient-end: #3b82f6;
-    /* Blue 500 */
   }
 
   .dark {
-    --background: 222 47% 8%;
+    --background: 222 47% 11%;
+    /* Slate 900 */
     --foreground: 210 40% 98%;
 
-    --card: 224 71% 4%;
+    --card: 215 28% 17%;
+    /* Slate 800 */
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 8%;
+    --popover: 215 28% 17%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217 91% 60%;
+    --primary: 151 55% 42%;
+    /* Emerald 500 */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 223 47% 11%;
+    --muted: 215 28% 17%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 199 89% 48%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 151 55% 42%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 345 80% 50%;
+    --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217 33% 25%;
+    --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 217 91% 60%;
+    --ring: 151 55% 42%;
 
-    /* Neon Chart Colors */
-    --chart-1: 217 91% 60%;
-    --chart-2: 180 100% 50%;
-    --chart-3: 280 80% 60%;
-    --chart-4: 340 80% 60%;
-    --chart-5: 160 80% 60%;
+    /* Sales Chart - Neon Green (Dark Mode) */
+    --sales-stroke: #4ade80;
+    /* Green 400 (Brighter for Dark Mode) */
+    --sales-gradient-start: #4ade80;
+    --sales-gradient-end: #10b981;
 
-    --bg-gradient: radial-gradient(circle at 50% 0%, #172033 0%, #030712 100%);
-
-    /* Sales Chart - Dark Mode */
-    --sales-stroke: #22d3ee;
-    /* Cyan 400 */
-    --sales-gradient-start: #06b6d4;
-    /* Cyan 500 */
-    --sales-gradient-end: #3b82f6;
-    /* Blue 500 */
+    /* Chart Colors - Dark Mode */
+    --chart-1: 151 55% 42%;
+    /* Emerald */
+    --chart-2: 217 91% 60%;
+    --chart-3: 271 81% 56%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 258 75% 65%;
   }
 }
 
 @layer base {
   html {
-    @apply text-[90%];
+    @apply text-[95%];
+    font-family: 'Outfit', sans-serif;
   }
 
   * {
@@ -113,12 +116,8 @@
   }
 
   body {
-    @apply bg-background text-foreground text-base transition-colors duration-500;
-    background-image: var(--bg-gradient);
-    background-attachment: fixed;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    @apply bg-background text-foreground text-sm transition-colors duration-300 antialiased h-screen overflow-hidden selection:bg-primary selection:text-white;
+    font-family: 'Outfit', sans-serif;
   }
 
   h1,
@@ -127,47 +126,56 @@
   h4,
   h5,
   h6 {
-    @apply font-headline;
+    @apply font-bold tracking-tight font-sans;
   }
 }
 
 @layer components {
 
-  /* Dynamic Glassmorphism Cards */
+  /* Reference .glass utility */
+  .glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .dark .glass {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* Legacy glass utilities updated for compatibility */
   .glass-card {
-    @apply bg-white dark:bg-slate-900/40 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 shadow-sm dark:shadow-glass;
+    @apply bg-white dark:bg-slate-800 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 shadow-sm;
+  }
+
+  .dark .glass-card {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.05);
   }
 
   .glass-panel {
-    @apply bg-white/60 dark:bg-slate-950/30 backdrop-blur-lg border border-white/60 dark:border-slate-800/50 shadow-sm dark:shadow-none;
-  }
-
-  /* Dialogs / Modals with Glassmorphism Overlay */
-  .dialog-overlay {
-    @apply bg-slate-950/20 dark:bg-slate-950/80 backdrop-blur-sm;
-  }
-
-  .toast {
-    @apply shadow-lg bg-white/90 dark:bg-slate-900/90 backdrop-blur text-slate-900 dark:text-white border-slate-200 dark:border-slate-800;
+    @apply bg-white/60 dark:bg-slate-900/50 backdrop-blur-lg border border-white/60 dark:border-slate-700/50 shadow-sm;
   }
 
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted-foreground)) transparent;
   }
-}
 
-@layer utilities {
-  body {
-    overflow-x: hidden;
+  ::-webkit-scrollbar {
+    width: 8px;
   }
 
-  .text-glow-blue {
-    @apply text-blue-600 dark:text-blue-400;
-    text-shadow: 0 0 10px rgba(37, 99, 235, 0.2);
+  ::-webkit-scrollbar-track {
+    background: transparent;
   }
 
-  .dark .text-glow-blue {
-    text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  ::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
   }
 }

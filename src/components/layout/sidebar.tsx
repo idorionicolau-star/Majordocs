@@ -1,5 +1,5 @@
 
-'use client';
+"use client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -9,18 +9,12 @@ import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import type { ModulePermission } from "@/lib/types";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-interface DesktopSidebarProps {
-    isCollapsed: boolean;
-    onToggleCollapse: () => void;
-}
-
-export function Sidebar({ isCollapsed, onToggleCollapse }: DesktopSidebarProps) {
+export function Sidebar() {
     const pathname = usePathname();
-    const { canView, companyData } = useContext(InventoryContext) || { canView: () => false, companyData: null };
+    const { canView, companyData, user } = useContext(InventoryContext) || { canView: () => false, companyData: null, user: null };
+
     const navItems = mainNavItems.filter(item => {
         if (!canView(item.id as ModulePermission)) return false;
         if (item.isSubItem) return false;
@@ -31,30 +25,16 @@ export function Sidebar({ isCollapsed, onToggleCollapse }: DesktopSidebarProps) 
     });
 
     return (
-        <aside className={cn(
-            "hidden md:flex flex-col fixed inset-y-4 left-4 z-40 h-[calc(100vh-2rem)] rounded-2xl glass-panel transition-all duration-300 ease-in-out border-white/5 dark text-foreground",
-            isCollapsed ? "w-20" : "w-72"
-        )}>
-            <div className="flex h-20 items-center justify-center px-4 relative">
-                {/* Decorative Glow */}
-                <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent opacity-50" />
-
-                <Link href="/dashboard" className="flex items-center gap-3 group">
-                    <div className="relative">
-                        <div className="absolute -inset-1 bg-cyan-500/20 blur-md rounded-full group-hover:bg-cyan-500/40 transition-all duration-500" />
-                        <Image src="/logo.svg" alt="MajorStockX Logo" width={32} height={32} className="relative z-10" />
-                    </div>
-                    {!isCollapsed && (
-                        <div className="flex flex-col">
-                            <span className="text-xl font-headline font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-                                MajorStockX
-                            </span>
-                        </div>
-                    )}
+        <aside className="hidden md:flex flex-col items-center py-6 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 z-50 fixed inset-y-0 left-0 w-24 h-screen transition-colors duration-300">
+            {/* Logo Area */}
+            <div className="h-14 w-14 bg-primary rounded-2xl flex items-center justify-center shadow-neon mb-10 cursor-pointer hover:scale-105 transition-transform group">
+                <Link href="/dashboard" className="flex items-center justify-center w-full h-full">
+                    <span className="text-white font-bold text-2xl font-headline">M</span>
                 </Link>
             </div>
 
-            <nav className="flex-1 space-y-2 p-3 overflow-y-auto scrollbar-thin">
+            {/* Navigation */}
+            <nav className="flex-1 flex flex-col gap-8 w-full items-center overflow-y-auto scrollbar-none">
                 <TooltipProvider delayDuration={0}>
                     {navItems.map(item => {
                         const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
@@ -65,63 +45,45 @@ export function Sidebar({ isCollapsed, onToggleCollapse }: DesktopSidebarProps) 
                                         href={item.href}
                                         onClick={() => window.dispatchEvent(new CustomEvent('navigation-start'))}
                                         className={cn(
-                                            "flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all duration-300 group relative overflow-hidden",
-                                            "hover:text-cyan-400 hover:bg-white/5",
-                                            isActive && "text-white bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.15)]",
-                                            isCollapsed && "justify-center px-2"
+                                            "p-3 rounded-xl transition-all duration-300 group relative flex items-center justify-center",
+                                            isActive
+                                                ? "bg-slate-100 dark:bg-slate-800 text-primary shadow-sm"
+                                                : "text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/50"
                                         )}
                                     >
-                                        {isActive && (
-                                            <div className="absolute inset-y-0 left-0 w-1 bg-cyan-500 shadow-[0_0_10px_#06b6d4] rounded-full" />
-                                        )}
-
                                         <item.icon className={cn(
-                                            "h-5 w-5 transition-transform duration-300 group-hover:scale-110",
-                                            isActive ? "text-cyan-400" : "group-hover:text-cyan-400"
+                                            "h-7 w-7 transition-transform duration-300",
+                                            isActive ? "text-primary" : "group-hover:text-primary"
                                         )} />
 
-                                        {!isCollapsed && (
-                                            <span className="flex-1 font-medium tracking-wide">{item.title}</span>
-                                        )}
-
-                                        {!isCollapsed && isActive && (
-                                            <div className="absolute right-2 h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_5px_#22d3ee]" />
+                                        {isActive && (
+                                            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1.5 h-8 w-1 bg-primary rounded-l-full" />
                                         )}
                                     </Link>
                                 </TooltipTrigger>
-                                {isCollapsed && (
-                                    <TooltipContent side="right" className="glass-panel text-white border-white/10">
-                                        <p>{item.title}</p>
-                                    </TooltipContent>
-                                )}
+                                <TooltipContent side="right" className="bg-slate-800 text-white border-slate-700 ml-2 font-medium">
+                                    <p>{item.title}</p>
+                                </TooltipContent>
                             </Tooltip>
                         )
                     })}
                 </TooltipProvider>
             </nav>
 
-            <div className="p-4 mt-auto">
-                <div className={cn(
-                    "rounded-xl bg-gradient-to-br from-purple-500/10 to-blue-600/10 border border-white/5 p-4 mb-4 backdrop-blur-sm",
-                    isCollapsed ? "hidden" : "block"
-                )}>
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse" />
-                        <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Sistema Online</span>
+            {/* Bottom Actions / User */}
+            <div className="flex flex-col gap-6 mt-auto items-center pb-4">
+                {/* Settings / Profile placeholder if needed, matching reference style */}
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 p-[2px] cursor-pointer hover:scale-105 transition-transform">
+                    <div className="rounded-full w-full h-full bg-white dark:bg-slate-900 p-[1px] overflow-hidden">
+                        {user?.profilePictureUrl ? (
+                            <Image src={user.profilePictureUrl} alt="User" width={40} height={40} className="w-full h-full object-cover rounded-full" />
+                        ) : (
+                            <div className="w-full h-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500">
+                                {user?.username?.charAt(0) || 'U'}
+                            </div>
+                        )}
                     </div>
-                    <p className="text-[10px] text-slate-400 leading-relaxed">
-                        Versão 2.4.0 <br />
-                        <span className="opacity-50">Stable Release</span>
-                    </p>
                 </div>
-
-                <Button
-                    variant="ghost"
-                    onClick={onToggleCollapse}
-                    className="w-full justify-center h-10 hover:bg-white/5 hover:text-cyan-400 transition-colors"
-                >
-                    <ChevronLeft className={cn("h-5 w-5 transition-transform duration-300", isCollapsed && "rotate-180")} />
-                </Button>
             </div>
         </aside>
     );

@@ -2,7 +2,6 @@
 'use client';
 
 import Link from "next/link";
-import Image from "next/image";
 import { useContext } from "react";
 import { mainNavItems } from "@/lib/data";
 import { cn } from "@/lib/utils";
@@ -34,14 +33,16 @@ export function MobileNav({ onLinkClick }: MobileNavProps) {
     });
 
     return (
-        <aside className="flex flex-col h-full bg-background">
-            <div className="flex h-16 items-center justify-center border-b px-4">
-                <Link href="/dashboard" className="flex items-center gap-2.5 font-semibold" onClick={handleLinkClick}>
-                    <Image src="/logo.svg" alt="MajorStockX Logo" width={28} height={28} />
-                    <span className="text-xl font-headline font-bold">MajorStockX</span>
+        <aside className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+            <div className="flex h-24 items-center justify-center border-b border-slate-100 dark:border-slate-800/50">
+                <Link href="/dashboard" className="flex items-center justify-center" onClick={handleLinkClick}>
+                    <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center shadow-neon">
+                        <span className="text-white font-bold text-xl font-headline">M</span>
+                    </div>
+                    <span className="ml-3 text-xl font-headline font-bold text-slate-800 dark:text-white">MajorStockX</span>
                 </Link>
             </div>
-            <nav className="flex-1 space-y-1 p-2 overflow-y-auto">
+            <nav className="flex-1 flex flex-col gap-2 p-4 overflow-y-auto">
                 {navItems.map(item => {
                     const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
                     return (
@@ -50,12 +51,17 @@ export function MobileNav({ onLinkClick }: MobileNavProps) {
                             href={item.href}
                             onClick={handleLinkClick}
                             className={cn(
-                                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted text-base",
-                                isActive && "bg-muted text-primary font-bold"
+                                "flex items-center gap-4 rounded-xl px-4 py-3.5 transition-all text-base font-medium",
+                                isActive
+                                    ? "bg-slate-100 dark:bg-slate-800 text-primary shadow-sm"
+                                    : "text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/50"
                             )}
                         >
-                            <item.icon className="h-5 w-5" />
+                            <item.icon className={cn("h-6 w-6", isActive ? "text-primary" : "text-slate-400 group-hover:text-primary")} />
                             <span className="flex-1">{item.title}</span>
+                            {isActive && (
+                                <div className="h-2 w-2 rounded-full bg-primary shadow-neon-emerald" />
+                            )}
                         </Link>
                     )
                 })}

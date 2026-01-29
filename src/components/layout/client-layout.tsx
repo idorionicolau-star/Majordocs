@@ -31,7 +31,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const authContext = React.useContext(InventoryContext);
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
-  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [openCommandMenu, setOpenCommandMenu] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
@@ -94,14 +93,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         <NavigationObserver onNavigate={handleNavigationTransition} />
       </Suspense>
       <div className="flex min-h-screen w-full bg-transparent">
-        <Sidebar
-          isCollapsed={isSidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
-        />
-        <div className={cn(
-          "flex flex-col flex-1 transition-all duration-300 ease-in-out",
-          isSidebarCollapsed ? "md:ml-24" : "md:ml-80"
-        )}>
+        <Sidebar />
+        <div className="flex flex-col flex-1 h-screen overflow-hidden transition-all duration-300 ease-in-out md:ml-24">
           <Header onSearchClick={() => setOpenCommandMenu(true)} />
           <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto main-content">
             <Suspense fallback={

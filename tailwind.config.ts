@@ -11,12 +11,21 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['var(--font-body)', 'sans-serif'],
-        headline: ['var(--font-headline)', 'sans-serif'],
+        sans: ['Outfit', 'sans-serif'],
+        body: ['Outfit', 'sans-serif'],
+        headline: ['Outfit', 'sans-serif'],
       },
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
+        "background-light": "#f1f5f9", // Slate 100
+        "background-dark": "#0f172a", // Slate 900
+        "surface-light": "#ffffff",
+        "surface-dark": "#1e293b", // Slate 800
+        "accent-purple": "#8b5cf6",
+        "accent-blue": "#0ea5e9",
+        "accent-green": "#10b981",
+        "accent-neon": "#4ade80",
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
@@ -57,7 +66,7 @@ export default {
         },
       },
       borderRadius: {
-        '3xl': 'calc(var(--radius) + 16px)',
+        '3xl': '1.5rem',
         '2xl': 'calc(var(--radius) + 8px)',
         xl: 'calc(var(--radius) + 4px)',
         lg: 'var(--radius)',
@@ -87,9 +96,6 @@ export default {
         'accordion-up': {
           from: {
             height: 'var(--radix-accordion-content-height)',
-          },
-          to: {
-            height: '0',
           },
         },
         'fade-in-out': {
