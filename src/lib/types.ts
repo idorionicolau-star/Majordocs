@@ -277,7 +277,7 @@ export interface InventoryContextType {
     productName: string,
     quantity: number,
     locationId?: string
-  ) => void;
+  ) => Promise<void>;
   updateCompany: (details: Partial<Company>) => Promise<void>;
   addSale: (newSaleData: Omit<Sale, 'id' | 'guideNumber'>, reserveStock?: boolean) => void;
   confirmSalePickup: (sale: Sale) => void;

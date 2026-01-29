@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -28,26 +28,26 @@ export function MonthlySalesChart() {
     if (!sales) return [];
 
     const now = new Date();
-    
+
     if (period === '30d') {
-        const startDate = subDays(now, 29); // 30 days including today
-        const endDate = now;
-        const dayInterval = eachDayOfInterval({ start: startDate, end: endDate });
+      const startDate = subDays(now, 29); // 30 days including today
+      const endDate = now;
+      const dayInterval = eachDayOfInterval({ start: startDate, end: endDate });
 
-        return dayInterval.map(day => {
-            const daySales = sales.filter(s => {
-                const saleDate = new Date(s.date);
-                return saleDate.getFullYear() === day.getFullYear() && 
-                       saleDate.getMonth() === day.getMonth() && 
-                       saleDate.getDate() === day.getDate();
-            }).reduce((sum, s) => sum + s.totalValue, 0);
+      return dayInterval.map(day => {
+        const daySales = sales.filter(s => {
+          const saleDate = new Date(s.date);
+          return saleDate.getFullYear() === day.getFullYear() &&
+            saleDate.getMonth() === day.getMonth() &&
+            saleDate.getDate() === day.getDate();
+        }).reduce((sum, s) => sum + s.totalValue, 0);
 
-            const dayName = format(day, 'dd/MMM', { locale: pt });
-            return {
-                name: dayName,
-                vendas: daySales,
-            };
-        });
+        const dayName = format(day, 'dd/MMM', { locale: pt });
+        return {
+          name: dayName,
+          vendas: daySales,
+        };
+      });
     }
 
     let startDate: Date, endDate: Date;
@@ -68,22 +68,22 @@ export function MonthlySalesChart() {
         endDate = now;
         break;
     }
-    
+
     startDate = startOfMonth(startDate);
 
     const monthInterval = eachMonthOfInterval({ start: startDate, end: endDate });
-    
-    const salesByMonth = monthInterval.map(monthStart => {
-        const monthSales = sales.filter(s => {
-            const saleDate = new Date(s.date);
-            return saleDate.getFullYear() === monthStart.getFullYear() && saleDate.getMonth() === monthStart.getMonth();
-        }).reduce((sum, s) => sum + s.totalValue, 0);
 
-        const monthName = format(monthStart, 'MMM', { locale: pt });
-        return {
-            name: monthName.charAt(0).toUpperCase() + monthName.slice(1).replace('.', ''),
-            vendas: monthSales,
-        };
+    const salesByMonth = monthInterval.map(monthStart => {
+      const monthSales = sales.filter(s => {
+        const saleDate = new Date(s.date);
+        return saleDate.getFullYear() === monthStart.getFullYear() && saleDate.getMonth() === monthStart.getMonth();
+      }).reduce((sum, s) => sum + s.totalValue, 0);
+
+      const monthName = format(monthStart, 'MMM', { locale: pt });
+      return {
+        name: monthName.charAt(0).toUpperCase() + monthName.slice(1).replace('.', ''),
+        vendas: monthSales,
+      };
     });
 
     return salesByMonth;
@@ -100,76 +100,84 @@ export function MonthlySalesChart() {
 
   if (loading) {
     return (
-      <Card className="bg-white/70 dark:bg-[#0f172a]/50">
+      <Card className="bg-transparent border-none">
         <CardHeader>
-          <Skeleton className="h-8 w-2/3" />
-          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-8 w-2/3 bg-slate-800" />
+          <Skeleton className="h-4 w-1/2 bg-slate-800" />
         </CardHeader>
         <CardContent className="p-6">
-          <Skeleton className="h-[300px] w-full" />
+          <Skeleton className="h-[300px] w-full bg-slate-800" />
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="bg-white/70 dark:bg-[#0f172a]/50 backdrop-blur-lg border-white dark:border-slate-800 shadow-sm shadow-slate-200/50 dark:shadow-none">
-      <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <Card className="glass-panel border-slate-200/50 dark:border-slate-800/50 shadow-none h-full">
+      <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-0">
         <div>
-            <CardTitle>Vendas ao Longo do Tempo</CardTitle>
-            <CardDescription>Um resumo da sua receita de vendas.</CardDescription>
+          <CardTitle className="text-xl text-foreground font-medium tracking-wide">Vendas ao Longo do Tempo</CardTitle>
         </div>
         <Select value={period} onValueChange={(value: Period) => setPeriod(value)}>
-            <SelectTrigger className="w-full md:w-[220px]">
-                <SelectValue placeholder="Período" />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value="30d">Diário (Últimos 30 dias)</SelectItem>
-                <SelectItem value="6m">Mensal (Últimos 6 Meses)</SelectItem>
-                <SelectItem value="this_year">Mensal (Este Ano)</SelectItem>
-                <SelectItem value="last_year">Mensal (Ano Passado)</SelectItem>
-            </SelectContent>
+          <SelectTrigger className="w-full md:w-[180px] bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 text-foreground">
+            <SelectValue placeholder="Período" />
+          </SelectTrigger>
+          <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-foreground">
+            <SelectItem value="30d">Diário (30 dias)</SelectItem>
+            <SelectItem value="6m">Mensal (6 Meses)</SelectItem>
+            <SelectItem value="this_year">Este Ano</SelectItem>
+            <SelectItem value="last_year">Ano Passado</SelectItem>
+          </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="h-[300px] w-full">
+      <CardContent className="pl-0 pr-6 pt-6">
+        <ChartContainer config={chartConfig} className="h-[350px] w-full">
           <ResponsiveContainer>
-            <AreaChart data={chartData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="fillVendas" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-vendas)" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="var(--color-vendas)" stopOpacity={0.05}/>
+                  <stop offset="5%" stopColor="var(--sales-gradient-start)" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="var(--sales-gradient-end)" stopOpacity={0.1} />
                 </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-800" />
+              <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-800/60" />
               <XAxis
                 dataKey="name"
                 tickLine={false}
                 axisLine={false}
-                tickMargin={8}
+                tickMargin={12}
                 fontSize={12}
+                stroke="currentColor"
+                className="text-muted-foreground"
               />
               <YAxis
-                tickFormatter={(value) => formatCurrency(value as number).replace(",00", "").replace(/\s?MZN/,"")}
+                tickFormatter={(value) => formatCurrency(value as number).replace(",00", "").replace(/\s?MZN/, "")}
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                width={80}
+                width={70}
+                fontSize={12}
+                stroke="currentColor"
+                className="text-muted-foreground"
               />
               <Tooltip
-                cursor={true}
-                content={<ChartTooltipContent 
-                    formatter={(value) => formatCurrency(value as number)}
-                    className="bg-background/80 dark:bg-slate-950/80 dark:border-slate-700/50 backdrop-blur-md rounded-xl" 
+                cursor={{ stroke: 'var(--sales-stroke)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                content={<ChartTooltipContent
+                  formatter={(value) => (
+                    <span className="font-bold" style={{ color: 'var(--sales-stroke)' }}>
+                      {formatCurrency(value as number)}
+                    </span>
+                  )}
+                  className="bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-700 backdrop-blur-xl rounded-xl shadow-xl p-4"
                 />}
               />
-              <Area 
-                type="monotone" 
-                dataKey="vendas" 
-                stroke="var(--color-vendas)" 
-                strokeWidth={2}
-                fillOpacity={1} 
-                fill="url(#fillVendas)" 
+              <Area
+                type="monotone"
+                dataKey="vendas"
+                stroke="var(--sales-stroke)"
+                strokeWidth={3}
+                fillOpacity={1}
+                fill="url(#fillVendas)"
               />
             </AreaChart>
           </ResponsiveContainer>

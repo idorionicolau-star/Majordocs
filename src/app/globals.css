@@ -1,115 +1,173 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 210 40% 98%; /* slate-50 */
-    --foreground: 222 47% 11%; /* slate-900 */
+    --background: 210 40% 98%;
+    /* Light gray/white background */
+    --foreground: 222 47% 11%;
+    /* Dark text */
 
-    --card: 0 0% 100%; /* white */
+    --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 222 47% 11%;
+    --primary: 221 83% 53%;
+    /* Blue */
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 215 20% 94%; /* slate-100 */
+    --secondary: 210 40% 96.1%;
     --secondary-foreground: 222 47% 11%;
 
-    --muted: 215 20% 90%; /* slate-200 */
-    --muted-foreground: 215 14% 34%; /* slate-600 */
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 215 20% 94%; /* slate-100 */
+    --accent: 210 40% 96.1%;
     --accent-foreground: 222 47% 11%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 215 20% 85%; /* slate-300 */
-    --input: 215 28% 93%; /* slate-100 */
-    --ring: 222 47% 11%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221 83% 53%;
 
-    /* Vertex Frost Chart Colors */
-    --chart-1: 190 75% 38%; /* cyan-600 */
-    --chart-2: 152 63% 31%; /* emerald-600 */
-    --chart-3: 35 92% 55%;  /* amber-500 */
-    --chart-4: 0 84% 60%;   /* destructive/rose-500 */
-    --chart-5: 258 75% 65%; /* violet-500 */
+    --radius: 0.5rem;
+
+    /* Chart Colors - Light Mode */
+    --chart-1: 190 75% 38%;
+    --chart-2: 152 63% 31%;
+    --chart-3: 35 92% 55%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 258 75% 65%;
+
+    --bg-gradient: radial-gradient(circle at 50% 0%, #f1f5f9 0%, #e2e8f0 70%);
+
+    /* Sales Chart - Light Mode (Neon Blue request) */
+    --sales-stroke: #06b6d4;
+    /* Cyan 500 */
+    --sales-gradient-start: #0ea5e9;
+    /* Sky 500 */
+    --sales-gradient-end: #3b82f6;
+    /* Blue 500 */
   }
 
   .dark {
     --background: 222 47% 8%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 11%;
+
+    --card: 224 71% 4%;
     --card-foreground: 210 40% 98%;
+
     --popover: 222 47% 8%;
     --popover-foreground: 210 40% 98%;
-    --primary: 199 91% 60%;
-    --primary-foreground: 222 47% 11%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
+
+    --muted: 223 47% 11%;
     --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
+
+    --accent: 199 89% 48%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 350 90% 60%;
+
+    --destructive: 345 80% 50%;
     --destructive-foreground: 210 40% 98%;
-    --border: 222 47% 21%;
+
+    --border: 217 33% 25%;
     --input: 217 33% 17%;
-    --ring: 199 91% 60%;
-    --chart-1: 199 91% 60%;
-    --chart-2: 145 63% 59%;
-    --chart-3: 45 96% 57%;
-    --chart-4: 350 90% 60%;
-    --chart-5: 258 75% 70%;
+    --ring: 217 91% 60%;
+
+    /* Neon Chart Colors */
+    --chart-1: 217 91% 60%;
+    --chart-2: 180 100% 50%;
+    --chart-3: 280 80% 60%;
+    --chart-4: 340 80% 60%;
+    --chart-5: 160 80% 60%;
+
+    --bg-gradient: radial-gradient(circle at 50% 0%, #172033 0%, #030712 100%);
+
+    /* Sales Chart - Dark Mode */
+    --sales-stroke: #22d3ee;
+    /* Cyan 400 */
+    --sales-gradient-start: #06b6d4;
+    /* Cyan 500 */
+    --sales-gradient-end: #3b82f6;
+    /* Blue 500 */
   }
 }
 
 @layer base {
   html {
-    @apply text-[78%];
+    @apply text-[90%];
   }
+
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground text-base transition-colors duration-500;
+    background-image: var(--bg-gradient);
+    background-attachment: fixed;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-headline;
   }
 }
 
 @layer components {
+
+  /* Dynamic Glassmorphism Cards */
+  .glass-card {
+    @apply bg-white dark:bg-slate-900/40 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 shadow-sm dark:shadow-glass;
+  }
+
+  .glass-panel {
+    @apply bg-white/60 dark:bg-slate-950/30 backdrop-blur-lg border border-white/60 dark:border-slate-800/50 shadow-sm dark:shadow-none;
+  }
+
   /* Dialogs / Modals with Glassmorphism Overlay */
   .dialog-overlay {
-    @apply bg-background/80 backdrop-blur-sm;
+    @apply bg-slate-950/20 dark:bg-slate-950/80 backdrop-blur-sm;
   }
 
   .toast {
-    @apply shadow-lg;
+    @apply shadow-lg bg-white/90 dark:bg-slate-900/90 backdrop-blur text-slate-900 dark:text-white border-slate-200 dark:border-slate-800;
   }
 
   .scrollbar-thin {
-      scrollbar-width: thin;
-      scrollbar-color: hsl(var(--muted)) hsl(var(--background));
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground)) transparent;
   }
 }
 
 @layer utilities {
-    body {
-        overflow-x: hidden;
-    }
-    .bg-pattern {
-      background-image: radial-gradient(hsl(var(--muted)) 0.5px, transparent 0);
-      background-size: 10px 10px;
-    }
+  body {
+    overflow-x: hidden;
+  }
+
+  .text-glow-blue {
+    @apply text-blue-600 dark:text-blue-400;
+    text-shadow: 0 0 10px rgba(37, 99, 235, 0.2);
+  }
+
+  .dark .text-glow-blue {
+    text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  }
 }

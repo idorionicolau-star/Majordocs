@@ -577,193 +577,195 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        <div className="py-4 space-y-4">
-          <div className="flex flex-col sm:flex-row items-center gap-2">
-            <Input
-              placeholder="Filtrar por nome..."
-              value={nameFilter}
-              onChange={(event) => setNameFilter(event.target.value)}
-              className="w-full sm:max-w-xs shadow-sm h-12 text-sm"
-            />
-            <div className="flex w-full sm:w-auto items-center gap-2">
-              <DatePicker date={dateFilter} setDate={setDateFilter} />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between sm:w-auto h-12">
-                    <ChevronsUpDown className="mr-2 h-4 w-4" />
-                    <span>Ordenar por</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuRadioGroup value={sortBy} onValueChange={(value) => setSortBy(value as 'stock_desc' | 'stock_asc' | 'name_asc' | 'date_desc')}>
-                    <DropdownMenuRadioItem value="stock_desc">Maior Stock</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="stock_asc">Menor Stock</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="name_asc">Ordem Alfabética (A-Z)</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="date_desc">Atualizados Recentemente</DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t pt-4">
-            <div className="hidden md:flex items-center gap-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant={view === 'list' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('list')} className="h-12 w-12 hidden md:flex">
-                      <List className="h-5 w-5" />
+        <Card className="glass-panel p-4 mb-6 border-none">
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-center gap-2">
+              <Input
+                placeholder="Filtrar por nome..."
+                value={nameFilter}
+                onChange={(event) => setNameFilter(event.target.value)}
+                className="w-full sm:max-w-xs shadow-sm h-12 text-sm bg-background/50"
+              />
+              <div className="flex w-full sm:w-auto items-center gap-2">
+                <DatePicker date={dateFilter} setDate={setDateFilter} />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between sm:w-auto h-12 bg-background/50">
+                      <ChevronsUpDown className="mr-2 h-4 w-4" />
+                      <span>Ordenar por</span>
                     </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Vista de Lista</p></TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('grid')} className="h-12 w-12 hidden md:flex">
-                      <LayoutGrid className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Vista de Grelha</p></TooltipContent>
-                </Tooltip>
-                {view === 'grid' && (
-                  <div className="hidden md:flex">
-                    <DropdownMenu>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="h-12 w-28 gap-2">
-                              <span>{gridCols} Colunas</span>
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Número de colunas</p></TooltipContent>
-                      </Tooltip>
-                      <DropdownMenuContent>
-                        <DropdownMenuRadioGroup value={gridCols} onValueChange={(value) => handleSetGridCols(value as '3' | '4' | '5')}>
-                          <DropdownMenuRadioItem value="3">3 Colunas</DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="4">4 Colunas</DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="5">5 Colunas</DropdownMenuRadioItem>
-                        </DropdownMenuRadioGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                )}
-              </TooltipProvider>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuRadioGroup value={sortBy} onValueChange={(value) => setSortBy(value as 'stock_desc' | 'stock_asc' | 'name_asc' | 'date_desc')}>
+                      <DropdownMenuRadioItem value="stock_desc">Maior Stock</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="stock_asc">Menor Stock</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="name_asc">Ordem Alfabética (A-Z)</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="date_desc">Atualizados Recentemente</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
-            <ScrollArea className="w-full md:w-auto pb-2">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t border-border/50 pt-4">
+              <div className="hidden md:flex items-center gap-2">
                 <TooltipProvider>
-                  {isMultiLocation && canEditInventory && (
-                    <TransferStockDialog
-                      onTransfer={handleTransferStock}
-                    />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant={view === 'list' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('list')} className="h-12 w-12 hidden md:flex bg-background/50">
+                        <List className="h-5 w-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Vista de Lista</p></TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('grid')} className="h-12 w-12 hidden md:flex bg-background/50">
+                        <LayoutGrid className="h-5 w-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Vista de Grelha</p></TooltipContent>
+                  </Tooltip>
+                  {view === 'grid' && (
+                    <div className="hidden md:flex">
+                      <DropdownMenu>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" className="h-12 w-28 gap-2 bg-background/50">
+                                <span>{gridCols} Colunas</span>
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Número de colunas</p></TooltipContent>
+                        </Tooltip>
+                        <DropdownMenuContent>
+                          <DropdownMenuRadioGroup value={gridCols} onValueChange={(value) => handleSetGridCols(value as '3' | '4' | '5')}>
+                            <DropdownMenuRadioItem value="3">3 Colunas</DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="4">4 Colunas</DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="5">5 Colunas</DropdownMenuRadioItem>
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   )}
-                  {isMultiLocation && canViewInventory && (
+                </TooltipProvider>
+              </div>
+
+              <ScrollArea className="w-full md:w-auto pb-2">
+                <div className="flex items-center gap-2">
+                  <TooltipProvider>
+                    {isMultiLocation && canEditInventory && (
+                      <TransferStockDialog
+                        onTransfer={handleTransferStock}
+                      />
+                    )}
+                    {isMultiLocation && canViewInventory && (
+                      <DropdownMenu>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="icon" className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0 bg-background/50">
+                                <MapPin className="h-5 w-5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Filtrar por Localização</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <DropdownMenuContent align="end">
+                          <ScrollArea className="h-[200px]">
+                            <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuCheckboxItem
+                              checked={selectedLocation === 'all'}
+                              onCheckedChange={() => setSelectedLocation('all')}
+                            >
+                              Todas as Localizações
+                            </DropdownMenuCheckboxItem>
+                            {locations.map(location => (
+                              <DropdownMenuCheckboxItem
+                                key={location.id}
+                                checked={selectedLocation === location.id}
+                                onCheckedChange={() => setSelectedLocation(location.id)}
+                              >
+                                {location.name}
+                              </DropdownMenuCheckboxItem>
+                            ))}
+                          </ScrollArea>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                     <DropdownMenu>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="icon" className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0">
-                              <MapPin className="h-5 w-5" />
+                            <Button variant="outline" size="icon" className="shadow-sm relative h-12 w-12 rounded-2xl flex-shrink-0 bg-background/50">
+                              <ListFilter className="h-5 w-5" />
+                              {categoryFilter.length > 0 && (
+                                <span className="absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs px-1">
+                                  {categoryFilter.length > 9 ? '9+' : categoryFilter.length}
+                                </span>
+                              )}
                             </Button>
                           </DropdownMenuTrigger>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Filtrar por Localização</p>
+                          <p>Filtrar por Categoria</p>
                         </TooltipContent>
                       </Tooltip>
                       <DropdownMenuContent align="end">
-                        <ScrollArea className="h-[200px]">
-                          <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuCheckboxItem
-                            checked={selectedLocation === 'all'}
-                            onCheckedChange={() => setSelectedLocation('all')}
-                          >
-                            Todas as Localizações
-                          </DropdownMenuCheckboxItem>
-                          {locations.map(location => (
-                            <DropdownMenuCheckboxItem
-                              key={location.id}
-                              checked={selectedLocation === location.id}
-                              onCheckedChange={() => setSelectedLocation(location.id)}
-                            >
-                              {location.name}
-                            </DropdownMenuCheckboxItem>
-                          ))}
+                        <ScrollArea className="h-48">
+                          {categories.map((category) => {
+                            return (
+                              <DropdownMenuCheckboxItem
+                                key={category}
+                                className="capitalize"
+                                checked={categoryFilter.includes(category)}
+                                onCheckedChange={(value) => {
+                                  if (value) {
+                                    setCategoryFilter([...categoryFilter, category]);
+                                  } else {
+                                    setCategoryFilter(categoryFilter.filter(c => c !== category));
+                                  }
+                                }}
+                              >
+                                {category}
+                              </DropdownMenuCheckboxItem>
+                            )
+                          })}
                         </ScrollArea>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  )}
-                  <DropdownMenu>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="icon" className="shadow-sm relative h-12 w-12 rounded-2xl flex-shrink-0">
-                            <ListFilter className="h-5 w-5" />
-                            {categoryFilter.length > 0 && (
-                              <span className="absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs px-1">
-                                {categoryFilter.length > 9 ? '9+' : categoryFilter.length}
-                              </span>
-                            )}
-                          </Button>
-                        </DropdownMenuTrigger>
+                        <Button variant="outline" size="icon" asChild className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0 bg-background/50">
+                          <Link href="/inventory/history"><History className="h-5 w-5" /></Link>
+                        </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Filtrar por Categoria</p>
+                        <p>Ver Histórico de Movimentos</p>
                       </TooltipContent>
                     </Tooltip>
-                    <DropdownMenuContent align="end">
-                      <ScrollArea className="h-48">
-                        {categories.map((category) => {
-                          return (
-                            <DropdownMenuCheckboxItem
-                              key={category}
-                              className="capitalize"
-                              checked={categoryFilter.includes(category)}
-                              onCheckedChange={(value) => {
-                                if (value) {
-                                  setCategoryFilter([...categoryFilter, category]);
-                                } else {
-                                  setCategoryFilter(categoryFilter.filter(c => c !== category));
-                                }
-                              }}
-                            >
-                              {category}
-                            </DropdownMenuCheckboxItem>
-                          )
-                        })}
-                      </ScrollArea>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" asChild className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0">
-                        <Link href="/inventory/history"><History className="h-5 w-5" /></Link>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Ver Histórico de Movimentos</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" onClick={handlePrintCountForm} className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0">
-                        <FileText className="h-5 w-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Imprimir Formulário de Contagem</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <ScrollBar orientation="horizontal" className="md:hidden" />
-            </ScrollArea>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" onClick={handlePrintCountForm} className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0 bg-background/50">
+                          <FileText className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Imprimir Formulário de Contagem</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <ScrollBar orientation="horizontal" className="md:hidden" />
+              </ScrollArea>
+            </div>
           </div>
-        </div>
+        </Card>
 
         {view === 'list' ? (
           <InventoryDataTable

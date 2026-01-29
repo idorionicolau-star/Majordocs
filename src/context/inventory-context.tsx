@@ -871,8 +871,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     } else {
       if (!catalogProduct) {
-        toast({ variant: 'destructive', title: 'Produto Base Não Encontrado', description: `Adicione "${productName}" ao catálogo primeiro.` });
-        return;
+        // toast is handled by caller or we throw to let caller know
+        const errorMsg = `Produto Base Não Encontrado: Adicione "${productName}" ao catálogo primeiro.`;
+        // We still show toast here for immediate feedback if not caught, but we must throw.
+        // Better to JUST throw and let caller handle toast, but for safety lets throw.
+        throw new Error(errorMsg);
       }
       const { id, ...restOfCatalogProduct } = catalogProduct;
       const productsRef = collection(firestore, `companies/${companyId}/products`);
@@ -993,11 +996,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const confirmSalePickup = useCallback(async (sale: Sale) => {
     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
 
-    if ((sale.amountPaid ?? 0) < sale.totalValue) {
+    const amountPaid = sale.amountPaid ?? 0;
+    // Allow for a small tolerance (e.g., 0.50) to account for rounding errors or negligible differences
+    if ((sale.totalValue - amountPaid) > 0.5) {
       toast({
         variant: "destructive",
         title: 'Pagamento Incompleto',
-        description: `Não é possível confirmar o levantamento. O cliente ainda precisa de pagar ${formatCurrency(sale.totalValue - (sale.amountPaid || 0))}.`,
+        description: `Não é possível confirmar o levantamento. O cliente ainda precisa de pagar ${formatCurrency(sale.totalValue - amountPaid)}.`,
         duration: 6000,
       });
       return;

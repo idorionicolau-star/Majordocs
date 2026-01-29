@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useContext, useMemo, useState } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, Download } from 'lucide-react';
+import { AlertTriangle, Download, AlertCircle, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -70,13 +71,13 @@ export function StockAlerts() {
 
     if (loading) {
         return (
-            <Card className="bg-white/70 dark:bg-[#0f172a]/50 h-full">
+            <Card className="bg-transparent border-none">
                 <CardHeader>
-                    <Skeleton className="h-6 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-6 w-3/4 bg-slate-800" />
+                    <Skeleton className="h-4 w-1/2 bg-slate-800" />
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-full bg-slate-800" />)}
                 </CardContent>
             </Card>
         );
@@ -84,54 +85,57 @@ export function StockAlerts() {
 
     if (criticalStockProducts.length === 0) {
         return (
-            <Card className="bg-white/70 dark:bg-[#0f172a]/50 backdrop-blur-lg flex flex-col justify-center items-center h-full border-white dark:border-slate-800 shadow-sm shadow-slate-200/50 dark:shadow-none">
+            <Card className="glass-panel border-slate-200/50 dark:border-slate-800/50 shadow-none flex flex-col justify-center items-center h-full">
                 <CardHeader className="items-center">
-                    <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-300">
-                        <AlertTriangle className="text-emerald-500 dark:text-emerald-400" strokeWidth={1.5} />
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                        <CheckCircle2 className="text-emerald-500" strokeWidth={1.5} />
                         Alertas de Stock
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Nenhum alerta crítico.</p>
+                    <p className="text-sm text-muted-foreground">Nenhum alerta crítico.</p>
                 </CardContent>
             </Card>
         );
     }
 
     return (
-        <Card className="bg-white/70 dark:bg-[#0f172a]/50 backdrop-blur-lg border-white dark:border-slate-800 shadow-sm shadow-slate-200/50 dark:shadow-none">
-            <CardHeader>
+        <Card className="glass-panel border-red-500/20 dark:border-red-900/40 shadow-[0_0_20px_rgba(220,38,38,0.1)] h-full">
+            <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                        <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-300">
-                            <AlertTriangle className="text-rose-500 h-5 w-5" strokeWidth={2} />
+                        <CardTitle className="flex items-center gap-2 text-foreground">
+                            <AlertTriangle className="text-red-500" strokeWidth={2} />
                             Stock Crítico
                         </CardTitle>
-                        <CardDescription className="text-slate-500 dark:text-slate-500">
-                            Atenção imediata necessária.
+                        <CardDescription className="text-muted-foreground">
+                            <span className="flex items-center gap-2">
+                                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                                Atenção imediata necessária.
+                            </span>
                         </CardDescription>
                     </div>
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
-                                    variant="outline"
+                                    variant="ghost"
                                     size="icon"
-                                    className="h-9 w-9 border-rose-200 hover:bg-rose-50 dark:border-rose-900/30 dark:hover:bg-rose-900/10 text-rose-500"
+                                    className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
                                     onClick={handleDownloadCriticalStock}
                                     disabled={isDownloading}
                                 >
                                     <Download className={cn("h-4 w-4", isDownloading && "animate-pulse")} />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Baixar Relatório de Stock Crítico</p>
+                            <TooltipContent className="bg-popover text-popover-foreground border-border">
+                                <p>Baixar Relatório</p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                 </div>
             </CardHeader>
-            <CardContent className="space-y-1">
+            <CardContent className="space-y-3">
                 {displayProducts.map(product => {
                     const availableStock = product.stock - product.reservedStock;
                     const isFullyReserved = availableStock <= 0 && product.reservedStock > 0;
@@ -142,27 +146,13 @@ export function StockAlerts() {
                             key={product.instanceId}
                             className="block group"
                         >
-                            <div className="flex items-center justify-between p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
-                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-primary">{product.name}</span>
-                                <div className="font-bold text-rose-500 text-right flex items-center">
-                                    {isFullyReserved ? (
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <div className="cursor-help flex items-center justify-end" onClick={(e) => e.preventDefault()}>
-                                                        {Math.floor(product.stock)}
-                                                        <span className="text-xs font-bold ml-1 text-amber-500">(R)</span>
-                                                    </div>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>{product.reservedStock} unidade(s) reservada(s) para vendas.</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    ) : (
-                                        Math.floor(Math.max(0, availableStock))
-                                    )}
-                                    <span className="text-xs text-slate-500 dark:text-slate-500 ml-1">{product.unit || 'un.'}</span>
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-white/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 group-hover:border-red-500/30 transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/60 shadow-sm dark:shadow-none">
+                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-foreground transition-colors">{product.name}</span>
+                                <div className="text-right flex items-center gap-2">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_5px_currentColor]" />
+                                    <span className="text-sm font-bold text-red-600 dark:text-red-400">
+                                        {Math.floor(Math.max(0, availableStock))} <span className="text-[10px] text-muted-foreground font-normal">{product.unit || 'un'}</span>
+                                    </span>
                                 </div>
                             </div>
                         </Link>
@@ -170,9 +160,9 @@ export function StockAlerts() {
                 })}
             </CardContent>
             {criticalStockProducts.length > 3 && (
-                <CardFooter>
-                    <Button variant="link" className="text-primary dark:text-sky-400 p-0 h-auto text-sm" onClick={() => setIsExpanded(!isExpanded)}>
-                        {isExpanded ? 'Mostrar menos' : `Mostrar todos os ${criticalStockProducts.length} itens`}
+                <CardFooter className="pt-2">
+                    <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-full h-8 text-xs" onClick={() => setIsExpanded(!isExpanded)}>
+                        {isExpanded ? 'Mostrar menos' : `Ver mais ${criticalStockProducts.length - 3} itens`}
                     </Button>
                 </CardFooter>
             )}

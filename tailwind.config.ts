@@ -1,5 +1,5 @@
 
-import type {Config} from 'tailwindcss';
+import type { Config } from 'tailwindcss';
 
 export default {
   darkMode: ['class'],
@@ -73,6 +73,7 @@ export default {
         'neon-sky': '0 0 15px rgba(56, 189, 248, 0.15)',
         'neon-emerald': '0 0 15px rgba(74, 222, 128, 0.2)',
         'neon-rose': '0 0 15px rgba(244, 63, 94, 0.2)',
+        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
       },
       keyframes: {
         'accordion-down': {
@@ -140,7 +141,7 @@ export default {
             animationTimingFunction: 'cubic-bezier(0, 0, 0.2, 1)',
           },
         },
-         'pulse-indicator': {
+        'pulse-indicator': {
           '0%, 100%': { opacity: '1', transform: 'scale(1)' },
           '50%': { opacity: '0.4', transform: 'scale(1.2)' },
         },

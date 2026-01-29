@@ -5,7 +5,7 @@ import * as React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { Sale, Company } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import { Edit, Printer, FileSearch, CheckCircle, PackageCheck, Download } from "lucide-react"
+import { Edit, Printer, FileSearch, CheckCircle, PackageCheck, Download, DollarSign } from "lucide-react"
 import { SaleDetailsDialogContent } from "./sale-details-dialog"
 import { formatCurrency, downloadSaleDocument } from "@/lib/utils"
 import { EditSaleDialog } from "./edit-sale-dialog"
@@ -110,6 +110,27 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
                     open={isEditDialogOpen}
                 />
             </Dialog>}
+
+            {canEdit && (sale.amountPaid || 0) < sale.totalValue && (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-amber-600"
+                                onClick={() => options.onUpdateSale({ ...sale, amountPaid: sale.totalValue })}
+                            >
+                                <DollarSign className="h-4 w-4" />
+                                <span className="sr-only">Confirmar Pagamento Total</span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Confirmar Pagamento Total</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            )}
 
             <TooltipProvider>
                 <Tooltip>

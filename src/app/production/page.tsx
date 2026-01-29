@@ -103,20 +103,29 @@ export default function ProductionPage() {
     });
   };
 
-  const handleConfirmTransfer = () => {
+  const handleConfirmTransfer = async () => {
     if (!productionToTransfer || !firestore || !companyId) return;
 
-    updateProductStock(productionToTransfer.productName, productionToTransfer.quantity, productionToTransfer.location);
+    try {
+      await updateProductStock(productionToTransfer.productName, productionToTransfer.quantity, productionToTransfer.location);
 
-    const prodDocRef = doc(firestore, `companies/${companyId}/productions`, productionToTransfer.id);
-    updateDoc(prodDocRef, { status: 'Transferido' });
+      const prodDocRef = doc(firestore, `companies/${companyId}/productions`, productionToTransfer.id);
+      await updateDoc(prodDocRef, { status: 'Transferido' });
 
-    toast({
-      title: "Transferência Concluída",
-      description: `${productionToTransfer.quantity} unidades de ${productionToTransfer.productName} foram adicionadas ao inventário.`,
-    });
+      toast({
+        title: "Transferência Concluída",
+        description: `${productionToTransfer.quantity} unidades de ${productionToTransfer.productName} foram adicionadas ao inventário.`,
+      });
 
-    setProductionToTransfer(null);
+      setProductionToTransfer(null);
+    } catch (error: any) {
+      console.error("Erro na transferência:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro na Transferência",
+        description: error.message || "Não foi possível transferir para o inventário.",
+      });
+    }
   };
 
   const filteredProductions = useMemo(() => {
@@ -296,101 +305,103 @@ export default function ProductionPage() {
           </div>
         </div>
 
-        <div className="py-4 space-y-4">
-          <div className="flex flex-col sm:flex-row items-center gap-2">
-            <Input
-              placeholder="Filtrar por nome do produto..."
-              value={nameFilter}
-              onChange={(event) => setNameFilter(event.target.value)}
-              className="w-full sm:max-w-xs shadow-sm h-12 text-sm"
-            />
-            <div className="flex w-full sm:w-auto items-center gap-2">
-              <DatePicker date={dateFilter} setDate={setDateFilter} />
+        <Card className="glass-panel p-4 mb-6 border-none">
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-center gap-2">
+              <Input
+                placeholder="Filtrar por nome do produto..."
+                value={nameFilter}
+                onChange={(event) => setNameFilter(event.target.value)}
+                className="w-full sm:max-w-xs shadow-sm h-12 text-sm bg-background/50"
+              />
+              <div className="flex w-full sm:w-auto items-center gap-2">
+                <DatePicker date={dateFilter} setDate={setDateFilter} />
+              </div>
             </div>
-          </div>
 
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t pt-4">
-            <div className="hidden md:flex items-center gap-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant={view === 'list' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('list')} className="h-12 w-12 hidden md:flex">
-                      <List className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Vista de Lista</p></TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('grid')} className="h-12 w-12 hidden md:flex">
-                      <LayoutGrid className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Vista de Grelha</p></TooltipContent>
-                </Tooltip>
-                {view === 'grid' && (
-                  <div className="hidden md:flex">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t border-border/50 pt-4">
+              <div className="hidden md:flex items-center gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant={view === 'list' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('list')} className="h-12 w-12 hidden md:flex bg-background/50">
+                        <List className="h-5 w-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Vista de Lista</p></TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('grid')} className="h-12 w-12 hidden md:flex bg-background/50">
+                        <LayoutGrid className="h-5 w-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Vista de Grelha</p></TooltipContent>
+                  </Tooltip>
+                  {view === 'grid' && (
+                    <div className="hidden md:flex">
+                      <DropdownMenu>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" className="h-12 w-28 gap-2 bg-background/50">
+                                <span>{gridCols} Colunas</span>
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Número de colunas</p></TooltipContent>
+                        </Tooltip>
+                        <DropdownMenuContent>
+                          <DropdownMenuRadioGroup value={gridCols} onValueChange={(value) => handleSetGridCols(value as '3' | '4' | '5')}>
+                            <DropdownMenuRadioItem value="3">3 Colunas</DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="4">4 Colunas</DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="5">5 Colunas</DropdownMenuRadioItem>
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  )}
+                </TooltipProvider>
+              </div>
+              <ScrollArea
+                className="w-full md:w-auto pb-2"
+              >
+                <div className="flex items-center gap-2">
+                  {isMultiLocation && canViewProduction && (
                     <DropdownMenu>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="h-12 w-28 gap-2">
-                              <span>{gridCols} Colunas</span>
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Número de colunas</p></TooltipContent>
-                      </Tooltip>
-                      <DropdownMenuContent>
-                        <DropdownMenuRadioGroup value={gridCols} onValueChange={(value) => handleSetGridCols(value as '3' | '4' | '5')}>
-                          <DropdownMenuRadioItem value="3">3 Colunas</DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="4">4 Colunas</DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="5">5 Colunas</DropdownMenuRadioItem>
-                        </DropdownMenuRadioGroup>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" className="h-12 w-12 flex-shrink-0 bg-background/50" size="icon">
+                                <MapPin className="h-5 w-5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Filtrar por Localização</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <DropdownMenuContent align="end">
+                        <ScrollArea className="h-48">
+                          <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuCheckboxItem checked={locationFilter === 'all'} onCheckedChange={() => setLocationFilter('all')}>Todas</DropdownMenuCheckboxItem>
+                          {locations.map(loc => (
+                            <DropdownMenuCheckboxItem key={loc.id} checked={locationFilter === loc.id} onCheckedChange={() => setLocationFilter(loc.id)}>{loc.name}</DropdownMenuCheckboxItem>
+                          ))}
+                        </ScrollArea>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </div>
-                )}
-              </TooltipProvider>
+                  )}
+                </div>
+                <ScrollBar orientation="horizontal" className="md:hidden" />
+              </ScrollArea>
             </div>
-            <ScrollArea
-              className="w-full md:w-auto pb-2"
-            >
-              <div className="flex items-center gap-2">
-                {isMultiLocation && canViewProduction && (
-                  <DropdownMenu>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="h-12 w-12 flex-shrink-0" size="icon">
-                              <MapPin className="h-5 w-5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Filtrar por Localização</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <DropdownMenuContent align="end">
-                      <ScrollArea className="h-48">
-                        <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuCheckboxItem checked={locationFilter === 'all'} onCheckedChange={() => setLocationFilter('all')}>Todas</DropdownMenuCheckboxItem>
-                        {locations.map(loc => (
-                          <DropdownMenuCheckboxItem key={loc.id} checked={locationFilter === loc.id} onCheckedChange={() => setLocationFilter(loc.id)}>{loc.name}</DropdownMenuCheckboxItem>
-                        ))}
-                      </ScrollArea>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-              <ScrollBar orientation="horizontal" className="md:hidden" />
-            </ScrollArea>
           </div>
-        </div>
+        </Card>
 
         <div className="hidden md:block">
           {view === 'list' ? (

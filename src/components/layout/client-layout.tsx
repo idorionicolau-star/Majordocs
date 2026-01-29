@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
@@ -92,14 +93,14 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         <LoadingBar />
         <NavigationObserver onNavigate={handleNavigationTransition} />
       </Suspense>
-      <div className="flex min-h-screen w-full bg-muted/40 bg-pattern">
+      <div className="flex min-h-screen w-full bg-transparent">
         <Sidebar
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
         />
         <div className={cn(
           "flex flex-col flex-1 transition-all duration-300 ease-in-out",
-          isSidebarCollapsed ? "md:ml-20" : "md:ml-64"
+          isSidebarCollapsed ? "md:ml-24" : "md:ml-80"
         )}>
           <Header onSearchClick={() => setOpenCommandMenu(true)} />
           <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto main-content">
@@ -114,7 +115,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         </div>
         <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
       </div>
-      <SheetContent side="left" className="p-0">
+      <SheetContent side="left" className="p-0 glass-panel border-r border-white/10">
         <MobileNav onLinkClick={() => setIsMobileNavOpen(false)} />
       </SheetContent>
     </Sheet>
