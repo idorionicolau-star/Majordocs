@@ -142,13 +142,16 @@ export const PrimaryKPIs = () => {
             {cards.map((card, index) => {
                 const isPositive = (card.trend || 0) >= 0;
                 const isCapitalCard = card.title === "CAPITAL IMOBILIZADO";
+                const isFaturamentoCard = card.title === "FATURAMENTO MENSAL";
                 const TrendIcon = card.trend === null ? Minus : (isPositive ? TrendingUp : TrendingDown);
                 
-                const trendColor = isCapitalCard
-                    ? "text-sky-500 dark:text-sky-400"
-                    : card.trend === null
-                        ? "text-slate-400"
-                        : (isPositive ? "text-emerald-500" : "text-rose-500");
+                const trendColor = isFaturamentoCard 
+                    ? "text-purple-500 dark:text-purple-400"
+                    : isCapitalCard
+                        ? "text-sky-500 dark:text-sky-400"
+                        : card.trend === null
+                            ? "text-slate-400"
+                            : (isPositive ? "text-emerald-500" : "text-rose-500");
 
                 const trendText = card.trend === null ? "--" : `${isPositive ? '+' : ''}${card.trend?.toFixed(1)}%`;
 
@@ -169,7 +172,8 @@ export const PrimaryKPIs = () => {
                                     <p className="text-slate-400 text-[9px] font-bold tracking-widest uppercase mb-1">{card.title}</p>
                                     <h2 className={cn(
                                         "text-xl md:text-2xl font-bold text-slate-800 dark:text-white text-center",
-                                        isCapitalCard && "text-sky-500 dark:text-sky-400"
+                                        isCapitalCard && "text-sky-500 dark:text-sky-400",
+                                        isFaturamentoCard && "text-purple-500 dark:text-purple-400"
                                     )}>
                                         {formatCurrency(card.value)}
                                     </h2>
@@ -182,6 +186,14 @@ export const PrimaryKPIs = () => {
                                     <div
                                         className="h-full rounded-full bg-gradient-to-r from-sky-400 to-blue-500"
                                         style={{ width: '100%' }}
+                                    />
+                                ) : isFaturamentoCard ? (
+                                     <div
+                                        className={cn(
+                                            "h-full rounded-full transition-all duration-700 ease-out",
+                                            isPositive ? "bg-gradient-to-r from-purple-400 to-purple-600" : "bg-gradient-to-r from-rose-400 to-rose-600"
+                                        )}
+                                        style={{ width: `${Math.min(Math.abs(card.trend || 0), 100)}%` }}
                                     />
                                 ) : card.trend !== null && (
                                     <div
