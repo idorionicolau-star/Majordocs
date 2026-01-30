@@ -173,7 +173,7 @@ function generateDailySummary(sales: any[], products: any[]) {
     return (
         <div className="space-y-3">
             <p className="font-medium">👋 Olá! Estou analisando <b>{sales.length} vendas</b> e <b>{products.length} produtos</b> (Base Completa).</p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-2">
                 <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                     <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mb-1">Vendas (Mês)</p>
                     <p className="text-lg font-bold text-slate-800 dark:text-white">{formatCurrency(currentMonthRevenue)}</p>

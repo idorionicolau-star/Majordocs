@@ -70,7 +70,6 @@ export const PrimaryKPIs = () => {
     const cards = [
         {
             title: "FATURAMENTO MENSAL",
-            subtitle: "Performance de Vendas",
             value: kpiData.currentMonthSales, // Use real calculated current month sales
             symbol: "VENDAS",
             href: "/sales",
@@ -83,7 +82,6 @@ export const PrimaryKPIs = () => {
         },
         {
             title: "CAPITAL IMOBILIZADO",
-            subtitle: "Valor em Stock",
             value: dashboardStats.totalInventoryValue,
             symbol: "STOCK",
             href: "/inventory",
@@ -96,7 +94,6 @@ export const PrimaryKPIs = () => {
         },
         {
             title: "TICKET MÉDIO",
-            subtitle: "Média por Venda",
             value: kpiData.currentAvgTicket, // Use real current month avg
             symbol: "AVG",
             href: "/sales",
@@ -125,7 +122,6 @@ export const PrimaryKPIs = () => {
                                     <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded mb-2", card.badgeColor)}>{card.symbol}</span>
                                     <div>
                                         <p className="text-slate-400 text-[10px] font-bold tracking-widest uppercase">{card.title}</p>
-                                        <h3 className="text-lg font-bold text-slate-800 dark:text-white mt-0.5 group-hover:text-primary transition-colors">{card.subtitle}</h3>
                                     </div>
                                 </div>
                                 <div className="mt-2 mb-4 md:mb-10 flex flex-col items-center">
