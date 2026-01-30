@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useContext, useMemo } from "react";
@@ -8,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
-import { startOfMonth, subMonths, isSameMonth, parseISO, isSameDay, subDays } from "date-fns";
+import { startOfMonth, subMonths, isSameMonth, parseISO, isSameDay, subDays } from 'date-fns';
 
 export const PrimaryKPIs = () => {
     const { dashboardStats, sales, stockMovements, loading } = useContext(InventoryContext) || { dashboardStats: null, sales: [], stockMovements: [], loading: true };
@@ -61,9 +60,9 @@ export const PrimaryKPIs = () => {
     if (loading || !kpiData) {
         return (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Skeleton className="h-48 rounded-3xl bg-slate-200 dark:bg-slate-800" />
-                <Skeleton className="h-48 rounded-3xl bg-slate-200 dark:bg-slate-800" />
-                <Skeleton className="h-48 rounded-3xl bg-slate-200 dark:bg-slate-800" />
+                <Skeleton className="h-28 rounded-3xl bg-slate-200 dark:bg-slate-800" />
+                <Skeleton className="h-28 rounded-3xl bg-slate-200 dark:bg-slate-800" />
+                <Skeleton className="h-28 rounded-3xl bg-slate-200 dark:bg-slate-800" />
             </div>
         )
     }
@@ -110,27 +109,26 @@ export const PrimaryKPIs = () => {
                 return (
                     <Link href={card.href} key={index} className="block group">
                         <div className={cn(
-                            "bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-3 md:p-4 relative overflow-hidden border hover:-translate-y-1 transition-transform duration-300 cursor-pointer h-36 md:h-44",
+                            "bg-white dark:bg-slate-800 rounded-2xl p-4 relative overflow-hidden border hover:-translate-y-1 transition-transform duration-300 cursor-pointer",
                             card.colorClass
                         )}>
-                            <div className="relative z-10 flex flex-col h-full">
-                                <div className="absolute top-0 right-0 flex flex-col items-end pointer-events-none">
-                                    <span className={cn("flex items-center text-[10px] md:text-xs font-bold gap-0.5", trendColor)}>
-                                        <TrendIcon className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                                        {trendText}
-                                    </span>
-                                    <span className="text-slate-400 text-[9px] md:text-[10px]">{card.trendLabel}</span>
-                                </div>
-
-                                <div className="flex flex-col items-center mt-2 md:mt-4">
-                                    <p className="text-slate-400 text-[9px] font-bold tracking-widest uppercase mb-1">{card.title}</p>
-                                    <h2 className="text-xl md:text-2xl font-bold text-center text-[var(--card-color)]">
+                             <div className="flex justify-between items-start">
+                                <div className="flex flex-col">
+                                    <p className="text-slate-400 text-[10px] font-bold tracking-wider uppercase">{card.title}</p>
+                                    <h2 className="text-2xl font-bold" style={{ color: 'var(--card-color)' }}>
                                         {formatCurrency(card.value)}
                                     </h2>
                                 </div>
+                                <div className="flex flex-col items-end pointer-events-none">
+                                    <span className={cn("flex items-center text-xs font-bold gap-0.5", trendColor)}>
+                                        <TrendIcon className="h-3 w-3" />
+                                        {trendText}
+                                    </span>
+                                    <span className="text-slate-400 text-[10px]">{card.trendLabel}</span>
+                                </div>
                             </div>
                             
-                            <div className="absolute bottom-4 left-4 right-4 h-2.5 rounded-full bg-slate-200 dark:bg-slate-700/50 overflow-hidden">
+                            <div className="mt-3 h-2 rounded-full bg-slate-200 dark:bg-slate-700/50 overflow-hidden">
                                 <div
                                     className="h-full rounded-full transition-all duration-700 ease-out"
                                     style={{ 
