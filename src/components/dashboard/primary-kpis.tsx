@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useContext, useMemo } from "react";
@@ -190,8 +189,7 @@ export const PrimaryKPIs = () => {
                                 ) : isFaturamentoCard ? (
                                      <div
                                         className={cn(
-                                            "h-full rounded-full transition-all duration-700 ease-out",
-                                            isPositive ? "bg-gradient-to-r from-purple-400 to-purple-600" : "bg-gradient-to-r from-rose-400 to-rose-600"
+                                            "h-full rounded-full transition-all duration-700 ease-out bg-gradient-to-r from-purple-400 to-purple-600"
                                         )}
                                         style={{ width: `${Math.min(Math.abs(card.trend || 0), 100)}%` }}
                                     />
