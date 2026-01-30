@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useContext, useMemo } from "react";
@@ -144,7 +145,7 @@ export const PrimaryKPIs = () => {
                 const isFaturamentoCard = card.title === "FATURAMENTO MENSAL";
                 const TrendIcon = card.trend === null ? Minus : (isPositive ? TrendingUp : TrendingDown);
                 
-                const trendColor = isFaturamentoCard 
+                const trendColor = isFaturamentoCard
                     ? "text-purple-500 dark:text-purple-400"
                     : isCapitalCard
                         ? "text-sky-500 dark:text-sky-400"
@@ -156,7 +157,11 @@ export const PrimaryKPIs = () => {
 
                 return (
                     <Link href={card.href} key={index} className="block group">
-                        <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-3 md:p-4 relative overflow-hidden shadow-lg border border-slate-100 dark:border-slate-700/50 hover:-translate-y-1 transition-transform duration-300 cursor-pointer h-36 md:h-44">
+                        <div className={cn(
+                            "bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-3 md:p-4 relative overflow-hidden shadow-lg border border-slate-100 dark:border-slate-700/50 hover:-translate-y-1 transition-transform duration-300 cursor-pointer h-36 md:h-44",
+                            isFaturamentoCard && "shadow-purple-500/10 dark:shadow-purple-500/20 border-purple-500/20 dark:border-purple-500/30",
+                            isCapitalCard && "shadow-sky-500/10 dark:shadow-sky-500/20 border-sky-500/20 dark:border-sky-500/30"
+                        )}>
                             <div className="relative z-10 flex flex-col h-full">
                                 {/* Trend Indicator - Top Right */}
                                 <div className="absolute top-0 right-0 flex flex-col items-end pointer-events-none">
