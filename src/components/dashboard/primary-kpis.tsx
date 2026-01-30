@@ -39,7 +39,7 @@ export const PrimaryKPIs = () => {
 
         const salesGrowth = lastMonthSales > 0
             ? ((currentMonthSales - lastMonthSales) / lastMonthSales) * 100
-            : 0;
+            : (currentMonthSales > 0 ? 100 : 0);
 
         // 2. Avg Ticket Growth (MoM)
         const currentAvgTicket = currentMonthCount > 0 ? currentMonthSales / currentMonthCount : 0;
@@ -47,60 +47,15 @@ export const PrimaryKPIs = () => {
 
         const ticketGrowth = lastAvgTicket > 0
             ? ((currentAvgTicket - lastAvgTicket) / lastAvgTicket) * 100
-            : 0;
-
-        // 3. Daily Trends (Today vs Yesterday)
-        let todaySales = 0;
-        let yesterdaySales = 0;
-        let todayCount = 0;
-        let yesterdayCount = 0;
-
-        const today = now;
-        const yesterday = subDays(now, 1);
-
-        sales.forEach(sale => {
-            const d = parseISO(sale.date);
-            if (isSameDay(d, today)) {
-                todaySales += (sale.amountPaid ?? sale.totalValue ?? 0);
-                todayCount++;
-            } else if (isSameDay(d, yesterday)) {
-                yesterdaySales += (sale.amountPaid ?? sale.totalValue ?? 0);
-                yesterdayCount++;
-            }
-        });
-
-        const dailySalesTrend = todaySales > 0 && todaySales >= yesterdaySales ? 'up' : 'down';
-
-        const todayTicket = todayCount > 0 ? todaySales / todayCount : 0;
-        const yesterdayTicket = yesterdayCount > 0 ? yesterdaySales / yesterdayCount : 0;
-        const dailyTicketTrend = todayTicket > 0 && todayTicket >= yesterdayTicket ? 'up' : 'down';
-
-
-        // 4. Daily Stock Trend (Net Change Today)
-        const todayStockMovements = stockMovements.filter(m => {
-            if (!m.timestamp) return false;
-            const date = m.timestamp.toDate ? m.timestamp.toDate() : (typeof m.timestamp === 'string' ? parseISO(m.timestamp) : new Date(m.timestamp));
-            return isSameDay(date, now);
-        });
-        const netStockChange = todayStockMovements.reduce((acc, m) => {
-            if (m.type === 'IN') return acc + m.quantity;
-            if (m.type === 'OUT') return acc - m.quantity;
-            if (m.type === 'ADJUSTMENT') return acc + m.quantity;
-            return acc;
-        }, 0);
-
-        const dailyStockTrend = netStockChange >= 0 ? 'up' : 'down';
+            : (currentAvgTicket > 0 ? 100 : 0);
 
         return {
             salesGrowth,
             ticketGrowth,
             currentMonthSales,
             currentAvgTicket,
-            dailySalesTrend,
-            dailyTicketTrend,
-            dailyStockTrend
         };
-    }, [sales, dashboardStats, stockMovements]);
+    }, [sales, dashboardStats]);
 
 
     if (loading || !kpiData) {
@@ -120,6 +75,7 @@ export const PrimaryKPIs = () => {
             href: "/sales",
             trend: kpiData.salesGrowth,
             trendLabel: "vs mês anterior",
+            colorClass: "kpi-card--purple",
         },
         {
             title: "CAPITAL IMOBILIZADO",
@@ -127,6 +83,7 @@ export const PrimaryKPIs = () => {
             href: "/inventory",
             trend: null,
             trendLabel: "Posição Atual",
+            colorClass: "kpi-card--blue",
         },
         {
             title: "TICKET MÉDIO",
@@ -134,38 +91,27 @@ export const PrimaryKPIs = () => {
             href: "/sales",
             trend: kpiData.ticketGrowth,
             trendLabel: "vs mês anterior",
+            colorClass: "kpi-card--green",
         },
     ];
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-4">
             {cards.map((card, index) => {
-                const isFaturamentoCard = card.title === "FATURAMENTO MENSAL";
-                const isCapitalCard = card.title === "CAPITAL IMOBILIZADO";
-                const isTicketMedioCard = card.title === "TICKET MÉDIO";
-                
                 const isPositive = (card.trend || 0) >= 0;
                 const TrendIcon = card.trend === null ? Minus : (isPositive ? TrendingUp : TrendingDown);
                 
-                const trendColor = isFaturamentoCard
-                    ? "text-purple-500 dark:text-purple-400"
-                    : isCapitalCard
-                        ? "text-sky-500 dark:text-sky-400"
-                        : isTicketMedioCard
-                            ? "text-emerald-500 dark:text-emerald-400"
-                            : card.trend === null
-                                ? "text-slate-400"
-                                : (isPositive ? "text-emerald-500" : "text-rose-500");
-
+                const trendColor = card.trend === null
+                    ? "text-slate-400"
+                    : isPositive ? `text-[var(--card-color)]` : "text-rose-500 dark:text-rose-400";
+                
                 const trendText = card.trend === null ? "--" : `${isPositive ? '+' : ''}${card.trend?.toFixed(1)}%`;
 
                 return (
                     <Link href={card.href} key={index} className="block group">
                         <div className={cn(
-                            "bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-3 md:p-4 relative overflow-hidden shadow-lg border hover:-translate-y-1 transition-transform duration-300 cursor-pointer h-36 md:h-44",
-                            isFaturamentoCard && "shadow-purple-500/10 dark:shadow-purple-500/20 border-purple-500/20 dark:border-purple-500/30",
-                            isCapitalCard && "shadow-sky-500/10 dark:shadow-sky-500/20 border-sky-500/20 dark:border-sky-500/30",
-                            isTicketMedioCard && "shadow-emerald-500/10 dark:shadow-emerald-500/20 border-emerald-500/20 dark:border-emerald-500/30"
+                            "bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-3 md:p-4 relative overflow-hidden border hover:-translate-y-1 transition-transform duration-300 cursor-pointer h-36 md:h-44",
+                            card.colorClass
                         )}>
                             <div className="relative z-10 flex flex-col h-full">
                                 <div className="absolute top-0 right-0 flex flex-col items-end pointer-events-none">
@@ -178,42 +124,20 @@ export const PrimaryKPIs = () => {
 
                                 <div className="flex flex-col items-center mt-2 md:mt-4">
                                     <p className="text-slate-400 text-[9px] font-bold tracking-widest uppercase mb-1">{card.title}</p>
-                                    <h2 className={cn(
-                                        "text-xl md:text-2xl font-bold text-slate-800 dark:text-white text-center",
-                                        isCapitalCard && "text-sky-500 dark:text-sky-400",
-                                        isFaturamentoCard && "text-purple-500 dark:text-purple-400",
-                                        isTicketMedioCard && "text-emerald-500 dark:text-emerald-400"
-                                    )}>
+                                    <h2 className="text-xl md:text-2xl font-bold text-center text-[var(--card-color)]">
                                         {formatCurrency(card.value)}
                                     </h2>
                                 </div>
                             </div>
                             
                             <div className="absolute bottom-4 left-4 right-4 h-2.5 rounded-full bg-slate-200 dark:bg-slate-700/50 overflow-hidden">
-                                {isCapitalCard ? (
-                                    <div
-                                        className="h-full rounded-full bg-sky-500"
-                                        style={{ width: '100%' }}
-                                    />
-                                ) : isFaturamentoCard ? (
-                                    <div
-                                        className="h-full rounded-full bg-purple-500 transition-all duration-700 ease-out"
-                                        style={{ width: `${Math.min(Math.abs(card.trend || 0), 100)}%` }}
-                                    />
-                                ) : isTicketMedioCard ? (
-                                     <div
-                                        className="h-full rounded-full bg-emerald-500 transition-all duration-700 ease-out"
-                                        style={{ width: `${Math.min(Math.abs(card.trend || 0), 100)}%` }}
-                                    />
-                                ) : card.trend !== null && (
-                                    <div
-                                        className={cn(
-                                            "h-full rounded-full transition-all duration-700 ease-out",
-                                            isPositive ? "bg-emerald-500" : "bg-rose-500"
-                                        )}
-                                        style={{ width: `${Math.min(Math.abs(card.trend || 0), 100)}%` }}
-                                    />
-                                )}
+                                <div
+                                    className="h-full rounded-full transition-all duration-700 ease-out"
+                                    style={{ 
+                                        backgroundColor: 'var(--card-color)',
+                                        width: card.trend !== null ? `${Math.min(Math.abs(card.trend || 0), 100)}%` : '100%' 
+                                    }}
+                                />
                             </div>
                         </div>
                     </Link>
