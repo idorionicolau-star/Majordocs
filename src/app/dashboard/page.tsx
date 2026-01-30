@@ -44,7 +44,7 @@ export default function DashboardPage() {
   const isPrivilegedUser = user?.role === 'Admin' || user?.role === 'Dono';
 
   return (
-    <div className="flex flex-col gap-4 md:gap-8 animate-in fade-in duration-700 pb-10 main-content">
+    <div className="flex flex-col gap-4 animate-in fade-in duration-700 pb-10 main-content">
 
       {/* 1. Quick Action Cards (Top Row) */}
       <QuickActions />
@@ -56,19 +56,19 @@ export default function DashboardPage() {
 
 
           {/* 3. Charts & Insights Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8 min-h-[400px]">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[400px]">
             <div className="lg:col-span-2 h-full">
               <MonthlySalesChart />
             </div>
             <div className="lg:col-span-1 h-full">
-              <InsightsPanel />
+              <TopSales />
             </div>
           </div>
 
           {/* 4. Bottom Section: Top Sales & Stock Alerts */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2 h-full">
-              <TopSales />
+              <InsightsPanel />
             </div>
             <div className="lg:col-span-1 h-full">
               <StockAlerts />

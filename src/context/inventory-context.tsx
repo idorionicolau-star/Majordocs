@@ -1376,7 +1376,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || stockMovementsLoading || catalogProductsLoading || catalogCategoriesLoading || rawMaterialsLoading || recipesLoading;
 
-  const value: InventoryContextType = {
+  const value: InventoryContextType = useMemo(() => ({
     user, firebaseUser, companyId, loading: isDataLoading,
     login, logout, resetPassword, registerCompany, profilePicture, setProfilePicture: handleSetProfilePicture,
     canView, canEdit,
@@ -1389,7 +1389,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     chatHistory, setChatHistory,
     addProduct, updateProduct, deleteProduct, clearProductsCollection,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
-    addProduction, updateProduction, deleteProduction, deleteOrder,
+    addProduction, updateProduction, deleteProduction, deleteOrder, deleteSale,
     clearSales, clearProductions, clearOrders, clearStockMovements,
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
     recalculateReservedStock,
@@ -1401,7 +1401,30 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     updateRecipe,
     deleteRecipe,
     produceFromRecipe,
-  };
+  }), [
+    user, firebaseUser, companyId, isDataLoading,
+    login, logout, resetPassword, registerCompany, profilePicture, handleSetProfilePicture,
+    canView, canEdit,
+    companyData, products, salesData, productionsData, ordersData, stockMovementsData, catalogProductsData, catalogCategoriesData,
+    rawMaterialsData, recipesData,
+    locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
+    businessStartDate,
+    chatHistory, setChatHistory,
+    addProduct, updateProduct, deleteProduct, clearProductsCollection,
+    auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
+    addProduction, updateProduction, deleteProduction, deleteOrder, deleteSale,
+    clearSales, clearProductions, clearOrders, clearStockMovements,
+    markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
+    recalculateReservedStock,
+    addCatalogProduct, addCatalogCategory,
+    addRawMaterial,
+    updateRawMaterial,
+    deleteRawMaterial,
+    addRecipe,
+    updateRecipe,
+    deleteRecipe,
+    produceFromRecipe
+  ]);
 
   return (
     <InventoryContext.Provider value={value}>

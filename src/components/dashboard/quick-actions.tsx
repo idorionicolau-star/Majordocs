@@ -95,45 +95,42 @@ export const QuickActions = () => {
     return (
         <>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
                 {actions.filter(a => a.show).map((action, index) => (
                     <button
                         key={index}
                         onClick={action.onClick}
                         className={cn(
-                            "group relative flex items-center p-3 md:p-6 h-16 md:h-32 rounded-2xl md:rounded-3xl transition-all duration-300",
+                            "group relative flex items-center p-1.5 md:px-3 h-10 md:h-14 rounded-lg transition-all duration-300",
                             "bg-white dark:bg-slate-800 border",
                             "border-slate-100 dark:border-slate-700/50",
                             action.border.replace("border-", "border-").replace("/50", "/30"),
                             action.shadow,
-                            "hover:scale-[1.02] hover:-translate-y-1"
+                            "hover:scale-[1.02] hover:-translate-y-0.5"
                         )}
                         style={{ borderColor: '' }} // Override if needed
                     >
                         <div className={cn(
-                            "absolute inset-0 rounded-2xl md:rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br",
+                            "absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br",
                             action.gradient
                         )} />
 
                         <div className={cn(
-                            "h-9 w-9 md:h-14 md:w-14 rounded-xl md:rounded-2xl flex items-center justify-center mr-3 md:mr-5 transition-transform duration-300 group-hover:scale-110",
+                            "h-6 w-6 md:h-8 md:w-8 rounded-md flex items-center justify-center mr-2 md:mr-3 transition-transform duration-300 group-hover:scale-105",
                             "bg-white/80 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10",
                             action.shadow
                         )}>
-                            <action.icon className={cn("h-5 w-5 md:h-7 md:w-7", action.iconColor)} />
+                            <action.icon className={cn("h-3 w-3 md:h-4 md:w-4", action.iconColor)} />
                         </div>
 
                         <div className="flex flex-col items-start z-10">
-                            <span className="text-sm md:text-xl font-bold text-foreground tracking-wide group-hover:text-glow-blue transition-all">
+                            <span className="text-[10px] md:text-sm font-bold text-foreground tracking-wide group-hover:text-glow-blue transition-all">
                                 {action.title}
-                            </span>
-                            <span className="text-[10px] md:text-sm text-muted-foreground mt-0.5 md:mt-1 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 hidden md:inline">
-                                Clique para acessar
                             </span>
                         </div>
 
                         {/* Shine Effect */}
-                        <div className="hidden md:block absolute inset-0 rounded-2xl md:rounded-3xl overflow-hidden pointer-events-none">
+                        <div className="hidden md:block absolute inset-0 rounded-lg overflow-hidden pointer-events-none">
                             <div className="absolute top-0 left-[-100%] w-[50%] h-full bg-gradient-to-r from-transparent via-white/40 dark:via-white/10 to-transparent skew-x-12 group-hover:left-[200%] transition-all duration-1000 ease-in-out" />
                         </div>
                     </button>

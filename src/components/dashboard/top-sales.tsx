@@ -82,7 +82,7 @@ export function TopSales() {
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent className="space-y-5 pt-2">
+      <CardContent className="space-y-3 pt-2">
         {loading ? (
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full bg-slate-800" />)}

@@ -130,8 +130,8 @@ export function MonthlySalesChart() {
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent className="pl-0 pr-6 pt-6">
-        <ChartContainer config={chartConfig} className="h-[350px] w-full">
+      <CardContent className="pl-0 pr-6 pt-4">
+        <ChartContainer config={chartConfig} className="h-[280px] w-full">
           <ResponsiveContainer>
             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
