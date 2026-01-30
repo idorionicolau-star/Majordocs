@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useContext, useMemo } from "react";
@@ -9,9 +8,6 @@ import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 import { startOfMonth, subMonths, isSameMonth, parseISO, isSameDay, subDays } from "date-fns";
-
-const GROWING_PATH = "M0,320 L0,220 C180,220 240,120 480,120 C720,120 840,240 1080,240 C1320,240 1380,40 1440,40 L1440,320 Z";
-const DECLINING_PATH = "M0,320 L0,40 C180,40 240,160 480,160 C720,160 840,80 1080,80 C1320,80 1380,260 1440,260 L1440,320 Z";
 
 export const PrimaryKPIs = () => {
     const { dashboardStats, sales, stockMovements, loading } = useContext(InventoryContext) || { dashboardStats: null, sales: [], stockMovements: [], loading: true };
@@ -106,7 +102,7 @@ export const PrimaryKPIs = () => {
     }, [sales, dashboardStats, stockMovements]);
 
 
-    if (loading || !dashboardStats || !kpiData) {
+    if (loading || !kpiData) {
         return (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Skeleton className="h-48 rounded-3xl bg-slate-200 dark:bg-slate-800" />
@@ -120,48 +116,21 @@ export const PrimaryKPIs = () => {
         {
             title: "FATURAMENTO MENSAL",
             value: kpiData.currentMonthSales,
-            symbol: "VENDAS",
             href: "/sales",
-            badgeColor: kpiData.dailySalesTrend === 'up'
-                ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-300"
-                : "bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-300",
-            gradientId: "grad1",
-            gradientColors: kpiData.dailySalesTrend === 'up'
-                ? { start: "#4ade80", end: "#22c55e" } // Emerald
-                : { start: "#fb7185", end: "#e11d48" }, // Rose
-            wavePath: kpiData.dailySalesTrend === 'up' ? GROWING_PATH : DECLINING_PATH,
             trend: kpiData.salesGrowth,
             trendLabel: "vs mês anterior",
         },
         {
             title: "CAPITAL IMOBILIZADO",
             value: dashboardStats.totalInventoryValue,
-            symbol: "STOCK",
             href: "/inventory",
-            badgeColor: kpiData.dailyStockTrend === 'up'
-                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300" // Keep blue for positive stock/asset? Or Green? User said "Red if negative". Standard asset logic: Growth = Good/Green or Blue. Decline = Bad/Red. Let's use Blue/Green vs Red. Actually, I'll stick to Blue for 'Normal/Good' to differentiate from Sales, unless 'up' means Green. Let's use the requested Red for down.
-                : "bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-300",
-            gradientId: "grad2",
-            gradientColors: kpiData.dailyStockTrend === 'up'
-                ? { start: "#38bdf8", end: "#0284c7" } // Blue
-                : { start: "#fb7185", end: "#e11d48" }, // Rose
-            wavePath: kpiData.dailyStockTrend === 'up' ? GROWING_PATH : DECLINING_PATH,
             trend: null,
             trendLabel: "Posição Atual",
         },
         {
             title: "TICKET MÉDIO",
             value: kpiData.currentAvgTicket,
-            symbol: "AVG",
             href: "/sales",
-            badgeColor: kpiData.dailyTicketTrend === 'up'
-                ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-300"
-                : "bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-300",
-            gradientId: "grad3",
-            gradientColors: kpiData.dailyTicketTrend === 'up'
-                ? { start: "#4ade80", end: "#22c55e" } // Emerald
-                : { start: "#fb7185", end: "#e11d48" }, // Rose
-            wavePath: kpiData.dailyTicketTrend === 'up' ? GROWING_PATH : DECLINING_PATH,
             trend: kpiData.ticketGrowth,
             trendLabel: "vs mês anterior",
         },
@@ -195,16 +164,18 @@ export const PrimaryKPIs = () => {
                                     </h2>
                                 </div>
                             </div>
-                            <div className="absolute bottom-0 left-0 w-full h-20 md:h-24 opacity-90 transition-opacity duration-300 group-hover:opacity-100">
-                                <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 1440 320">
-                                    <defs>
-                                        <linearGradient id={card.gradientId} x1="0%" x2="0%" y1="0%" y2="100%">
-                                            <stop offset="0%" style={{ stopColor: card.gradientColors.start, stopOpacity: 1 }}></stop>
-                                            <stop offset="100%" style={{ stopColor: card.gradientColors.end, stopOpacity: 0.6 }}></stop>
-                                        </linearGradient>
-                                    </defs>
-                                    <path d={card.wavePath} fill={`url(#${card.gradientId})`}></path>
-                                </svg>
+                            
+                            {/* Horizontal Bar Chart */}
+                            <div className="absolute bottom-4 left-4 right-4 h-2.5 rounded-full bg-slate-200 dark:bg-slate-700/50 overflow-hidden">
+                                {card.trend !== null && (
+                                    <div
+                                        className={cn(
+                                            "h-full rounded-full transition-all duration-700 ease-out",
+                                            isPositive ? "bg-gradient-to-r from-emerald-400 to-emerald-600" : "bg-gradient-to-r from-rose-400 to-rose-600"
+                                        )}
+                                        style={{ width: `${Math.min(Math.abs(card.trend || 0), 100)}%` }}
+                                    />
+                                )}
                             </div>
                         </div>
                     </Link>
