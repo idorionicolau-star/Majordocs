@@ -78,11 +78,13 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
 
       {/* Right side icons */}
       <div className="flex items-center gap-1 md:gap-4">
-        <ConnectionStatus />
+        <div className="hidden md:block">
+          <ConnectionStatus />
+        </div>
         {isMounted ? (
-          <Button variant="ghost" size="icon" onClick={toggleTheme}>
-            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all ease-overshoot duration-500 dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all ease-overshoot duration-500 dark:rotate-0 dark:scale-100" />
+          <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-8 w-8 md:h-10 md:w-10">
+            <Sun className="h-[1rem] w-[1rem] md:h-[1.2rem] md:w-[1.2rem] rotate-0 scale-100 transition-all ease-overshoot duration-500 dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-[1rem] w-[1rem] md:h-[1.2rem] md:w-[1.2rem] rotate-90 scale-0 transition-all ease-overshoot duration-500 dark:rotate-0 dark:scale-100" />
             <span className="sr-only">Toggle theme</span>
           </Button>
         ) : (
