@@ -12,6 +12,7 @@ const CommandMenu = dynamic(() => import('@/components/command-menu').then(mod =
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { MobileNav } from './mobile-nav';
 import { LoadingBar } from './loading-bar';
+import { MajorAssistant } from '@/components/assistant/major-assistant';
 import { useSearchParams } from 'next/navigation';
 
 function NavigationObserver({ onNavigate }: { onNavigate: () => void }) {
@@ -107,6 +108,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           </main>
         </div>
         <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
+        <MajorAssistant />
       </div>
       <SheetContent side="left" className="p-0 glass-panel border-r border-white/10">
         <MobileNav onLinkClick={() => setIsMobileNavOpen(false)} />

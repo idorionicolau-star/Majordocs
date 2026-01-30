@@ -58,48 +58,49 @@
   }
 
   .dark {
-    --background: 222 47% 11%;
-    /* Slate 900 */
+    --background: 222 47% 6%;
+    /* #090e16 - Deep dark navy */
     --foreground: 210 40% 98%;
 
-    --card: 215 28% 17%;
-    /* Slate 800 */
+    --card: 217 33% 12%;
+    /* Darker card background */
     --card-foreground: 210 40% 98%;
 
-    --popover: 215 28% 17%;
+    --popover: 217 33% 12%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 151 55% 42%;
-    /* Emerald 500 */
+    --primary: 160 84% 39%;
+    /* Bright Green/Emerald for primary actions */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 33% 17%;
+    --secondary: 217 33% 15%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 215 28% 17%;
+    --muted: 217 33% 15%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 151 55% 42%;
+    --accent: 160 84% 39%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 151 55% 42%;
+    --border: 217 33% 15%;
+    --input: 217 33% 15%;
+    --ring: 160 84% 39%;
 
     /* Sales Chart - Neon Green (Dark Mode) */
-    --sales-stroke: #4ade80;
-    /* Green 400 (Brighter for Dark Mode) */
+    --sales-stroke: #22c55e;
     --sales-gradient-start: #4ade80;
     --sales-gradient-end: #10b981;
 
     /* Chart Colors - Dark Mode */
-    --chart-1: 151 55% 42%;
+    --chart-1: 160 84% 39%;
     /* Emerald */
     --chart-2: 217 91% 60%;
+    /* Blue */
     --chart-3: 271 81% 56%;
+    /* Purple */
     --chart-4: 0 84% 60%;
     --chart-5: 258 75% 65%;
   }

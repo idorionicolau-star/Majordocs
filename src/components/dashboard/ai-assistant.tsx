@@ -4,6 +4,7 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { cn, formatCurrency } from "@/lib/utils";
 import { Sparkles, Bot, User, Send, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryContext } from '@/context/inventory-context';
@@ -13,28 +14,27 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
 import { ScrollArea } from '../ui/scroll-area';
-import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 
 
 export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
-  const { 
-      chatHistory: messages, 
-      setChatHistory: setMessages,
-      sales, 
-      products, 
-      dashboardStats,
-      stockMovements
-  } = useContext(InventoryContext) || { 
-      chatHistory: [], 
-      setChatHistory: () => {}, 
-      sales: [], 
-      products: [], 
-      stockMovements: [],
-      dashboardStats: {} 
+  const {
+    chatHistory: messages,
+    setChatHistory: setMessages,
+    sales,
+    products,
+    dashboardStats,
+    stockMovements
+  } = useContext(InventoryContext) || {
+    chatHistory: [],
+    setChatHistory: () => { },
+    sales: [],
+    products: [],
+    stockMovements: [],
+    dashboardStats: {}
   };
-  
+
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState<Record<number, 'like' | 'dislike' | null>>({});
@@ -55,7 +55,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
       isMounted.current = true;
     }
   }, [messages]); // This effect runs every time the messages array changes.
-  
+
 
   const handleAskAI = async (currentQuery: string) => {
     if (!currentQuery || !setMessages) return;
@@ -63,7 +63,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
 
     const newMessages: { role: 'user' | 'model', text: string, toolCalls?: any[], toolResponse?: any }[] = [...messages, { role: 'user', text: currentQuery }];
     setMessages(newMessages);
-    setQuery(''); 
+    setQuery('');
 
     try {
       const response = await fetch('/api/ai-search', {
@@ -87,7 +87,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
       }
 
       const data = await response.json();
-      
+
       setMessages(prev => [...prev, { role: 'model', text: data.text }]);
 
     } catch (e: any) {
@@ -115,10 +115,10 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
   const handleFeedback = (index: number, choice: 'like' | 'dislike') => {
     setFeedback(prev => ({ ...prev, [index]: choice }));
     if (choice === 'dislike') {
-        setShowFeedbackInputFor(index);
-        setFeedbackText('');
+      setShowFeedbackInputFor(index);
+      setFeedbackText('');
     } else {
-        setShowFeedbackInputFor(null);
+      setShowFeedbackInputFor(null);
     }
   };
 
@@ -128,39 +128,41 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     setShowFeedbackInputFor(null);
     setFeedbackText('');
   };
-  
+
   return (
-     <Card className="glass-card shadow-sm flex flex-col h-full">
-      <CardHeader>
-        <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
-          <Bot className="text-primary" />
-          MajorAssistant
+    <Card className="glass-panel border-slate-800 bg-slate-900/50 shadow-xl h-full flex flex-col relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-950/50 pointer-events-none" />
+      <CardHeader className="flex flex-row items-center justify-between pb-2 z-10 relative">
+        <CardTitle className="text-xl text-white font-bold tracking-wide flex items-center gap-2">
+          <Sparkles className="text-emerald-400 h-5 w-5" />
+          Assistente IA
         </CardTitle>
-        <CardDescription>
-          Faça uma pergunta sobre seus dados de negócio para obter uma resposta detalhada.
-        </CardDescription>
+        <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+          <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[10px] font-bold text-emerald-400 tracking-wider">ONLINE (FULL BASE)</span>
+        </div>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col gap-4">
         <ScrollArea className="flex-grow h-[200px] pr-4 -mr-4">
           <div className="space-y-4">
-             {messages.length === 0 && !isLoading && (
+            {messages.length === 0 && !isLoading && (
               <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6 border-2 border-dashed rounded-xl h-full">
-                  <Bot size={40} className="mb-4" />
-                  <p>Faça uma pergunta para começar.</p>
+                <Bot size={40} className="mb-4" />
+                <p>Faça uma pergunta para começar.</p>
               </div>
             )}
             {messages.map((message, index) => (
-              <div 
+              <div
                 key={index}
                 ref={index === messages.length - 1 ? lastMessageRef : null}
                 className={cn("flex items-start gap-3", message.role === 'user' ? 'justify-end' : '')}
               >
-                {message.role === 'model' && <Avatar className="h-8 w-8"><AvatarFallback><Bot /></AvatarFallback></Avatar>}
+                {message.role === 'model' && <Avatar className="h-8 w-8 bg-emerald-500/20 border border-emerald-500/30"><AvatarFallback className="bg-transparent text-emerald-400"><Bot size={16} /></AvatarFallback></Avatar>}
                 <div className={cn(
-                  "p-3 rounded-2xl max-w-lg",
+                  "p-3 rounded-2xl max-w-[85%] text-sm",
                   message.role === 'user'
-                    ? "bg-primary text-primary-foreground rounded-br-none"
-                    : "bg-muted rounded-bl-none"
+                    ? "bg-emerald-600 text-white rounded-br-none shadow-lg shadow-emerald-900/20"
+                    : "bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700"
                 )}>
                   <div className="prose dark:prose-invert prose-sm max-w-none">
                     <ReactMarkdown
@@ -169,7 +171,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
                         a: ({ node, ...props }) => {
                           const href = props.href || '';
                           if (href.startsWith('/')) {
-                             return <Link href={href} {...props} className="text-primary hover:underline font-bold" />;
+                            return <Link href={href} {...props} className="text-primary hover:underline font-bold" />;
                           }
                           return <a {...props} className="text-primary hover:underline font-bold" target="_blank" rel="noopener noreferrer" />;
                         },
@@ -181,53 +183,54 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
                   {message.role === 'model' && (
                     <>
                       <div className="mt-3 flex items-center gap-1 border-t pt-2">
-                          <Button variant="ghost" size="icon" className={`h-7 w-7 rounded-md ${feedback[index] === 'like' ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`} onClick={() => handleFeedback(index, 'like')}>
-                              <ThumbsUp className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className={`h-7 w-7 rounded-md ${feedback[index] === 'dislike' ? 'text-destructive bg-destructive/10' : 'text-muted-foreground'}`} onClick={() => handleFeedback(index, 'dislike')}>
-                              <ThumbsDown className="h-4 w-4" />
-                          </Button>
+                        <Button variant="ghost" size="icon" className={`h-7 w-7 rounded-md ${feedback[index] === 'like' ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`} onClick={() => handleFeedback(index, 'like')}>
+                          <ThumbsUp className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className={`h-7 w-7 rounded-md ${feedback[index] === 'dislike' ? 'text-destructive bg-destructive/10' : 'text-muted-foreground'}`} onClick={() => handleFeedback(index, 'dislike')}>
+                          <ThumbsDown className="h-4 w-4" />
+                        </Button>
                       </div>
-                       {showFeedbackInputFor === index && (
-                          <div className="mt-2 space-y-2">
-                              <Textarea placeholder="O que podemos melhorar?" value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} />
-                              <div className="flex justify-end gap-2">
-                                  <Button variant="ghost" size="sm" onClick={() => setShowFeedbackInputFor(null)}>Cancelar</Button>
-                                  <Button size="sm" onClick={() => handleSendFeedback(index)}>Enviar</Button>
-                              </div>
+                      {showFeedbackInputFor === index && (
+                        <div className="mt-2 space-y-2">
+                          <Textarea placeholder="O que podemos melhorar?" value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} />
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => setShowFeedbackInputFor(null)}>Cancelar</Button>
+                            <Button size="sm" onClick={() => handleSendFeedback(index)}>Enviar</Button>
                           </div>
+                        </div>
                       )}
                     </>
                   )}
                 </div>
-                 {message.role === 'user' && <Avatar className="h-8 w-8"><AvatarFallback><User /></AvatarFallback></Avatar>}
+                {message.role === 'user' && <Avatar className="h-8 w-8"><AvatarFallback><User /></AvatarFallback></Avatar>}
               </div>
             ))}
-             {isLoading && messages.length > 0 && (
-                <div className="flex items-start gap-3">
-                    <Avatar className="h-8 w-8"><AvatarFallback><Bot /></AvatarFallback></Avatar>
-                    <div className="p-3 rounded-2xl bg-muted rounded-bl-none">
-                        <div className="space-y-2">
-                            <Skeleton className="h-3 w-12" />
-                        </div>
-                    </div>
+            {isLoading && messages.length > 0 && (
+              <div className="flex items-start gap-3">
+                <Avatar className="h-8 w-8"><AvatarFallback><Bot /></AvatarFallback></Avatar>
+                <div className="p-3 rounded-2xl bg-muted rounded-bl-none">
+                  <div className="space-y-2">
+                    <Skeleton className="h-3 w-12" />
+                  </div>
+                </div>
               </div>
             )}
           </div>
         </ScrollArea>
       </CardContent>
-      <CardFooter>
-         <div className="flex items-center gap-2 w-full">
-            <Input 
-                placeholder="Peça um insight ou faça uma pergunta..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                disabled={isLoading}
-            />
-            <Button type="button" onClick={() => handleAskAI(query)} size="icon" disabled={isLoading || !query}>
-                <Send className="h-4 w-4" />
-            </Button>
+      <CardFooter className="z-10 relative pt-0">
+        <div className="flex items-center gap-2 w-full bg-slate-950/50 p-1.5 rounded-full border border-slate-800">
+          <Input
+            placeholder="Pergunte ao assistente..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isLoading}
+            className="border-none bg-transparent focus-visible:ring-0 text-slate-200 placeholder:text-slate-500 h-9"
+          />
+          <Button type="button" onClick={() => handleAskAI(query)} size="icon" disabled={isLoading || !query} className="h-8 w-8 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shrink-0">
+            <Send className="h-4 w-4" />
+          </Button>
         </div>
       </CardFooter>
     </Card>

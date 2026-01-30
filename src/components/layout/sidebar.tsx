@@ -45,19 +45,19 @@ export function Sidebar() {
                                         href={item.href}
                                         onClick={() => window.dispatchEvent(new CustomEvent('navigation-start'))}
                                         className={cn(
-                                            "p-3 rounded-xl transition-all duration-300 group relative flex items-center justify-center",
+                                            "relative p-3 rounded-xl transition-all duration-300 group flex items-center justify-center",
                                             isActive
-                                                ? "bg-slate-100 dark:bg-slate-800 text-primary shadow-sm"
-                                                : "text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                                                ? "bg-primary/10 text-primary shadow-[0_0_15px_rgba(16,185,129,0.2)]" // Active: Subtle green bg + shadow
+                                                : "text-slate-500 dark:text-slate-400 hover:text-slate-200 dark:hover:text-slate-200 hover:bg-white/5"
                                         )}
                                     >
                                         <item.icon className={cn(
-                                            "h-7 w-7 transition-transform duration-300",
-                                            isActive ? "text-primary" : "group-hover:text-primary"
+                                            "h-6 w-6 transition-transform duration-300",
+                                            isActive ? "text-primary scale-110" : "group-hover:scale-105"
                                         )} />
 
                                         {isActive && (
-                                            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1.5 h-8 w-1 bg-primary rounded-l-full" />
+                                            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1.5 h-6 w-1 bg-primary rounded-l-full shadow-[0_0_10px_#10b981]" />
                                         )}
                                     </Link>
                                 </TooltipTrigger>

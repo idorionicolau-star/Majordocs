@@ -122,14 +122,10 @@ export const PrimaryKPIs = () => {
             value: kpiData.currentMonthSales,
             symbol: "VENDAS",
             href: "/sales",
-            badgeColor: kpiData.dailySalesTrend === 'up'
-                ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-300"
-                : "bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-300",
-            gradientId: "grad1",
-            gradientColors: kpiData.dailySalesTrend === 'up'
-                ? { start: "#4ade80", end: "#22c55e" } // Emerald
-                : { start: "#fb7185", end: "#e11d48" }, // Rose
-            wavePath: kpiData.dailySalesTrend === 'up' ? GROWING_PATH : DECLINING_PATH,
+            badgeColor: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+            gradientId: "grad_purple",
+            gradientColors: { start: "#a855f7", end: "#7c3aed" }, // Purple
+            wavePath: GROWING_PATH, // Always nice wave
             trend: kpiData.salesGrowth,
             trendLabel: "vs mês anterior",
         },
@@ -138,14 +134,10 @@ export const PrimaryKPIs = () => {
             value: dashboardStats.totalInventoryValue,
             symbol: "STOCK",
             href: "/inventory",
-            badgeColor: kpiData.dailyStockTrend === 'up'
-                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300" // Keep blue for positive stock/asset? Or Green? User said "Red if negative". Standard asset logic: Growth = Good/Green or Blue. Decline = Bad/Red. Let's use Blue/Green vs Red. Actually, I'll stick to Blue for 'Normal/Good' to differentiate from Sales, unless 'up' means Green. Let's use the requested Red for down.
-                : "bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-300",
-            gradientId: "grad2",
-            gradientColors: kpiData.dailyStockTrend === 'up'
-                ? { start: "#38bdf8", end: "#0284c7" } // Blue
-                : { start: "#fb7185", end: "#e11d48" }, // Rose
-            wavePath: kpiData.dailyStockTrend === 'up' ? GROWING_PATH : DECLINING_PATH,
+            badgeColor: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+            gradientId: "grad_green",
+            gradientColors: { start: "#34d399", end: "#059669" }, // Green
+            wavePath: GROWING_PATH,
             trend: null,
             trendLabel: "Posição Atual",
         },
@@ -154,14 +146,10 @@ export const PrimaryKPIs = () => {
             value: kpiData.currentAvgTicket,
             symbol: "AVG",
             href: "/sales",
-            badgeColor: kpiData.dailyTicketTrend === 'up'
-                ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-300"
-                : "bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-300",
-            gradientId: "grad3",
-            gradientColors: kpiData.dailyTicketTrend === 'up'
-                ? { start: "#4ade80", end: "#22c55e" } // Emerald
-                : { start: "#fb7185", end: "#e11d48" }, // Rose
-            wavePath: kpiData.dailyTicketTrend === 'up' ? GROWING_PATH : DECLINING_PATH,
+            badgeColor: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+            gradientId: "grad_blue",
+            gradientColors: { start: "#38bdf8", end: "#0284c7" }, // Blue
+            wavePath: GROWING_PATH,
             trend: kpiData.ticketGrowth,
             trendLabel: "vs mês anterior",
         },
@@ -177,30 +165,38 @@ export const PrimaryKPIs = () => {
 
                 return (
                     <Link href={card.href} key={index} className="block group">
-                        <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-3 md:p-4 relative overflow-hidden shadow-lg border border-slate-100 dark:border-slate-700/50 hover:-translate-y-1 transition-transform duration-300 cursor-pointer h-36 md:h-44">
-                            <div className="relative z-10 flex flex-col h-full">
-                                {/* Trend Indicator - Top Right */}
-                                <div className="absolute top-0 right-0 flex flex-col items-end pointer-events-none">
-                                    <span className={cn("flex items-center text-[10px] md:text-xs font-bold gap-0.5", trendColor)}>
-                                        <TrendIcon className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                                        {trendText}
-                                    </span>
-                                    <span className="text-slate-400 text-[9px] md:text-[10px]">{card.trendLabel}</span>
+                        <div className="bg-slate-900/50 backdrop-blur-md rounded-3xl p-5 relative overflow-hidden/ border border-slate-800 hover:border-slate-700 hover:-translate-y-1 transition-all duration-300 cursor-pointer h-40 md:h-48 shadow-xl">
+                            <div className="relative z-10 flex flex-col h-full justify-between">
+                                {/* Header with Badge */}
+                                <div className="flex justify-between items-start">
+                                    <div className={cn("px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wider", card.badgeColor)}>
+                                        {card.symbol}
+                                    </div>
+                                    {/* Trend Indicator */}
+                                    <div className="flex flex-col items-end">
+                                        <span className={cn("flex items-center text-xs font-bold gap-1", trendColor)}>
+                                            <TrendIcon className="h-3 w-3" />
+                                            {trendText}
+                                        </span>
+                                        <span className="text-slate-500 text-[10px]">{card.trendLabel}</span>
+                                    </div>
                                 </div>
 
-                                <div className="flex flex-col items-center mt-2 md:mt-4">
-                                    <p className="text-slate-400 text-[9px] font-bold tracking-widest uppercase mb-1">{card.title}</p>
-                                    <h2 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-white text-center">
+                                <div className="flex flex-col items-center mb-4">
+                                    <p className="text-slate-400 text-xs font-bold tracking-widest uppercase mb-1 opacity-80">{card.title}</p>
+                                    <h2 className="text-2xl md:text-3xl font-bold text-white text-center tracking-tight">
                                         {formatCurrency(card.value)}
                                     </h2>
                                 </div>
                             </div>
-                            <div className="absolute bottom-0 left-0 w-full h-20 md:h-24 opacity-90 transition-opacity duration-300 group-hover:opacity-100">
+
+                            {/* Wave Background */}
+                            <div className="absolute bottom-0 left-0 w-full h-24 md:h-28 opacity-100 transition-opacity duration-300">
                                 <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 1440 320">
                                     <defs>
                                         <linearGradient id={card.gradientId} x1="0%" x2="0%" y1="0%" y2="100%">
                                             <stop offset="0%" style={{ stopColor: card.gradientColors.start, stopOpacity: 1 }}></stop>
-                                            <stop offset="100%" style={{ stopColor: card.gradientColors.end, stopOpacity: 0.6 }}></stop>
+                                            <stop offset="100%" style={{ stopColor: card.gradientColors.end, stopOpacity: 1 }}></stop>
                                         </linearGradient>
                                     </defs>
                                     <path d={card.wavePath} fill={`url(#${card.gradientId})`}></path>

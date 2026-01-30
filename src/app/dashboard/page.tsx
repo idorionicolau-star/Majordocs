@@ -28,10 +28,7 @@ const PrimaryKPIs = dynamic(() => import("@/components/dashboard/primary-kpis").
 const MonthlySalesChart = dynamic(() => import("@/components/dashboard/monthly-sales-chart").then(mod => mod.MonthlySalesChart), {
   loading: () => <ChartSkeleton />
 });
-const InsightsPanel = dynamic(() => import("@/components/dashboard/insights-panel").then(mod => mod.InsightsPanel), {
-  loading: () => <PanelSkeleton />
-});
-const TopSales = dynamic(() => import("@/components/dashboard/top-sales").then(mod => mod.TopSales), {
+const AIAssistant = dynamic(() => import("@/components/dashboard/ai-assistant").then(mod => mod.AIAssistant), {
   loading: () => <PanelSkeleton />
 });
 const StockAlerts = dynamic(() => import("@/components/dashboard/stock-alerts").then(mod => mod.StockAlerts), {
@@ -39,9 +36,31 @@ const StockAlerts = dynamic(() => import("@/components/dashboard/stock-alerts").
 });
 
 
+const DeadStock = dynamic(() => import("@/components/dashboard/dead-stock").then(mod => mod.DeadStock), {
+  loading: () => <PanelSkeleton />
+});
+
+const EmptyStateWelcome = dynamic(() => import("@/components/dashboard/empty-state").then(mod => mod.EmptyStateWelcome));
+
 export default function DashboardPage() {
-  const { user } = useContext(InventoryContext) || { user: null };
+  const { user, products, loading } = useContext(InventoryContext) || { user: null, products: [], loading: true };
   const isPrivilegedUser = user?.role === 'Admin' || user?.role === 'Dono';
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-4 pb-10 main-content">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 rounded-3xl" />)}
+        </div>
+        <PanelSkeleton />
+      </div>
+    );
+  }
+
+  // SHOW WELCOME SCREEN IF NO PRODUCTS
+  if (!loading && products.length === 0) {
+    return <EmptyStateWelcome />;
+  }
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in duration-700 pb-10 main-content">
@@ -61,16 +80,16 @@ export default function DashboardPage() {
               <MonthlySalesChart />
             </div>
             <div className="lg:col-span-1 h-full">
-              <TopSales />
+              <AIAssistant />
             </div>
           </div>
 
-          {/* 4. Bottom Section: Top Sales & Stock Alerts */}
+          {/* 4. Bottom Section: Dead Stock & Stock Alerts */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 h-full">
-              <InsightsPanel />
-            </div>
             <div className="lg:col-span-1 h-full">
+              <DeadStock />
+            </div>
+            <div className="lg:col-span-2 h-full">
               <StockAlerts />
             </div>
           </div>

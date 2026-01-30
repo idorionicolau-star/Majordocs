@@ -44,7 +44,7 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
   const pageTitle = getPageTitle();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-white/40 px-4 backdrop-blur-xl dark:bg-slate-950/50 sm:px-6 border-slate-200/60 dark:border-slate-800/60">
+    <header className="sticky top-0 z-30 flex h-20 items-center justify-between gap-4 px-6 md:px-8 py-4 bg-transparent">
 
       {/* Hamburger menu for mobile, hidden on desktop */}
       <div className="flex items-center gap-3 md:hidden">
@@ -65,12 +65,12 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
       <div className="hidden md:flex flex-1">
         <Button
           variant="outline"
-          className="relative w-full max-w-sm px-4 py-2 h-11 justify-start items-center text-left font-normal bg-slate-100 text-slate-500 hover:bg-slate-200 border-slate-300/70 dark:bg-slate-800/50 dark:text-slate-400 dark:hover:bg-slate-800/80 dark:border-slate-700"
+          className="relative w-full max-w-sm px-4 py-2 h-11 justify-start items-center text-left font-normal bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200 border-white/10 dark:border-white/10 rounded-2xl shadow-inner active:scale-[0.98] transition-all"
           onClick={onSearchClick}
         >
-          <Search className="mr-2 h-4 w-4" />
-          <span className="flex-1">Pesquisa Rápida</span>
-          <kbd className="pointer-events-none hidden h-6 select-none items-center gap-1 rounded border bg-slate-200 border-slate-300 px-1.5 font-mono text-[10px] font-medium text-slate-500 dark:bg-slate-700/80 dark:border-slate-600 dark:text-slate-300 sm:flex">
+          <Search className="mr-3 h-4 w-4 opacity-50" />
+          <span className="flex-1 text-sm tracking-wide">Pesquisa Rápida</span>
+          <kbd className="pointer-events-none hidden h-6 select-none items-center gap-1 rounded bg-white/5 border border-white/10 px-2 font-mono text-[10px] font-medium text-slate-400 sm:flex shadow-sm">
             Ctrl+K
           </kbd>
         </Button>
