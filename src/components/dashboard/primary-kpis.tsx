@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useContext, useMemo } from "react";
@@ -140,8 +141,15 @@ export const PrimaryKPIs = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-4">
             {cards.map((card, index) => {
                 const isPositive = (card.trend || 0) >= 0;
+                const isCapitalCard = card.title === "CAPITAL IMOBILIZADO";
                 const TrendIcon = card.trend === null ? Minus : (isPositive ? TrendingUp : TrendingDown);
-                const trendColor = card.trend === null ? "text-slate-400" : (isPositive ? "text-emerald-500" : "text-rose-500");
+                
+                const trendColor = isCapitalCard
+                    ? "text-sky-500 dark:text-sky-400"
+                    : card.trend === null
+                        ? "text-slate-400"
+                        : (isPositive ? "text-emerald-500" : "text-rose-500");
+
                 const trendText = card.trend === null ? "--" : `${isPositive ? '+' : ''}${card.trend?.toFixed(1)}%`;
 
                 return (
@@ -159,7 +167,10 @@ export const PrimaryKPIs = () => {
 
                                 <div className="flex flex-col items-center mt-2 md:mt-4">
                                     <p className="text-slate-400 text-[9px] font-bold tracking-widest uppercase mb-1">{card.title}</p>
-                                    <h2 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-white text-center">
+                                    <h2 className={cn(
+                                        "text-xl md:text-2xl font-bold text-slate-800 dark:text-white text-center",
+                                        isCapitalCard && "text-sky-500 dark:text-sky-400"
+                                    )}>
                                         {formatCurrency(card.value)}
                                     </h2>
                                 </div>
@@ -167,7 +178,12 @@ export const PrimaryKPIs = () => {
                             
                             {/* Horizontal Bar Chart */}
                             <div className="absolute bottom-4 left-4 right-4 h-2.5 rounded-full bg-slate-200 dark:bg-slate-700/50 overflow-hidden">
-                                {card.trend !== null && (
+                                {isCapitalCard ? (
+                                    <div
+                                        className="h-full rounded-full bg-gradient-to-r from-sky-400 to-blue-500"
+                                        style={{ width: '100%' }}
+                                    />
+                                ) : card.trend !== null && (
                                     <div
                                         className={cn(
                                             "h-full rounded-full transition-all duration-700 ease-out",
