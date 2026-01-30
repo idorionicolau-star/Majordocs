@@ -143,15 +143,18 @@ export const PrimaryKPIs = () => {
                 const isPositive = (card.trend || 0) >= 0;
                 const isCapitalCard = card.title === "CAPITAL IMOBILIZADO";
                 const isFaturamentoCard = card.title === "FATURAMENTO MENSAL";
+                const isTicketMedioCard = card.title === "TICKET MÉDIO";
                 const TrendIcon = card.trend === null ? Minus : (isPositive ? TrendingUp : TrendingDown);
                 
                 const trendColor = isFaturamentoCard
                     ? "text-purple-500 dark:text-purple-400"
                     : isCapitalCard
                         ? "text-sky-500 dark:text-sky-400"
-                        : card.trend === null
-                            ? "text-slate-400"
-                            : (isPositive ? "text-emerald-500" : "text-rose-500");
+                        : isTicketMedioCard
+                            ? "text-emerald-500 dark:text-emerald-400"
+                            : card.trend === null
+                                ? "text-slate-400"
+                                : (isPositive ? "text-emerald-500" : "text-rose-500");
 
                 const trendText = card.trend === null ? "--" : `${isPositive ? '+' : ''}${card.trend?.toFixed(1)}%`;
 
@@ -160,7 +163,8 @@ export const PrimaryKPIs = () => {
                         <div className={cn(
                             "bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-3 md:p-4 relative overflow-hidden shadow-lg border border-slate-100 dark:border-slate-700/50 hover:-translate-y-1 transition-transform duration-300 cursor-pointer h-36 md:h-44",
                             isFaturamentoCard && "shadow-purple-500/10 dark:shadow-purple-500/20 border-purple-500/20 dark:border-purple-500/30",
-                            isCapitalCard && "shadow-sky-500/10 dark:shadow-sky-500/20 border-sky-500/20 dark:border-sky-500/30"
+                            isCapitalCard && "shadow-sky-500/10 dark:shadow-sky-500/20 border-sky-500/20 dark:border-sky-500/30",
+                            isTicketMedioCard && "shadow-emerald-500/10 dark:shadow-emerald-500/20 border-emerald-500/20 dark:border-emerald-500/30"
                         )}>
                             <div className="relative z-10 flex flex-col h-full">
                                 {/* Trend Indicator - Top Right */}
@@ -177,7 +181,8 @@ export const PrimaryKPIs = () => {
                                     <h2 className={cn(
                                         "text-xl md:text-2xl font-bold text-slate-800 dark:text-white text-center",
                                         isCapitalCard && "text-sky-500 dark:text-sky-400",
-                                        isFaturamentoCard && "text-purple-500 dark:text-purple-400"
+                                        isFaturamentoCard && "text-purple-500 dark:text-purple-400",
+                                        isTicketMedioCard && "text-emerald-500 dark:text-emerald-400"
                                     )}>
                                         {formatCurrency(card.value)}
                                     </h2>
@@ -192,10 +197,13 @@ export const PrimaryKPIs = () => {
                                         style={{ width: '100%' }}
                                     />
                                 ) : isFaturamentoCard ? (
+                                    <div
+                                        className="h-full rounded-full bg-gradient-to-r from-purple-400 to-purple-600 transition-all duration-700 ease-out"
+                                        style={{ width: `${Math.min(Math.abs(card.trend || 0), 100)}%` }}
+                                    />
+                                ) : isTicketMedioCard ? (
                                      <div
-                                        className={cn(
-                                            "h-full rounded-full transition-all duration-700 ease-out bg-gradient-to-r from-purple-400 to-purple-600"
-                                        )}
+                                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-700 ease-out"
                                         style={{ width: `${Math.min(Math.abs(card.trend || 0), 100)}%` }}
                                     />
                                 ) : card.trend !== null && (
