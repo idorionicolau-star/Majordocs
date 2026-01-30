@@ -101,44 +101,37 @@ export const QuickActions = () => {
                         key={index}
                         onClick={action.onClick}
                         className={cn(
-                            "group relative flex items-center p-4 md:px-5 h-20 md:h-24 rounded-3xl transition-all duration-300",
-                            "bg-slate-900/50 backdrop-blur-md border",
-                            "border-slate-800",
-                            action.border.replace("border-", "hover:border-").replace("/50", "/60"),
+                            "group relative flex items-center p-1.5 md:px-3 h-10 md:h-14 rounded-lg transition-all duration-300",
+                            "bg-white dark:bg-slate-800 border",
+                            "border-slate-100 dark:border-slate-700/50",
+                            action.border.replace("border-", "border-").replace("/50", "/30"),
                             action.shadow,
-                            "hover:scale-[1.02] hover:-translate-y-1"
+                            "hover:scale-[1.02] hover:-translate-y-0.5"
                         )}
-                        style={{ borderColor: '' }}
+                        style={{ borderColor: '' }} // Override if needed
                     >
                         <div className={cn(
-                            "absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-transparent to-white/5",
-                            // action.gradient // Removed full gradient overlay for a cleaner dark look
+                            "absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br",
+                            action.gradient
                         )} />
 
-                        {/* Glow effect specific to color */}
                         <div className={cn(
-                            "absolute -inset-0.5 rounded-3xl opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-500",
-                            action.color === "cyan" && "bg-cyan-500",
-                            action.color === "blue" && "bg-blue-500",
-                            action.color === "purple" && "bg-purple-500",
-                        )} />
-
-
-                        <div className={cn(
-                            "h-10 w-10 md:h-12 md:w-12 rounded-2xl flex items-center justify-center mr-4 transition-transform duration-300 group-hover:scale-110 shadow-lg",
-                            "bg-slate-950 border border-slate-800",
-                            action.iconColor.replace("text-", "text-").replace("-400", "-500")
+                            "h-6 w-6 md:h-8 md:w-8 rounded-md flex items-center justify-center mr-2 md:mr-3 transition-transform duration-300 group-hover:scale-105",
+                            "bg-white/80 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10",
+                            action.shadow
                         )}>
-                            <action.icon className={cn("h-5 w-5 md:h-6 md:w-6", action.iconColor)} strokeWidth={2} />
+                            <action.icon className={cn("h-3 w-3 md:h-4 md:w-4", action.iconColor)} />
                         </div>
 
                         <div className="flex flex-col items-start z-10">
-                            <span className="text-sm md:text-base font-bold text-slate-100 tracking-wide group-hover:text-white transition-all">
+                            <span className="text-[10px] md:text-sm font-bold text-foreground tracking-wide group-hover:text-glow-blue transition-all">
                                 {action.title}
                             </span>
-                            <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider mt-0.5">
-                                Ação Rápida
-                            </span>
+                        </div>
+
+                        {/* Shine Effect */}
+                        <div className="hidden md:block absolute inset-0 rounded-lg overflow-hidden pointer-events-none">
+                            <div className="absolute top-0 left-[-100%] w-[50%] h-full bg-gradient-to-r from-transparent via-white/40 dark:via-white/10 to-transparent skew-x-12 group-hover:left-[200%] transition-all duration-1000 ease-in-out" />
                         </div>
                     </button>
                 ))}

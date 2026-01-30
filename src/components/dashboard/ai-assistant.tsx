@@ -4,7 +4,6 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { cn, formatCurrency } from "@/lib/utils";
 import { Sparkles, Bot, User, Send, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryContext } from '@/context/inventory-context';
@@ -14,6 +13,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
 import { ScrollArea } from '../ui/scroll-area';
+import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 
@@ -130,17 +130,15 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
   };
 
   return (
-    <Card className="glass-panel border-slate-800 bg-slate-900/50 shadow-xl h-full flex flex-col relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-950/50 pointer-events-none" />
-      <CardHeader className="flex flex-row items-center justify-between pb-2 z-10 relative">
-        <CardTitle className="text-xl text-white font-bold tracking-wide flex items-center gap-2">
-          <Sparkles className="text-emerald-400 h-5 w-5" />
-          Assistente IA
+    <Card className="glass-card shadow-sm flex flex-col h-full">
+      <CardHeader>
+        <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+          <Bot className="text-primary" />
+          MajorAssistant
         </CardTitle>
-        <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
-          <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] font-bold text-emerald-400 tracking-wider">ONLINE (FULL BASE)</span>
-        </div>
+        <CardDescription>
+          Faça uma pergunta sobre seus dados de negócio para obter uma resposta detalhada.
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col gap-4">
         <ScrollArea className="flex-grow h-[200px] pr-4 -mr-4">
@@ -157,12 +155,12 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
                 ref={index === messages.length - 1 ? lastMessageRef : null}
                 className={cn("flex items-start gap-3", message.role === 'user' ? 'justify-end' : '')}
               >
-                {message.role === 'model' && <Avatar className="h-8 w-8 bg-emerald-500/20 border border-emerald-500/30"><AvatarFallback className="bg-transparent text-emerald-400"><Bot size={16} /></AvatarFallback></Avatar>}
+                {message.role === 'model' && <Avatar className="h-8 w-8"><AvatarFallback><Bot /></AvatarFallback></Avatar>}
                 <div className={cn(
-                  "p-3 rounded-2xl max-w-[85%] text-sm",
+                  "p-3 rounded-2xl max-w-lg",
                   message.role === 'user'
-                    ? "bg-emerald-600 text-white rounded-br-none shadow-lg shadow-emerald-900/20"
-                    : "bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700"
+                    ? "bg-primary text-primary-foreground rounded-br-none"
+                    : "bg-muted rounded-bl-none"
                 )}>
                   <div className="prose dark:prose-invert prose-sm max-w-none">
                     <ReactMarkdown
@@ -218,17 +216,16 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
           </div>
         </ScrollArea>
       </CardContent>
-      <CardFooter className="z-10 relative pt-0">
-        <div className="flex items-center gap-2 w-full bg-slate-950/50 p-1.5 rounded-full border border-slate-800">
+      <CardFooter>
+        <div className="flex items-center gap-2 w-full">
           <Input
-            placeholder="Pergunte ao assistente..."
+            placeholder="Peça um insight ou faça uma pergunta..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={isLoading}
-            className="border-none bg-transparent focus-visible:ring-0 text-slate-200 placeholder:text-slate-500 h-9"
           />
-          <Button type="button" onClick={() => handleAskAI(query)} size="icon" disabled={isLoading || !query} className="h-8 w-8 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shrink-0">
+          <Button type="button" onClick={() => handleAskAI(query)} size="icon" disabled={isLoading || !query}>
             <Send className="h-4 w-4" />
           </Button>
         </div>

@@ -28,7 +28,7 @@ const PrimaryKPIs = dynamic(() => import("@/components/dashboard/primary-kpis").
 const MonthlySalesChart = dynamic(() => import("@/components/dashboard/monthly-sales-chart").then(mod => mod.MonthlySalesChart), {
   loading: () => <ChartSkeleton />
 });
-const AIAssistant = dynamic(() => import("@/components/dashboard/ai-assistant").then(mod => mod.AIAssistant), {
+const TopSales = dynamic(() => import("@/components/dashboard/top-sales").then(mod => mod.TopSales), {
   loading: () => <PanelSkeleton />
 });
 const StockAlerts = dynamic(() => import("@/components/dashboard/stock-alerts").then(mod => mod.StockAlerts), {
@@ -80,7 +80,7 @@ export default function DashboardPage() {
               <MonthlySalesChart />
             </div>
             <div className="lg:col-span-1 h-full">
-              <AIAssistant />
+              <TopSales />
             </div>
           </div>
 

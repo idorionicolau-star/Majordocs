@@ -113,18 +113,16 @@ export function MonthlySalesChart() {
   }
 
   return (
-    <Card className="glass-panel border-slate-800 bg-slate-900/50 shadow-xl h-full relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-950/50 pointer-events-none" />
-      <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-2 z-10 relative">
-        <div className="flex flex-col">
-          <CardTitle className="text-xl text-white font-bold tracking-wide">Vendas ao Longo do Tempo</CardTitle>
-          <CardDescription className="text-slate-400">Acompanhamento de performance</CardDescription>
+    <Card className="glass-panel border-slate-200/50 dark:border-slate-800/50 shadow-none h-full">
+      <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-0">
+        <div>
+          <CardTitle className="text-xl text-foreground font-medium tracking-wide">Vendas ao Longo do Tempo</CardTitle>
         </div>
         <Select value={period} onValueChange={(value: Period) => setPeriod(value)}>
-          <SelectTrigger className="w-full md:w-[180px] bg-slate-800/50 border-slate-700 text-slate-200 focus:ring-emerald-500/50">
+          <SelectTrigger className="w-full md:w-[180px] bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 text-foreground">
             <SelectValue placeholder="Período" />
           </SelectTrigger>
-          <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
+          <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-foreground">
             <SelectItem value="30d">Diário (30 dias)</SelectItem>
             <SelectItem value="6m">Mensal (6 Meses)</SelectItem>
             <SelectItem value="this_year">Este Ano</SelectItem>
@@ -132,55 +130,54 @@ export function MonthlySalesChart() {
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent className="pl-0 pr-6 pt-6 z-10 relative">
-        <ChartContainer config={chartConfig} className="h-[320px] w-full">
+      <CardContent className="pl-0 pr-6 pt-4">
+        <ChartContainer config={chartConfig} className="h-[280px] w-full">
           <ResponsiveContainer>
             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="fillVendas" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.6} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  <stop offset="5%" stopColor="var(--sales-gradient-start)" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="var(--sales-gradient-end)" stopOpacity={0.1} />
                 </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-slate-800" />
+              <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-800/60" />
               <XAxis
                 dataKey="name"
                 tickLine={false}
                 axisLine={false}
                 tickMargin={12}
                 fontSize={12}
-                stroke="#64748b"
-                className="text-slate-500 font-medium"
+                stroke="currentColor"
+                className="text-muted-foreground"
               />
               <YAxis
-                tickFormatter={(value) => formatCurrency(value as number).replace(",00", "").replace(/\s?MZN/, "").replace("MT", "") + " MTn"}
+                tickFormatter={(value) => formatCurrency(value as number).replace(",00", "").replace(/\s?MZN/, "")}
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                width={80}
+                width={70}
                 fontSize={12}
-                stroke="#64748b"
-                className="text-slate-500 font-medium"
+                stroke="currentColor"
+                className="text-muted-foreground"
               />
               <Tooltip
-                cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '4 4' }}
+                cursor={{ stroke: 'var(--sales-stroke)', strokeWidth: 1, strokeDasharray: '4 4' }}
                 content={<ChartTooltipContent
                   formatter={(value) => (
-                    <span className="font-bold text-emerald-400">
+                    <span className="font-bold" style={{ color: 'var(--sales-stroke)' }}>
                       {formatCurrency(value as number)}
                     </span>
                   )}
-                  className="bg-slate-900/90 border-slate-800 backdrop-blur-xl rounded-xl shadow-2xl p-4"
+                  className="bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-700 backdrop-blur-xl rounded-xl shadow-xl p-4"
                 />}
               />
               <Area
                 type="monotone"
                 dataKey="vendas"
-                stroke="#10b981" // Emerald 500
-                strokeWidth={4}
+                stroke="var(--sales-stroke)"
+                strokeWidth={3}
                 fillOpacity={1}
                 fill="url(#fillVendas)"
-                animationDuration={1500}
               />
             </AreaChart>
           </ResponsiveContainer>
