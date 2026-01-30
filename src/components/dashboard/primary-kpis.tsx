@@ -140,10 +140,11 @@ export const PrimaryKPIs = () => {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-4">
             {cards.map((card, index) => {
-                const isPositive = (card.trend || 0) >= 0;
-                const isCapitalCard = card.title === "CAPITAL IMOBILIZADO";
                 const isFaturamentoCard = card.title === "FATURAMENTO MENSAL";
+                const isCapitalCard = card.title === "CAPITAL IMOBILIZADO";
                 const isTicketMedioCard = card.title === "TICKET MÉDIO";
+                
+                const isPositive = (card.trend || 0) >= 0;
                 const TrendIcon = card.trend === null ? Minus : (isPositive ? TrendingUp : TrendingDown);
                 
                 const trendColor = isFaturamentoCard
@@ -161,13 +162,12 @@ export const PrimaryKPIs = () => {
                 return (
                     <Link href={card.href} key={index} className="block group">
                         <div className={cn(
-                            "bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-3 md:p-4 relative overflow-hidden shadow-lg border border-slate-100 dark:border-slate-700/50 hover:-translate-y-1 transition-transform duration-300 cursor-pointer h-36 md:h-44",
+                            "bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-3 md:p-4 relative overflow-hidden shadow-lg border hover:-translate-y-1 transition-transform duration-300 cursor-pointer h-36 md:h-44",
                             isFaturamentoCard && "shadow-purple-500/10 dark:shadow-purple-500/20 border-purple-500/20 dark:border-purple-500/30",
                             isCapitalCard && "shadow-sky-500/10 dark:shadow-sky-500/20 border-sky-500/20 dark:border-sky-500/30",
                             isTicketMedioCard && "shadow-emerald-500/10 dark:shadow-emerald-500/20 border-emerald-500/20 dark:border-emerald-500/30"
                         )}>
                             <div className="relative z-10 flex flex-col h-full">
-                                {/* Trend Indicator - Top Right */}
                                 <div className="absolute top-0 right-0 flex flex-col items-end pointer-events-none">
                                     <span className={cn("flex items-center text-[10px] md:text-xs font-bold gap-0.5", trendColor)}>
                                         <TrendIcon className="h-2.5 w-2.5 md:h-3 md:w-3" />
@@ -189,28 +189,27 @@ export const PrimaryKPIs = () => {
                                 </div>
                             </div>
                             
-                            {/* Horizontal Bar Chart */}
                             <div className="absolute bottom-4 left-4 right-4 h-2.5 rounded-full bg-slate-200 dark:bg-slate-700/50 overflow-hidden">
                                 {isCapitalCard ? (
                                     <div
-                                        className="h-full rounded-full bg-gradient-to-r from-sky-400 to-blue-500"
+                                        className="h-full rounded-full bg-sky-500"
                                         style={{ width: '100%' }}
                                     />
                                 ) : isFaturamentoCard ? (
                                     <div
-                                        className="h-full rounded-full bg-gradient-to-r from-purple-400 to-purple-600 transition-all duration-700 ease-out"
+                                        className="h-full rounded-full bg-purple-500 transition-all duration-700 ease-out"
                                         style={{ width: `${Math.min(Math.abs(card.trend || 0), 100)}%` }}
                                     />
                                 ) : isTicketMedioCard ? (
                                      <div
-                                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-700 ease-out"
+                                        className="h-full rounded-full bg-emerald-500 transition-all duration-700 ease-out"
                                         style={{ width: `${Math.min(Math.abs(card.trend || 0), 100)}%` }}
                                     />
                                 ) : card.trend !== null && (
                                     <div
                                         className={cn(
                                             "h-full rounded-full transition-all duration-700 ease-out",
-                                            isPositive ? "bg-gradient-to-r from-emerald-400 to-emerald-600" : "bg-gradient-to-r from-rose-400 to-rose-600"
+                                            isPositive ? "bg-emerald-500" : "bg-rose-500"
                                         )}
                                         style={{ width: `${Math.min(Math.abs(card.trend || 0), 100)}%` }}
                                     />
