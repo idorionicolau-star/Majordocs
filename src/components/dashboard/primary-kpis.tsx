@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useContext, useMemo } from "react";
@@ -59,10 +60,10 @@ export const PrimaryKPIs = () => {
 
     if (loading || !kpiData) {
         return (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Skeleton className="h-28 rounded-3xl bg-slate-200 dark:bg-slate-800" />
-                <Skeleton className="h-28 rounded-3xl bg-slate-200 dark:bg-slate-800" />
-                <Skeleton className="h-28 rounded-3xl bg-slate-200 dark:bg-slate-800" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-4">
+                <Skeleton className="h-28 rounded-2xl bg-slate-200 dark:bg-slate-800" />
+                <Skeleton className="h-28 rounded-2xl bg-slate-200 dark:bg-slate-800" />
+                <Skeleton className="h-28 rounded-2xl bg-slate-200 dark:bg-slate-800" />
             </div>
         )
     }
@@ -74,7 +75,7 @@ export const PrimaryKPIs = () => {
             href: "/sales",
             trend: kpiData.salesGrowth,
             trendLabel: "vs mês anterior",
-            colorClass: "kpi-card--purple",
+            colorClass: "kpi-card--green",
         },
         {
             title: "CAPITAL IMOBILIZADO",
@@ -87,10 +88,10 @@ export const PrimaryKPIs = () => {
         {
             title: "TICKET MÉDIO",
             value: kpiData.currentAvgTicket,
-            href: "/sales",
+            href: "/reports",
             trend: kpiData.ticketGrowth,
             trendLabel: "vs mês anterior",
-            colorClass: "kpi-card--green",
+            colorClass: "kpi-card--purple",
         },
     ];
 
