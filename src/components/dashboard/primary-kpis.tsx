@@ -8,16 +8,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
-import { startOfMonth, subMonths, isSameMonth, parseISO, isSameDay, subDays } from 'date-fns';
+import { isSameMonth, parseISO, startOfMonth, subMonths } from 'date-fns';
 
 export const PrimaryKPIs = () => {
-    const { dashboardStats, sales, stockMovements, loading } = useContext(InventoryContext) || { dashboardStats: null, sales: [], stockMovements: [], loading: true };
+    const { dashboardStats, sales, loading } = useContext(InventoryContext) || { dashboardStats: null, sales: [], loading: true };
 
     const kpiData = useMemo(() => {
         if (!sales || !dashboardStats) return null;
 
         const now = new Date();
-        const currentMonthStart = startOfMonth(now);
         const lastMonthStart = startOfMonth(subMonths(now, 1));
 
         // 1. Sales Growth (MoM)
@@ -31,7 +30,7 @@ export const PrimaryKPIs = () => {
             if (isSameMonth(d, now)) {
                 currentMonthSales += (sale.amountPaid ?? sale.totalValue ?? 0);
                 currentMonthCount++;
-            } else if (isSameMonth(d, subMonths(now, 1))) {
+            } else if (isSameMonth(d, lastMonthStart)) {
                 lastMonthSales += (sale.amountPaid ?? sale.totalValue ?? 0);
                 lastMonthCount++;
             }
@@ -75,7 +74,6 @@ export const PrimaryKPIs = () => {
             href: "/sales",
             trend: kpiData.salesGrowth,
             trendLabel: "vs mês anterior",
-            colorVar: "var(--chart-1)",
             colorClass: "kpi-card--green",
         },
         {
@@ -84,7 +82,6 @@ export const PrimaryKPIs = () => {
             href: "/inventory",
             trend: null,
             trendLabel: "Posição Atual",
-            colorVar: "var(--chart-2)",
             colorClass: "kpi-card--blue",
         },
         {
@@ -93,7 +90,6 @@ export const PrimaryKPIs = () => {
             href: "/reports",
             trend: kpiData.ticketGrowth,
             trendLabel: "vs mês anterior",
-            colorVar: "var(--chart-3)",
             colorClass: "kpi-card--purple",
         },
     ];
@@ -116,9 +112,9 @@ export const PrimaryKPIs = () => {
                             "bg-white dark:bg-slate-800 rounded-2xl p-4 relative overflow-hidden border hover:-translate-y-1 transition-transform duration-300 cursor-pointer",
                             card.colorClass
                         )}>
-                             <div className="flex flex-col items-center text-center">
+                             <div className="relative z-10 flex flex-col h-full items-center justify-center text-center">
                                 <p className="text-slate-400 text-[10px] font-bold tracking-wider uppercase">{card.title}</p>
-                                <h2 className="text-2xl font-bold" style={{ color: card.colorVar }}>
+                                <h2 className="text-2xl font-bold" style={{ color: `var(--card-color)` }}>
                                     {formatCurrency(card.value)}
                                 </h2>
                                 <div className="flex items-center gap-1 mt-1">
@@ -130,11 +126,11 @@ export const PrimaryKPIs = () => {
                                 </div>
                             </div>
                             
-                            <div className="mt-3 h-2 rounded-full bg-slate-200 dark:bg-slate-700/50 overflow-hidden">
+                            <div className="absolute bottom-0 left-0 w-full h-1.5 rounded-b-2xl bg-slate-200 dark:bg-slate-700/50 overflow-hidden">
                                 <div
-                                    className="h-full rounded-full"
+                                    className="h-full"
                                     style={{ 
-                                        backgroundColor: card.colorVar,
+                                        backgroundColor: `var(--card-color)`,
                                         width: card.trend !== null ? `${Math.min(Math.abs(card.trend || 0), 100)}%` : '100%' 
                                     }}
                                 />
