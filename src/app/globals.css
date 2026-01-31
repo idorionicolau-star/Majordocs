@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
@@ -35,8 +36,6 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 151 55% 42%;
-
-    --radius: 1rem;
 
     /* Sales Chart - Neon Green */
     --sales-stroke: #10b981;
@@ -99,7 +98,7 @@
     --chart-1: 151 55% 42%;
     /* Emerald */
     --chart-2: 217 91% 60%;
-    --chart-3: 330 100% 65%;
+    --chart-3: 330 100% 50%;
     --chart-4: 0 84% 60%;
     --chart-5: 258 75% 65%;
   }
