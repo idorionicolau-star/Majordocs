@@ -75,6 +75,7 @@ export const PrimaryKPIs = () => {
             href: "/sales",
             trend: kpiData.salesGrowth,
             trendLabel: "vs mês anterior",
+            colorVar: "var(--chart-1)",
             colorClass: "kpi-card--green",
         },
         {
@@ -83,6 +84,7 @@ export const PrimaryKPIs = () => {
             href: "/inventory",
             trend: null,
             trendLabel: "Posição Atual",
+            colorVar: "var(--chart-2)",
             colorClass: "kpi-card--blue",
         },
         {
@@ -91,6 +93,7 @@ export const PrimaryKPIs = () => {
             href: "/reports",
             trend: kpiData.ticketGrowth,
             trendLabel: "vs mês anterior",
+            colorVar: "var(--chart-3)",
             colorClass: "kpi-card--purple",
         },
     ];
@@ -101,9 +104,9 @@ export const PrimaryKPIs = () => {
                 const isPositive = (card.trend || 0) >= 0;
                 const TrendIcon = card.trend === null ? Minus : (isPositive ? TrendingUp : TrendingDown);
                 
-                const trendColor = card.trend === null
+                 const trendColor = card.trend === null
                     ? "text-slate-400"
-                    : isPositive ? `text-[var(--card-color)]` : "text-rose-500 dark:text-rose-400";
+                    : isPositive ? "text-[var(--card-color)]" : "text-rose-500 dark:text-rose-400";
                 
                 const trendText = card.trend === null ? "--" : `${isPositive ? '+' : ''}${card.trend?.toFixed(1)}%`;
 
@@ -113,14 +116,12 @@ export const PrimaryKPIs = () => {
                             "bg-white dark:bg-slate-800 rounded-2xl p-4 relative overflow-hidden border hover:-translate-y-1 transition-transform duration-300 cursor-pointer",
                             card.colorClass
                         )}>
-                             <div className="flex justify-between items-start">
-                                <div className="flex flex-col">
-                                    <p className="text-slate-400 text-[10px] font-bold tracking-wider uppercase">{card.title}</p>
-                                    <h2 className="text-2xl font-bold" style={{ color: 'var(--card-color)' }}>
-                                        {formatCurrency(card.value)}
-                                    </h2>
-                                </div>
-                                <div className="flex flex-col items-end pointer-events-none">
+                             <div className="flex flex-col items-center text-center">
+                                <p className="text-slate-400 text-[10px] font-bold tracking-wider uppercase">{card.title}</p>
+                                <h2 className="text-2xl font-bold" style={{ color: card.colorVar }}>
+                                    {formatCurrency(card.value)}
+                                </h2>
+                                <div className="flex items-center gap-1 mt-1">
                                     <span className={cn("flex items-center text-xs font-bold gap-0.5", trendColor)}>
                                         <TrendIcon className="h-3 w-3" />
                                         {trendText}
@@ -131,9 +132,9 @@ export const PrimaryKPIs = () => {
                             
                             <div className="mt-3 h-2 rounded-full bg-slate-200 dark:bg-slate-700/50 overflow-hidden">
                                 <div
-                                    className="h-full rounded-full transition-all duration-700 ease-out"
+                                    className="h-full rounded-full"
                                     style={{ 
-                                        backgroundColor: 'var(--card-color)',
+                                        backgroundColor: card.colorVar,
                                         width: card.trend !== null ? `${Math.min(Math.abs(card.trend || 0), 100)}%` : '100%' 
                                     }}
                                 />
