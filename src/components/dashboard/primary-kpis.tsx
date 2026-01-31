@@ -7,54 +7,78 @@ import { cn, formatCurrency } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
-
-import { isSameMonth, parseISO, startOfMonth, subMonths } from 'date-fns';
+import { isToday, isYesterday, subDays, parseISO } from 'date-fns';
+import { Timestamp } from "firebase/firestore";
 
 export const PrimaryKPIs = () => {
-    const { dashboardStats, sales, loading } = useContext(InventoryContext) || { dashboardStats: null, sales: [], loading: true };
+    const { dashboardStats, sales, loading, products, stockMovements } = useContext(InventoryContext) || {
+        dashboardStats: null,
+        sales: [],
+        products: [],
+        stockMovements: [],
+        loading: true
+    };
 
     const kpiData = useMemo(() => {
-        if (!sales || !dashboardStats) return null;
+        if (loading || !sales || !dashboardStats || !products || !stockMovements) return null;
 
         const now = new Date();
-        const lastMonthStart = startOfMonth(subMonths(now, 1));
+        
+        // --- Daily Sales & Ticket vs Yesterday ---
+        const todaySales = sales.filter(s => isToday(parseISO(s.date)));
+        const yesterdaySales = sales.filter(s => isYesterday(parseISO(s.date)));
 
-        // 1. Sales Growth (MoM)
-        let currentMonthSales = 0;
-        let lastMonthSales = 0;
-        let currentMonthCount = 0;
-        let lastMonthCount = 0;
+        const todaySalesValue = todaySales.reduce((sum, s) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);
+        const yesterdaySalesValue = yesterdaySales.reduce((sum, s) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);
 
-        sales.forEach(sale => {
-            const d = parseISO(sale.date);
-            if (isSameMonth(d, now)) {
-                currentMonthSales += (sale.amountPaid ?? sale.totalValue ?? 0);
-                currentMonthCount++;
-            } else if (isSameMonth(d, lastMonthStart)) {
-                lastMonthSales += (sale.amountPaid ?? sale.totalValue ?? 0);
-                lastMonthCount++;
-            }
+        const salesGrowth = yesterdaySalesValue > 0
+            ? ((todaySalesValue - yesterdaySalesValue) / yesterdaySalesValue) * 100
+            : (todaySalesValue > 0 ? 100 : 0);
+
+        const currentAvgTicket = todaySales.length > 0 ? todaySalesValue / todaySales.length : 0;
+        const yesterdayAvgTicket = yesterdaySales.length > 0 ? yesterdaySalesValue / yesterdaySales.length : 0;
+
+        const ticketGrowth = yesterdayAvgTicket > 0
+            ? ((currentAvgTicket - yesterdayAvgTicket) / yesterdayAvgTicket) * 100
+            : (currentAvgTicket > 0 ? 100 : 0);
+        
+        // --- Capital Imobilizado Growth (Last 24h) ---
+        const currentInventoryValue = dashboardStats.totalInventoryValue;
+        const twentyFourHoursAgo = subDays(now, 1);
+        
+        const productPriceMap = new Map<string, number>();
+        products.forEach(p => {
+          if (p.sourceIds) {
+            p.sourceIds.forEach(id => productPriceMap.set(id, p.price));
+          } else if (p.id) {
+            productPriceMap.set(p.id, p.price);
+          }
         });
 
-        const salesGrowth = lastMonthSales > 0
-            ? ((currentMonthSales - lastMonthSales) / lastMonthSales) * 100
-            : (currentMonthSales > 0 ? 100 : 0);
+        const inventoryValueChangeLast24h = stockMovements
+            .filter(m => m.timestamp && (m.timestamp as Timestamp).toDate() > twentyFourHoursAgo)
+            .reduce((netChange, movement) => {
+                const price = productPriceMap.get(movement.productId);
+                if (price === undefined || movement.type === 'TRANSFER') {
+                    return netChange;
+                }
+                return netChange + (movement.quantity * price);
+            }, 0);
+        
+        const inventoryValue24hAgo = currentInventoryValue - inventoryValueChangeLast24h;
 
-        // 2. Avg Ticket Growth (MoM)
-        const currentAvgTicket = currentMonthCount > 0 ? currentMonthSales / currentMonthCount : 0;
-        const lastAvgTicket = lastMonthCount > 0 ? lastMonthSales / lastMonthCount : 0;
-
-        const ticketGrowth = lastAvgTicket > 0
-            ? ((currentAvgTicket - lastAvgTicket) / lastAvgTicket) * 100
-            : (currentAvgTicket > 0 ? 100 : 0);
+        const capitalGrowth = inventoryValue24hAgo > 0
+            ? ((currentInventoryValue - inventoryValue24hAgo) / inventoryValue24hAgo) * 100
+            : (currentInventoryValue > 0 ? 100 : 0);
 
         return {
             salesGrowth,
             ticketGrowth,
-            currentMonthSales,
+            capitalGrowth,
+            currentDaySales: todaySalesValue,
             currentAvgTicket,
         };
-    }, [sales, dashboardStats]);
+    }, [sales, dashboardStats, products, stockMovements, loading]);
 
 
     if (loading || !kpiData) {
@@ -69,27 +93,27 @@ export const PrimaryKPIs = () => {
 
     const cards = [
         {
-            title: "FATURAMENTO MENSAL",
-            value: kpiData.currentMonthSales,
+            title: "FATURAMENTO (HOJE)",
+            value: kpiData.currentDaySales,
             href: "/sales",
             trend: kpiData.salesGrowth,
-            trendLabel: "vs mês anterior",
+            trendLabel: "vs ontem",
             colorClass: "kpi-card--green",
         },
         {
             title: "CAPITAL IMOBILIZADO",
             value: dashboardStats.totalInventoryValue,
             href: "/inventory",
-            trend: null,
-            trendLabel: "Posição Atual",
+            trend: kpiData.capitalGrowth,
+            trendLabel: "vs 24h atrás",
             colorClass: "kpi-card--blue",
         },
         {
-            title: "TICKET MÉDIO",
+            title: "TICKET MÉDIO (HOJE)",
             value: kpiData.currentAvgTicket,
             href: "/reports",
             trend: kpiData.ticketGrowth,
-            trendLabel: "vs mês anterior",
+            trendLabel: "vs ontem",
             colorClass: "kpi-card--purple",
         },
     ];
@@ -98,13 +122,13 @@ export const PrimaryKPIs = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-4">
             {cards.map((card, index) => {
                 const isPositive = (card.trend || 0) >= 0;
-                const TrendIcon = card.trend === null ? Minus : (isPositive ? TrendingUp : TrendingDown);
+                const TrendIcon = card.trend === null || card.trend === 0 ? Minus : (isPositive ? TrendingUp : TrendingDown);
                 
-                 const trendColor = card.trend === null
+                 const trendColor = card.trend === null || card.trend === 0
                     ? "text-slate-400"
                     : isPositive ? "text-[var(--card-color)]" : "text-rose-500 dark:text-rose-400";
                 
-                const trendText = card.trend === null ? "--" : `${isPositive ? '+' : ''}${card.trend?.toFixed(1)}%`;
+                const trendText = card.trend === null || !isFinite(card.trend) ? "--" : `${isPositive ? '+' : ''}${card.trend?.toFixed(1)}%`;
 
                 return (
                     <Link href={card.href} key={index} className="block group">
@@ -131,7 +155,7 @@ export const PrimaryKPIs = () => {
                                     className="h-full"
                                     style={{ 
                                         backgroundColor: `var(--card-color)`,
-                                        width: card.trend !== null ? `${Math.min(Math.abs(card.trend || 0), 100)}%` : '100%' 
+                                        width: card.trend !== null && isFinite(card.trend) ? `${Math.min(Math.abs(card.trend || 0), 100)}%` : '0%' 
                                     }}
                                 />
                             </div>
