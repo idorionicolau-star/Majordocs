@@ -260,17 +260,7 @@ export default function InventoryPage() {
     return <div className="p-10 text-center"><Skeleton className="h-10 w-full" /></div>
   }
 
-  const {
-    data: products,
-    loading: inventoryLoading,
-    loadMore,
-    hasMore,
-    error: paginationError
-  } = useFirestorePagination<Product>(
-    productsQuery as any,
-    50,
-    productsQuery ? queryConstraints : []
-  );
+
 
   if (paginationError) {
     return (
