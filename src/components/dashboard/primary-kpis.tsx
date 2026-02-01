@@ -8,10 +8,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import {
-  isToday, isYesterday, subDays, parseISO,
-  startOfWeek, endOfWeek, subWeeks,
-  startOfMonth, endOfMonth, subMonths,
-  isWithinInterval,
+    isToday, isYesterday, subDays, parseISO,
+    startOfWeek, endOfWeek, subWeeks,
+    startOfMonth, endOfMonth, subMonths,
+    isWithinInterval,
 } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { Timestamp } from "firebase/firestore";
@@ -37,14 +37,14 @@ export const PrimaryKPIs = () => {
         let previousPeriodSales: typeof sales;
         let trendLabel = '';
         let capitalTrendPeriod = 1; // days
-        
+
         switch (period) {
             case 'weekly':
                 const startOfThisWeek = startOfWeek(now, { locale: pt });
                 const endOfThisWeek = endOfWeek(now, { locale: pt });
                 const startOfLastWeek = startOfWeek(subWeeks(now, 1), { locale: pt });
                 const endOfLastWeek = endOfWeek(subWeeks(now, 1), { locale: pt });
-                
+
                 currentPeriodSales = sales.filter(s => isWithinInterval(parseISO(s.date), { start: startOfThisWeek, end: endOfThisWeek }));
                 previousPeriodSales = sales.filter(s => isWithinInterval(parseISO(s.date), { start: startOfLastWeek, end: endOfLastWeek }));
                 trendLabel = "vs semana ant.";
@@ -72,7 +72,7 @@ export const PrimaryKPIs = () => {
 
         const currentSalesValue = currentPeriodSales.reduce((sum, s) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);
         const previousSalesValue = previousPeriodSales.reduce((sum, s) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);
-        
+
         const salesGrowth = previousSalesValue > 0
             ? ((currentSalesValue - previousSalesValue) / previousSalesValue) * 100
             : (currentSalesValue > 0 ? 100 : 0);
@@ -83,14 +83,14 @@ export const PrimaryKPIs = () => {
         const ticketGrowth = previousAvgTicket > 0
             ? ((currentAvgTicket - previousAvgTicket) / previousAvgTicket) * 100
             : (currentAvgTicket > 0 ? 100 : 0);
-        
+
         const periodAgo = subDays(now, capitalTrendPeriod);
-        
+
         const productPriceMap = new Map<string, number>();
         products.forEach(p => {
-          if (p.id) { // Use catalog product ID which is more stable
-            productPriceMap.set(p.id, p.price);
-          }
+            if (p.id) { // Use catalog product ID which is more stable
+                productPriceMap.set(p.id, p.price);
+            }
         });
 
         const inventoryValueChange = stockMovements
@@ -102,7 +102,7 @@ export const PrimaryKPIs = () => {
                 }
                 return netChange + (movement.quantity * price);
             }, 0);
-        
+
         const currentInventoryValue = dashboardStats.totalInventoryValue;
         const inventoryValuePeriodAgo = currentInventoryValue - inventoryValueChange;
 
@@ -130,7 +130,7 @@ export const PrimaryKPIs = () => {
             </div>
         )
     }
-    
+
     const periodLabels = {
         daily: 'Diário',
         weekly: 'Semanal',
@@ -175,15 +175,15 @@ export const PrimaryKPIs = () => {
                     </TabsList>
                 </Tabs>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {cards.map((card, index) => {
                     const isPositive = (card.trend || 0) >= 0;
                     const TrendIcon = card.trend === null || card.trend === 0 ? Minus : (isPositive ? TrendingUp : TrendingDown);
-                    
+
                     const trendColor = card.trend === null || card.trend === 0
                         ? "text-slate-400"
                         : isPositive ? "text-[var(--card-color)]" : "text-rose-500 dark:text-rose-400";
-                    
+
                     const trendText = card.trend === null || !isFinite(card.trend) ? "--" : `${isPositive ? '+' : ''}${card.trend?.toFixed(1)}%`;
 
                     return (
@@ -205,13 +205,13 @@ export const PrimaryKPIs = () => {
                                         <span className="text-slate-400 text-[10px]">{card.trendLabel}</span>
                                     </div>
                                 </div>
-                                
+
                                 <div className="absolute bottom-0 left-0 w-full h-1.5 rounded-b-2xl bg-slate-200 dark:bg-slate-700/50 overflow-hidden">
                                     <div
                                         className="h-full"
-                                        style={{ 
+                                        style={{
                                             backgroundColor: `var(--card-color)`,
-                                            width: card.trend !== null && isFinite(card.trend) ? `${Math.min(Math.abs(card.trend || 0), 100)}%` : '0%' 
+                                            width: card.trend !== null && isFinite(card.trend) ? `${Math.min(Math.abs(card.trend || 0), 100)}%` : '0%'
                                         }}
                                     />
                                 </div>

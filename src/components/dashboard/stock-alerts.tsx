@@ -135,7 +135,7 @@ export function StockAlerts() {
                     </TooltipProvider>
                 </div>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
                 {displayProducts.map(product => {
                     const availableStock = product.stock - product.reservedStock;
                     const isFullyReserved = availableStock <= 0 && product.reservedStock > 0;
