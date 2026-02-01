@@ -150,7 +150,8 @@ export default function InventoryPage() {
     data: products,
     loading: inventoryLoading,
     loadMore,
-    hasMore
+    hasMore,
+    error: paginationError // Renamed in previous step but need to ensure hook call matches content
   } = useFirestorePagination<Product>(
     productsQuery as any, // Cast to any because hook expects generic Query
     50, // Page size
@@ -257,6 +258,38 @@ export default function InventoryPage() {
 
   if (!companyId) {
     return <div className="p-10 text-center"><Skeleton className="h-10 w-full" /></div>
+  }
+
+  const {
+    data: products,
+    loading: inventoryLoading,
+    loadMore,
+    hasMore,
+    error: paginationError
+  } = useFirestorePagination<Product>(
+    productsQuery as any,
+    50,
+    productsQuery ? queryConstraints : []
+  );
+
+  if (paginationError) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center text-center space-y-4">
+        <div className="p-4 rounded-full bg-destructive/10 text-destructive">
+          <AlertCircle className="h-8 w-8" />
+        </div>
+        <h3 className="text-lg font-semibold">Erro ao carregar inventário</h3>
+        <p className="text-muted-foreground max-w-md">
+          {paginationError.message.includes('requires an index')
+            ? "O sistema de filtros precisa de uma configuração extra no banco de dados (Índice). Por favor contacte o suporte técnico com este erro."
+            : "Ocorreu um problema ao comunicar com o servidor."}
+        </p>
+        <p className="text-xs text-muted-foreground font-mono bg-muted p-2 rounded border border-border">
+          {paginationError.message}
+        </p>
+        <Button onClick={() => window.location.reload()}>Tentar Novamente</Button>
+      </div>
+    );
   }
 
   return (
