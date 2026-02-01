@@ -43,6 +43,7 @@ import {
   arrayUnion,
   type CollectionReference,
   DocumentReference,
+  limit,
 } from 'firebase/firestore';
 import { allPermissions } from '@/lib/data';
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
@@ -387,12 +388,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const productsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
-    return collection(firestore, `companies/${companyId}/products`);
+    return query(collection(firestore, `companies/${companyId}/products`), limit(100));
   }, [firestore, companyId]);
 
   const salesCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
-    return collection(firestore, `companies/${companyId}/sales`);
+    return query(collection(firestore, `companies/${companyId}/sales`), limit(100));
   }, [firestore, companyId]);
 
   const productionsCollectionRef = useMemoFirebase(() => {

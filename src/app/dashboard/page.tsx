@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useContext } from "react";
@@ -8,18 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
-
-// Loading Fallbacks
-const KPISkeleton = () => (
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-    <Skeleton className="h-32 bg-slate-800/50 rounded-3xl" />
-    <Skeleton className="h-32 bg-slate-800/50 rounded-3xl" />
-    <Skeleton className="h-32 bg-slate-800/50 rounded-3xl" />
-  </div>
-);
-
-const ChartSkeleton = () => <Skeleton className="h-[400px] w-full bg-slate-800/50 rounded-3xl" />;
-const PanelSkeleton = () => <Skeleton className="h-[400px] w-full bg-slate-800/50 rounded-3xl" />;
+import { KPISkeleton } from "@/components/dashboard/kpi-skeleton";
+import { ChartSkeleton } from "@/components/dashboard/chart-skeleton";
+import { PanelSkeleton } from "@/components/dashboard/panel-skeleton";
 
 // Dynamic Imports
 const PrimaryKPIs = dynamic(() => import("@/components/dashboard/primary-kpis").then(mod => mod.PrimaryKPIs), {
@@ -49,8 +39,9 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex flex-col gap-4 pb-10 main-content">
+        <KPISkeleton />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 rounded-3xl" />)}
+          {/* Fallback skeleton grid if needed, but KPISkeleton covers it */}
         </div>
         <PanelSkeleton />
       </div>

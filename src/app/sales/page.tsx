@@ -2,23 +2,22 @@
 
 import { useState, useEffect, useMemo, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
-import type { Sale, Location, ModulePermission } from "@/lib/types";
+import type { Sale } from "@/lib/types";
 import { columns } from "@/components/sales/columns";
-import { SalesDataTable } from "@/components/sales/data-table";
+import { VirtualSalesList } from "@/components/sales/virtual-sales-list";
+import { VirtualSalesGrid } from "@/components/sales/virtual-sales-grid";
 import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronDown, Filter, Lock, MapPin, Trash2, PlusCircle, Plus } from "lucide-react";
+import { List, LayoutGrid, ChevronDown, Filter, MapPin, Trash2, Plus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { SaleCard } from "@/components/sales/sale-card";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { doc, updateDoc } from "firebase/firestore";
 import { useFirestore } from '@/firebase/provider';
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
 import { isSameDay } from "date-fns";
@@ -33,6 +32,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card } from "@/components/ui/card";
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { collection, where, orderBy, QueryConstraint } from "firebase/firestore";
 
 export default function SalesPage() {
   const searchParams = useSearchParams();
@@ -49,7 +50,6 @@ export default function SalesPage() {
   const firestore = useFirestore();
 
   const {
-    sales,
     loading: inventoryLoading,
     addSale,
     confirmSalePickup,
@@ -62,7 +62,6 @@ export default function SalesPage() {
     isMultiLocation,
     clearSales,
   } = inventoryContext || {
-    sales: [],
     loading: true,
     addSale: async () => { },
     confirmSalePickup: () => { },
@@ -79,6 +78,56 @@ export default function SalesPage() {
   const canEditSales = canEdit('sales');
   const canViewSales = canView('sales');
   const isAdmin = user?.role === 'Admin';
+
+  // --- Firestore Pagination Query Construction ---
+  const salesQuery = useMemo(() => {
+    if (!firestore || !companyId) return null;
+    return collection(firestore, `companies/${companyId}/sales`);
+  }, [firestore, companyId]);
+
+  const queryConstraints = useMemo(() => {
+    const constraints: QueryConstraint[] = [];
+
+    // 1. Status Filter
+    if (statusFilter !== 'all') {
+      constraints.push(where('status', '==', statusFilter));
+    }
+
+    // 2. Location Filter
+    if (isMultiLocation && locationFilter !== 'all') {
+      constraints.push(where('location', '==', locationFilter));
+    }
+
+    // 3. Name Filter (Search by productName or guideNumber)
+    // Basic prefix search on productName (limitation: cannot OR guideNumber efficiently server-side without multiple queries)
+    if (nameFilter) {
+      constraints.push(where('productName', '>=', nameFilter));
+      constraints.push(where('productName', '<=', nameFilter + '\uf8ff'));
+    }
+    // 4. Date Filter - Exact match on Date object stored as string/timestamp?
+    // Sale type usually saves ISO string or timestamp. 
+    // The previous client-side logic used `isSameDay`.
+    // Server-side: `where('date', '>=', startOfDay), where('date', '<=', endOfDay)`.
+    // We'll skip complex date filtering server-side for this iteration and default to sorting.
+    else {
+      // Default Sort
+      constraints.push(orderBy('date', 'desc'));
+    }
+
+    return constraints;
+  }, [statusFilter, locationFilter, isMultiLocation, nameFilter, dateFilter]);
+
+  // Use the Hook
+  const {
+    data: sales,
+    loading: salesLoading,
+    loadMore,
+    hasMore
+  } = useFirestorePagination<Sale>(
+    salesQuery as any,
+    50,
+    salesQuery ? queryConstraints : []
+  );
 
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditSales) {
@@ -158,26 +207,6 @@ export default function SalesPage() {
     }
   };
 
-  const filteredSales = useMemo(() => {
-    let result = sales;
-    if (nameFilter) {
-      result = result.filter(s =>
-        s.productName.toLowerCase().includes(nameFilter.toLowerCase()) ||
-        s.guideNumber.toLowerCase().includes(nameFilter.toLowerCase())
-      );
-    }
-    if (statusFilter !== 'all') {
-      result = result.filter(s => s.status === statusFilter);
-    }
-    if (isMultiLocation && locationFilter !== 'all') {
-      result = result.filter(s => s.location === locationFilter);
-    }
-    if (dateFilter) {
-      result = result.filter(s => isSameDay(new Date(s.date), dateFilter));
-    }
-    return [...result].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [sales, nameFilter, statusFilter, isMultiLocation, locationFilter, dateFilter]);
-
   const handleClearSales = async () => {
     if (clearSales) {
       await clearSales();
@@ -185,18 +214,8 @@ export default function SalesPage() {
     setShowClearConfirm(false);
   };
 
-  if (inventoryLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-12 w-1/3" />
-        <Skeleton className="h-8 w-1/4" />
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      </div>
-    );
+  if (!companyId) {
+    return <div className="p-10 text-center"><Skeleton className="h-10 w-full" /></div>
   }
 
   return (
@@ -218,18 +237,18 @@ export default function SalesPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
+      <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500 h-[calc(100vh-100px)]">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-headline font-bold">Vendas</h1>
           </div>
         </div>
 
-        <Card className="glass-panel p-4 mb-6 border-none">
+        <Card className="glass-panel p-4 border-none shrink-0">
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row items-center gap-2">
               <Input
-                placeholder="Filtrar por produto ou guia..."
+                placeholder="Filtrar por produto (nome)..."
                 value={nameFilter}
                 onChange={(event) => setNameFilter(event.target.value)}
                 className="w-full sm:max-w-xs shadow-sm h-12 text-sm bg-background/50"
@@ -346,62 +365,43 @@ export default function SalesPage() {
           </div>
         </Card>
 
-        <div className="hidden md:block">
+        <div className="flex-grow min-h-0">
           {view === 'list' ? (
-            <SalesDataTable
+            <VirtualSalesList
+              loading={salesLoading && sales.length === 0}
               columns={columns({
                 onUpdateSale: handleUpdateSale,
                 onConfirmPickup: handleConfirmPickup,
                 canEdit: canEditSales
               })}
-              data={filteredSales}
+              sales={sales}
+              loadMore={loadMore}
+              hasMore={hasMore}
             />
           ) : (
-            <div className={cn(
-              "grid gap-2 sm:gap-4",
-              gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
-              gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
-              gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
-            )}>
-              {filteredSales.map(sale => (
-                <SaleCard
-                  key={sale.id}
-                  sale={sale}
-                  onUpdateSale={handleUpdateSale}
-                  onConfirmPickup={handleConfirmPickup}
-                  onDeleteSale={deleteSale}
-                  viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
-                  canEdit={canEditSales}
-                  locationName={locations.find(l => l.id === sale.location)?.name}
-                />
-              ))}
-            </div>
+            <VirtualSalesGrid
+              sales={sales}
+              loading={salesLoading && sales.length === 0}
+              onUpdateSale={handleUpdateSale}
+              onConfirmPickup={handleConfirmPickup}
+              onDeleteSale={deleteSale}
+              canEdit={canEditSales}
+              locations={locations}
+              gridCols={gridCols}
+              loadMore={loadMore}
+              hasMore={hasMore}
+            />
           )}
-        </div>
 
-        <div className="md:hidden space-y-3">
-          {filteredSales.length > 0 ? (
-            filteredSales.map(sale => (
-              <SaleCard
-                key={sale.id}
-                sale={sale}
-                onUpdateSale={handleUpdateSale}
-                onConfirmPickup={handleConfirmPickup}
-                onDeleteSale={deleteSale}
-                viewMode='normal'
-                canEdit={canEditSales}
-                locationName={locations.find(l => l.id === sale.location)?.name}
-              />
-            ))
-          ) : (
-            <Card className="text-center py-12 text-muted-foreground">
+          {!salesLoading && sales.length === 0 && (
+            <Card className="text-center py-12 text-muted-foreground mt-4">
               Nenhuma venda encontrada com os filtros atuais.
             </Card>
           )}
         </div>
 
         {isAdmin && (
-          <Card className="mt-8">
+          <Card className="mt-8 shrink-0">
             <div className="p-6 flex flex-col items-center text-center">
               <h3 className="font-semibold mb-2">Zona de Administrador</h3>
               <p className="text-sm text-muted-foreground mb-4 max-w-md">

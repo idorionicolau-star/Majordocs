@@ -17,9 +17,14 @@ export function BottomNav() {
 
   const navItems = mainNavItems.filter(item => {
     if (item.isSubItem) return false;
+
+    // Lista explícita de itens permitidos no rodapé
+    const allowedFooterItems = ['dashboard', 'inventory', 'sales', 'production'];
+    if (!allowedFooterItems.includes(item.id)) return false;
+
     if (!canView(item.id as ModulePermission)) return false;
     if (companyData?.businessType === 'reseller' && (item.id === 'production' || item.id === 'orders')) {
-        return false;
+      return false;
     }
     return true;
   });

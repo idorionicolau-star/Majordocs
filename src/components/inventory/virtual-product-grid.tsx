@@ -1,0 +1,101 @@
+import { VirtuosoGrid } from 'react-virtuoso';
+import { Product, Location } from '@/lib/types';
+import { ProductCard } from './product-card';
+import { cn } from '@/lib/utils';
+import { forwardRef } from 'react';
+
+interface VirtualProductGridProps {
+    products: Product[];
+    onProductUpdate: (product: Product) => void;
+    onAttemptDelete: (product: Product) => void;
+    canEdit: boolean;
+    locations: Location[];
+    isMultiLocation: boolean;
+    gridCols: '3' | '4' | '5';
+    loadMore: () => void;
+    hasMore: boolean;
+    loading: boolean;
+}
+
+const GridContainer = forwardRef<HTMLDivElement, any>(({ className, ...props }, ref) => (
+    <div
+        ref={ref}
+        {...props}
+        className={cn(className, "w-full")}
+    />
+));
+GridContainer.displayName = 'GridContainer';
+
+const GridList = forwardRef<HTMLDivElement, any>(({ className, children, ...props }, ref) => (
+    <div
+        ref={ref}
+        {...props}
+        className={cn("flex flex-wrap gap-2 sm:gap-4 pb-4", className)}
+    >
+        {children}
+    </div>
+));
+GridList.displayName = 'GridList';
+
+export function VirtualProductGrid({
+    products,
+    onProductUpdate,
+    onAttemptDelete,
+    canEdit,
+    locations,
+    isMultiLocation,
+    gridCols,
+    loadMore,
+    hasMore,
+    loading
+}: VirtualProductGridProps) {
+
+    const ItemContainer = ({ children, ...props }: any) => {
+        let widthClass = "w-full"; // Fallback
+
+        // Calculate width based on columns and gap
+        // These are approximations to match the tailwind grid classes
+        if (gridCols === '3') widthClass = "w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-0.8rem)]";
+        else if (gridCols === '4') widthClass = "w-[calc(50%-0.5rem)] sm:w-[calc(25%-0.8rem)]";
+        else if (gridCols === '5') widthClass = "w-[calc(50%-0.5rem)] sm:w-[calc(25%-0.8rem)] lg:w-[calc(20%-0.85rem)]";
+
+        return (
+            <div {...props} className={cn(widthClass, "mb-2")}>
+                {children}
+            </div>
+        );
+    };
+
+    return (
+        <VirtuosoGrid
+            style={{ height: 'calc(100vh - 300px)' }}
+            useWindowScroll
+            data={products}
+            endReached={() => {
+                if (hasMore && !loading) {
+                    loadMore();
+                }
+            }}
+            overscan={200}
+            components={{
+                List: GridList,
+                Item: ItemContainer,
+                Footer: () => loading ? <div className="py-4 text-center text-sm text-muted-foreground">A carregar mais produtos...</div> : null
+            }}
+            itemContent={(index, product) => (
+                <div style={{ height: '100%' }}>
+                    <ProductCard
+                        key={product.instanceId || product.id}
+                        product={product}
+                        onProductUpdate={onProductUpdate}
+                        onAttemptDelete={onAttemptDelete}
+                        viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
+                        canEdit={canEdit}
+                        locations={locations}
+                        isMultiLocation={isMultiLocation}
+                    />
+                </div>
+            )}
+        />
+    );
+}
