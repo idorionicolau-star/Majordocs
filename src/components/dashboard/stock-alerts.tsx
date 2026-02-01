@@ -1,11 +1,9 @@
 
-'use client';
-
 import { useContext, useMemo, useState } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, Download, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, Download, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -14,9 +12,11 @@ import { useToast } from '@/hooks/use-toast';
 
 export function StockAlerts() {
     const { products, loading, companyData } = useContext(InventoryContext) || { products: [], loading: true, companyData: null };
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
     const [isDownloading, setIsDownloading] = useState(false);
     const { toast } = useToast();
+
+    const ITEMS_PER_PAGE = 10;
 
     const criticalStockProducts = useMemo(() => {
         if (!products) return [];
@@ -30,12 +30,19 @@ export function StockAlerts() {
 
     }, [products]);
 
+    // Reset to page 1 if data changes significantly
+    useMemo(() => {
+        setCurrentPage(1);
+    }, [criticalStockProducts.length]);
+
+
     const handleDownloadCriticalStock = async () => {
         if (criticalStockProducts.length === 0) return;
 
         setIsDownloading(true);
         try {
             const { pdf } = await import('@react-pdf/renderer');
+            // Dynamically import to avoid server-side issues with PDF generation
             const { CriticalStockPDF } = await import('@/components/inventory/CriticalStockPDF');
 
             const doc = <CriticalStockPDF
@@ -67,7 +74,19 @@ export function StockAlerts() {
         }
     };
 
-    const displayProducts = isExpanded ? criticalStockProducts : criticalStockProducts.slice(0, 3);
+    const totalPages = Math.ceil(criticalStockProducts.length / ITEMS_PER_PAGE);
+    const displayProducts = criticalStockProducts.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
+
+    const handlePrevPage = () => {
+        if (currentPage > 1) setCurrentPage(p => p - 1);
+    };
+
+    const handleNextPage = () => {
+        if (currentPage < totalPages) setCurrentPage(p => p + 1);
+    };
 
     if (loading) {
         return (
@@ -100,8 +119,8 @@ export function StockAlerts() {
     }
 
     return (
-        <Card className="glass-panel border-red-500/20 dark:border-red-900/40 shadow-[0_0_20px_rgba(220,38,38,0.1)] h-full">
-            <CardHeader className="pb-3">
+        <Card className="glass-panel border-red-500/20 dark:border-red-900/40 shadow-[0_0_20px_rgba(220,38,38,0.1)] h-full flex flex-col">
+            <CardHeader className="pb-3 shrink-0">
                 <div className="flex items-center justify-between">
                     <div className="space-y-1">
                         <CardTitle className="flex items-center gap-2 text-foreground">
@@ -135,10 +154,9 @@ export function StockAlerts() {
                     </TooltipProvider>
                 </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 flex-grow overflow-auto">
                 {displayProducts.map(product => {
                     const availableStock = product.stock - product.reservedStock;
-                    const isFullyReserved = availableStock <= 0 && product.reservedStock > 0;
 
                     return (
                         <Link
@@ -147,8 +165,8 @@ export function StockAlerts() {
                             className="block group"
                         >
                             <div className="flex items-center justify-between p-3 rounded-xl bg-white/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 group-hover:border-red-500/30 transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/60 shadow-sm dark:shadow-none">
-                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-foreground transition-colors">{product.name}</span>
-                                <div className="text-right flex items-center gap-2">
+                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-foreground transition-colors truncate mr-2">{product.name}</span>
+                                <div className="text-right flex items-center gap-2 shrink-0">
                                     <span className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_5px_currentColor]" />
                                     <span className="text-sm font-bold text-red-600 dark:text-red-400">
                                         {Math.floor(Math.max(0, availableStock))} <span className="text-[10px] text-muted-foreground font-normal">{product.unit || 'un'}</span>
@@ -159,10 +177,28 @@ export function StockAlerts() {
                     )
                 })}
             </CardContent>
-            {criticalStockProducts.length > 3 && (
-                <CardFooter className="pt-2">
-                    <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-full h-8 text-xs" onClick={() => setIsExpanded(!isExpanded)}>
-                        {isExpanded ? 'Mostrar menos' : `Ver mais ${criticalStockProducts.length - 3} itens`}
+            {totalPages > 1 && (
+                <CardFooter className="pt-2 pb-4 shrink-0 flex items-center justify-between border-t border-border/40 mt-2">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handlePrevPage}
+                        disabled={currentPage === 1}
+                        className="h-8 w-8 p-0"
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                        Página {currentPage} de {totalPages}
+                    </span>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleNextPage}
+                        disabled={currentPage === totalPages}
+                        className="h-8 w-8 p-0"
+                    >
+                        <ChevronRight className="h-4 w-4" />
                     </Button>
                 </CardFooter>
             )}
