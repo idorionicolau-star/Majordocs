@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 const CommandMenu = dynamic(() => import('@/components/command-menu').then(mod => mod.CommandMenu), { ssr: false });
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { MobileNav } from './mobile-nav';
+import { BottomNav } from './bottom-nav';
 import { LoadingBar } from './loading-bar';
 import { MajorAssistant } from '@/components/assistant/major-assistant';
 import { useSearchParams } from 'next/navigation';
@@ -88,31 +89,34 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
-      <Suspense fallback={null}>
-        <LoadingBar />
-        <NavigationObserver onNavigate={handleNavigationTransition} />
-      </Suspense>
-      <div className="flex min-h-screen w-full bg-transparent">
-        <Sidebar />
-        <div className="flex flex-col flex-1 h-screen overflow-hidden transition-[margin,width] duration-300 ease-in-out md:ml-24">
-          <Header onSearchClick={() => setOpenCommandMenu(true)} />
-          <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto main-content">
-            <Suspense fallback={
-              <div className="flex h-full w-full items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-              </div>
-            }>
-              {children}
-            </Suspense>
-          </main>
+    <>
+      <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
+        <Suspense fallback={null}>
+          <LoadingBar />
+          <NavigationObserver onNavigate={handleNavigationTransition} />
+        </Suspense>
+        <div className="flex min-h-screen w-full bg-transparent">
+          <Sidebar />
+          <div className="flex flex-col flex-1 h-screen overflow-hidden transition-[margin,width] duration-300 ease-in-out md:ml-24">
+            <Header onSearchClick={() => setOpenCommandMenu(true)} />
+            <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto main-content">
+              <Suspense fallback={
+                <div className="flex h-full w-full items-center justify-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                </div>
+              }>
+                {children}
+              </Suspense>
+            </main>
+          </div>
+          <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
+          <MajorAssistant />
         </div>
-        <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
-        <MajorAssistant />
-      </div>
-      <SheetContent side="left" className="p-0 glass-panel border-r border-white/10">
-        <MobileNav onLinkClick={() => setIsMobileNavOpen(false)} />
-      </SheetContent>
-    </Sheet>
+        <SheetContent side="left" className="p-0 glass-panel border-r border-white/10">
+          <MobileNav onLinkClick={() => setIsMobileNavOpen(false)} />
+        </SheetContent>
+      </Sheet>
+      <BottomNav />
+    </>
   );
 }

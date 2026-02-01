@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
@@ -178,34 +177,31 @@
   ::-webkit-scrollbar-thumb:hover {
     background: #475569;
   }
-  
+
   .kpi-card--purple {
     --card-color: hsl(var(--chart-3));
-    box-shadow: 0 0 20px hsl(var(--chart-3) / 0.1);
-    border-color: hsl(var(--chart-3) / 0.2);
+    border-color: hsl(var(--chart-3) / 0.5);
   }
+
   .dark .kpi-card--purple {
-    box-shadow: 0 0 20px hsl(var(--chart-3) / 0.2);
-    border-color: hsl(var(--chart-3) / 0.3);
+    border-color: hsl(var(--chart-3) / 0.5);
   }
 
   .kpi-card--blue {
     --card-color: hsl(var(--chart-2));
-    box-shadow: 0 0 20px hsl(var(--chart-2) / 0.1);
-    border-color: hsl(var(--chart-2) / 0.2);
+    border-color: hsl(var(--chart-2) / 0.5);
   }
+
   .dark .kpi-card--blue {
-    box-shadow: 0 0 20px hsl(var(--chart-2) / 0.2);
-    border-color: hsl(var(--chart-2) / 0.3);
+    border-color: hsl(var(--chart-2) / 0.5);
   }
 
   .kpi-card--green {
     --card-color: hsl(var(--chart-1));
-    box-shadow: 0 0 20px hsl(var(--chart-1) / 0.1);
-    border-color: hsl(var(--chart-1) / 0.2);
+    border-color: hsl(var(--chart-1) / 0.5);
   }
+
   .dark .kpi-card--green {
-    box-shadow: 0 0 20px hsl(var(--chart-1) / 0.2);
-    border-color: hsl(var(--chart-1) / 0.3);
+    border-color: hsl(var(--chart-1) / 0.5);
   }
 }
