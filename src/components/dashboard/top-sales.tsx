@@ -20,27 +20,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DatePicker } from "@/components/ui/date-picker";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { DateRange } from "react-day-picker";
 import {
   isToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
   isWithinInterval, parseISO, startOfDay, endOfDay
 } from 'date-fns';
 import { pt } from 'date-fns/locale';
 
-type Period = 'daily' | 'weekly' | 'monthly' | 'custom';
+type Period = 'all_time' | 'daily' | 'weekly' | 'monthly' | 'custom';
 
 export function TopSales() {
   const { sales, loading } = useContext(InventoryContext) || { sales: [], loading: true };
   const [sortBy, setSortBy] = useState<'revenue' | 'quantity'>('revenue');
   const [period, setPeriod] = useState<Period>('monthly');
-  const [customStart, setCustomStart] = useState<Date | undefined>(new Date());
-  const [customEnd, setCustomEnd] = useState<Date | undefined>(new Date());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const topProducts = useMemo(() => {
     if (!sales || sales.length === 0) return [];
 
     const now = new Date();
-    let filteredSales = sales;
+    let filteredSales = sales; // Default to all sales
 
     // Filter by period
     if (period === 'daily') {
@@ -53,11 +53,18 @@ export function TopSales() {
       const start = startOfMonth(now);
       const end = endOfMonth(now);
       filteredSales = sales.filter(s => isWithinInterval(parseISO(s.date), { start, end }));
-    } else if (period === 'custom' && customStart && customEnd) {
-      const start = startOfDay(customStart);
-      const end = endOfDay(customEnd);
-      filteredSales = sales.filter(s => isWithinInterval(parseISO(s.date), { start, end }));
+    } else if (period === 'custom') {
+      if (dateRange?.from) {
+        const start = startOfDay(dateRange.from);
+        const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from); // Handle single day selection in range mode
+        filteredSales = sales.filter(s => isWithinInterval(parseISO(s.date), { start, end }));
+      } else {
+        // If custom is selected but no range, treated as "All Time" per user request (or explicit 'all_time' period)
+        // Actually user said: "when nothing is selected, it should appear the total period by default".
+        // So if dateRange is undefined, we simply don't filter => All Time.
+      }
     }
+    // 'all_time' falls through here with no filter
 
     const productStats = filteredSales.reduce((acc, sale) => {
       const value = sale.amountPaid ?? sale.totalValue;
@@ -86,7 +93,7 @@ export function TopSales() {
 
     return allProducts.slice(0, 5);
 
-  }, [sales, sortBy, period, customStart, customEnd]);
+  }, [sales, sortBy, period, dateRange]);
 
   const barColors = ["bg-cyan-500", "bg-blue-500", "bg-purple-500", "bg-pink-500", "bg-emerald-500"];
 
@@ -122,6 +129,7 @@ export function TopSales() {
               </div>
             </SelectTrigger>
             <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-foreground">
+              <SelectItem value="all_time">Todo o Período</SelectItem>
               <SelectItem value="daily">Diário (Hoje)</SelectItem>
               <SelectItem value="weekly">Semanal (Esta Semana)</SelectItem>
               <SelectItem value="monthly">Mensal (Este Mês)</SelectItem>
@@ -130,10 +138,12 @@ export function TopSales() {
           </Select>
 
           {period === 'custom' && (
-            <div className="flex items-center gap-2 animate-in slide-in-from-top-2 fade-in duration-300">
-              <DatePicker date={customStart} setDate={setCustomStart} />
-              <span className="text-muted-foreground">-</span>
-              <DatePicker date={customEnd} setDate={setCustomEnd} />
+            <div className="animate-in slide-in-from-top-2 fade-in duration-300">
+              <DateRangePicker
+                date={dateRange}
+                setDate={setDateRange}
+                className="w-full"
+              />
             </div>
           )}
         </div>
