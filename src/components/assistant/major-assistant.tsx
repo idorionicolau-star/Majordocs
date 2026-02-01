@@ -37,7 +37,7 @@ type Message = {
     timestamp: Date;
 };
 
-export function MajorAssistant() {
+export function MajorAssistant({ variant = 'sheet', className }: { variant?: 'sheet' | 'card', className?: string }) {
     const context = useContext(InventoryContext);
     const pathname = usePathname();
     const [open, setOpen] = useState(false);
@@ -155,9 +155,128 @@ export function MajorAssistant() {
         }
     };
 
+    const ChatInterface = () => (
+        <div className="flex flex-col h-full bg-background">
+            <div className="p-4 border-b border-border bg-muted/20 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/20 rounded-lg">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-base leading-none">Major Assistant</h3>
+                        <div className="flex items-center gap-1.5 mt-1">
+                            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Online</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-hidden relative flex flex-col min-h-0">
+                <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
+                    {messages.length === 0 && (
+                        <div className="space-y-4 mt-2">
+                            <div className="p-3 rounded-xl bg-muted/50 border border-border text-center">
+                                <p className="text-sm text-muted-foreground italic">
+                                    "Olá! Sou o seu assistente inteligente. Como posso ajudar?"
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2">
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase px-1">Sugestões</p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="justify-start gap-2 h-auto py-2 text-xs"
+                                    onClick={() => handleSend("Resumo do stock atual")}
+                                >
+                                    <Package className="h-3 w-3 text-amber-500" />
+                                    Resumo de Stock
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="justify-start gap-2 h-auto py-2 text-xs"
+                                    onClick={() => handleSend("Alertas críticos?")}
+                                >
+                                    <AlertCircle className="h-3 w-3 text-red-500" />
+                                    Alertas Críticos
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {messages.map((msg) => (
+                        <div key={msg.id} className={cn("flex gap-3", msg.role === 'user' ? "flex-row-reverse" : "flex-row")}>
+                            <div className={cn(
+                                "h-8 w-8 shrink-0 rounded-lg flex items-center justify-center border shadow-sm",
+                                msg.role === 'user'
+                                    ? "bg-muted border-border"
+                                    : "bg-primary text-primary-foreground border-primary/20"
+                            )}>
+                                {msg.role === 'user' ? <UserIcon className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                            </div>
+                            <div className={cn(
+                                "rounded-xl px-4 py-2 text-sm max-w-[85%] shadow-sm leading-relaxed",
+                                msg.role === 'user'
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted/50 border border-border"
+                            )}>
+                                {msg.content}
+                            </div>
+                        </div>
+                    ))}
+
+                    {isLoading && (
+                        <div className="flex gap-3">
+                            <div className="h-8 w-8 shrink-0 rounded-lg bg-primary text-white flex items-center justify-center">
+                                <Bot className="h-4 w-4" />
+                            </div>
+                            <div className="rounded-xl px-4 py-2 bg-muted/50 border border-border flex items-center gap-1">
+                                <span className="h-1.5 w-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                <span className="h-1.5 w-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                <span className="h-1.5 w-1.5 bg-primary rounded-full animate-bounce" />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="p-4 border-t border-border bg-background shrink-0">
+                <form
+                    className="flex gap-2"
+                    onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+                >
+                    <Input
+                        placeholder="Mensagem..."
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        disabled={isLoading}
+                        className="bg-muted/30 border-border focus-visible:ring-primary h-10 rounded-lg text-sm"
+                    />
+                    <Button
+                        type="submit"
+                        size="icon"
+                        disabled={!input.trim() || isLoading}
+                        className="h-10 w-10 shrink-0 rounded-lg shadow-sm"
+                    >
+                        <Send className="h-4 w-4" />
+                    </Button>
+                </form>
+            </div>
+        </div>
+    );
+
+    if (variant === 'card') {
+        return (
+            <div className={cn("rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col h-full", className)}>
+                <ChatInterface />
+            </div>
+        );
+    }
+
     return (
         <Sheet open={open} onOpenChange={setOpen}>
-            <div className="fixed bottom-6 right-6 z-[100]">
+            <div className={cn("fixed bottom-6 right-6 z-[100]", className)}>
                 <SheetTrigger asChild>
                     <motion.button
                         whileHover={{ scale: 1.05 }}
@@ -178,138 +297,7 @@ export function MajorAssistant() {
             </div>
 
             <SheetContent side="right" className="p-0 flex flex-col h-full w-[400px] sm:w-[500px] border-l border-border bg-background">
-                <SheetHeader className="p-6 border-b border-border bg-muted/20">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2.5 bg-primary/20 rounded-xl">
-                                <Sparkles className="h-6 w-6 text-primary" />
-                            </div>
-                            <div>
-                                <SheetTitle className="text-xl font-headline">Major Assistant</SheetTitle>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">IA Conectada • v3.0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </SheetHeader>
-
-                <div className="flex-1 overflow-hidden relative flex flex-col">
-                    <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
-                        {messages.length === 0 && (
-                            <div className="space-y-6 mt-4">
-                                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
-                                    <p className="text-sm text-muted-foreground italic leading-relaxed">
-                                        "Olá! Eu sou o Major Assistant. Como posso ajudar na gestão da MajorStockX hoje?"
-                                    </p>
-                                </div>
-                                <div className="grid grid-cols-1 gap-2">
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase px-1">Atalhos Estratégicos</p>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="justify-start gap-2 bg-white/5 border-white/5 hover:bg-white/10"
-                                        onClick={() => handleSend("Faça um resumo rápido do estado atual do stock.")}
-                                    >
-                                        <Package className="h-4 w-4 text-amber-500" />
-                                        Resumo de Estoque
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="justify-start gap-2 bg-white/5 border-white/5 hover:bg-white/10"
-                                        onClick={() => handleSend("Quais são os alertas críticos hoje?")}
-                                    >
-                                        <AlertCircle className="h-4 w-4 text-red-500" />
-                                        Ver Alertas Críticos
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="justify-start gap-2 bg-white/5 border-white/5 hover:bg-white/10"
-                                        onClick={() => handleSend("Como posso gerar relatórios em PDF?")}
-                                    >
-                                        <FileText className="h-4 w-4 text-blue-500" />
-                                        Ajuda com PDF
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-
-                        {messages.map((msg) => (
-                            <div key={msg.id} className={cn("flex gap-4", msg.role === 'user' ? "flex-row-reverse" : "flex-row")}>
-                                <div className={cn(
-                                    "h-9 w-9 shrink-0 rounded-xl flex items-center justify-center border shadow-sm",
-                                    msg.role === 'user'
-                                        ? "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-                                        : "bg-primary text-white border-primary/20"
-                                )}>
-                                    {msg.role === 'user' ? <UserIcon className="h-4 w-4" /> : <Bot className="h-5 w-5" />}
-                                </div>
-                                <div className={cn(
-                                    "rounded-2xl px-5 py-3.5 text-sm max-w-[85%] shadow-sm leading-relaxed",
-                                    msg.role === 'user'
-                                        ? "bg-primary text-primary-foreground"
-                                        : "bg-white/10 border border-white/5 text-slate-700 dark:text-slate-200"
-                                )}>
-                                    {msg.content}
-                                </div>
-                            </div>
-                        ))}
-
-                        {isLoading && (
-                            <div className="flex gap-4">
-                                <div className="h-9 w-9 shrink-0 rounded-xl bg-primary text-white flex items-center justify-center animate-pulse">
-                                    <Bot className="h-5 w-5" />
-                                </div>
-                                <div className="rounded-2xl px-5 py-3.5 bg-white/5 border border-white/10 flex items-center gap-1.5">
-                                    <motion.span
-                                        animate={{ opacity: [0.4, 1, 0.4] }}
-                                        transition={{ repeat: Infinity, duration: 1.5 }}
-                                        className="h-1.5 w-1.5 bg-primary rounded-full"
-                                    />
-                                    <motion.span
-                                        animate={{ opacity: [0.4, 1, 0.4] }}
-                                        transition={{ repeat: Infinity, duration: 1.5, delay: 0.2 }}
-                                        className="h-1.5 w-1.5 bg-primary rounded-full"
-                                    />
-                                    <motion.span
-                                        animate={{ opacity: [0.4, 1, 0.4] }}
-                                        transition={{ repeat: Infinity, duration: 1.5, delay: 0.4 }}
-                                        className="h-1.5 w-1.5 bg-primary rounded-full"
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="p-6 border-t border-white/10 bg-slate-900/50">
-                    <form
-                        className="flex gap-2"
-                        onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                    >
-                        <Input
-                            placeholder="Escreva a sua mensagem..."
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            disabled={isLoading}
-                            className="bg-white/5 border-white/10 focus-visible:ring-primary h-12 rounded-xl"
-                        />
-                        <Button
-                            type="submit"
-                            size="icon"
-                            disabled={!input.trim() || isLoading}
-                            className="h-12 w-12 shrink-0 rounded-xl shadow-xl shadow-primary/20"
-                        >
-                            <Send className="h-5 w-5" />
-                        </Button>
-                    </form>
-                    <p className="text-[9px] text-center text-slate-500 mt-4 uppercase tracking-widest font-bold opacity-60">
-                        Major StockX Intelligence • Powered by Gemini 2.0
-                    </p>
-                </div>
+                <ChatInterface />
             </SheetContent>
         </Sheet>
     );

@@ -32,6 +32,10 @@ const DeadStock = dynamic(() => import("@/components/dashboard/dead-stock").then
 
 const EmptyStateWelcome = dynamic(() => import("@/components/dashboard/empty-state").then(mod => mod.EmptyStateWelcome));
 
+const MajorAssistant = dynamic(() => import("@/components/assistant/major-assistant").then(mod => mod.MajorAssistant), {
+  loading: () => <PanelSkeleton />
+});
+
 export default function DashboardPage() {
   const { user, products, loading } = useContext(InventoryContext) || { user: null, products: [], loading: true };
   const isPrivilegedUser = user?.role === 'Admin' || user?.role === 'Dono';
@@ -66,21 +70,22 @@ export default function DashboardPage() {
 
 
           {/* 3. Charts & Insights Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[400px]">
-            <div className="lg:col-span-2 h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[500px]">
+            <div className="lg:col-span-2 h-full flex flex-col gap-4">
               <MonthlySalesChart />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+                <TopSales />
+                <DeadStock />
+              </div>
             </div>
             <div className="lg:col-span-1 h-full">
-              <TopSales />
+              <MajorAssistant variant="card" className="h-full min-h-[500px]" />
             </div>
           </div>
 
-          {/* 4. Bottom Section: Dead Stock & Stock Alerts */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-1 h-full">
-              <DeadStock />
-            </div>
-            <div className="lg:col-span-2 h-full">
+          {/* 4. Bottom Section: Stock Alerts */}
+          <div className="grid grid-cols-1 gap-4">
+            <div className="h-full">
               <StockAlerts />
             </div>
           </div>
