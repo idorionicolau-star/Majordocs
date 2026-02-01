@@ -296,8 +296,8 @@ export default function InventoryPage() {
       <div className="flex flex-col gap-6 h-[calc(100vh-100px)]">
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
           {/* Header Buttons */}
-          <div className="flex items-center gap-2">
-            <Button variant="outline" className="h-12"><Download className="mr-2 h-4 w-4" /> Exportar</Button>
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <Button variant="outline" className="h-12 flex-1 md:flex-none"><Download className="mr-2 h-4 w-4" /> Exportar</Button>
           </div>
         </div>
 
@@ -310,7 +310,7 @@ export default function InventoryPage() {
                 onChange={(event) => setNameFilter(event.target.value)}
                 className="w-full sm:max-w-xs shadow-sm h-12 text-sm bg-background/50"
               />
-              <div className="flex w-full sm:w-auto items-center gap-2">
+              <div className="flex flex-col w-full sm:flex-row sm:w-auto items-center gap-2">
                 <DatePicker date={dateFilter} setDate={setDateFilter} />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

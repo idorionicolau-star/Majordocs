@@ -68,8 +68,8 @@ export function VirtualProductGrid({
 
     return (
         <VirtuosoGrid
-            style={{ height: 'calc(100vh - 300px)' }}
-            useWindowScroll
+            style={{ height: '100%' }}
+            // useWindowScroll removed to fix pagination in scrollable container
             data={products}
             endReached={() => {
                 if (hasMore && !loading) {

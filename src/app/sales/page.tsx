@@ -253,7 +253,7 @@ export default function SalesPage() {
                 onChange={(event) => setNameFilter(event.target.value)}
                 className="w-full sm:max-w-xs shadow-sm h-12 text-sm bg-background/50"
               />
-              <div className="flex w-full sm:w-auto items-center gap-2">
+              <div className="flex flex-col w-full sm:flex-row sm:w-auto items-center gap-2">
                 <DatePicker date={dateFilter} setDate={setDateFilter} />
               </div>
             </div>

@@ -34,10 +34,10 @@ export function VirtualInventoryList({
     const { rows } = table.getRowModel();
 
     return (
-        <Card className="glass-card shadow-sm overflow-hidden">
-            <CardContent className="p-0">
+        <Card className="glass-card shadow-sm overflow-hidden h-full flex flex-col">
+            <CardContent className="p-0 flex-1 h-full">
                 <TableVirtuoso
-                    useWindowScroll
+                    style={{ height: '100%' }}
                     data={rows}
                     components={{
                         Table: (props) => <table {...props} className="w-full caption-bottom text-sm" />,

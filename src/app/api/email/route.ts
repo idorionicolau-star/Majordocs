@@ -18,9 +18,9 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { to, subject, type } = body;
-    
+
     let htmlContent = '';
-    
+
     const headerHtml = `
         <div style="background-color: #0f172a; padding: 24px; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 20px; font-weight: bold;">Notificação do MajorStockX</h1>
@@ -33,10 +33,10 @@ export async function POST(req: Request) {
     `;
 
     if (type === 'CRITICAL') {
-        const { productName, quantity, location, threshold } = body;
-        const color = '#ef4444';
-        const accentColor = '#fef2f2';
-        htmlContent = `
+      const { productName, quantity, location, threshold } = body;
+      const color = '#ef4444';
+      const accentColor = '#fef2f2';
+      htmlContent = `
             ${headerHtml}
             <div style="padding: 24px;">
               <h2 style="color: ${color}; font-size: 22px; margin-top: 0;">
@@ -55,10 +55,10 @@ export async function POST(req: Request) {
             ${footerHtml}
         `;
     } else if (type === 'SALE') {
-        const { productName, quantity, location, guideNumber, totalValue, soldBy } = body;
-        const color = '#3b82f6';
-        const accentColor = '#eff6ff';
-        htmlContent = `
+      const { productName, quantity, location, guideNumber, totalValue, soldBy } = body;
+      const color = '#3b82f6';
+      const accentColor = '#eff6ff';
+      htmlContent = `
             ${headerHtml}
             <div style="padding: 24px;">
               <h2 style="color: ${color}; font-size: 22px; margin-top: 0;">
@@ -79,10 +79,10 @@ export async function POST(req: Request) {
             ${footerHtml}
         `;
     } else if (type === 'WELCOME') {
-        const { companyName } = body;
-        const color = '#10b981'; // Emerald
-        const accentColor = '#ecfdf5';
-        htmlContent = `
+      const { companyName } = body;
+      const color = '#10b981'; // Emerald
+      const accentColor = '#ecfdf5';
+      htmlContent = `
             ${headerHtml}
             <div style="padding: 24px;">
               <h2 style="color: ${color}; font-size: 22px; margin-top: 0;">
@@ -99,7 +99,7 @@ export async function POST(req: Request) {
             ${footerHtml}
         `;
     } else {
-        return NextResponse.json({ error: 'Tipo de e-mail inválido.' }, { status: 400 });
+      return NextResponse.json({ error: 'Tipo de e-mail inválido.' }, { status: 400 });
     }
 
     const finalHtml = `
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
     `;
 
     const { data, error } = await resend.emails.send({
-      from: 'MajorStockX <onboarding@resend.dev>',
+      from: 'Major Assistant <assistant@majorgroup.app>',
       to: [to],
       subject: subject,
       html: finalHtml,

@@ -359,10 +359,10 @@ export default function ReportsPage() {
       </AlertDialog>
 
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
-        <div className="flex flex-col w-full items-center md:flex-row justify-between items-start gap-4">
-          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+        <div className="flex flex-col w-full md:flex-row justify-between items-start gap-4">
+          <div className="flex flex-col w-full gap-2 sm:flex-row sm:flex-wrap md:items-center">
             <Select value={period} onValueChange={(value: Period) => setPeriod(value)}>
-              <SelectTrigger className="h-12 w-full md:w-[180px]">
+              <SelectTrigger className="h-12 w-full sm:w-[180px]">
                 <SelectValue placeholder="Selecionar Período" />
               </SelectTrigger>
               <SelectContent>
@@ -372,15 +372,19 @@ export default function ReportsPage() {
                 <SelectItem value="yearly">Anual</SelectItem>
               </SelectContent>
             </Select>
-            <DatePicker date={selectedDate} setDate={setSelectedDate} />
-            <Button onClick={handleGeneratePdf} variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate || isProcessing}>
-              <Download className="mr-2 h-4 w-4" />
-              {isProcessing ? 'A processar...' : 'Exportar PDF'}
-            </Button>
-            <Button onClick={handleSharePdf} variant="outline" className="h-12 w-full md:w-auto" disabled={!selectedDate || isProcessing}>
-              <Share2 className="mr-2 h-4 w-4" />
-              {isProcessing ? 'A processar...' : 'Partilhar'}
-            </Button>
+            <div className="w-full sm:w-auto">
+              <DatePicker date={selectedDate} setDate={setSelectedDate} />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+              <Button onClick={handleGeneratePdf} variant="outline" className="h-12 flex-1 sm:flex-none" disabled={!selectedDate || isProcessing}>
+                <Download className="mr-2 h-4 w-4" />
+                {isProcessing ? 'A processar...' : 'Exportar PDF'}
+              </Button>
+              <Button onClick={handleSharePdf} variant="outline" className="h-12 flex-1 sm:flex-none" disabled={!selectedDate || isProcessing}>
+                <Share2 className="mr-2 h-4 w-4" />
+                {isProcessing ? 'A processar...' : 'Partilhar'}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -426,7 +430,7 @@ export default function ReportsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="hidden md:block">
+            <div className="hidden md:block rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

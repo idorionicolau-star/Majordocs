@@ -163,14 +163,14 @@ const RawMaterialsManager = () => {
                 <CardDescription>Adicione e gira o stock das suas matérias-primas.</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="flex justify-end mb-4 gap-2">
-                    <Button onClick={handleDownload} variant="outline"><Download className="mr-2 h-4 w-4" /> Baixar PDF</Button>
-                    <Button onClick={handlePrint} variant="outline"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
-                    <Button onClick={() => handleOpenDialog()}>
+                <div className="flex flex-col sm:flex-row justify-end mb-4 gap-2">
+                    <Button onClick={handleDownload} variant="outline" className="w-full sm:w-auto"><Download className="mr-2 h-4 w-4" /> Baixar PDF</Button>
+                    <Button onClick={handlePrint} variant="outline" className="w-full sm:w-auto"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
+                    <Button onClick={() => handleOpenDialog()} className="w-full sm:w-auto">
                         <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Matéria-Prima
                     </Button>
                 </div>
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -603,7 +603,7 @@ export default function RawMaterialsPage() {
                 </p>
             </div>
             <Tabs defaultValue="materials">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto">
                     <TabsTrigger value="materials">Insumos</TabsTrigger>
                     <TabsTrigger value="recipes">Receitas</TabsTrigger>
                     <TabsTrigger value="production">Produção</TabsTrigger>
