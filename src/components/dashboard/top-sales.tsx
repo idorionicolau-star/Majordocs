@@ -33,7 +33,7 @@ type Period = 'all_time' | 'daily' | 'weekly' | 'monthly' | 'custom';
 export function TopSales() {
   const { sales, loading } = useContext(InventoryContext) || { sales: [], loading: true };
   const [sortBy, setSortBy] = useState<'revenue' | 'quantity'>('revenue');
-  const [period, setPeriod] = useState<Period>('monthly');
+  const [period, setPeriod] = useState<Period>('all_time');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const topProducts = useMemo(() => {
