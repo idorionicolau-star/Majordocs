@@ -388,12 +388,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const productsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
-    return query(collection(firestore, `companies/${companyId}/products`), limit(100));
+    return query(collection(firestore, `companies/${companyId}/products`));
   }, [firestore, companyId]);
 
   const salesCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
-    return query(collection(firestore, `companies/${companyId}/sales`), limit(100));
+    return query(collection(firestore, `companies/${companyId}/sales`));
   }, [firestore, companyId]);
 
   const productionsCollectionRef = useMemoFirebase(() => {
