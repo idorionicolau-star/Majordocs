@@ -168,7 +168,7 @@ export function MonthlySalesChart() {
                       {formatCurrency(value as number)}
                     </span>
                   )}
-                  className="bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-700 backdrop-blur-xl rounded-xl shadow-xl p-4"
+                  className="bg-card/95 border-border rounded-xl shadow-xl p-4"
                 />}
               />
               <Area

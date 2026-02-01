@@ -134,7 +134,7 @@ export const TacticalSummary = () => {
   };
 
   return (
-    <Card className="bg-white/70 dark:bg-[#0f172a]/50 backdrop-blur-lg border-white dark:border-slate-800 shadow-sm shadow-slate-200/50 dark:shadow-none lg:col-span-2">
+    <Card className="bg-card/60 dark:bg-slate-900/50 border-border shadow-sm lg:col-span-2">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-300">
           <Sparkles className="text-cyan-600 dark:text-sky-400 dark:shadow-neon-sky" strokeWidth={1.5} />

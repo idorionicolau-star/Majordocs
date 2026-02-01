@@ -30,7 +30,7 @@ export function BottomNav() {
   });
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-20 bg-background/95 backdrop-blur-lg border-t">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-20 bg-background border-t">
       <ScrollArea className="h-full w-full whitespace-nowrap">
         <div className="flex w-max h-full mx-auto animate-peek md:animate-none items-center">
           {navItems.map(item => {
