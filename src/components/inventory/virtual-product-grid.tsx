@@ -54,10 +54,12 @@ export function VirtualProductGrid({
         let widthClass = "w-full"; // Fallback
 
         // Calculate width based on columns and gap
-        // These are approximations to match the tailwind grid classes
-        if (gridCols === '3') widthClass = "w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-0.8rem)]";
-        else if (gridCols === '4') widthClass = "w-[calc(50%-0.5rem)] sm:w-[calc(25%-0.8rem)]";
-        else if (gridCols === '5') widthClass = "w-[calc(50%-0.5rem)] sm:w-[calc(25%-0.8rem)] lg:w-[calc(20%-0.85rem)]";
+        // Calculate width based on columns and gap
+        // Mobile: w-full (1 column)
+        // Small/Medium and up: grid cols logic
+        if (gridCols === '3') widthClass = "w-full md:w-[calc(33.333%-0.8rem)]";
+        else if (gridCols === '4') widthClass = "w-full sm:w-[calc(50%-0.5rem)] md:w-[calc(25%-0.8rem)]";
+        else if (gridCols === '5') widthClass = "w-full sm:w-[calc(50%-0.5rem)] md:w-[calc(25%-0.8rem)] lg:w-[calc(20%-0.85rem)]";
 
         return (
             <div {...props} className={cn(widthClass, "mb-2")}>

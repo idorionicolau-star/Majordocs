@@ -342,7 +342,7 @@ const RecipesManager = () => {
                         <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Receita
                     </Button>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {recipes.map(recipe => (
                         <Card key={recipe.id} className="flex flex-col">
                             <CardHeader><CardTitle>{recipe.productName}</CardTitle></CardHeader>

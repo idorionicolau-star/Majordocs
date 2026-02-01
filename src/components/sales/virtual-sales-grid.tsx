@@ -44,9 +44,9 @@ export function VirtualSalesGrid({
     const ItemContainer = ({ children, ...props }: any) => {
         let widthClass = "w-full";
 
-        if (gridCols === '3') widthClass = "w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-0.8rem)]";
-        else if (gridCols === '4') widthClass = "w-[calc(50%-0.5rem)] sm:w-[calc(25%-0.8rem)]";
-        else if (gridCols === '5') widthClass = "w-[calc(50%-0.5rem)] sm:w-[calc(25%-0.8rem)] lg:w-[calc(20%-0.85rem)]";
+        if (gridCols === '3') widthClass = "w-full md:w-[calc(33.333%-0.8rem)]";
+        else if (gridCols === '4') widthClass = "w-full sm:w-[calc(50%-0.5rem)] md:w-[calc(25%-0.8rem)]";
+        else if (gridCols === '5') widthClass = "w-full sm:w-[calc(50%-0.5rem)] md:w-[calc(25%-0.8rem)] lg:w-[calc(20%-0.85rem)]";
 
         return (
             <div {...props} className={cn(widthClass, "mb-2")}>
