@@ -11,7 +11,7 @@ import dynamic from 'next/dynamic';
 const CommandMenu = dynamic(() => import('@/components/command-menu').then(mod => mod.CommandMenu), { ssr: false });
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { MobileNav } from './mobile-nav';
-import { BottomNav } from './bottom-nav';
+
 import { LoadingBar } from './loading-bar';
 
 import { useSearchParams } from 'next/navigation';
@@ -115,7 +115,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <MobileNav onLinkClick={() => setIsMobileNavOpen(false)} />
         </SheetContent>
       </Sheet>
-      <BottomNav />
     </>
   );
 }
