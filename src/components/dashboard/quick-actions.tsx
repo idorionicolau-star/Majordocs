@@ -101,7 +101,7 @@ export const QuickActions = () => {
                         key={index}
                         onClick={action.onClick}
                         className={cn(
-                            "group relative flex items-center p-1.5 md:px-3 h-10 md:h-14 rounded-lg transition-all duration-300",
+                            "group relative flex items-center justify-center p-1.5 md:px-3 h-10 md:h-14 rounded-lg transition-all duration-300",
                             "bg-white dark:bg-slate-800 border",
                             "border-slate-100 dark:border-slate-700/50",
                             action.border.replace("border-", "border-").replace("/50", "/30"),
@@ -123,7 +123,7 @@ export const QuickActions = () => {
                             <action.icon className={cn("h-3 w-3 md:h-4 md:w-4", action.iconColor)} />
                         </div>
 
-                        <div className="flex flex-col items-start z-10">
+                        <div className="flex flex-col items-center z-10">
                             <span className="text-[10px] md:text-sm font-bold text-foreground tracking-wide group-hover:text-glow-blue transition-all">
                                 {action.title}
                             </span>
