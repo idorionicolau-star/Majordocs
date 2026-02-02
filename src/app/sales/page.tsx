@@ -238,11 +238,7 @@ export default function SalesPage() {
       </AlertDialog>
 
       <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500 h-[calc(100vh-100px)]">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-headline font-bold">Vendas</h1>
-          </div>
-        </div>
+
 
         <Card className="glass-panel p-4 border-none shrink-0">
           <div className="space-y-4">
