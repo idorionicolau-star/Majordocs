@@ -54,12 +54,12 @@ export default function InventoryPage() {
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [dateFilter, setDateFilter] = useState<Date | undefined>();
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
-  const [view, setView] = useState<'list' | 'grid'>('grid');
+  const [view, setView] = useState<'list' | 'grid'>('list');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 30;
+  const itemsPerPage = 10;
   const [sortBy, setSortBy] = useState<'stock_desc' | 'stock_asc' | 'name_asc' | 'date_desc'>('stock_desc');
   const { toast } = useToast();
 

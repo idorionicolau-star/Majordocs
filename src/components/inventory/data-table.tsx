@@ -7,7 +7,6 @@ import {
   SortingState,
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   getFilteredRowModel,
@@ -21,9 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
 import type { Product } from "@/lib/types"
-import { Card, CardContent, CardFooter } from "../ui/card"
+import { Card, CardContent } from "../ui/card"
 
 interface DataTableProps<TData extends Product, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -45,29 +43,24 @@ export function InventoryDataTable<TData extends Product, TValue>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: {
-        pagination: {
-            pageSize: 8,
-        },
-    },
     state: {
       sorting,
     },
   })
-  
+
 
   if (!isClient) {
     return null;
   }
 
   return (
-    <Card className="glass-card shadow-sm overflow-hidden">
+    <Card className="glass-card shadow-sm overflow-hidden border-0 bg-transparent sm:bg-card sm:border">
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -78,9 +71,9 @@ export function InventoryDataTable<TData extends Product, TValue>({
                         {header.isPlaceholder
                           ? null
                           : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                       </TableHead>
                     )
                   })}
@@ -93,7 +86,7 @@ export function InventoryDataTable<TData extends Product, TValue>({
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
-                     className="dark:border-slate-800/50 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-all group"
+                    className="dark:border-slate-800/50 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-all group"
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="px-4 sm:px-8 py-4">
@@ -112,33 +105,59 @@ export function InventoryDataTable<TData extends Product, TValue>({
             </TableBody>
           </Table>
         </div>
+
+        {/* Mobile List View */}
+        <div className="md:hidden flex flex-col gap-4">
+          {table.getRowModel().rows?.length ? (
+            table.getRowModel().rows.map((row) => (
+              <div key={row.id} className="bg-card rounded-xl p-4 border shadow-sm space-y-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    {/* We access cells by index since we know the column structure. 
+                            Index 0: Name, Index 1: Category. 
+                            This is brittle but effective for preserving column rendering logic without reimplementing it. 
+                            OR we can just render specific cells.
+                        */}
+                    <div className="mb-1">
+                      {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      {flexRender(row.getVisibleCells()[1].column.columnDef.cell, row.getVisibleCells()[1].getContext())}
+                      {/* Location cell if exists (Index 2 usually if multi-location) */}
+                      {row.getVisibleCells().find(c => c.column.id === 'location') && (
+                        flexRender(row.getVisibleCells().find(c => c.column.id === 'location')!.column.columnDef.cell, row.getVisibleCells().find(c => c.column.id === 'location')!.getContext())
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    {/* Actions cell is usually last */}
+                    {flexRender(row.getVisibleCells()[row.getVisibleCells().length - 1].column.columnDef.cell, row.getVisibleCells()[row.getVisibleCells().length - 1].getContext())}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 py-3 border-t border-b border-dashed">
+                  <div className="flex flex-col items-center justify-center p-2 bg-muted/30 rounded-lg">
+                    <span className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Disponível</span>
+                    {flexRender(row.getVisibleCells().find(c => c.column.id === 'stock')!.column.columnDef.cell, row.getVisibleCells().find(c => c.column.id === 'stock')!.getContext())}
+                  </div>
+                  <div className="flex flex-col items-center justify-center p-2 bg-muted/30 rounded-lg">
+                    <span className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Reservado</span>
+                    {flexRender(row.getVisibleCells().find(c => c.column.id === 'reservedStock')!.column.columnDef.cell, row.getVisibleCells().find(c => c.column.id === 'reservedStock')!.getContext())}
+                  </div>
+                  <div className="flex flex-col items-center justify-center p-2 bg-muted/30 rounded-lg">
+                    <span className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Estado</span>
+                    {flexRender(row.getVisibleCells().find(c => c.column.id === 'lastUpdated')!.column.columnDef.cell, row.getVisibleCells().find(c => c.column.id === 'lastUpdated')!.getContext())}
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-muted-foreground bg-card rounded-xl border">
+              Nenhum resultado.
+            </div>
+          )}
+        </div>
       </CardContent>
-      <CardFooter className="flex items-center justify-between space-x-2 p-4 border-t dark:border-slate-800/50">
-        <div className="text-sm text-muted-foreground">
-            {table.getFilteredRowModel().rows.length} de {data.length} produto(s).
-        </div>
-        <div className="flex items-center space-x-2">
-            <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            >
-            Anterior
-            </Button>
-            <span className="text-sm">
-                {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
-            </span>
-            <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            >
-            Próximo
-            </Button>
-        </div>
-      </CardFooter>
     </Card>
   )
 }
