@@ -525,7 +525,7 @@ export default function InventoryPage() {
       </AlertDialog>
 
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div className="flex items-center gap-2">
             <Button onClick={handleDownloadPdfReport} variant="outline" className="h-12">
               <Download className="mr-2 h-4 w-4" />
@@ -541,7 +541,7 @@ export default function InventoryPage() {
             </Button>
           </div>
         </div>
-        <div className="py-4 space-y-4">
+        <div className="w-full">
           <div className="flex flex-col sm:flex-row items-center gap-2">
             <div className="relative w-full sm:max-w-xs">
               <ScanBarcode className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -573,7 +573,7 @@ export default function InventoryPage() {
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t pt-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="hidden md:flex items-center gap-2">
               <TooltipProvider>
                 <Tooltip>
@@ -787,7 +787,10 @@ export default function InventoryPage() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                onClick={() => {
+                  setCurrentPage(p => Math.max(1, p - 1));
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
                 disabled={currentPage === 1}
                 className="h-9 w-9"
               >
@@ -799,7 +802,10 @@ export default function InventoryPage() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                onClick={() => {
+                  setCurrentPage(p => Math.min(totalPages, p + 1));
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
                 disabled={currentPage === totalPages}
                 className="h-9 w-9"
               >
