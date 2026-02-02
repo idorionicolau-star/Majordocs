@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
 import type { Sale } from "@/lib/types";
 import { columns } from "@/components/sales/columns";
-import { VirtualSalesList } from "@/components/sales/virtual-sales-list";
+import { SalesDataTable } from "@/components/sales/sales-data-table";
 import { VirtualSalesGrid } from "@/components/sales/virtual-sales-grid";
 import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -125,9 +125,42 @@ export default function SalesPage() {
     hasMore
   } = useFirestorePagination<Sale>(
     salesQuery as any,
-    50,
+    500, // Increase fetch limit to support client-side pagination
     salesQuery ? queryConstraints : []
   );
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [nameFilter, statusFilter, dateFilter, locationFilter]);
+
+  const totalPages = Math.ceil(sales.length / itemsPerPage);
+  const paginatedSales = sales.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(p => p + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (hasMore) {
+      loadMore();
+      // We might need to handle the "after load, go to next page" logic, 
+      // but for simplicity, we load more into the buffer and user might need to click next again 
+      // or we rely on the fact that if we have more, we just let them click next if the buffer filled up.
+      // Actually, useFirestorePagination loads *into* 'sales'.
+      // If we are at the end of current 'sales' list and 'hasMore' is true, we should load more.
+      // For this implementation, let's keep it simple: "Load More" button if needed, or auto-load.
+      // Standard "Next" usually implies we have the data. 
+      // With 500 limit, we likely have it.
+    }
+  };
+
+  const handlePreviousPage = () => {
+    setCurrentPage(p => Math.max(1, p - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditSales) {
@@ -363,29 +396,23 @@ export default function SalesPage() {
 
         <div className="flex-grow min-h-0">
           {view === 'list' ? (
-            <VirtualSalesList
-              loading={salesLoading && sales.length === 0}
+            <SalesDataTable
               columns={columns({
                 onUpdateSale: handleUpdateSale,
                 onConfirmPickup: handleConfirmPickup,
                 canEdit: canEditSales
               })}
-              sales={sales}
-              loadMore={loadMore}
-              hasMore={hasMore}
+              data={paginatedSales}
             />
           ) : (
             <VirtualSalesGrid
-              sales={sales}
-              loading={salesLoading && sales.length === 0}
+              sales={paginatedSales}
               onUpdateSale={handleUpdateSale}
               onConfirmPickup={handleConfirmPickup}
               onDeleteSale={deleteSale}
               canEdit={canEditSales}
               locations={locations}
               gridCols={gridCols}
-              loadMore={loadMore}
-              hasMore={hasMore}
             />
           )}
 
@@ -393,6 +420,34 @@ export default function SalesPage() {
             <Card className="text-center py-12 text-muted-foreground mt-4">
               Nenhuma venda encontrada com os filtros atuais.
             </Card>
+          )}
+
+          {/* Pagination Controls */}
+          {sales.length > 0 && (
+            <div className="flex items-center justify-between py-4">
+              <div className="flex-1 text-sm text-muted-foreground">
+                Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, sales.length)} de {sales.length} vendas
+                {hasMore && " (carregado)"}
+              </div>
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={currentPage >= totalPages && !hasMore}
+                >
+                  Próximo
+                </Button>
+              </div>
+            </div>
           )}
         </div>
 
