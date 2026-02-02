@@ -633,7 +633,7 @@ export default function InventoryPage() {
               onTouchMove={e => e.stopPropagation()}
               onTouchEnd={e => e.stopPropagation()}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 justify-center sm:justify-start">
                 <TooltipProvider>
                   {isMultiLocation && canEditInventory && (
                     <TransferStockDialog
