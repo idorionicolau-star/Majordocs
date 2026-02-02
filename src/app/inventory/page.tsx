@@ -54,7 +54,7 @@ export default function InventoryPage() {
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [dateFilter, setDateFilter] = useState<Date | undefined>();
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
-  const [view, setView] = useState<'list' | 'grid'>('list');
+  const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
