@@ -524,53 +524,61 @@ export default function InventoryPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4">
+        {/* Report Actions */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Button onClick={handleDownloadPdfReport} variant="outline" className="h-12">
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+            <Button onClick={handleDownloadPdfReport} variant="outline" className="h-12 w-full sm:w-auto">
               <Download className="mr-2 h-4 w-4" />
-              Baixar PDF
+              <span className="truncate">PDF</span>
+            </Button>
+            <Button onClick={handlePrintReport} variant="outline" className="h-12 w-full sm:w-auto">
+              <Printer className="mr-2 h-4 w-4" />
+              <span className="truncate">Imprimir</span>
             </Button>
             <Button onClick={() => toast({ title: "Em breve", description: "Envio por e-mail será ativado na próxima atualização." })} variant="outline" className="h-12 hidden sm:flex">
               <Mail className="mr-2 h-4 w-4" />
               Enviar por Email
             </Button>
-            <Button onClick={handlePrintReport} variant="outline" className="h-12">
-              <Printer className="mr-2 h-4 w-4" />
-              Imprimir Relatório
-            </Button>
           </div>
         </div>
-        <div className="w-full">
-          <div className="flex flex-col sm:flex-row items-center gap-2">
-            <div className="relative w-full sm:max-w-xs">
-              <ScanBarcode className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input
-                placeholder="Filtrar nome ou código..."
-                value={nameFilter}
-                onChange={(event) => setNameFilter(event.target.value)}
-                className="w-full shadow-sm h-12 text-sm pr-10"
-              />
-            </div>
-            <div className="flex w-full sm:w-auto items-center gap-2">
+
+        {/* Filters & Search */}
+        <div className="w-full space-y-3">
+          {/* Search Bar */}
+          <div className="relative w-full">
+            <ScanBarcode className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Filtrar nome ou código..."
+              value={nameFilter}
+              onChange={(event) => setNameFilter(event.target.value)}
+              className="w-full shadow-sm h-12 text-sm pr-10"
+            />
+          </div>
+
+          {/* Filters Grid (Mobile) / Flex (Desktop) */}
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full">
+            <div className="w-full sm:w-auto">
               <DatePicker date={dateFilter} setDate={setDateFilter} />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between sm:w-auto h-12">
-                    <ChevronsUpDown className="mr-2 h-4 w-4" />
-                    <span>Ordenar por</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuRadioGroup value={sortBy} onValueChange={(value) => setSortBy(value as 'stock_desc' | 'stock_asc' | 'name_asc' | 'date_desc')}>
-                    <DropdownMenuRadioItem value="stock_desc">Maior Stock</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="stock_asc">Menor Stock</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="name_asc">Ordem Alfabética (A-Z)</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="date_desc">Atualizados Recentemente</DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-between sm:w-auto h-12 px-3">
+                  <div className="flex items-center truncate">
+                    <ChevronsUpDown className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">Ordenar</span>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuRadioGroup value={sortBy} onValueChange={(value) => setSortBy(value as 'stock_desc' | 'stock_asc' | 'name_asc' | 'date_desc')}>
+                  <DropdownMenuRadioItem value="stock_desc">Maior Stock</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="stock_asc">Menor Stock</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="name_asc">Ordem Alfabética (A-Z)</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="date_desc">Atualizados Recentemente</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -832,7 +840,7 @@ export default function InventoryPage() {
             </div>
           </Card>
         )}
-      </div>
+      </div >
       {canEditInventory && (
         <>
           <AddProductDialog
@@ -849,7 +857,8 @@ export default function InventoryPage() {
             <span className="sr-only">Adicionar Produto</span>
           </Button>
         </>
-      )}
+      )
+      }
     </>
   );
 }
