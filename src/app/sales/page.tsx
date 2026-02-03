@@ -394,7 +394,7 @@ export default function SalesPage() {
           </div>
         </Card>
 
-        <div className="flex-grow min-h-0">
+        <div className="flex-grow min-h-0 overflow-y-auto p-1">
           {view === 'list' ? (
             <SalesDataTable
               columns={columns({
@@ -449,25 +449,25 @@ export default function SalesPage() {
               </div>
             </div>
           )}
-        </div>
 
-        {isAdmin && (
-          <Card className="mt-8 shrink-0">
-            <div className="p-6 flex flex-col items-center text-center">
-              <h3 className="font-semibold mb-2">Zona de Administrador</h3>
-              <p className="text-sm text-muted-foreground mb-4 max-w-md">
-                Esta ação é irreversível e irá apagar permanentemente **todas** as vendas.
-              </p>
-              <Button
-                variant="destructive"
-                onClick={() => setShowClearConfirm(true)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Limpar Vendas
-              </Button>
-            </div>
-          </Card>
-        )}
+          {isAdmin && (
+            <Card className="mt-8 mb-6">
+              <div className="p-6 flex flex-col items-center text-center">
+                <h3 className="font-semibold mb-2">Zona de Administrador</h3>
+                <p className="text-sm text-muted-foreground mb-4 max-w-md">
+                  Esta ação é irreversível e irá apagar permanentemente **todas** as vendas.
+                </p>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowClearConfirm(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Limpar Vendas
+                </Button>
+              </div>
+            </Card>
+          )}
+        </div>
 
         {canEditSales && (
           <>
