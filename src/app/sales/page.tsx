@@ -130,7 +130,19 @@ export default function SalesPage() {
   );
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setItemsPerPage(window.innerWidth >= 768 ? 60 : 10);
+    };
+
+    // Initial check
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Reset to page 1 when filters change
   useEffect(() => {
