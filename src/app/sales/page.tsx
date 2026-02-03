@@ -282,7 +282,7 @@ export default function SalesPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500 h-[calc(100vh-100px)]">
+      <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
 
 
         <Card className="glass-panel p-4 border-none shrink-0">
@@ -406,7 +406,7 @@ export default function SalesPage() {
           </div>
         </Card>
 
-        <div className="flex-grow min-h-0 overflow-y-auto p-1">
+        <div className="space-y-4">
           {view === 'list' ? (
             <SalesDataTable
               columns={columns({
