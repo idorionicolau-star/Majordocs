@@ -5,36 +5,21 @@ import { InventoryContext } from "@/context/inventory-context";
 import { Lock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QuickActions } from "@/components/dashboard/quick-actions";
-import dynamic from "next/dynamic";
-import { Skeleton } from "@/components/ui/skeleton";
 import { KPISkeleton } from "@/components/dashboard/kpi-skeleton";
-import { ChartSkeleton } from "@/components/dashboard/chart-skeleton";
 import { PanelSkeleton } from "@/components/dashboard/panel-skeleton";
 
-// Dynamic Imports
-const PrimaryKPIs = dynamic(() => import("@/components/dashboard/primary-kpis").then(mod => mod.PrimaryKPIs), {
-  loading: () => <KPISkeleton />
-});
-const MonthlySalesChart = dynamic(() => import("@/components/dashboard/monthly-sales-chart").then(mod => mod.MonthlySalesChart), {
-  loading: () => <ChartSkeleton />
-});
-const TopSales = dynamic(() => import("@/components/dashboard/top-sales").then(mod => mod.TopSales), {
-  loading: () => <PanelSkeleton />
-});
-const StockAlerts = dynamic(() => import("@/components/dashboard/stock-alerts").then(mod => mod.StockAlerts), {
-  loading: () => <PanelSkeleton />
-});
+// Static Imports
+import { PrimaryKPIs } from "@/components/dashboard/primary-kpis";
+import { MonthlySalesChart } from "@/components/dashboard/monthly-sales-chart";
+import { TopSales } from "@/components/dashboard/top-sales";
+import { StockAlerts } from "@/components/dashboard/stock-alerts";
+import { DeadStock } from "@/components/dashboard/dead-stock";
+import { EmptyStateWelcome } from "@/components/dashboard/empty-state";
+import { MajorAssistant } from "@/components/assistant/major-assistant";
 
+// Removed dynamic imports to prevent circular dependency issues in production build
+// The loading state is handled by the main component logic below
 
-const DeadStock = dynamic(() => import("@/components/dashboard/dead-stock").then(mod => mod.DeadStock), {
-  loading: () => <PanelSkeleton />
-});
-
-const EmptyStateWelcome = dynamic(() => import("@/components/dashboard/empty-state").then(mod => mod.EmptyStateWelcome));
-
-const MajorAssistant = dynamic(() => import("@/components/assistant/major-assistant").then(mod => mod.MajorAssistant), {
-  loading: () => <PanelSkeleton />
-});
 
 export default function DashboardPage() {
   const { user, products, loading } = useContext(InventoryContext) || { user: null, products: [], loading: true };

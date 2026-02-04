@@ -22,7 +22,12 @@ import {
 } from "@/components/ui/select";
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
-import { QuickCreateProductDialog } from './quick-create-product-dialog';
+import dynamic from 'next/dynamic';
+// Dynamically import QuickCreateProductDialog to avoid circular dependency initialization issues
+const QuickCreateProductDialog = dynamic(() => import('./quick-create-product-dialog').then(mod => mod.QuickCreateProductDialog), {
+  loading: () => null,
+  ssr: false
+});
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 type CatalogCategory = { id: string; name: string };
