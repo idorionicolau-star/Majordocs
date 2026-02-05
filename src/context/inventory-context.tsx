@@ -803,17 +803,48 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const toProduct = products.find(p => p.name === productName && p.location === toLocationId);
+
     try {
       await runTransaction(firestore, async (transaction) => {
-        // ... (transfer logic would be here, but using placeholder for simplicity as we just add mergeProducts below)
-        // Actually, transferStock implementation was cut off in view, so I will append mergeProducts after it.
+        const productsRef = collection(firestore, `companies/${companyId}/products`);
+        const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+
+        const fromDocRef = doc(productsRef, fromProduct.id!);
+        const newFromStock = fromProduct.stock - quantity;
+        transaction.update(fromDocRef, { stock: newFromStock });
+
+        checkStockAndNotify({ ...fromProduct, stock: newFromStock });
+
+        if (toProduct && toProduct.id) {
+          const toDocRef = doc(productsRef, toProduct.id);
+          transaction.update(toDocRef, { stock: toProduct.stock + quantity });
+        } else {
+          const { id, instanceId, ...restOfProduct } = fromProduct;
+          const newDocRef = doc(productsRef);
+          transaction.set(newDocRef, { ...restOfProduct, location: toLocationId, stock: quantity, reservedStock: 0, lastUpdated: new Date().toISOString().split('T')[0] });
+        }
+
+        const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+          productId: fromProduct.id!,
+          productName,
+          type: 'TRANSFER',
+          quantity,
+          fromLocationId,
+          toLocationId,
+          reason: `Transferência manual`,
+          userId: user.id,
+          userName: user.username,
+        };
+        transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
       });
-      // Complete the transferStock logically if needed or just insert mergeProducts
-      // Since I don't have the full file, I will insert mergeProducts before the end of the Provider component or after a known function.
-      // I'll insert it after auditStock to be safe, or I can use the position of transferStock if I knew where it ended.
-      // Let's look for `return (` to find the end of the component logic.
-    } catch (e) { }
-  }, [firestore, companyId, user, products, toast]);
+
+      toast({ title: 'Transferência Concluída' });
+    } catch (error) {
+      console.error('Error transferring stock:', error);
+      toast({ variant: 'destructive', title: 'Erro na Transferência', description: (error as Error).message });
+    }
+  }, [firestore, companyId, user, products, toast, checkStockAndNotify]);
 
   const mergeProducts = useCallback(async (targetProductId: string, sourceProductIds: string[]) => {
     if (!firestore || !companyId || !user) return;
@@ -928,818 +959,777 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   }, [firestore, companyId, user, toast]);
 
-  const toProduct = products.find(p => p.name === productName && p.location === toLocationId);
 
-  try {
-    await runTransaction(firestore, async (transaction) => {
-      const productsRef = collection(firestore, `companies/${companyId}/products`);
-      const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
-      const fromDocRef = doc(productsRef, fromProduct.id!);
-      const newFromStock = fromProduct.stock - quantity;
-      transaction.update(fromDocRef, { stock: newFromStock });
+  const updateProductStock = useCallback(async (productName: string, quantity: number, locationId?: string) => {
+    if (!firestore || !companyId || !user) return;
+    const targetLocation = locationId || (isMultiLocation && locations.length > 0 ? locations[0].id : 'Principal');
+    const catalogProduct = catalogProductsData?.find(p => p.name === productName);
+    const existingInstance = products.find(p => p.name === productName && p.location === targetLocation);
 
-      checkStockAndNotify({ ...fromProduct, stock: newFromStock });
+    const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
-      if (toProduct && toProduct.id) {
-        const toDocRef = doc(productsRef, toProduct.id);
-        transaction.update(toDocRef, { stock: toProduct.stock + quantity });
-      } else {
-        const { id, instanceId, ...restOfProduct } = fromProduct;
-        const newDocRef = doc(productsRef);
-        transaction.set(newDocRef, { ...restOfProduct, location: toLocationId, stock: quantity, reservedStock: 0, lastUpdated: new Date().toISOString().split('T')[0] });
-      }
+    if (existingInstance && existingInstance.id) {
+      const docRef = doc(firestore, `companies/${companyId}/products`, existingInstance.id);
+      const batch = writeBatch(firestore);
+      const newStock = existingInstance.stock + quantity;
+      batch.update(docRef, { stock: newStock });
+
+      checkStockAndNotify({ ...existingInstance, stock: newStock });
 
       const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
-        productId: fromProduct.id!,
-        productName,
-        type: 'TRANSFER',
-        quantity,
-        fromLocationId,
-        toLocationId,
-        reason: `Transferência manual`,
+        productId: existingInstance.id,
+        productName: productName,
+        type: 'IN',
+        quantity: quantity,
+        toLocationId: targetLocation,
+        reason: `Produção de Lote: ${quantity} unidades`,
+        userId: user.id,
+        userName: user.username,
+      };
+      batch.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+      await batch.commit();
+
+    } else {
+      if (!catalogProduct) {
+        // toast is handled by caller or we throw to let caller know
+        const errorMsg = `Produto Base Não Encontrado: Adicione "${productName}" ao catálogo primeiro.`;
+        // We still show toast here for immediate feedback if not caught, but we must throw.
+        // Better to JUST throw and let caller handle toast, but for safety lets throw.
+        throw new Error(errorMsg);
+      }
+      const { id, ...restOfCatalogProduct } = catalogProduct;
+      const productsRef = collection(firestore, `companies/${companyId}/products`);
+
+      const batch = writeBatch(firestore);
+      const newProductRef = doc(productsRef);
+      batch.set(newProductRef, { ...restOfCatalogProduct, stock: quantity, reservedStock: 0, location: targetLocation, lastUpdated: new Date().toISOString().split('T')[0] });
+
+      checkStockAndNotify({ ...catalogProduct, id: newProductRef.id, stock: quantity } as Product);
+
+      const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+        productId: newProductRef.id,
+        productName: productName,
+        type: 'IN',
+        quantity: quantity,
+        toLocationId: targetLocation,
+        reason: `Produção de Lote: ${quantity} unidades`,
+        userId: user.id,
+        userName: user.username,
+      };
+      batch.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+      await batch.commit();
+    }
+
+    addNotification({
+      type: 'production',
+      message: `${quantity} unidades de ${productName} foram produzidas.`,
+      href: '/production',
+    });
+  }, [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast, user, checkStockAndNotify, addNotification]);
+
+  const updateCompany = useCallback(async (details: Partial<Company>) => {
+    if (companyDocRef) {
+      updateDocumentNonBlocking(companyDocRef, details);
+    }
+  }, [companyDocRef]);
+
+  const addSale = useCallback(async (newSaleData: Omit<Sale, 'id' | 'guideNumber'>, reserveStock = true) => {
+    if (!firestore || !companyId || !productsCollectionRef) throw new Error("Firestore não está pronto.");
+
+    const settings = companyData?.notificationSettings;
+    if (settings?.onSale && (!settings.email || settings.email.trim() === '')) {
+      toast({
+        variant: "destructive",
+        title: "E-mail de Notificação em Falta",
+        description: "Ativou as notificações de venda, mas não configurou um e-mail de destino nos Ajustes.",
+      });
+    }
+
+    const productQuery = query(
+      productsCollectionRef,
+      where("name", "==", newSaleData.productName),
+      where("location", "==", newSaleData.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
+    );
+
+    const salesCollectionRef = collection(firestore, `companies/${companyId}/sales`);
+    const newSaleRef = doc(salesCollectionRef);
+    const companyDocRef = doc(firestore, `companies/${companyId}`);
+
+    let guideNumberForOuterScope: string | null = null;
+
+    // This is a read outside the transaction to get the document reference.
+    const productSnapshot = reserveStock ? await getDocs(productQuery) : null;
+    if (reserveStock && productSnapshot && productSnapshot.empty) {
+      throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque para a localização selecionada.`);
+    }
+    const productDocRef = productSnapshot ? productSnapshot.docs[0].ref : null;
+
+    await runTransaction(firestore, async (transaction) => {
+      const companyDoc = await transaction.get(companyDocRef);
+      if (!companyDoc.exists()) {
+        throw new Error("Documento da empresa não encontrado.");
+      }
+      const currentCompanyData = companyDoc.data();
+      const newSaleCounter = (currentCompanyData.saleCounter || 0) + 1;
+
+      const guideNumber = `GT-${String(newSaleCounter).padStart(6, '0')}`;
+      guideNumberForOuterScope = guideNumber;
+
+      if (reserveStock && productDocRef) {
+        const productDoc = await transaction.get(productDocRef);
+        if (!productDoc.exists()) {
+          throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque.`);
+        }
+        const productData = productDoc.data() as Product;
+        const availableStock = productData.stock - productData.reservedStock;
+
+        if (availableStock < newSaleData.quantity) {
+          throw new Error(`Estoque insuficiente. Disponível: ${availableStock}.`);
+        }
+
+        const newReservedStock = productData.reservedStock + newSaleData.quantity;
+        transaction.update(productDoc.ref, { reservedStock: newReservedStock });
+      }
+
+      transaction.update(companyDocRef, { saleCounter: newSaleCounter });
+      transaction.set(newSaleRef, { ...newSaleData, guideNumber });
+    });
+
+    if (guideNumberForOuterScope) {
+      const createdSale: Sale = {
+        ...newSaleData,
+        id: newSaleRef.id,
+        guideNumber: guideNumberForOuterScope,
+      };
+      downloadSaleDocument(createdSale, companyData);
+
+      await triggerEmailAlert({
+        type: 'SALE',
+        ...newSaleData,
+        guideNumber: guideNumberForOuterScope,
+        location: locations.find(l => l.id === newSaleData.location)?.name || 'Principal',
+      });
+    }
+
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, toast, triggerEmailAlert]);
+
+  const confirmSalePickup = useCallback(async (sale: Sale) => {
+    if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
+
+    const amountPaid = sale.amountPaid ?? 0;
+    // Allow for a small tolerance (e.g., 0.50) to account for rounding errors or negligible differences
+    if ((sale.totalValue - amountPaid) > 0.5) {
+      toast({
+        variant: "destructive",
+        title: 'Pagamento Incompleto',
+        description: `Não é possível confirmar o levantamento. O cliente ainda precisa de pagar ${formatCurrency(sale.totalValue - amountPaid)}.`,
+        duration: 6000,
+      });
+      return;
+    }
+
+    const productQuery = query(
+      productsCollectionRef,
+      where("name", "==", sale.productName),
+      where("location", "==", sale.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
+    );
+    const saleRef = doc(firestore, `companies/${companyId}/sales`, sale.id);
+    const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+
+    await runTransaction(firestore, async (transaction) => {
+      const productSnapshot = await getDocs(productQuery);
+      if (productSnapshot.empty) {
+        throw new Error(`Produto "${sale.productName}" não encontrado para atualizar estoque.`);
+      }
+      const productDoc = productSnapshot.docs[0];
+      const productData = productDoc.data() as Product;
+
+      const newStock = productData.stock - sale.quantity;
+      let newReservedStock = productData.reservedStock - sale.quantity;
+
+      if (newReservedStock < 0) {
+        console.warn(`[Audit] Negative reserved stock detected for ${productData.name} during pickup. Clamped to 0. Was: ${productData.reservedStock}, Deducting: ${sale.quantity}`);
+        newReservedStock = 0;
+      }
+
+      if (newStock < 0) {
+        throw new Error("Erro Crítico: Stock insuficiente para realizar o levantamento."); // Physical stock MUST be sufficient
+      }
+
+      transaction.update(productDoc.ref, { stock: newStock, reservedStock: newReservedStock });
+      transaction.update(saleRef, { status: 'Levantado' });
+
+      checkStockAndNotify({ ...productData, stock: newStock });
+
+      const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+        productId: productDoc.id,
+        productName: sale.productName,
+        type: 'OUT',
+        quantity: -sale.quantity, // Negative for stock out
+        fromLocationId: productData.location,
+        reason: `Venda #${sale.guideNumber}`,
         userId: user.id,
         userName: user.username,
       };
       transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
     });
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user, checkStockAndNotify, toast]);
 
-    toast({ title: 'Transferência Concluída' });
-  } catch (error) {
-    console.error('Error transferring stock:', error);
-    toast({ variant: 'destructive', title: 'Erro na Transferência', description: (error as Error).message });
-  }
-}, [firestore, companyId, products, toast, user, checkStockAndNotify]);
-
-const updateProductStock = useCallback(async (productName: string, quantity: number, locationId?: string) => {
-  if (!firestore || !companyId || !user) return;
-  const targetLocation = locationId || (isMultiLocation && locations.length > 0 ? locations[0].id : 'Principal');
-  const catalogProduct = catalogProductsData?.find(p => p.name === productName);
-  const existingInstance = products.find(p => p.name === productName && p.location === targetLocation);
-
-  const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
-
-  if (existingInstance && existingInstance.id) {
-    const docRef = doc(firestore, `companies/${companyId}/products`, existingInstance.id);
-    const batch = writeBatch(firestore);
-    const newStock = existingInstance.stock + quantity;
-    batch.update(docRef, { stock: newStock });
-
-    checkStockAndNotify({ ...existingInstance, stock: newStock });
-
-    const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
-      productId: existingInstance.id,
-      productName: productName,
-      type: 'IN',
-      quantity: quantity,
-      toLocationId: targetLocation,
-      reason: `Produção de Lote: ${quantity} unidades`,
-      userId: user.id,
-      userName: user.username,
-    };
-    batch.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
-    await batch.commit();
-
-  } else {
-    if (!catalogProduct) {
-      // toast is handled by caller or we throw to let caller know
-      const errorMsg = `Produto Base Não Encontrado: Adicione "${productName}" ao catálogo primeiro.`;
-      // We still show toast here for immediate feedback if not caught, but we must throw.
-      // Better to JUST throw and let caller handle toast, but for safety lets throw.
-      throw new Error(errorMsg);
-    }
-    const { id, ...restOfCatalogProduct } = catalogProduct;
-    const productsRef = collection(firestore, `companies/${companyId}/products`);
-
-    const batch = writeBatch(firestore);
-    const newProductRef = doc(productsRef);
-    batch.set(newProductRef, { ...restOfCatalogProduct, stock: quantity, reservedStock: 0, location: targetLocation, lastUpdated: new Date().toISOString().split('T')[0] });
-
-    checkStockAndNotify({ ...catalogProduct, id: newProductRef.id, stock: quantity } as Product);
-
-    const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
-      productId: newProductRef.id,
-      productName: productName,
-      type: 'IN',
-      quantity: quantity,
-      toLocationId: targetLocation,
-      reason: `Produção de Lote: ${quantity} unidades`,
-      userId: user.id,
-      userName: user.username,
-    };
-    batch.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
-    await batch.commit();
-  }
-
-  addNotification({
-    type: 'production',
-    message: `${quantity} unidades de ${productName} foram produzidas.`,
-    href: '/production',
-  });
-}, [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast, user, checkStockAndNotify, addNotification]);
-
-const updateCompany = useCallback(async (details: Partial<Company>) => {
-  if (companyDocRef) {
-    updateDocumentNonBlocking(companyDocRef, details);
-  }
-}, [companyDocRef]);
-
-const addSale = useCallback(async (newSaleData: Omit<Sale, 'id' | 'guideNumber'>, reserveStock = true) => {
-  if (!firestore || !companyId || !productsCollectionRef) throw new Error("Firestore não está pronto.");
-
-  const settings = companyData?.notificationSettings;
-  if (settings?.onSale && (!settings.email || settings.email.trim() === '')) {
-    toast({
-      variant: "destructive",
-      title: "E-mail de Notificação em Falta",
-      description: "Ativou as notificações de venda, mas não configurou um e-mail de destino nos Ajustes.",
-    });
-  }
-
-  const productQuery = query(
-    productsCollectionRef,
-    where("name", "==", newSaleData.productName),
-    where("location", "==", newSaleData.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
-  );
-
-  const salesCollectionRef = collection(firestore, `companies/${companyId}/sales`);
-  const newSaleRef = doc(salesCollectionRef);
-  const companyDocRef = doc(firestore, `companies/${companyId}`);
-
-  let guideNumberForOuterScope: string | null = null;
-
-  // This is a read outside the transaction to get the document reference.
-  const productSnapshot = reserveStock ? await getDocs(productQuery) : null;
-  if (reserveStock && productSnapshot && productSnapshot.empty) {
-    throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque para a localização selecionada.`);
-  }
-  const productDocRef = productSnapshot ? productSnapshot.docs[0].ref : null;
-
-  await runTransaction(firestore, async (transaction) => {
-    const companyDoc = await transaction.get(companyDocRef);
-    if (!companyDoc.exists()) {
-      throw new Error("Documento da empresa não encontrado.");
-    }
-    const currentCompanyData = companyDoc.data();
-    const newSaleCounter = (currentCompanyData.saleCounter || 0) + 1;
-
-    const guideNumber = `GT-${String(newSaleCounter).padStart(6, '0')}`;
-    guideNumberForOuterScope = guideNumber;
-
-    if (reserveStock && productDocRef) {
-      const productDoc = await transaction.get(productDocRef);
-      if (!productDoc.exists()) {
-        throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque.`);
-      }
-      const productData = productDoc.data() as Product;
-      const availableStock = productData.stock - productData.reservedStock;
-
-      if (availableStock < newSaleData.quantity) {
-        throw new Error(`Estoque insuficiente. Disponível: ${availableStock}.`);
-      }
-
-      const newReservedStock = productData.reservedStock + newSaleData.quantity;
-      transaction.update(productDoc.ref, { reservedStock: newReservedStock });
-    }
-
-    transaction.update(companyDocRef, { saleCounter: newSaleCounter });
-    transaction.set(newSaleRef, { ...newSaleData, guideNumber });
-  });
-
-  if (guideNumberForOuterScope) {
-    const createdSale: Sale = {
-      ...newSaleData,
-      id: newSaleRef.id,
-      guideNumber: guideNumberForOuterScope,
-    };
-    downloadSaleDocument(createdSale, companyData);
-
-    await triggerEmailAlert({
-      type: 'SALE',
-      ...newSaleData,
-      guideNumber: guideNumberForOuterScope,
-      location: locations.find(l => l.id === newSaleData.location)?.name || 'Principal',
-    });
-  }
-
-}, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, toast, triggerEmailAlert]);
-
-const confirmSalePickup = useCallback(async (sale: Sale) => {
-  if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
-
-  const amountPaid = sale.amountPaid ?? 0;
-  // Allow for a small tolerance (e.g., 0.50) to account for rounding errors or negligible differences
-  if ((sale.totalValue - amountPaid) > 0.5) {
-    toast({
-      variant: "destructive",
-      title: 'Pagamento Incompleto',
-      description: `Não é possível confirmar o levantamento. O cliente ainda precisa de pagar ${formatCurrency(sale.totalValue - amountPaid)}.`,
-      duration: 6000,
-    });
-    return;
-  }
-
-  const productQuery = query(
-    productsCollectionRef,
-    where("name", "==", sale.productName),
-    where("location", "==", sale.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
-  );
-  const saleRef = doc(firestore, `companies/${companyId}/sales`, sale.id);
-  const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
-
-  await runTransaction(firestore, async (transaction) => {
-    const productSnapshot = await getDocs(productQuery);
-    if (productSnapshot.empty) {
-      throw new Error(`Produto "${sale.productName}" não encontrado para atualizar estoque.`);
-    }
-    const productDoc = productSnapshot.docs[0];
-    const productData = productDoc.data() as Product;
-
-    const newStock = productData.stock - sale.quantity;
-    let newReservedStock = productData.reservedStock - sale.quantity;
-
-    if (newReservedStock < 0) {
-      console.warn(`[Audit] Negative reserved stock detected for ${productData.name} during pickup. Clamped to 0. Was: ${productData.reservedStock}, Deducting: ${sale.quantity}`);
-      newReservedStock = 0;
-    }
-
-    if (newStock < 0) {
-      throw new Error("Erro Crítico: Stock insuficiente para realizar o levantamento."); // Physical stock MUST be sufficient
-    }
-
-    transaction.update(productDoc.ref, { stock: newStock, reservedStock: newReservedStock });
-    transaction.update(saleRef, { status: 'Levantado' });
-
-    checkStockAndNotify({ ...productData, stock: newStock });
-
-    const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
-      productId: productDoc.id,
-      productName: sale.productName,
-      type: 'OUT',
-      quantity: -sale.quantity, // Negative for stock out
-      fromLocationId: productData.location,
-      reason: `Venda #${sale.guideNumber}`,
-      userId: user.id,
-      userName: user.username,
-    };
-    transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
-  });
-}, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user, checkStockAndNotify, toast]);
-
-const addProduction = useCallback(async (prodData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
-  if (!firestore || !companyId || !user) throw new Error("Contexto não pronto.");
-
-  const newProduction: Omit<Production, 'id'> = {
-    ...prodData,
-    date: new Date().toISOString().split('T')[0],
-    registeredBy: user.username || 'Desconhecido',
-    status: 'Concluído',
-  };
-
-  const productionsRef = collection(firestore, `companies/${companyId}/productions`);
-  addDocumentNonBlocking(productionsRef, newProduction);
-
-  addNotification({
-    type: 'production',
-    message: `Produção de ${newProduction.quantity} ${newProduction.unit} de ${newProduction.productName} registada.`,
-    href: '/production',
-  });
-}, [firestore, companyId, user, addNotification]);
-
-const addProductionLog = useCallback((orderId: string, logData: { quantity: number; notes?: string }) => {
-  if (!firestore || !companyId || !user || !ordersData) return;
-
-  const orderToUpdate = ordersData.find(o => o.id === orderId);
-
-  if (orderToUpdate) {
-    const orderDocRef = doc(firestore, `companies/${companyId}/orders`, orderId);
-    const productionsRef = collection(firestore, `companies/${companyId}/productions`);
-
-    const batch = writeBatch(firestore);
-
-    const newLog: ProductionLog = {
-      id: `log-${Date.now()}`,
-      date: new Date().toISOString(),
-      quantity: logData.quantity,
-      notes: logData.notes,
-      registeredBy: user.username || 'Desconhecido',
-    };
-    const newQuantityProduced = orderToUpdate.quantityProduced + logData.quantity;
-
-    batch.update(orderDocRef, {
-      quantityProduced: newQuantityProduced,
-      productionLogs: arrayUnion(newLog)
-    });
+  const addProduction = useCallback(async (prodData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
+    if (!firestore || !companyId || !user) throw new Error("Contexto não pronto.");
 
     const newProduction: Omit<Production, 'id'> = {
+      ...prodData,
       date: new Date().toISOString().split('T')[0],
-      productName: orderToUpdate.productName,
-      quantity: logData.quantity,
-      unit: orderToUpdate.unit,
-      location: orderToUpdate.location,
       registeredBy: user.username || 'Desconhecido',
-      status: 'Concluído'
+      status: 'Concluído',
     };
-    batch.set(doc(productionsRef), newProduction);
 
-    batch.commit().then(() => {
-      toast({
-        title: "Registo de Produção Adicionado",
-        description: `${logData.quantity} unidades de "${orderToUpdate?.productName}" foram registadas.`,
+    const productionsRef = collection(firestore, `companies/${companyId}/productions`);
+    addDocumentNonBlocking(productionsRef, newProduction);
+
+    addNotification({
+      type: 'production',
+      message: `Produção de ${newProduction.quantity} ${newProduction.unit} de ${newProduction.productName} registada.`,
+      href: '/production',
+    });
+  }, [firestore, companyId, user, addNotification]);
+
+  const addProductionLog = useCallback((orderId: string, logData: { quantity: number; notes?: string }) => {
+    if (!firestore || !companyId || !user || !ordersData) return;
+
+    const orderToUpdate = ordersData.find(o => o.id === orderId);
+
+    if (orderToUpdate) {
+      const orderDocRef = doc(firestore, `companies/${companyId}/orders`, orderId);
+      const productionsRef = collection(firestore, `companies/${companyId}/productions`);
+
+      const batch = writeBatch(firestore);
+
+      const newLog: ProductionLog = {
+        id: `log-${Date.now()}`,
+        date: new Date().toISOString(),
+        quantity: logData.quantity,
+        notes: logData.notes,
+        registeredBy: user.username || 'Desconhecido',
+      };
+      const newQuantityProduced = orderToUpdate.quantityProduced + logData.quantity;
+
+      batch.update(orderDocRef, {
+        quantityProduced: newQuantityProduced,
+        productionLogs: arrayUnion(newLog)
       });
-      addNotification({
-        type: 'production',
-        message: `Produção de ${orderToUpdate.productName} atualizada.`,
-        href: `/orders?id=${orderId}`
-      })
-    }).catch(error => {
-      console.error("Error adding production log: ", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao Registar",
-        description: "Não foi possível guardar o registo de produção.",
-      });
-    });
-  }
-}, [firestore, companyId, user, ordersData, toast, addNotification]);
 
-const addCatalogProduct = useCallback(async (productData: Omit<CatalogProduct, 'id'>) => {
-  if (!catalogProductsCollectionRef) {
-    throw new Error("Referência da coleção do catálogo não disponível.");
-  }
-  try {
-    addDocumentNonBlocking(catalogProductsCollectionRef, productData);
-  } catch (e) {
-    console.error("Error adding catalog product:", e);
-    throw new Error("Não foi possível adicionar o produto ao catálogo.");
-  }
-}, [catalogProductsCollectionRef]);
-
-const addCatalogCategory = useCallback(async (categoryName: string) => {
-  if (!catalogCategoriesCollectionRef || !catalogCategoriesData) return;
-  const trimmedName = categoryName.trim();
-  if (!trimmedName) return;
-
-  const exists = catalogCategoriesData.some(c => c.name.toLowerCase() === trimmedName.toLowerCase());
-  if (exists) {
-    return;
-  }
-
-  try {
-    addDocumentNonBlocking(catalogCategoriesCollectionRef, { name: trimmedName });
-  } catch (e) {
-    console.error("Error adding catalog category:", e);
-    throw new Error("Não foi possível adicionar a nova categoria.");
-  }
-}, [catalogCategoriesCollectionRef, catalogCategoriesData]);
-
-const deleteSale = useCallback(async (saleId: string) => {
-  if (!firestore || !companyId || !productsCollectionRef || !user) {
-    toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta.' });
-    return;
-  }
-  const saleRef = doc(firestore, `companies/${companyId}/sales`, saleId);
-
-  try {
-    const saleDoc = await getDoc(saleRef);
-    if (!saleDoc.exists()) {
-      throw new Error("Venda não encontrada.");
-    }
-    const saleData = saleDoc.data() as Sale;
-
-    let productDocRef: DocumentReference | null = null;
-    if (saleData.status === 'Pago' || saleData.status === 'Levantado') {
-      const productQuery = query(
-        productsCollectionRef,
-        where("name", "==", saleData.productName),
-        where("location", "==", saleData.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
-      );
-      const productSnapshot = await getDocs(productQuery);
-      if (!productSnapshot.empty) {
-        productDocRef = productSnapshot.docs[0].ref;
-      }
-    }
-
-    await runTransaction(firestore, async (transaction) => {
-      // We reinstate stock because "Deleting" a sale usually means it was valid but we want to cancel it.
-      // Soft delete logic: Just mark as deleted? If we mark as deleted but keep stock deducted, it's just hiding.
-      // User expects "Undo" usually for accidental deletion.
-      // If we want "Undo" to work perfectly, we should NOT revert stock on soft delete if we assume it's just moving to trash,
-      // BUT if we don't revert stock, the stock count is wrong if the sale is indeed cancelled.
-      // Plan: Soft delete = "Cancelled" effectively. So we revert stock.
-      // Restore = "Re-do" sale. We take stock again.
-
-      if (productDocRef) {
-        const productDoc = await transaction.get(productDocRef);
-        if (productDoc.exists()) {
-          const productData = productDoc.data() as Product;
-          let stockUpdate = {};
-
-          // If it was just 'Pago' (reserved), we free reserved.
-          // If it was 'Levantado' (stock taken), we free stock AND reserved? No, just stock.
-          // Wait, logic:
-          // Pago -> Reserved Stock increased.
-          // Levantado -> Stock decreased (Reserved decreased).
-
-          if (saleData.status === 'Pago') {
-            const newReserved = Math.max(0, productData.reservedStock - saleData.quantity);
-            stockUpdate = { reservedStock: newReserved };
-          } else if (saleData.status === 'Levantado') {
-            // Stock was already taken. Put it back.
-            const newStock = productData.stock + saleData.quantity;
-            stockUpdate = { stock: newStock };
-          }
-
-          transaction.update(productDocRef, stockUpdate);
-        }
-      }
-
-      transaction.update(saleRef, {
-        deletedAt: new Date().toISOString(),
-        deletedBy: user.username
-      });
-    });
-
-    toast({ title: 'Venda enviada para Lixeira', description: 'O stock foi reposto.' });
-
-  } catch (error: any) {
-    console.error("Error deleting sale: ", error);
-    toast({ variant: 'destructive', title: 'Erro ao Apagar Venda', description: error.message });
-  }
-}, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, toast, user]);
-
-const recalculateReservedStock = useCallback(async () => {
-  if (!firestore || !companyId || !productsData) {
-    toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta para esta operação.' });
-    return;
-  }
-
-  toast({ title: 'A recalcular stock reservado...', description: 'Isto pode demorar um momento.' });
-
-  try {
-    // 1. Fetch all 'Paid' sales directly from Firestore
-    const salesRef = collection(firestore, `companies/${companyId}/sales`);
-    const q = query(salesRef, where("status", "==", "Pago"));
-    const paidSalesSnapshot = await getDocs(q);
-    const paidSales = paidSalesSnapshot.docs.map(doc => doc.data() as Sale);
-
-    // 2. Calculate the correct reserved stock for each product instance (name + location)
-    const correctReservedMap = new Map<string, number>(); // Key: 'productName|locationId'
-    paidSales.forEach(sale => {
-      // Use an empty string for undefined location to ensure consistency
-      const locationKey = sale.location || '';
-      const key = `${sale.productName}|${locationKey}`;
-      const currentReserved = correctReservedMap.get(key) || 0;
-      correctReservedMap.set(key, currentReserved + sale.quantity);
-    });
-
-    // 3. Compare with existing data and prepare batch update
-    const batch = writeBatch(firestore);
-    let updatesCount = 0;
-
-    productsData.forEach(product => {
-      const locationKey = product.location || '';
-      const key = `${product.name}|${locationKey}`;
-      const correctReserved = correctReservedMap.get(key) || 0;
-
-      if (product.reservedStock !== correctReserved) {
-        const productRef = doc(firestore, `companies/${companyId}/products`, product.id);
-        batch.update(productRef, { reservedStock: correctReserved });
-        updatesCount++;
-      }
-    });
-
-    // 4. Commit batch if needed
-    if (updatesCount > 0) {
-      await batch.commit();
-      toast({ title: 'Sucesso!', description: `${updatesCount} registo(s) de stock reservado foram corrigidos.` });
-    } else {
-      toast({ title: 'Tudo certo!', description: 'Nenhuma inconsistência encontrada no stock reservado.' });
-    }
-
-  } catch (error: any) {
-    console.error("Error recalculating reserved stock:", error);
-    toast({ variant: 'destructive', title: 'Erro ao Recalcular', description: 'Não foi possível completar a operação.' });
-  }
-}, [firestore, companyId, productsData, toast]);
-
-const deleteProduction = useCallback((productionId: string) => {
-  if (!productionsCollectionRef) return;
-  deleteDocumentNonBlocking(doc(productionsCollectionRef, productionId));
-  toast({ title: 'Registo de Produção Apagado' });
-}, [productionsCollectionRef, toast]);
-
-const updateProduction = useCallback((productionId: string, data: Partial<Production>) => {
-  if (!productionsCollectionRef) return;
-  const docRef = doc(productionsCollectionRef, productionId);
-  updateDocumentNonBlocking(docRef, data);
-  toast({ title: 'Registo de Produção Atualizado' });
-}, [productionsCollectionRef, toast]);
-
-const deleteOrder = useCallback((orderId: string) => {
-  if (!ordersCollectionRef) return;
-  deleteDocumentNonBlocking(doc(ordersCollectionRef, orderId));
-  toast({ title: 'Encomenda Apagada' });
-}, [ordersCollectionRef, toast]);
-
-const addRawMaterial = useCallback(async (material: Omit<RawMaterial, 'id'>) => {
-  if (!rawMaterialsCollectionRef) return;
-  addDocumentNonBlocking(rawMaterialsCollectionRef, material);
-  toast({ title: 'Matéria-Prima Adicionada' });
-}, [rawMaterialsCollectionRef, toast]);
-
-const updateRawMaterial = useCallback(async (materialId: string, data: Partial<RawMaterial>) => {
-  if (!rawMaterialsCollectionRef) return;
-  const docRef = doc(rawMaterialsCollectionRef, materialId);
-  updateDocumentNonBlocking(docRef, data);
-  toast({ title: 'Matéria-Prima Atualizada' });
-}, [rawMaterialsCollectionRef, toast]);
-
-const deleteRawMaterial = useCallback(async (materialId: string) => {
-  if (!rawMaterialsCollectionRef) return;
-  deleteDocumentNonBlocking(doc(rawMaterialsCollectionRef, materialId));
-  toast({ title: 'Matéria-Prima Removida' });
-}, [rawMaterialsCollectionRef, toast]);
-
-const addRecipe = useCallback(async (recipe: Omit<Recipe, 'id'>) => {
-  if (!recipesCollectionRef) return;
-  addDocumentNonBlocking(recipesCollectionRef, recipe);
-  toast({ title: 'Receita Adicionada' });
-}, [recipesCollectionRef, toast]);
-
-const updateRecipe = useCallback(async (recipeId: string, data: Partial<Recipe>) => {
-  if (!recipesCollectionRef) return;
-  const docRef = doc(recipesCollectionRef, recipeId);
-  updateDocumentNonBlocking(docRef, data);
-  toast({ title: 'Receita Atualizada' });
-}, [recipesCollectionRef, toast]);
-
-const deleteRecipe = useCallback(async (recipeId: string) => {
-  if (!recipesCollectionRef) return;
-  deleteDocumentNonBlocking(doc(recipesCollectionRef, recipeId));
-  toast({ title: 'Receita Removida' });
-}, [recipesCollectionRef, toast]);
-
-const produceFromRecipe = useCallback(async (recipeId: string, quantityToProduce: number) => {
-  if (!firestore || !companyId || !user || !recipesData) {
-    toast({ variant: 'destructive', title: 'Erro', description: 'Dados de produção indisponíveis.' });
-    return;
-  }
-
-  const recipe = recipesData.find(r => r.id === recipeId);
-  if (!recipe) {
-    toast({ variant: 'destructive', title: 'Erro', description: 'Receita não encontrada.' });
-    return;
-  }
-
-  if (quantityToProduce <= 0) {
-    toast({ variant: 'destructive', title: 'Quantidade Inválida', description: 'A quantidade deve ser maior que zero.' });
-    return;
-  }
-
-  try {
-    await runTransaction(firestore, async (transaction) => {
-      // 1. Validate and Deduct Raw Materials atomically
-      for (const ingredient of recipe.ingredients) {
-        const materialRef = doc(firestore, `companies/${companyId}/rawMaterials`, ingredient.rawMaterialId);
-        const materialDoc = await transaction.get(materialRef);
-
-        if (!materialDoc.exists()) {
-          throw new Error(`Matéria-prima não encontrada (ID: ${ingredient.rawMaterialId}).`);
-        }
-
-        const materialData = materialDoc.data() as RawMaterial;
-        const requiredQty = ingredient.quantity * quantityToProduce;
-        const newStock = (materialData.stock || 0) - requiredQty;
-
-        if (newStock < 0) {
-          throw new Error(`Stock insuficiente de ${materialData.name}. Necessário: ${requiredQty}, Disponível: ${materialData.stock}.`);
-        }
-
-        transaction.update(materialRef, { stock: newStock });
-      }
-
-      // 2. Add to Production Log (Create new document)
-      const productionRef = doc(collection(firestore, `companies/${companyId}/productions`));
       const newProduction: Omit<Production, 'id'> = {
         date: new Date().toISOString().split('T')[0],
-        productName: recipe.productName,
-        quantity: quantityToProduce,
-        unit: catalogProductsData?.find(p => p.name === recipe.productName)?.unit || 'un',
-        registeredBy: user.username,
+        productName: orderToUpdate.productName,
+        quantity: logData.quantity,
+        unit: orderToUpdate.unit,
+        location: orderToUpdate.location,
+        registeredBy: user.username || 'Desconhecido',
         status: 'Concluído'
       };
-      transaction.set(productionRef, newProduction);
+      batch.set(doc(productionsRef), newProduction);
 
-    });
+      batch.commit().then(() => {
+        toast({
+          title: "Registo de Produção Adicionado",
+          description: `${logData.quantity} unidades de "${orderToUpdate?.productName}" foram registadas.`,
+        });
+        addNotification({
+          type: 'production',
+          message: `Produção de ${orderToUpdate.productName} atualizada.`,
+          href: `/orders?id=${orderId}`
+        })
+      }).catch(error => {
+        console.error("Error adding production log: ", error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao Registar",
+          description: "Não foi possível guardar o registo de produção.",
+        });
+      });
+    }
+  }, [firestore, companyId, user, ordersData, toast, addNotification]);
 
-    toast({ title: 'Produção Registada', description: `Produção de ${quantityToProduce} ${recipe.productName} registada com sucesso. Stock de insumos atualizado.` });
+  const addCatalogProduct = useCallback(async (productData: Omit<CatalogProduct, 'id'>) => {
+    if (!catalogProductsCollectionRef) {
+      throw new Error("Referência da coleção do catálogo não disponível.");
+    }
+    try {
+      addDocumentNonBlocking(catalogProductsCollectionRef, productData);
+    } catch (e) {
+      console.error("Error adding catalog product:", e);
+      throw new Error("Não foi possível adicionar o produto ao catálogo.");
+    }
+  }, [catalogProductsCollectionRef]);
 
-  } catch (e: any) {
-    console.error("Production error:", e);
-    toast({ variant: 'destructive', title: 'Erro na Produção', description: e.message });
-    throw e;
-  }
-}, [firestore, companyId, user, recipesData, catalogProductsData, toast]);
+  const addCatalogCategory = useCallback(async (categoryName: string) => {
+    if (!catalogCategoriesCollectionRef || !catalogCategoriesData) return;
+    const trimmedName = categoryName.trim();
+    if (!trimmedName) return;
 
-const restoreItem = useCallback(async (collectionName: string, id: string) => {
-  if (!firestore || !companyId) return;
-  const docRef = doc(firestore, `companies/${companyId}/${collectionName}`, id);
-
-  // If it's a sale, we might need to deduct stock again?
-  // For simplicity in this iteration, we just restore the record. 
-  // Ideally, if we restored stock on delete, we should consume it on restore.
-  // This logic is complex for "Undo".
-  // Let's implement basic restore (remove deletedAt) first.
-
-  await updateDocumentNonBlocking(docRef, { deletedAt: null, deletedBy: null });
-  toast({ title: 'Item Restaurado' });
-}, [firestore, companyId, toast]);
-
-const hardDelete = useCallback(async (collectionName: string, id: string) => {
-  if (!firestore || !companyId) return;
-  const docRef = doc(firestore, `companies/${companyId}/${collectionName}`, id);
-  await deleteDocumentNonBlocking(docRef);
-  toast({ title: 'Item Apagado Permanentemente' });
-}, [firestore, companyId, toast]);
-
-const exportCompanyData = useCallback(async () => {
-  if (!productsData || !salesData) {
-    toast({ variant: 'destructive', title: 'Aguarde', description: 'Os dados ainda estão a carregar.' });
-    return;
-  }
-
-  const backup = {
-    date: new Date().toISOString(),
-    company: companyData,
-    products: products,
-    sales: salesData,
-    clients: [], // Assuming separate clients collection later, for now implicit in sales
-    version: '1.0'
-  };
-
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup));
-  const downloadAnchorNode = document.createElement('a');
-  downloadAnchorNode.setAttribute("href", dataStr);
-  downloadAnchorNode.setAttribute("download", `majorstockx-backup-${new Date().toISOString().split('T')[0]}.json`);
-  document.body.appendChild(downloadAnchorNode); // required for firefox
-  downloadAnchorNode.click();
-  downloadAnchorNode.remove();
-}, [companyData, products, salesData, toast]);
-
-
-const mergeProducts = useCallback(async (targetProductId: string, sourceProductIds: string[]) => {
-  if (!firestore || !companyId || !user) return;
-  if (user.role !== 'Admin') {
-    toast({ variant: 'destructive', title: 'Acesso Negado', description: 'Apenas administradores podem unir produtos.' });
-    return;
-  }
-
-  try {
-    toast({ title: 'A Unificar...', description: 'Isto pode demorar alguns instantes.' });
-
-    const targetRef = doc(firestore, `companies/${companyId}/products`, targetProductId);
-    const targetDoc = await getDoc(targetRef);
-
-    if (!targetDoc.exists()) {
-      throw new Error("Produto alvo não encontrado.");
+    const exists = catalogCategoriesData.some(c => c.name.toLowerCase() === trimmedName.toLowerCase());
+    if (exists) {
+      return;
     }
 
-    const targetData = targetDoc.data() as Product;
+    try {
+      addDocumentNonBlocking(catalogCategoriesCollectionRef, { name: trimmedName });
+    } catch (e) {
+      console.error("Error adding catalog category:", e);
+      throw new Error("Não foi possível adicionar a nova categoria.");
+    }
+  }, [catalogCategoriesCollectionRef, catalogCategoriesData]);
 
-    await runTransaction(firestore, async (transaction) => {
-      let totalStockToAdd = 0;
-      let totalReservedToAdd = 0;
+  const deleteSale = useCallback(async (saleId: string) => {
+    if (!firestore || !companyId || !productsCollectionRef || !user) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta.' });
+      return;
+    }
+    const saleRef = doc(firestore, `companies/${companyId}/sales`, saleId);
 
-      // 1. Calculate stock from sources
-      for (const sourceId of sourceProductIds) {
-        const sourceRef = doc(firestore, `companies/${companyId}/products`, sourceId);
-        const sourceDoc = await transaction.get(sourceRef);
-        if (sourceDoc.exists()) {
-          const sData = sourceDoc.data() as Product;
-          totalStockToAdd += (sData.stock || 0);
-          totalReservedToAdd += (sData.reservedStock || 0);
-          transaction.delete(sourceRef);
+    try {
+      const saleDoc = await getDoc(saleRef);
+      if (!saleDoc.exists()) {
+        throw new Error("Venda não encontrada.");
+      }
+      const saleData = saleDoc.data() as Sale;
+
+      let productDocRef: DocumentReference | null = null;
+      if (saleData.status === 'Pago' || saleData.status === 'Levantado') {
+        const productQuery = query(
+          productsCollectionRef,
+          where("name", "==", saleData.productName),
+          where("location", "==", saleData.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
+        );
+        const productSnapshot = await getDocs(productQuery);
+        if (!productSnapshot.empty) {
+          productDocRef = productSnapshot.docs[0].ref;
         }
       }
 
-      // 2. Update Target
-      transaction.update(targetRef, {
-        stock: (targetData.stock || 0) + totalStockToAdd,
-        reservedStock: (targetData.reservedStock || 0) + totalReservedToAdd,
-        lastUpdated: new Date().toISOString().split('T')[0]
+      await runTransaction(firestore, async (transaction) => {
+        // We reinstate stock because "Deleting" a sale usually means it was valid but we want to cancel it.
+        // Soft delete logic: Just mark as deleted? If we mark as deleted but keep stock deducted, it's just hiding.
+        // User expects "Undo" usually for accidental deletion.
+        // If we want "Undo" to work perfectly, we should NOT revert stock on soft delete if we assume it's just moving to trash,
+        // BUT if we don't revert stock, the stock count is wrong if the sale is indeed cancelled.
+        // Plan: Soft delete = "Cancelled" effectively. So we revert stock.
+        // Restore = "Re-do" sale. We take stock again.
+
+        if (productDocRef) {
+          const productDoc = await transaction.get(productDocRef);
+          if (productDoc.exists()) {
+            const productData = productDoc.data() as Product;
+            let stockUpdate = {};
+
+            // If it was just 'Pago' (reserved), we free reserved.
+            // If it was 'Levantado' (stock taken), we free stock AND reserved? No, just stock.
+            // Wait, logic:
+            // Pago -> Reserved Stock increased.
+            // Levantado -> Stock decreased (Reserved decreased).
+
+            if (saleData.status === 'Pago') {
+              const newReserved = Math.max(0, productData.reservedStock - saleData.quantity);
+              stockUpdate = { reservedStock: newReserved };
+            } else if (saleData.status === 'Levantado') {
+              // Stock was already taken. Put it back.
+              const newStock = productData.stock + saleData.quantity;
+              stockUpdate = { stock: newStock };
+            }
+
+            transaction.update(productDocRef, stockUpdate);
+          }
+        }
+
+        transaction.update(saleRef, {
+          deletedAt: new Date().toISOString(),
+          deletedBy: user.username
+        });
       });
 
-    });
+      toast({ title: 'Venda enviada para Lixeira', description: 'O stock foi reposto.' });
 
-    const salesRef = collection(firestore, `companies/${companyId}/sales`);
-    const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
-    const ordersRef = collection(firestore, `companies/${companyId}/orders`);
+    } catch (error: any) {
+      console.error("Error deleting sale: ", error);
+      toast({ variant: 'destructive', title: 'Erro ao Apagar Venda', description: error.message });
+    }
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, toast, user]);
 
-    const processReassignment = async (sourceId: string) => {
-      const batch = writeBatch(firestore);
-      let opCount = 0;
-
-      // Sales
-      const salesQ = query(salesRef, where("productId", "==", sourceId));
-      const salesSnaps = await getDocs(salesQ);
-      salesSnaps.forEach(doc => {
-        batch.update(doc.ref, { productId: targetProductId, productName: targetData.name });
-        opCount++;
-      });
-
-      // Movements
-      const movQ = query(movementsRef, where("productId", "==", sourceId));
-      const movSnaps = await getDocs(movQ);
-      movSnaps.forEach(doc => {
-        batch.update(doc.ref, { productId: targetProductId, productName: targetData.name });
-        opCount++;
-      });
-
-      // Orders
-      const ordQ = query(ordersRef, where("productId", "==", sourceId));
-      const ordSnaps = await getDocs(ordQ);
-      ordSnaps.forEach(doc => {
-        batch.update(doc.ref, { productId: targetProductId, productName: targetData.name });
-        opCount++;
-      });
-
-      if (opCount > 0) await batch.commit();
-    };
-
-    for (const sourceId of sourceProductIds) {
-      await processReassignment(sourceId);
+  const recalculateReservedStock = useCallback(async () => {
+    if (!firestore || !companyId || !productsData) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta para esta operação.' });
+      return;
     }
 
-    toast({ title: 'Unificação Concluída', description: `Produtos unificados com sucesso em ${targetData.name}.` });
+    toast({ title: 'A recalcular stock reservado...', description: 'Isto pode demorar um momento.' });
 
-  } catch (error: any) {
-    console.error("Merge error:", error);
-    toast({ variant: 'destructive', title: 'Erro na Unificação', description: error.message });
-  }
+    try {
+      // 1. Fetch all 'Paid' sales directly from Firestore
+      const salesRef = collection(firestore, `companies/${companyId}/sales`);
+      const q = query(salesRef, where("status", "==", "Pago"));
+      const paidSalesSnapshot = await getDocs(q);
+      const paidSales = paidSalesSnapshot.docs.map(doc => doc.data() as Sale);
 
-}, [firestore, companyId, user, toast]);
+      // 2. Calculate the correct reserved stock for each product instance (name + location)
+      const correctReservedMap = new Map<string, number>(); // Key: 'productName|locationId'
+      paidSales.forEach(sale => {
+        // Use an empty string for undefined location to ensure consistency
+        const locationKey = sale.location || '';
+        const key = `${sale.productName}|${locationKey}`;
+        const currentReserved = correctReservedMap.get(key) || 0;
+        correctReservedMap.set(key, currentReserved + sale.quantity);
+      });
+
+      // 3. Compare with existing data and prepare batch update
+      const batch = writeBatch(firestore);
+      let updatesCount = 0;
+
+      productsData.forEach(product => {
+        const locationKey = product.location || '';
+        const key = `${product.name}|${locationKey}`;
+        const correctReserved = correctReservedMap.get(key) || 0;
+
+        if (product.reservedStock !== correctReserved) {
+          const productRef = doc(firestore, `companies/${companyId}/products`, product.id);
+          batch.update(productRef, { reservedStock: correctReserved });
+          updatesCount++;
+        }
+      });
+
+      // 4. Commit batch if needed
+      if (updatesCount > 0) {
+        await batch.commit();
+        toast({ title: 'Sucesso!', description: `${updatesCount} registo(s) de stock reservado foram corrigidos.` });
+      } else {
+        toast({ title: 'Tudo certo!', description: 'Nenhuma inconsistência encontrada no stock reservado.' });
+      }
+
+    } catch (error: any) {
+      console.error("Error recalculating reserved stock:", error);
+      toast({ variant: 'destructive', title: 'Erro ao Recalcular', description: 'Não foi possível completar a operação.' });
+    }
+  }, [firestore, companyId, productsData, toast]);
+
+  const deleteProduction = useCallback((productionId: string) => {
+    if (!productionsCollectionRef) return;
+    deleteDocumentNonBlocking(doc(productionsCollectionRef, productionId));
+    toast({ title: 'Registo de Produção Apagado' });
+  }, [productionsCollectionRef, toast]);
+
+  const updateProduction = useCallback((productionId: string, data: Partial<Production>) => {
+    if (!productionsCollectionRef) return;
+    const docRef = doc(productionsCollectionRef, productionId);
+    updateDocumentNonBlocking(docRef, data);
+    toast({ title: 'Registo de Produção Atualizado' });
+  }, [productionsCollectionRef, toast]);
+
+  const deleteOrder = useCallback((orderId: string) => {
+    if (!ordersCollectionRef) return;
+    deleteDocumentNonBlocking(doc(ordersCollectionRef, orderId));
+    toast({ title: 'Encomenda Apagada' });
+  }, [ordersCollectionRef, toast]);
+
+  const addRawMaterial = useCallback(async (material: Omit<RawMaterial, 'id'>) => {
+    if (!rawMaterialsCollectionRef) return;
+    addDocumentNonBlocking(rawMaterialsCollectionRef, material);
+    toast({ title: 'Matéria-Prima Adicionada' });
+  }, [rawMaterialsCollectionRef, toast]);
+
+  const updateRawMaterial = useCallback(async (materialId: string, data: Partial<RawMaterial>) => {
+    if (!rawMaterialsCollectionRef) return;
+    const docRef = doc(rawMaterialsCollectionRef, materialId);
+    updateDocumentNonBlocking(docRef, data);
+    toast({ title: 'Matéria-Prima Atualizada' });
+  }, [rawMaterialsCollectionRef, toast]);
+
+  const deleteRawMaterial = useCallback(async (materialId: string) => {
+    if (!rawMaterialsCollectionRef) return;
+    deleteDocumentNonBlocking(doc(rawMaterialsCollectionRef, materialId));
+    toast({ title: 'Matéria-Prima Removida' });
+  }, [rawMaterialsCollectionRef, toast]);
+
+  const addRecipe = useCallback(async (recipe: Omit<Recipe, 'id'>) => {
+    if (!recipesCollectionRef) return;
+    addDocumentNonBlocking(recipesCollectionRef, recipe);
+    toast({ title: 'Receita Adicionada' });
+  }, [recipesCollectionRef, toast]);
+
+  const updateRecipe = useCallback(async (recipeId: string, data: Partial<Recipe>) => {
+    if (!recipesCollectionRef) return;
+    const docRef = doc(recipesCollectionRef, recipeId);
+    updateDocumentNonBlocking(docRef, data);
+    toast({ title: 'Receita Atualizada' });
+  }, [recipesCollectionRef, toast]);
+
+  const deleteRecipe = useCallback(async (recipeId: string) => {
+    if (!recipesCollectionRef) return;
+    deleteDocumentNonBlocking(doc(recipesCollectionRef, recipeId));
+    toast({ title: 'Receita Removida' });
+  }, [recipesCollectionRef, toast]);
+
+  const produceFromRecipe = useCallback(async (recipeId: string, quantityToProduce: number) => {
+    if (!firestore || !companyId || !user || !recipesData) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Dados de produção indisponíveis.' });
+      return;
+    }
+
+    const recipe = recipesData.find(r => r.id === recipeId);
+    if (!recipe) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Receita não encontrada.' });
+      return;
+    }
+
+    if (quantityToProduce <= 0) {
+      toast({ variant: 'destructive', title: 'Quantidade Inválida', description: 'A quantidade deve ser maior que zero.' });
+      return;
+    }
+
+    try {
+      await runTransaction(firestore, async (transaction) => {
+        // 1. Validate and Deduct Raw Materials atomically
+        for (const ingredient of recipe.ingredients) {
+          const materialRef = doc(firestore, `companies/${companyId}/rawMaterials`, ingredient.rawMaterialId);
+          const materialDoc = await transaction.get(materialRef);
+
+          if (!materialDoc.exists()) {
+            throw new Error(`Matéria-prima não encontrada (ID: ${ingredient.rawMaterialId}).`);
+          }
+
+          const materialData = materialDoc.data() as RawMaterial;
+          const requiredQty = ingredient.quantity * quantityToProduce;
+          const newStock = (materialData.stock || 0) - requiredQty;
+
+          if (newStock < 0) {
+            throw new Error(`Stock insuficiente de ${materialData.name}. Necessário: ${requiredQty}, Disponível: ${materialData.stock}.`);
+          }
+
+          transaction.update(materialRef, { stock: newStock });
+        }
+
+        // 2. Add to Production Log (Create new document)
+        const productionRef = doc(collection(firestore, `companies/${companyId}/productions`));
+        const newProduction: Omit<Production, 'id'> = {
+          date: new Date().toISOString().split('T')[0],
+          productName: recipe.productName,
+          quantity: quantityToProduce,
+          unit: catalogProductsData?.find(p => p.name === recipe.productName)?.unit || 'un',
+          registeredBy: user.username,
+          status: 'Concluído'
+        };
+        transaction.set(productionRef, newProduction);
+
+      });
+
+      toast({ title: 'Produção Registada', description: `Produção de ${quantityToProduce} ${recipe.productName} registada com sucesso. Stock de insumos atualizado.` });
+
+    } catch (e: any) {
+      console.error("Production error:", e);
+      toast({ variant: 'destructive', title: 'Erro na Produção', description: e.message });
+      throw e;
+    }
+  }, [firestore, companyId, user, recipesData, catalogProductsData, toast]);
+
+  const restoreItem = useCallback(async (collectionName: string, id: string) => {
+    if (!firestore || !companyId) return;
+    const docRef = doc(firestore, `companies/${companyId}/${collectionName}`, id);
+
+    // If it's a sale, we might need to deduct stock again?
+    // For simplicity in this iteration, we just restore the record. 
+    // Ideally, if we restored stock on delete, we should consume it on restore.
+    // This logic is complex for "Undo".
+    // Let's implement basic restore (remove deletedAt) first.
+
+    await updateDocumentNonBlocking(docRef, { deletedAt: null, deletedBy: null });
+    toast({ title: 'Item Restaurado' });
+  }, [firestore, companyId, toast]);
+
+  const hardDelete = useCallback(async (collectionName: string, id: string) => {
+    if (!firestore || !companyId) return;
+    const docRef = doc(firestore, `companies/${companyId}/${collectionName}`, id);
+    await deleteDocumentNonBlocking(docRef);
+    toast({ title: 'Item Apagado Permanentemente' });
+  }, [firestore, companyId, toast]);
+
+  const exportCompanyData = useCallback(async () => {
+    if (!productsData || !salesData) {
+      toast({ variant: 'destructive', title: 'Aguarde', description: 'Os dados ainda estão a carregar.' });
+      return;
+    }
+
+    const backup = {
+      date: new Date().toISOString(),
+      company: companyData,
+      products: products,
+      sales: salesData,
+      clients: [], // Assuming separate clients collection later, for now implicit in sales
+      version: '1.0'
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `majorstockx-backup-${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchorNode); // required for firefox
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  }, [companyData, products, salesData, toast]);
 
 
-const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || stockMovementsLoading || catalogProductsLoading || catalogCategoriesLoading || rawMaterialsLoading || recipesLoading;
+  const mergeProducts = useCallback(async (targetProductId: string, sourceProductIds: string[]) => {
+    if (!firestore || !companyId || !user) return;
+    if (user.role !== 'Admin') {
+      toast({ variant: 'destructive', title: 'Acesso Negado', description: 'Apenas administradores podem unir produtos.' });
+      return;
+    }
 
-const value: InventoryContextType = useMemo(() => ({
-  user, firebaseUser, companyId, loading: isDataLoading,
-  login, logout, resetPassword, registerCompany, profilePicture, setProfilePicture: handleSetProfilePicture,
-  canView, canEdit,
-  companyData, products, sales: salesData || [], productions: productionsData || [],
-  orders: ordersData || [], stockMovements: stockMovementsData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
-  rawMaterials: rawMaterialsData || [],
-  recipes: recipesData || [],
-  locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
-  businessStartDate,
-  chatHistory, setChatHistory,
-  addProduct, updateProduct, deleteProduct, clearProductsCollection,
-  auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
-  addProduction, updateProduction, deleteProduction, deleteOrder, deleteSale,
-  clearSales, clearProductions, clearOrders, clearStockMovements,
-  markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
-  recalculateReservedStock,
-  addCatalogProduct, addCatalogCategory,
-  addRawMaterial,
-  updateRawMaterial,
-  deleteRawMaterial,
-  addRecipe,
-  updateRecipe,
-  deleteRecipe,
-  produceFromRecipe,
-}), [
-  user, firebaseUser, companyId, isDataLoading,
-  login, logout, resetPassword, registerCompany, profilePicture, handleSetProfilePicture,
-  canView, canEdit,
-  companyData, products, salesData, productionsData, ordersData, stockMovementsData, catalogProductsData, catalogCategoriesData,
-  rawMaterialsData, recipesData,
-  locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
-  businessStartDate,
-  chatHistory, setChatHistory,
-  addProduct, updateProduct, deleteProduct, clearProductsCollection,
-  auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
-  addProduction, updateProduction, deleteProduction, deleteOrder, deleteSale,
-  clearSales, clearProductions, clearOrders, clearStockMovements,
-  markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
-  recalculateReservedStock,
-  addCatalogProduct, addCatalogCategory,
-  addRawMaterial,
-  updateRawMaterial,
-  deleteRawMaterial,
-  addRecipe,
-  updateRecipe,
-  deleteRecipe,
-  produceFromRecipe,
-  mergeProducts,
-  restoreItem,
-  hardDelete,
-  exportCompanyData,
-]);
+    try {
+      toast({ title: 'A Unificar...', description: 'Isto pode demorar alguns instantes.' });
 
-return (
-  <InventoryContext.Provider value={value}>
-    {children}
-  </InventoryContext.Provider>
-);
+      const targetRef = doc(firestore, `companies/${companyId}/products`, targetProductId);
+      const targetDoc = await getDoc(targetRef);
+
+      if (!targetDoc.exists()) {
+        throw new Error("Produto alvo não encontrado.");
+      }
+
+      const targetData = targetDoc.data() as Product;
+
+      await runTransaction(firestore, async (transaction) => {
+        let totalStockToAdd = 0;
+        let totalReservedToAdd = 0;
+
+        // 1. Calculate stock from sources
+        for (const sourceId of sourceProductIds) {
+          const sourceRef = doc(firestore, `companies/${companyId}/products`, sourceId);
+          const sourceDoc = await transaction.get(sourceRef);
+          if (sourceDoc.exists()) {
+            const sData = sourceDoc.data() as Product;
+            totalStockToAdd += (sData.stock || 0);
+            totalReservedToAdd += (sData.reservedStock || 0);
+            transaction.delete(sourceRef);
+          }
+        }
+
+        // 2. Update Target
+        transaction.update(targetRef, {
+          stock: (targetData.stock || 0) + totalStockToAdd,
+          reservedStock: (targetData.reservedStock || 0) + totalReservedToAdd,
+          lastUpdated: new Date().toISOString().split('T')[0]
+        });
+
+      });
+
+      const salesRef = collection(firestore, `companies/${companyId}/sales`);
+      const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+      const ordersRef = collection(firestore, `companies/${companyId}/orders`);
+
+      const processReassignment = async (sourceId: string) => {
+        const batch = writeBatch(firestore);
+        let opCount = 0;
+
+        // Sales
+        const salesQ = query(salesRef, where("productId", "==", sourceId));
+        const salesSnaps = await getDocs(salesQ);
+        salesSnaps.forEach(doc => {
+          batch.update(doc.ref, { productId: targetProductId, productName: targetData.name });
+          opCount++;
+        });
+
+        // Movements
+        const movQ = query(movementsRef, where("productId", "==", sourceId));
+        const movSnaps = await getDocs(movQ);
+        movSnaps.forEach(doc => {
+          batch.update(doc.ref, { productId: targetProductId, productName: targetData.name });
+          opCount++;
+        });
+
+        // Orders
+        const ordQ = query(ordersRef, where("productId", "==", sourceId));
+        const ordSnaps = await getDocs(ordQ);
+        ordSnaps.forEach(doc => {
+          batch.update(doc.ref, { productId: targetProductId, productName: targetData.name });
+          opCount++;
+        });
+
+        if (opCount > 0) await batch.commit();
+      };
+
+      for (const sourceId of sourceProductIds) {
+        await processReassignment(sourceId);
+      }
+
+      toast({ title: 'Unificação Concluída', description: `Produtos unificados com sucesso em ${targetData.name}.` });
+
+    } catch (error: any) {
+      console.error("Merge error:", error);
+      toast({ variant: 'destructive', title: 'Erro na Unificação', description: error.message });
+    }
+
+  }, [firestore, companyId, user, toast]);
+
+
+  const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || stockMovementsLoading || catalogProductsLoading || catalogCategoriesLoading || rawMaterialsLoading || recipesLoading;
+
+  const value: InventoryContextType = useMemo(() => ({
+    user, firebaseUser, companyId, loading: isDataLoading,
+    login, logout, resetPassword, registerCompany, profilePicture, setProfilePicture: handleSetProfilePicture,
+    canView, canEdit,
+    companyData, products, sales: salesData || [], productions: productionsData || [],
+    orders: ordersData || [], stockMovements: stockMovementsData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
+    rawMaterials: rawMaterialsData || [],
+    recipes: recipesData || [],
+    locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
+    businessStartDate,
+    chatHistory, setChatHistory,
+    addProduct, updateProduct, deleteProduct, clearProductsCollection,
+    auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
+    addProduction, updateProduction, deleteProduction, deleteOrder, deleteSale,
+    clearSales, clearProductions, clearOrders, clearStockMovements,
+    markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
+    recalculateReservedStock,
+    addCatalogProduct, addCatalogCategory,
+    addRawMaterial,
+    updateRawMaterial,
+    deleteRawMaterial,
+    addRecipe,
+    updateRecipe,
+    deleteRecipe,
+    produceFromRecipe,
+  }), [
+    user, firebaseUser, companyId, isDataLoading,
+    login, logout, resetPassword, registerCompany, profilePicture, handleSetProfilePicture,
+    canView, canEdit,
+    companyData, products, salesData, productionsData, ordersData, stockMovementsData, catalogProductsData, catalogCategoriesData,
+    rawMaterialsData, recipesData,
+    locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
+    businessStartDate,
+    chatHistory, setChatHistory,
+    addProduct, updateProduct, deleteProduct, clearProductsCollection,
+    auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
+    addProduction, updateProduction, deleteProduction, deleteOrder, deleteSale,
+    clearSales, clearProductions, clearOrders, clearStockMovements,
+    markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
+    recalculateReservedStock,
+    addCatalogProduct, addCatalogCategory,
+    addRawMaterial,
+    updateRawMaterial,
+    deleteRawMaterial,
+    addRecipe,
+    updateRecipe,
+    deleteRecipe,
+    produceFromRecipe,
+    mergeProducts,
+    restoreItem,
+    hardDelete,
+    exportCompanyData,
+  ]);
+
+  return (
+    <InventoryContext.Provider value={value}>
+      {children}
+    </InventoryContext.Provider>
+  );
 }
