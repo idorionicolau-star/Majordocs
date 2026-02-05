@@ -69,6 +69,18 @@ export type Product = {
   lastUpdated: string;
   location?: string;
   unit?: 'un' | 'm²' | 'm' | 'cj' | 'outro';
+  deletedAt?: string;
+  deletedBy?: string;
+};
+category: string;
+stock: number;
+reservedStock: number;
+price: number;
+lowStockThreshold: number;
+criticalStockThreshold: number;
+lastUpdated: string;
+location ?: string;
+unit ?: 'un' | 'm²' | 'm' | 'cj' | 'outro';
 };
 
 export type RawMaterial = {
@@ -98,6 +110,8 @@ export type Sale = {
   date: string;
   productId: string;
   productName: string;
+  deletedAt?: string;
+  deletedBy?: string;
   quantity: number;
   unit?: 'un' | 'm²' | 'm' | 'cj' | 'outro';
   unitPrice: number;
@@ -307,6 +321,10 @@ export interface InventoryContextType {
   updateRecipe: (recipeId: string, data: Partial<Recipe>) => Promise<void>;
   deleteRecipe: (recipeId: string) => Promise<void>;
   produceFromRecipe: (recipeId: string, quantityToProduce: number) => Promise<void>;
+  mergeProducts: (targetProductId: string, sourceProductIds: string[]) => Promise<void>;
+  restoreItem: (collectionName: string, id: string) => Promise<void>;
+  hardDelete: (collectionName: string, id: string) => Promise<void>;
+  exportCompanyData: () => Promise<void>;
 }
 
 type CatalogProduct = Omit<

@@ -342,7 +342,8 @@ export default function InventoryPage() {
     }
 
     if (nameFilter) {
-      result = result.filter(p => p.name.toLowerCase().includes(nameFilter.toLowerCase()));
+      const normalizedFilter = normalizeString(nameFilter);
+      result = result.filter(p => normalizeString(p.name).includes(normalizedFilter));
     }
 
     if (categoryFilter.length > 0) {

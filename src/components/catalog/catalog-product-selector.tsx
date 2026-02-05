@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from '@/lib/utils';
+import { cn, normalizeString } from '@/lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
 import dynamic from 'next/dynamic';
 // Dynamically import QuickCreateProductDialog to avoid circular dependency initialization issues
@@ -49,7 +49,8 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
       prods = prods.filter(p => p.category === categoryFilter);
     }
     if (searchQuery) {
-      prods = prods.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+      const normalizedQuery = normalizeString(searchQuery);
+      prods = prods.filter(p => normalizeString(p.name).includes(normalizedQuery));
     }
     return prods;
   }, [products, categoryFilter, searchQuery]);
@@ -91,7 +92,7 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
                 {searchQuery ? `Nenhum produto encontrado para "${searchQuery}".` : 'Nenhum produto encontrado.'}
               </CommandEmpty>
               <CommandGroup>
-                {searchQuery.length > 0 && !filteredProducts.some(p => p.name.toLowerCase() === searchQuery.toLowerCase()) && (
+                {searchQuery.length > 0 && !filteredProducts.some(p => normalizeString(p.name) === normalizeString(searchQuery)) && (
                   <CommandItem
                     key="create-new"
                     value={`CREATE:${searchQuery}`}

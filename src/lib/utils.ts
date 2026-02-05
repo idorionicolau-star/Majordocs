@@ -6,6 +6,40 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function normalizeString(str: string): string {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+export function levenshteinDistance(a: string, b: string): number {
+  const matrix = [];
+
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) == a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
+        );
+      }
+    }
+  }
+
+  return matrix[b.length][a.length];
+}
+
 export function formatCurrency(value: number, options?: Intl.NumberFormatOptions & { compact?: boolean }) {
   if (options?.compact) {
     if (value >= 1_000_000) {
@@ -59,7 +93,7 @@ export function downloadSaleDocument(sale: Sale, companyData: Company | null) {
       </style>
   `);
   printWindow.document.write('</head><body><div class="container">');
-  
+
   printWindow.document.write(`
       <div class="header">
            <div class="logo">
@@ -68,7 +102,7 @@ export function downloadSaleDocument(sale: Sale, companyData: Company | null) {
           <h1>${sale.documentType}</h1>
       </div>
   `);
-  
+
   printWindow.document.write(`
       <div class="details-grid">
           <div><strong>Data:</strong> ${new Date(sale.date).toLocaleDateString('pt-BR')}</div>
@@ -77,7 +111,7 @@ export function downloadSaleDocument(sale: Sale, companyData: Company | null) {
           <div><strong>Vendedor:</strong> ${sale.soldBy}</div>
       </div>
   `);
-  
+
   printWindow.document.write('<table><thead><tr><th>Produto</th><th>Quantidade</th><th>Preço Unit.</th><th>Subtotal</th></tr></thead><tbody>');
   printWindow.document.write(`<tr><td>${sale.productName}</td><td>${sale.quantity}</td><td>${formatCurrency(sale.unitPrice)}</td><td>${formatCurrency(sale.subtotal)}</td></tr>`);
   printWindow.document.write('</tbody></table>');
@@ -88,7 +122,7 @@ export function downloadSaleDocument(sale: Sale, companyData: Company | null) {
     totalsHtml += `<tr><td>Desconto:</td><td>-${formatCurrency(sale.discount)}</td></tr>`;
   }
   if (sale.vat && sale.vat > 0) {
-     totalsHtml += `<tr><td>IVA:</td><td>${formatCurrency(sale.vat)}</td></tr>`;
+    totalsHtml += `<tr><td>IVA:</td><td>${formatCurrency(sale.vat)}</td></tr>`;
   }
   totalsHtml += `<tr class="final-total"><td>Total:</td><td>${formatCurrency(sale.totalValue)}</td></tr>`;
   totalsHtml += '</table>';
@@ -98,7 +132,7 @@ export function downloadSaleDocument(sale: Sale, companyData: Company | null) {
   printWindow.document.write(`<div class="footer"><p>${companyData?.name || 'MajorStockX'} &copy; ' + new Date().getFullYear() + '</p></div>`);
   printWindow.document.write('</div></body></html>');
   printWindow.document.close();
-  
+
   setTimeout(() => {
     printWindow.focus();
     printWindow.print();

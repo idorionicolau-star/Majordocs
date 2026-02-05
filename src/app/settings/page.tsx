@@ -13,9 +13,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Code, RefreshCw, Trash2 } from "lucide-react";
+import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Code, RefreshCw, Trash2, ShieldCheck } from "lucide-react";
 import { CatalogManager } from "@/components/settings/catalog-manager";
 import { LocationsManager } from "@/components/settings/locations-manager";
+import { AdminMergeTool } from "@/components/admin/admin-merge-tool";
+import { BackupManager } from "@/components/settings/backup-manager";
+import { RecycleBin } from "@/components/settings/recycle-bin";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
 import { useToast } from "@/hooks/use-toast";
@@ -72,7 +75,7 @@ function ProfileTab() {
 
   const handleSavePicture = () => {
     if (selectedImage && setProfilePicture) {
-        setProfilePicture(selectedImage);
+      setProfilePicture(selectedImage);
     }
   };
 
@@ -83,7 +86,7 @@ function ProfileTab() {
     }
     return name.substring(0, 2).toUpperCase();
   }
-  
+
   const displayImage = selectedImage || profilePicture;
 
   return (
@@ -101,14 +104,14 @@ function ProfileTab() {
           </Avatar>
           <div className="space-y-2">
             <Label htmlFor="profile-pic-upload">Foto de Perfil</Label>
-            <Input id="profile-pic-upload" type="file" accept="image/*" onChange={handleProfilePicChange} className="max-w-xs"/>
+            <Input id="profile-pic-upload" type="file" accept="image/*" onChange={handleProfilePicChange} className="max-w-xs" />
             <p className="text-xs text-muted-foreground">Recomendado: 400x400px</p>
           </div>
         </div>
         <div className="flex justify-end">
-            <Button onClick={handleSavePicture} disabled={!selectedImage}>
-                Salvar foto
-            </Button>
+          <Button onClick={handleSavePicture} disabled={!selectedImage}>
+            Salvar foto
+          </Button>
         </div>
 
         <div className="space-y-4 pt-6 border-t">
@@ -150,14 +153,14 @@ export default function SettingsPage() {
     }
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const { companyData, updateCompany } = inventoryContext || {};
 
   const hasPermission = (permissionId: ModulePermission) => {
     if (!user) return false;
     if (user.role === 'Admin') return true;
     if (!user.permissions) return false;
-    
+
     const perms = user.permissions;
 
     if (typeof perms === 'object' && !Array.isArray(perms)) {
@@ -166,19 +169,20 @@ export default function SettingsPage() {
     }
 
     if (Array.isArray(perms)) {
-       // @ts-ignore
+      // @ts-ignore
       return perms.includes(permissionId);
     }
-    
+
     return false;
   };
-  
+
   const settingsTabs = [
     { value: 'profile', label: 'Perfil', icon: UserIcon, permission: true },
     { value: 'appearance', label: 'Aparência', icon: Palette, permission: true },
     { value: 'company', label: 'Empresa', icon: Building, permission: hasPermission('settings') },
     { value: 'locations', label: 'Localizações', icon: MapPin, permission: hasPermission('settings') },
     { value: 'catalog', label: 'Catálogo', icon: Book, permission: hasPermission('settings') },
+    { value: 'security', label: 'Segurança & Dados', icon: ShieldCheck, permission: hasPermission('settings') },
     { value: 'advanced', label: 'Avançado', icon: Code, permission: hasPermission('settings') }
   ].filter(tab => tab.permission);
 
@@ -205,20 +209,20 @@ export default function SettingsPage() {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.substring(1);
       if (hash) {
-          setActiveTab(hash);
+        setActiveTab(hash);
       }
     }
   }, []);
-  
-   useEffect(() => {
+
+  useEffect(() => {
     const activeLink = document.getElementById(`tab-trigger-${activeTab}`);
     if (activeLink && scrollRef.current) {
       const scrollArea = scrollRef.current;
       const linkRect = activeLink.getBoundingClientRect();
       const scrollAreaRect = scrollArea.getBoundingClientRect();
-      
+
       const scrollOffset = (linkRect.left - scrollAreaRect.left) - (scrollAreaRect.width / 2) + (linkRect.width / 2);
-      
+
       scrollArea.querySelector('[data-radix-scroll-area-viewport]')?.scrollBy({
         left: scrollOffset,
         behavior: 'smooth',
@@ -234,8 +238,8 @@ export default function SettingsPage() {
   const handleCompanyUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!updateCompany) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Função de atualização não encontrada.' });
-        return;
+      toast({ variant: 'destructive', title: 'Erro', description: 'Função de atualização não encontrada.' });
+      return;
     }
     setIsSubmitting(true);
     toast({ title: 'A atualizar...', description: 'A guardar os dados da empresa.' });
@@ -247,25 +251,25 @@ export default function SettingsPage() {
   const handleDetailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     if (id === 'notificationSettings.email') {
-        setCompanyDetails(prev => ({
-            ...prev,
-            notificationSettings: {
-                ...prev.notificationSettings,
-                email: value,
-            }
-        }));
+      setCompanyDetails(prev => ({
+        ...prev,
+        notificationSettings: {
+          ...prev.notificationSettings,
+          email: value,
+        }
+      }));
     } else {
-        setCompanyDetails(prev => ({...prev, [id]: value }));
+      setCompanyDetails(prev => ({ ...prev, [id]: value }));
     }
   }
 
   const handleSwitchChange = (id: 'onSale' | 'onCriticalStock', checked: boolean) => {
     setCompanyDetails(prev => ({
-        ...prev,
-        notificationSettings: {
-            ...prev.notificationSettings,
-            [id]: checked,
-        }
+      ...prev,
+      notificationSettings: {
+        ...prev.notificationSettings,
+        [id]: checked,
+      }
     }));
   };
 
@@ -319,7 +323,7 @@ export default function SettingsPage() {
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
           </div>
-          
+
           <div className="md:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -330,10 +334,10 @@ export default function SettingsPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
                 {settingsTabs.map(tab => (
-                    <DropdownMenuItem key={tab.value} onSelect={() => setActiveTab(tab.value)}>
-                        <tab.icon className="mr-2 h-4 w-4" />
-                        <span>{tab.label}</span>
-                    </DropdownMenuItem>
+                  <DropdownMenuItem key={tab.value} onSelect={() => setActiveTab(tab.value)}>
+                    <tab.icon className="mr-2 h-4 w-4" />
+                    <span>{tab.label}</span>
+                  </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -342,37 +346,37 @@ export default function SettingsPage() {
           <TabsContent value="profile">
             <ProfileTab />
           </TabsContent>
-          
-          <TabsContent value="appearance">
-             <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle>Aparência</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="theme">Modo de Cor</Label>
-                    <ThemeSwitcher />
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="border-radius">Arredondamento dos Cantos</Label>
-                    <p className="text-sm text-muted-foreground">Ajuste o raio das bordas dos elementos.</p>
-                    <div className="flex items-center gap-4">
-                      <Slider
-                        id="border-radius"
-                        min={0}
-                        max={2}
-                        step={0.1}
-                        value={[borderRadius]}
-                        onValueChange={handleBorderRadiusChange}
-                        className="w-[calc(100%-4rem)]"
-                      />
-                      <span className="w-12 text-right font-mono text-sm text-muted-foreground">
-                        {borderRadius.toFixed(1)}rem
-                      </span>
-                    </div>
+          <TabsContent value="appearance">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle>Aparência</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="theme">Modo de Cor</Label>
+                  <ThemeSwitcher />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="border-radius">Arredondamento dos Cantos</Label>
+                  <p className="text-sm text-muted-foreground">Ajuste o raio das bordas dos elementos.</p>
+                  <div className="flex items-center gap-4">
+                    <Slider
+                      id="border-radius"
+                      min={0}
+                      max={2}
+                      step={0.1}
+                      value={[borderRadius]}
+                      onValueChange={handleBorderRadiusChange}
+                      className="w-[calc(100%-4rem)]"
+                    />
+                    <span className="w-12 text-right font-mono text-sm text-muted-foreground">
+                      {borderRadius.toFixed(1)}rem
+                    </span>
                   </div>
-                </CardContent>
+                </div>
+              </CardContent>
             </Card>
           </TabsContent>
 
@@ -384,87 +388,87 @@ export default function SettingsPage() {
                     <CardTitle>Detalhes da Empresa</CardTitle>
                   </CardHeader>
                   <CardContent>
-                      <form onSubmit={handleCompanyUpdate} className="space-y-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Nome da Empresa</Label>
-                                <Input id="name" value={companyDetails.name} onChange={handleDetailChange} />
-                            </div>
-                             <div className="space-y-2">
-                                <Label>Tipo de Negócio</Label>
-                                <Select value={companyDetails.businessType} onValueChange={(value: 'manufacturer' | 'reseller') => setCompanyDetails(prev => ({ ...prev, businessType: value}))}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Selecione o tipo de negócio" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="manufacturer">Fábrica / Produtor</SelectItem>
-                                        <SelectItem value="reseller">Loja / Revendedor</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email de Contacto</Label>
-                                <Input id="email" type="email" value={companyDetails.email} onChange={handleDetailChange} />
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="phone">Telefone</Label>
-                                <Input id="phone" value={companyDetails.phone} onChange={handleDetailChange} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="taxId">NUIT</Label>
-                                <Input id="taxId" value={companyDetails.taxId} onChange={handleDetailChange} />
-                            </div>
-                            <div className="space-y-2 md:col-span-2">
-                                <Label htmlFor="address">Endereço</Label>
-                                <Input id="address" value={companyDetails.address} onChange={handleDetailChange} />
-                            </div>
-                          </div>
+                    <form onSubmit={handleCompanyUpdate} className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Nome da Empresa</Label>
+                          <Input id="name" value={companyDetails.name} onChange={handleDetailChange} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Tipo de Negócio</Label>
+                          <Select value={companyDetails.businessType} onValueChange={(value: 'manufacturer' | 'reseller') => setCompanyDetails(prev => ({ ...prev, businessType: value }))}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o tipo de negócio" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="manufacturer">Fábrica / Produtor</SelectItem>
+                              <SelectItem value="reseller">Loja / Revendedor</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email de Contacto</Label>
+                          <Input id="email" type="email" value={companyDetails.email} onChange={handleDetailChange} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">Telefone</Label>
+                          <Input id="phone" value={companyDetails.phone} onChange={handleDetailChange} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="taxId">NUIT</Label>
+                          <Input id="taxId" value={companyDetails.taxId} onChange={handleDetailChange} />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="address">Endereço</Label>
+                          <Input id="address" value={companyDetails.address} onChange={handleDetailChange} />
+                        </div>
+                      </div>
 
-                          <div className="space-y-4 pt-6 border-t">
-                              <Label className="flex items-center gap-2 font-semibold text-base">
-                                  <Mail className="h-5 w-5 text-primary"/>
-                                  Notificações por E-mail
-                              </Label>
-                              <div className="grid gap-4 rounded-2xl border p-4">
-                                  <div className="space-y-2">
-                                      <Label htmlFor="notificationSettings.email">E-mail de Destino</Label>
-                                      <p className="text-sm text-muted-foreground">
-                                          O e-mail para receber todos os alertas ativados.
-                                      </p>
-                                      <Input id="notificationSettings.email" type="email" value={companyDetails.notificationSettings.email} onChange={handleDetailChange} placeholder="ex: gerente@suaempresa.com"/>
-                                  </div>
-                                  <div className="space-y-3 pt-4">
-                                      <h4 className="font-medium text-sm">Ativar alertas para:</h4>
-                                      <div className="flex items-center justify-between rounded-md border p-3 bg-background/50">
-                                          <Label htmlFor="onCriticalStock" className="cursor-pointer">Stock Crítico</Label>
-                                          <Switch
-                                              id="onCriticalStock"
-                                              checked={companyDetails.notificationSettings.onCriticalStock}
-                                              onCheckedChange={(checked) => handleSwitchChange('onCriticalStock', checked)}
-                                          />
-                                      </div>
-                                      <div className="flex items-center justify-between rounded-md border p-3 bg-background/50">
-                                          <Label htmlFor="onSale" className="cursor-pointer">Novas Vendas</Label>
-                                          <Switch
-                                              id="onSale"
-                                              checked={companyDetails.notificationSettings.onSale}
-                                              onCheckedChange={(checked) => handleSwitchChange('onSale', checked)}
-                                          />
-                                      </div>
-                                  </div>
-                              </div>
+                      <div className="space-y-4 pt-6 border-t">
+                        <Label className="flex items-center gap-2 font-semibold text-base">
+                          <Mail className="h-5 w-5 text-primary" />
+                          Notificações por E-mail
+                        </Label>
+                        <div className="grid gap-4 rounded-2xl border p-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="notificationSettings.email">E-mail de Destino</Label>
+                            <p className="text-sm text-muted-foreground">
+                              O e-mail para receber todos os alertas ativados.
+                            </p>
+                            <Input id="notificationSettings.email" type="email" value={companyDetails.notificationSettings.email} onChange={handleDetailChange} placeholder="ex: gerente@suaempresa.com" />
                           </div>
+                          <div className="space-y-3 pt-4">
+                            <h4 className="font-medium text-sm">Ativar alertas para:</h4>
+                            <div className="flex items-center justify-between rounded-md border p-3 bg-background/50">
+                              <Label htmlFor="onCriticalStock" className="cursor-pointer">Stock Crítico</Label>
+                              <Switch
+                                id="onCriticalStock"
+                                checked={companyDetails.notificationSettings.onCriticalStock}
+                                onCheckedChange={(checked) => handleSwitchChange('onCriticalStock', checked)}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between rounded-md border p-3 bg-background/50">
+                              <Label htmlFor="onSale" className="cursor-pointer">Novas Vendas</Label>
+                              <Switch
+                                id="onSale"
+                                checked={companyDetails.notificationSettings.onSale}
+                                onCheckedChange={(checked) => handleSwitchChange('onSale', checked)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
 
-                          <div className="flex justify-end">
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting ? 'A guardar...' : 'Salvar Alterações'}
-                            </Button>
-                          </div>
-                      </form>
+                      <div className="flex justify-end">
+                        <Button type="submit" disabled={isSubmitting}>
+                          {isSubmitting ? 'A guardar...' : 'Salvar Alterações'}
+                        </Button>
+                      </div>
+                    </form>
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="locations">
                 <Card className="glass-card">
                   <CardHeader>
@@ -487,37 +491,53 @@ export default function SettingsPage() {
                 </Card>
               </TabsContent>
 
+              <TabsContent value="security">
+                <div className="space-y-6">
+                  <BackupManager />
+                  <RecycleBin />
+                </div>
+              </TabsContent>
+
               <TabsContent value="advanced">
-                 <Card className="glass-card">
+                <Card className="glass-card">
                   <CardHeader>
                     <CardTitle>Ferramentas Avançadas</CardTitle>
                     <CardDescription>Ações de manutenção para corrigir inconsistências nos dados. Use com cuidado.</CardDescription>
                   </CardHeader>
-                   <CardContent className="space-y-6">
-                      <div className="space-y-2">
-                        <h3 className="font-semibold">Recalcular Stock Reservado</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Sincroniza o stock reservado de todos os produtos com base nas vendas "Pagas" existentes. Útil para corrigir "reservas fantasma".
-                        </p>
-                        <Button onClick={() => inventoryContext?.recalculateReservedStock()} disabled={inventoryContext?.loading}>
-                          <RefreshCw className="mr-2 h-4 w-4" />
-                          Executar Recálculo
-                        </Button>
-                      </div>
-                      
-                      <Separator />
+                  <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                      <h3 className="font-semibold">Recalcular Stock Reservado</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Sincroniza o stock reservado de todos os produtos com base nas vendas "Pagas" existentes. Útil para corrigir "reservas fantasma".
+                      </p>
+                      <Button onClick={() => inventoryContext?.recalculateReservedStock()} disabled={inventoryContext?.loading}>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Executar Recálculo
+                      </Button>
+                    </div>
 
-                      <div className="space-y-2">
-                        <h3 className="font-semibold text-destructive">Limpar Inventário</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Atenção: Apaga permanentemente todos os produtos do inventário. Utilize apenas se quiser recomeçar do zero.
-                        </p>
-                         <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Limpar Produtos do Firestore
-                         </Button>
-                      </div>
-                   </CardContent>
+                    <Separator />
+
+                    {user?.role === 'Admin' && (
+                      <>
+                        <AdminMergeTool />
+                        <Separator />
+                      </>
+                    )}
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-destructive">Limpar Inventário</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Atenção: Apaga permanentemente todos os produtos do inventário. Utilize apenas se quiser recomeçar do zero.
+                      </p>
+                      <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Limpar Produtos do Firestore
+                      </Button>
+                    </div>
+                  </CardContent>
                 </Card>
               </TabsContent>
             </>
