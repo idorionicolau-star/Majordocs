@@ -1597,7 +1597,59 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     chatHistory, setChatHistory,
     addProduct, updateProduct, deleteProduct, clearProductsCollection,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
-    addProduction, updateProduction, deleteProduction, deleteOrder, deleteSale,
+    // Products Merge Tool
+    const mergeProducts = useCallback(async (targetProductId: string, sourceProductIds: string[]) => {
+      if (!productsCollectionRef || !firestore || !companyId) return;
+
+      try {
+        const batch = writeBatch(firestore);
+        const targetProduct = productsData.find(p => p.id === targetProductId);
+
+        if (!targetProduct) {
+          toast({ variant: 'destructive', title: 'Erro', description: 'Produto principal não encontrado.' });
+          return;
+        }
+
+        let totalStockToAdd = 0;
+        let totalReservedToAdd = 0;
+        const sourceIdsRecord: string[] = targetProduct.sourceIds || [];
+
+        // Calculate totals and mark sources for deletion
+        for (const sourceId of sourceProductIds) {
+          const sourceProduct = productsData.find(p => p.id === sourceId);
+          if (sourceProduct) {
+            totalStockToAdd += (sourceProduct.stock || 0);
+            totalReservedToAdd += (sourceProduct.reservedStock || 0);
+            sourceIdsRecord.push(sourceId);
+
+            // Delete source product
+            const sourceRef = doc(productsCollectionRef, sourceId);
+            batch.delete(sourceRef);
+          }
+        }
+
+        // Update target product
+        const targetRef = doc(productsCollectionRef, targetProductId);
+        batch.update(targetRef, {
+          stock: (targetProduct.stock || 0) + totalStockToAdd,
+          reservedStock: (targetProduct.reservedStock || 0) + totalReservedToAdd,
+          sourceIds: sourceIdsRecord,
+          lastUpdated: new Date().toISOString()
+        });
+
+        await batch.commit();
+        toast({
+          title: 'Produtos Unificados!',
+          description: `${sourceProductIds.length} produtos foram fundidos em "${targetProduct.name}".`
+        });
+
+      } catch (error) {
+        console.error("Error merging products:", error);
+        toast({ variant: 'destructive', title: 'Erro ao Unificar', description: 'Ocorreu um erro ao tentar unificar os produtos.' });
+      }
+    }, [productsCollectionRef, firestore, companyId, productsData, toast]);
+
+
     clearSales, clearProductions, clearOrders, clearStockMovements,
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
     recalculateReservedStock,
