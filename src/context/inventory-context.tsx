@@ -2,7 +2,8 @@
 
 'use client';
 
-createContext,
+import {
+  createContext,
   useContext,
   useState,
   useEffect,
