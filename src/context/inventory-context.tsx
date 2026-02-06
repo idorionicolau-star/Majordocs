@@ -891,7 +891,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       });
 
       // 3. Batch Update Collections (Store has limit of 500 ops per batch, so we might need multiple batches for large datasets)
-      // For simplicity/safety, we will do one batch per collection for now or assume dataset isn't huge. 
+      // For simplicity/safety, we will do one batch per collection for now or assume dataset isn't huge.
       // Ideally we query and update.
 
       // Since we can't do arbitrary large updates in a transaction easily without reading, and batch interaction is separate.
@@ -939,7 +939,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       // We need the source names to update the collections if they strictly rely on ID, but some rely on name.
       // Actually, since the sources are deleted, we can't get their names easily unless we read them before.
-      // But we just deleted them? 
+      // But we just deleted them?
       // Wait, deleting in transaction happens atomically.
       // For the history update, we should ideally query by ID (which is persistent in the sales record usually).
 
@@ -1578,97 +1578,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [companyData, products, salesData, toast]);
 
 
-  const mergeProducts = useCallback(async (targetProductId: string, sourceProductIds: string[]) => {
-    if (!firestore || !companyId || !user) return;
-    if (user.role !== 'Admin') {
-      toast({ variant: 'destructive', title: 'Acesso Negado', description: 'Apenas administradores podem unir produtos.' });
-      return;
-    }
 
-    try {
-      toast({ title: 'A Unificar...', description: 'Isto pode demorar alguns instantes.' });
-
-      const targetRef = doc(firestore, `companies/${companyId}/products`, targetProductId);
-      const targetDoc = await getDoc(targetRef);
-
-      if (!targetDoc.exists()) {
-        throw new Error("Produto alvo não encontrado.");
-      }
-
-      const targetData = targetDoc.data() as Product;
-
-      await runTransaction(firestore, async (transaction) => {
-        let totalStockToAdd = 0;
-        let totalReservedToAdd = 0;
-
-        // 1. Calculate stock from sources
-        for (const sourceId of sourceProductIds) {
-          const sourceRef = doc(firestore, `companies/${companyId}/products`, sourceId);
-          const sourceDoc = await transaction.get(sourceRef);
-          if (sourceDoc.exists()) {
-            const sData = sourceDoc.data() as Product;
-            totalStockToAdd += (sData.stock || 0);
-            totalReservedToAdd += (sData.reservedStock || 0);
-            transaction.delete(sourceRef);
-          }
-        }
-
-        // 2. Update Target
-        transaction.update(targetRef, {
-          stock: (targetData.stock || 0) + totalStockToAdd,
-          reservedStock: (targetData.reservedStock || 0) + totalReservedToAdd,
-          lastUpdated: new Date().toISOString().split('T')[0]
-        });
-
-      });
-
-      const salesRef = collection(firestore, `companies/${companyId}/sales`);
-      const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
-      const ordersRef = collection(firestore, `companies/${companyId}/orders`);
-
-      const processReassignment = async (sourceId: string) => {
-        const batch = writeBatch(firestore);
-        let opCount = 0;
-
-        // Sales
-        const salesQ = query(salesRef, where("productId", "==", sourceId));
-        const salesSnaps = await getDocs(salesQ);
-        salesSnaps.forEach(doc => {
-          batch.update(doc.ref, { productId: targetProductId, productName: targetData.name });
-          opCount++;
-        });
-
-        // Movements
-        const movQ = query(movementsRef, where("productId", "==", sourceId));
-        const movSnaps = await getDocs(movQ);
-        movSnaps.forEach(doc => {
-          batch.update(doc.ref, { productId: targetProductId, productName: targetData.name });
-          opCount++;
-        });
-
-        // Orders
-        const ordQ = query(ordersRef, where("productId", "==", sourceId));
-        const ordSnaps = await getDocs(ordQ);
-        ordSnaps.forEach(doc => {
-          batch.update(doc.ref, { productId: targetProductId, productName: targetData.name });
-          opCount++;
-        });
-
-        if (opCount > 0) await batch.commit();
-      };
-
-      for (const sourceId of sourceProductIds) {
-        await processReassignment(sourceId);
-      }
-
-      toast({ title: 'Unificação Concluída', description: `Produtos unificados com sucesso em ${targetData.name}.` });
-
-    } catch (error: any) {
-      console.error("Merge error:", error);
-      toast({ variant: 'destructive', title: 'Erro na Unificação', description: error.message });
-    }
-
-  }, [firestore, companyId, user, toast]);
 
 
   const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || stockMovementsLoading || catalogProductsLoading || catalogCategoriesLoading || rawMaterialsLoading || recipesLoading;
@@ -1733,3 +1643,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     </InventoryContext.Provider>
   );
 }
+
+export const useInventory = () => {
+  const context = useContext(InventoryContext);
+  if (context === undefined) {
+    throw new Error('useInventory must be used within an InventoryProvider');
+  }
+  return context;
+};

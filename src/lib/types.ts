@@ -6,8 +6,10 @@ export type ModulePermission =
   | 'diagnostico'
   | 'inventory'
   | 'sales'
+  | 'customers'
   | 'production'
   | 'raw-materials'
+  | 'finance'
   | 'orders'
   | 'reports'
   | 'users'
@@ -104,6 +106,26 @@ export type Recipe = {
   ingredients: RecipeIngredient[];
 };
 
+export type Customer = {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  totalPurchases: number;
+  lastVisit: string;
+  notes?: string;
+};
+
+export type Expense = {
+  id: string;
+  description: string;
+  amount: number;
+  category: string;
+  date: string;
+  status: 'Pago' | 'Pendente';
+  registeredBy: string;
+};
+
 export type Sale = {
   id: string;
   orderId?: string;
@@ -123,9 +145,10 @@ export type Sale = {
   soldBy: string;
   guideNumber: string;
   location?: string;
+  customerId?: string; // Link to Customer
   status: 'Pago' | 'Levantado';
   documentType: 'Guia de Remessa' | 'Factura' | 'Factura Proforma' | 'Recibo' | 'Encomenda';
-  clientName?: string;
+  clientName?: string; // Legacy field, allow keep for history
   notes?: string;
 };
 

@@ -55,14 +55,14 @@ const formSchema = z.object({
 type AddProductFormValues = z.infer<typeof formSchema>;
 
 interface AddProductDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onAddProduct: (product: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAddProduct: (product: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => void;
 }
 
 export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProductDialogProps) {
   const inventoryContext = useContext(InventoryContext);
-  const { catalogCategories, catalogProducts, locations, isMultiLocation, addCatalogProduct, addCatalogCategory } = inventoryContext || { catalogCategories: [], catalogProducts: [], locations: [], isMultiLocation: false, addCatalogProduct: async () => {}, addCatalogCategory: async () => {} };
+  const { catalogCategories, catalogProducts, locations, isMultiLocation, addCatalogProduct, addCatalogCategory } = inventoryContext || { catalogCategories: [], catalogProducts: [], locations: [], isMultiLocation: false, addCatalogProduct: async () => { }, addCatalogCategory: async () => { } };
   const [isCatalogProductSelected, setIsCatalogProductSelected] = useState(false);
   const { toast } = useToast();
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
@@ -84,12 +84,12 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
     if (!open) {
       setIsCatalogProductSelected(false);
     }
-    
+
     if (open) {
       const savedLocation = localStorage.getItem('majorstockx-last-product-location');
       const locationExists = locations.some(l => l.id === savedLocation);
-      const finalLocation = (savedLocation && locationExists) 
-        ? savedLocation 
+      const finalLocation = (savedLocation && locationExists)
+        ? savedLocation
         : (locations.length > 0 ? locations[0].id : "");
 
       form.reset({
@@ -107,24 +107,31 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
 
 
   const handleProductSelect = (productName: string, product?: CatalogProduct) => {
-    form.setValue('name', productName.trim());
+    form.setValue('name', productName, { shouldValidate: true });
     if (product) {
       setIsCatalogProductSelected(true);
       form.setValue('price', product.price);
       form.setValue('lowStockThreshold', product.lowStockThreshold);
       form.setValue('criticalStockThreshold', product.criticalStockThreshold);
-      form.setValue('category', product.category);
+      form.setValue('category', product.category, { shouldValidate: true });
       if (product.unit) {
         form.setValue('unit', product.unit);
       }
     } else {
       setIsCatalogProductSelected(false);
-      // Reset fields if it's a new product
+      // Only reset if we are ensuring it's a new product. 
+      // If the user is just typing "New Name", we keep price undefined (or default?)
+      // We keep existing values if they were manually entered? 
+      // The previous logic forced reset. I will keep it but only reset if it was previously selected?
+      // Actually, if I type "Cement", it fills price. If I backspace to "Cemen", it's not a product. Should I clear price?
+      // Probably yes, to avoid incorrect price for new product.
+      // But clearing it aggressively might annoy user if they are editing a product name slightly?
+      // Let's stick to existing logic for now (reset) but fix the validation trigger.
       form.setValue('price', undefined);
-      form.setValue('category', '');
+      form.setValue('category', '', { shouldValidate: true });
     }
   };
-  
+
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) {
       toast({
@@ -160,9 +167,9 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
         return;
       }
       try {
-        if(addCatalogCategory) await addCatalogCategory(values.category);
-        
-        if(addCatalogProduct) {
+        if (addCatalogCategory) await addCatalogCategory(values.category);
+
+        if (addCatalogProduct) {
           await addCatalogProduct({
             name: values.name,
             category: values.category,
@@ -174,8 +181,8 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
         }
 
         toast({
-            title: "Produto de Catálogo Criado",
-            description: `${values.name} foi adicionado ao catálogo.`,
+          title: "Produto de Catálogo Criado",
+          description: `${values.name} foi adicionado ao catálogo.`,
         });
 
       } catch (error: any) {
@@ -183,7 +190,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
         return;
       }
     }
-    
+
     if (values.location) {
       localStorage.setItem('majorstockx-last-product-location', values.location);
     }
@@ -214,205 +221,205 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
         <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Produto</FormLabel>
-                      <FormControl>
-                        <CatalogProductSelector
-                            products={catalogProducts}
-                            categories={catalogCategories}
-                            selectedValue={field.value}
-                            onValueChange={handleProductSelect}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Categoria</FormLabel>
-                      <div className="flex items-center gap-2">
-                        <Select 
-                          onValueChange={field.onChange} 
-                          value={field.value}
-                          disabled={isCatalogProductSelected}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione uma categoria" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {(catalogCategories || []).sort((a,b) => a.name.localeCompare(b.name)).map((cat) => (
-                              <SelectItem key={cat.id} value={cat.name}>
-                                {cat.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {!isCatalogProductSelected && (
-                          <Dialog open={showAddCategoryDialog} onOpenChange={setShowAddCategoryDialog}>
-                            <DialogTrigger asChild>
-                              <Button type="button" variant="outline" size="icon" className="flex-shrink-0">
-                                <PlusCircle className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-md">
-                              <DialogHeader>
-                                <DialogTitle>Adicionar Nova Categoria</DialogTitle>
-                                <DialogDescription>
-                                  Digite o nome da nova categoria. Ela será adicionada e selecionada automaticamente.
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="py-4">
-                                <Input
-                                  placeholder="Nome da categoria"
-                                  value={newCategoryName}
-                                  onChange={(e) => setNewCategoryName(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      e.preventDefault();
-                                      handleAddCategory();
-                                    }
-                                  }}
-                                />
-                              </div>
-                              <DialogFooter>
-                                <Button type="button" variant="secondary" onClick={() => setShowAddCategoryDialog(false)}>
-                                  Cancelar
-                                </Button>
-                                <Button type="button" onClick={handleAddCategory}>
-                                  Adicionar
-                                </Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
-                        )}
-                      </div>
-                      {isCatalogProductSelected && <FormDescription>A categoria é definida pelo produto do catálogo.</FormDescription>}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {isMultiLocation && (
-                    <FormField
-                      control={form.control}
-                      name="location"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Localização</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione uma localização" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {locations.map((location: Location) => (
-                                <SelectItem key={location.id} value={location.id}>
-                                  {location.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Produto</FormLabel>
+                    <FormControl>
+                      <CatalogProductSelector
+                        products={catalogProducts}
+                        categories={catalogCategories}
+                        selectedValue={field.value}
+                        onValueChange={handleProductSelect}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
+              />
 
               <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Categoria</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={isCatalogProductSelected}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma categoria" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {(catalogCategories || []).sort((a, b) => a.name.localeCompare(b.name)).map((cat) => (
+                            <SelectItem key={cat.id} value={cat.name}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {!isCatalogProductSelected && (
+                        <Dialog open={showAddCategoryDialog} onOpenChange={setShowAddCategoryDialog}>
+                          <DialogTrigger asChild>
+                            <Button type="button" variant="outline" size="icon" className="flex-shrink-0">
+                              <PlusCircle className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>Adicionar Nova Categoria</DialogTitle>
+                              <DialogDescription>
+                                Digite o nome da nova categoria. Ela será adicionada e selecionada automaticamente.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4">
+                              <Input
+                                placeholder="Nome da categoria"
+                                value={newCategoryName}
+                                onChange={(e) => setNewCategoryName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddCategory();
+                                  }
+                                }}
+                              />
+                            </div>
+                            <DialogFooter>
+                              <Button type="button" variant="secondary" onClick={() => setShowAddCategoryDialog(false)}>
+                                Cancelar
+                              </Button>
+                              <Button type="button" onClick={handleAddCategory}>
+                                Adicionar
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                    </div>
+                    {isCatalogProductSelected && <FormDescription>A categoria é definida pelo produto do catálogo.</FormDescription>}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {isMultiLocation && (
+                <FormField
                   control={form.control}
-                  name="price"
+                  name="location"
                   render={({ field }) => (
-                      <FormItem>
-                      <FormLabel>Preço Unitário (MT)</FormLabel>
-                      <FormControl>
-                          <Input type="number" step="0.01" {...field} placeholder="0.00" />
-                      </FormControl>
+                    <FormItem>
+                      <FormLabel>Localização</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma localização" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {locations.map((location: Location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
-                      </FormItem>
+                    </FormItem>
                   )}
-                  />
+                />
+              )}
+
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preço Unitário (MT)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} placeholder="0.00" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
+                <FormField
                   control={form.control}
                   name="stock"
                   render={({ field }) => (
-                      <FormItem>
+                    <FormItem>
                       <FormLabel>Estoque Inicial</FormLabel>
                       <FormControl>
-                          <Input type="number" step="any" {...field} placeholder="0" />
+                        <Input type="number" step="any" {...field} placeholder="0" />
                       </FormControl>
                       <FormMessage />
-                      </FormItem>
+                    </FormItem>
                   )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="unit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Unidade</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                              <SelectItem value="un">Unidade (un)</SelectItem>
-                              <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
-                              <SelectItem value="m">Metro Linear (m)</SelectItem>
-                              <SelectItem value="cj">Conjunto (cj)</SelectItem>
-                              <SelectItem value="outro">Outro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                />
+                <FormField
+                  control={form.control}
+                  name="unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unidade</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="un">Unidade (un)</SelectItem>
+                          <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
+                          <SelectItem value="m">Metro Linear (m)</SelectItem>
+                          <SelectItem value="cj">Conjunto (cj)</SelectItem>
+                          <SelectItem value="outro">Outro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
+                <FormField
                   control={form.control}
                   name="lowStockThreshold"
                   render={({ field }) => (
-                      <FormItem>
+                    <FormItem>
                       <FormLabel>Alerta Baixo</FormLabel>
                       <FormControl>
-                          <Input type="number" {...field} />
+                        <Input type="number" {...field} />
                       </FormControl>
                       <FormMessage />
-                      </FormItem>
+                    </FormItem>
                   )}
-                  />
-                  <FormField
+                />
+                <FormField
                   control={form.control}
                   name="criticalStockThreshold"
                   render={({ field }) => (
-                      <FormItem>
+                    <FormItem>
                       <FormLabel>Alerta Crítico</FormLabel>
                       <FormControl>
-                          <Input type="number" {...field} />
+                        <Input type="number" {...field} />
                       </FormControl>
                       <FormMessage />
-                      </FormItem>
+                    </FormItem>
                   )}
-                  />
+                />
               </div>
               <DialogFooter className="pt-4">
-                  <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                  <Button type="submit">Adicionar Produto</Button>
+                <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
+                <Button type="submit">Adicionar Produto</Button>
               </DialogFooter>
             </form>
           </Form>

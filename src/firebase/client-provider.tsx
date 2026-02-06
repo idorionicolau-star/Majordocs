@@ -5,6 +5,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
 import { FirebaseProvider } from '@/firebase/provider';
 import { InventoryProvider } from '@/context/inventory-context';
+import { CRMProvider } from '@/context/crm-context';
+import { FinanceProvider } from '@/context/finance-context';
 import { ClientLayout } from '@/components/layout/client-layout';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
@@ -13,9 +15,13 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     <ThemeProvider>
       <FirebaseProvider>
         <InventoryProvider>
-          <FirebaseErrorListener />
-          <ClientLayout>{children}</ClientLayout>
-          <Toaster />
+          <CRMProvider>
+            <FinanceProvider>
+              <FirebaseErrorListener />
+              <ClientLayout>{children}</ClientLayout>
+              <Toaster />
+            </FinanceProvider>
+          </CRMProvider>
         </InventoryProvider>
       </FirebaseProvider>
     </ThemeProvider>

@@ -3,6 +3,7 @@
 
 import { useContext, useState, useMemo } from "react";
 import { InventoryContext } from "@/context/inventory-context";
+import { useFinance } from "@/context/finance-context";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
@@ -27,6 +28,7 @@ export const PrimaryKPIs = () => {
         stockMovements: [],
         loading: true
     };
+    const { expenses } = useFinance();
     const [period, setPeriod] = useState<Period>('daily');
 
     const kpiData = useMemo(() => {
@@ -68,7 +70,55 @@ export const PrimaryKPIs = () => {
                 trendLabel = "vs ontem";
                 capitalTrendPeriod = 1;
                 break;
+                trendLabel = "vs ontem";
+                capitalTrendPeriod = 1;
+                break;
         }
+
+        // Calculate Profit
+        const currentPeriodExpenses = expenses.filter(e => {
+            const date = parseISO(e.date);
+            if (period === 'daily') return isToday(date);
+            if (period === 'weekly') return isWithinInterval(date, { start: startOfWeek(new Date(), { locale: pt }), end: endOfWeek(new Date(), { locale: pt }) });
+            if (period === 'monthly') return isWithinInterval(date, { start: startOfMonth(new Date()), end: endOfMonth(new Date()) });
+            return false;
+        });
+
+        const previousPeriodExpenses = expenses.filter(e => {
+            const date = parseISO(e.date);
+            if (period === 'daily') return isYesterday(date);
+            // ... simplified previous period logic for expenses matching standard periods ...
+            // Actually, let's reuse the interval logic if possible, but for now simple approximation:
+            return false; // Skip trend for profit for now to match simplicity or implement fully
+        });
+
+        // Full implementation for expenses trend:
+        let expenseStart: Date, expenseEnd: Date, prevExpenseStart: Date, prevExpenseEnd: Date;
+        const now = new Date();
+        if (period === 'daily') {
+            expenseStart = new Date(now.setHours(0, 0, 0, 0)); expenseEnd = new Date(now.setHours(23, 59, 59, 999));
+            prevExpenseStart = subDays(expenseStart, 1); prevExpenseEnd = subDays(expenseEnd, 1);
+        } else if (period === 'weekly') {
+            expenseStart = startOfWeek(now, { locale: pt }); expenseEnd = endOfWeek(now, { locale: pt });
+            prevExpenseStart = startOfWeek(subWeeks(now, 1), { locale: pt }); prevExpenseEnd = endOfWeek(subWeeks(now, 1), { locale: pt });
+        } else {
+            expenseStart = startOfMonth(now); expenseEnd = endOfMonth(now);
+            prevExpenseStart = startOfMonth(subMonths(now, 1)); prevExpenseEnd = endOfMonth(subMonths(now, 1));
+        }
+
+        const currentExpensesVal = expenses
+            .filter(e => isWithinInterval(parseISO(e.date), { start: expenseStart, end: expenseEnd }))
+            .reduce((sum, e) => sum + e.amount, 0);
+
+        const prevExpensesVal = expenses
+            .filter(e => isWithinInterval(parseISO(e.date), { start: prevExpenseStart, end: prevExpenseEnd }))
+            .reduce((sum, e) => sum + e.amount, 0);
+
+        const currentProfit = currentPeriodSales.reduce((sum, s) => sum + (s.amountPaid || s.totalValue), 0) - currentExpensesVal;
+        const prevProfit = previousPeriodSales.reduce((sum, s) => sum + (s.amountPaid || s.totalValue), 0) - prevExpensesVal;
+
+        const profitGrowth = prevProfit !== 0 ? ((currentProfit - prevProfit) / Math.abs(prevProfit)) * 100 : (currentProfit > 0 ? 100 : 0);
+
 
         const currentSalesValue = currentPeriodSales.reduce((sum, s) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);
         const previousSalesValue = previousPeriodSales.reduce((sum, s) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);
@@ -116,14 +166,17 @@ export const PrimaryKPIs = () => {
             capitalGrowth,
             currentPeriodSales: currentSalesValue,
             currentAvgTicket,
+            currentProfit,
+            profitGrowth,
             trendLabel
         };
-    }, [sales, dashboardStats, products, stockMovements, loading, period]);
+    }, [sales, dashboardStats, products, stockMovements, expenses, loading, period]);
 
 
     if (loading || !kpiData) {
         return (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
+                <Skeleton className="h-28 rounded-2xl bg-slate-200 dark:bg-slate-800" />
                 <Skeleton className="h-28 rounded-2xl bg-slate-200 dark:bg-slate-800" />
                 <Skeleton className="h-28 rounded-2xl bg-slate-200 dark:bg-slate-800" />
                 <Skeleton className="h-28 rounded-2xl bg-slate-200 dark:bg-slate-800" />
@@ -162,6 +215,14 @@ export const PrimaryKPIs = () => {
             trendLabel: kpiData.trendLabel,
             colorClass: "kpi-card--purple",
         },
+        {
+            title: `LUCRO LÍQUIDO (${periodLabels[period].toUpperCase()})`,
+            value: kpiData.currentProfit,
+            href: "/finance",
+            trend: kpiData.profitGrowth,
+            trendLabel: kpiData.trendLabel,
+            colorClass: "kpi-card--orange", // Define orange class in CSS or just use utility if configured
+        },
     ];
 
     return (
@@ -175,7 +236,7 @@ export const PrimaryKPIs = () => {
                     </TabsList>
                 </Tabs>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {cards.map((card, index) => {
                     const isPositive = (card.trend || 0) >= 0;
                     const TrendIcon = card.trend === null || card.trend === 0 ? Minus : (isPositive ? TrendingUp : TrendingDown);

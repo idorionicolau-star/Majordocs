@@ -98,6 +98,42 @@ export async function POST(req: Request) {
             </div>
             ${footerHtml}
         `;
+    } else if (type === 'RECEIPT') {
+      const { customerName, guideNumber, items, totalValue, date, companyName } = body;
+      const color = '#8b5cf6'; // Violet
+      const accentColor = '#f5f3ff';
+      const itemsHtml = items.map((item: any) => `
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
+          <span>${item.productName} (x${item.quantity})</span>
+          <span>${formatCurrency(item.subtotal)}</span>
+        </div>
+      `).join('');
+
+      htmlContent = `
+            ${headerHtml}
+            <div style="padding: 24px;">
+              <h2 style="color: ${color}; font-size: 22px; margin-top: 0;">
+                🧾 Recibo de Venda
+              </h2>
+              <p>Olá ${customerName || 'Cliente'},</p>
+              <p>Obrigado pela sua compra na <strong>${companyName}</strong>. Aqui está o seu recibo:</p>
+              
+              <div style="background-color: ${accentColor}; border: 1px solid ${color}; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                <div style="border-bottom: 2px dashed ${color}; padding-bottom: 10px; margin-bottom: 10px;">
+                  <p style="margin: 4px 0;"><strong>Guia N.º:</strong> ${guideNumber}</p>
+                  <p style="margin: 4px 0;"><strong>Data:</strong> ${new Date(date).toLocaleDateString('pt-BR')}</p>
+                </div>
+                ${itemsHtml}
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 2px solid ${color}; display: flex; justify-content: space-between; font-weight: bold; font-size: 18px;">
+                  <span>Total</span>
+                  <span>${formatCurrency(totalValue)}</span>
+                </div>
+              </div>
+
+              <p style="font-size: 14px; color: #64748b;">Se tiver alguma dúvida, não hesite em contactar-nos.</p>
+            </div>
+            ${footerHtml}
+        `;
     } else {
       return NextResponse.json({ error: 'Tipo de e-mail inválido.' }, { status: 400 });
     }

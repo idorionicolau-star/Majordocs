@@ -11,6 +11,7 @@ import { PanelSkeleton } from "@/components/dashboard/panel-skeleton";
 // Static Imports
 import { PrimaryKPIs } from "@/components/dashboard/primary-kpis";
 import { MonthlySalesChart } from "@/components/dashboard/monthly-sales-chart";
+import { FinancialHealthChart } from "@/components/dashboard/financial-health-chart";
 import { TopSales } from "@/components/dashboard/top-sales";
 import { StockAlerts } from "@/components/dashboard/stock-alerts";
 import { DeadStock } from "@/components/dashboard/dead-stock";
@@ -57,6 +58,7 @@ export default function DashboardPage() {
           {/* 3. Charts & Insights Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[500px]">
             <div className="lg:col-span-2 h-full flex flex-col gap-4">
+              <FinancialHealthChart />
               <MonthlySalesChart />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
                 <TopSales />

@@ -1,5 +1,5 @@
 
-import type { NavItem, Order, Sale, Production, Notification, Product, InitialCatalog, ModulePermission } from './types';
+import type { NavItem, Order, Sale, Production, AppNotification, Product, InitialCatalog, ModulePermission } from './types';
 import {
   LayoutDashboard,
   Box,
@@ -12,6 +12,7 @@ import {
   History,
   Layers, // Using Layers for raw materials
   BrainCircuit,
+  Banknote,
 } from 'lucide-react';
 
 export const mainNavItems: NavItem[] = [
@@ -20,21 +21,23 @@ export const mainNavItems: NavItem[] = [
   { title: 'Inventário', href: '/inventory', id: 'inventory', icon: Box },
   { title: 'Histórico', href: '/inventory/history', id: 'inventory', icon: History, isSubItem: true },
   { title: 'Vendas', href: '/sales', id: 'sales', icon: ShoppingCart },
+  { title: 'Clientes', href: '/customers', id: 'customers', icon: Users },
   { title: 'Matéria-Prima', href: '/raw-materials', id: 'raw-materials', icon: Layers },
   { title: 'Produção', href: '/production', id: 'production', icon: Hammer },
   { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList },
+  { title: 'Financeiro', href: '/finance', id: 'finance', icon: Banknote },
   { title: 'Relatórios', href: '/reports', id: 'reports', icon: FileText },
   { title: 'Funcionários', href: '/users', id: 'users', icon: Users, adminOnly: true },
   { title: 'Ajustes', href: '/settings', id: 'settings', icon: Settings },
 ];
 
 export const allPermissions: Readonly<{ id: ModulePermission; label: string; adminOnly: boolean; }[]> = [
-  { id: "dashboard", label: "Dashboard" , adminOnly: false},
+  { id: "dashboard", label: "Dashboard", adminOnly: false },
   { id: "diagnostico", label: "Diagnóstico", adminOnly: false },
   { id: "inventory", label: "Inventário", adminOnly: false },
   { id: "sales", label: "Vendas", adminOnly: false },
   { id: "production", label: "Produção", adminOnly: false },
-  { id: "raw-materials", label: "Matéria-Prima", adminOnly: false},
+  { id: "raw-materials", label: "Matéria-Prima", adminOnly: false },
   { id: "orders", label: "Encomendas", adminOnly: false },
   { id: "reports", label: "Relatórios", adminOnly: false },
   { id: "users", label: "Funcionários", adminOnly: true },
@@ -103,14 +106,14 @@ export const productions: Production[] = [];
 export const orders: Order[] = [];
 export const notifications: Notification[] = [];
 export const currentUser = {
-    name: 'Utilizador Padrão',
-    email: 'user@example.com',
-    role: 'Admin',
-    permissions: {
-        canSell: true,
-        canRegisterProduction: true,
-        canEditInventory: true,
-        canTransferStock: true,
-        canViewReports: true,
-    }
+  name: 'Utilizador Padrão',
+  email: 'user@example.com',
+  role: 'Admin',
+  permissions: {
+    canSell: true,
+    canRegisterProduction: true,
+    canEditInventory: true,
+    canTransferStock: true,
+    canViewReports: true,
+  }
 };

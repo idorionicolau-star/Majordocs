@@ -5,7 +5,9 @@ import * as React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { Sale, Company } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import { Edit, Printer, FileSearch, CheckCircle, PackageCheck, Download, DollarSign } from "lucide-react"
+import { Edit, Printer, FileSearch, CheckCircle, PackageCheck, Download, DollarSign, Mail } from "lucide-react"
+import { useCRM } from "@/context/crm-context"
+import { useToast } from "@/hooks/use-toast"
 import { SaleDetailsDialogContent } from "./sale-details-dialog"
 import { formatCurrency, downloadSaleDocument } from "@/lib/utils"
 import { EditSaleDialog } from "./edit-sale-dialog"
@@ -34,6 +36,43 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
     const { canEdit } = options;
     const inventoryContext = React.useContext(InventoryContext);
     const { companyData } = inventoryContext || {};
+    const { customers } = useCRM();
+    const { toast } = useToast();
+    const customer = customers.find(c => c.id === sale.customerId);
+
+    const handleSendReceipt = async () => {
+        if (!customer || !customer.email) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Cliente sem email registado.' });
+            return;
+        }
+
+        toast({ title: 'A enviar recibo...', description: `Para: ${customer.email}` });
+
+        try {
+            const response = await fetch('/api/email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'RECEIPT',
+                    to: customer.email,
+                    customerName: customer.name,
+                    guideNumber: sale.guideNumber,
+                    items: [{ productName: sale.productName, quantity: sale.quantity, subtotal: sale.totalValue }], // Simplified for single item sale
+                    totalValue: sale.totalValue,
+                    date: sale.date,
+                    companyName: companyData?.name || 'Major Group'
+                })
+            });
+
+            if (response.ok) {
+                toast({ title: 'Recibo Enviado', description: 'O cliente receberá o email em breve.' });
+            } else {
+                throw new Error('Falha ao enviar email');
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível enviar o recibo.' });
+        }
+    };
 
     const handleDownload = async () => {
         const doc = <SalePDF sale={sale} company={companyData || null} />;
@@ -127,6 +166,22 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
                         </TooltipTrigger>
                         <TooltipContent>
                             <p>Confirmar Pagamento Total</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            )}
+
+            {customer && customer.email && (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-violet-600" onClick={handleSendReceipt}>
+                                <Mail className="h-4 w-4" />
+                                <span className="sr-only">Enviar Recibo por Email</span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Enviar Recibo para {customer.email}</p>
                         </TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
