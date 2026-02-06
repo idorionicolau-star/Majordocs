@@ -40,6 +40,17 @@ export function levenshteinDistance(a: string, b: string): number {
   return matrix[b.length][a.length];
 }
 
+export function calculateSimilarity(str1: string, str2: string): number {
+  const normalized1 = normalizeString(str1);
+  const normalized2 = normalizeString(str2);
+  const distance = levenshteinDistance(normalized1, normalized2);
+  const maxLength = Math.max(normalized1.length, normalized2.length);
+
+  if (maxLength === 0) return 1.0;
+
+  return 1.0 - (distance / maxLength);
+}
+
 export function formatCurrency(value: number, options?: Intl.NumberFormatOptions & { compact?: boolean }) {
   if (options?.compact) {
     if (value >= 1_000_000) {

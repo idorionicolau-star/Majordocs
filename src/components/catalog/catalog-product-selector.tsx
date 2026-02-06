@@ -20,8 +20,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn, normalizeString } from '@/lib/utils';
+import { cn, normalizeString, calculateSimilarity } from '@/lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import dynamic from 'next/dynamic';
 // Dynamically import QuickCreateProductDialog to avoid circular dependency initialization issues
 const QuickCreateProductDialog = dynamic(() => import('./quick-create-product-dialog').then(mod => mod.QuickCreateProductDialog), {
@@ -59,6 +66,10 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
 
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [quickCreateName, setQuickCreateName] = useState('');
+
+  const [isSimilarityWarningOpen, setIsSimilarityWarningOpen] = useState(false);
+  const [similarCandidates, setSimilarCandidates] = useState<CatalogProduct[]>([]);
+  const [potentialDuplicateName, setPotentialDuplicateName] = useState('');
 
   // Import dynamically or at top? Top is better for React components.
   // Added import at top via separate instruction if possible, or just assume I can add it here if I replace the whole file or use multi-replace to add import. 
@@ -114,9 +125,15 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
                     key="create-new"
                     value={`CREATE:${searchQuery}`}
                     onSelect={() => {
-                      // Keep the typed name, just open the dialog to "Quick Create" if they want to add to catalog explicitly
-                      setQuickCreateName(searchQuery);
-                      setIsQuickCreateOpen(true);
+                      const candidates = products.filter(p => calculateSimilarity(p.name, searchQuery) >= 0.7);
+                      if (candidates.length > 0) {
+                        setSimilarCandidates(candidates);
+                        setPotentialDuplicateName(searchQuery);
+                        setIsSimilarityWarningOpen(true);
+                      } else {
+                        setQuickCreateName(searchQuery);
+                        setIsQuickCreateOpen(true);
+                      }
                     }}
                     className="cursor-pointer text-blue-600 font-medium"
                   >
@@ -129,7 +146,6 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
                     key={product.id}
                     value={product.name}
                     onSelect={() => {
-                      // On click, we enforce the exact name and product object
                       setSearchQuery(product.name);
                       onValueChange(product.name, product);
                     }}
@@ -149,15 +165,55 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
         </Command>
       </div>
 
+      <Dialog open={isSimilarityWarningOpen} onOpenChange={setIsSimilarityWarningOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Produtos Semelhantes Encontrados</DialogTitle>
+            <DialogDescription>
+              Encontrámos produtos com nomes semelhantes a "{potentialDuplicateName}". Deseja usar um destes ou criar um novo mesmo assim?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 mt-4">
+            {similarCandidates.map(candidate => (
+              <Button
+                key={candidate.id}
+                variant="outline"
+                className="justify-start"
+                onClick={() => {
+                  setSearchQuery(candidate.name);
+                  onValueChange(candidate.name, candidate);
+                  setIsSimilarityWarningOpen(false);
+                  setSimilarCandidates([]);
+                }}
+              >
+                <Check className="mr-2 h-4 w-4 text-green-500" />
+                Usar: {candidate.name}
+              </Button>
+            ))}
+            <div className="border-t my-2"></div>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setQuickCreateName(potentialDuplicateName);
+                setIsSimilarityWarningOpen(false);
+                setIsQuickCreateOpen(true);
+                setSimilarCandidates([]);
+              }}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Criar "{potentialDuplicateName}" (Novo)
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <QuickCreateProductDialog
         open={isQuickCreateOpen}
         onOpenChange={setIsQuickCreateOpen}
         defaultName={quickCreateName}
         onSuccess={(newName) => {
-          // We set the value immediately. The product might not be in the 'products' list yet 
-          // until the context updates, but we want the UI to reflect the selection.
           onValueChange(newName, undefined);
-          setSearchQuery(''); // Clear search on success
+          setSearchQuery('');
         }}
       />
     </div>
