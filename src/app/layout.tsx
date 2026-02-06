@@ -1,7 +1,7 @@
 
 import './globals.css';
 import { AppProviders } from '@/firebase/client-provider';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { PT_Sans, Space_Grotesk } from 'next/font/google';
 
 const ptSans = PT_Sans({
@@ -21,15 +21,20 @@ export const metadata: Metadata = {
   title: 'MajorStockX',
   description: 'Sistema de gestão de estoque e produção para materiais de construção.',
   manifest: '/manifest.json',
-  viewport:
-    'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no',
+  icons: {
+    icon: '/logo.svg',
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#ffffff' },
     { media: '(prefers-color-scheme: dark)', color: '#0d1117' },
   ],
-  icons: {
-    icon: '/logo.svg',
-  },
 };
 
 export default function RootLayout({
