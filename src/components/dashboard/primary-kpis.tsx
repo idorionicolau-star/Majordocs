@@ -94,7 +94,7 @@ export const PrimaryKPIs = () => {
 
         // Full implementation for expenses trend:
         let expenseStart: Date, expenseEnd: Date, prevExpenseStart: Date, prevExpenseEnd: Date;
-        const now = new Date();
+
         if (period === 'daily') {
             expenseStart = new Date(now.setHours(0, 0, 0, 0)); expenseEnd = new Date(now.setHours(23, 59, 59, 999));
             prevExpenseStart = subDays(expenseStart, 1); prevExpenseEnd = subDays(expenseEnd, 1);

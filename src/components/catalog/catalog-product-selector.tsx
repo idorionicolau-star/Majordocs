@@ -66,6 +66,19 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
 
   // Actually, I'll use multi_replace to handle imports and the component body.
 
+
+  // Sync searchQuery with selectedValue when it changes externally (e.g. form reset)
+  useEffect(() => {
+    setSearchQuery(selectedValue || '');
+  }, [selectedValue]);
+
+  const handleInputChange = (val: string) => {
+    setSearchQuery(val);
+    // Check if the typed value matches a product exactly
+    const match = products.find(p => p.name.toLowerCase() === val.toLowerCase());
+    onValueChange(val, match);
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <Select onValueChange={setCategoryFilter} defaultValue="all">
@@ -79,99 +92,74 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
           ))}
         </SelectContent>
       </Select>
-  // Sync searchQuery with selectedValue when it changes externally (e.g. form reset)
-  useEffect(() => {
-        setSearchQuery(selectedValue || '');
-  }, [selectedValue]);
-
-  const handleInputChange = (val: string) => {
-        setSearchQuery(val);
-      // Check if the typed value matches a product exactly
-      const match = products.find(p => p.name.toLowerCase() === val.toLowerCase());
-      onValueChange(val, match);
-  };
-
-      return (
-      <div className="flex flex-col gap-2">
-        <Select onValueChange={setCategoryFilter} defaultValue="all">
-          <SelectTrigger>
-            <SelectValue placeholder="Filtrar por Categoria" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as Categorias</SelectItem>
-            {categories.sort((a, b) => a.name.localeCompare(b.name)).map(cat => (
-              <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="rounded-md border">
-          <Command shouldFilter={false}>
-            <CommandInput
-              placeholder="Nome do produto..."
-              value={searchQuery}
-              onValueChange={handleInputChange}
-            />
-            <ScrollArea className="h-32">
-              <CommandList>
-                <CommandEmpty>
-                  {searchQuery ? (
-                    <div className="p-2 text-sm text-muted-foreground">
-                      Nenhum produto encontrado. O nome será usado para um novo produto.
-                    </div>
-                  ) : 'Comece a digitar...'}
-                </CommandEmpty>
-                <CommandGroup>
-                  {searchQuery.length > 0 && !filteredProducts.some(p => normalizeString(p.name) === normalizeString(searchQuery)) && (
-                    <CommandItem
-                      key="create-new"
-                      value={`CREATE:${searchQuery}`}
-                      onSelect={() => {
-                        // Keep the typed name, just open the dialog to "Quick Create" if they want to add to catalog explicitly
-                        setQuickCreateName(searchQuery);
-                        setIsQuickCreateOpen(true);
-                      }}
-                      className="cursor-pointer text-blue-600 font-medium"
-                    >
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      <span>Adicionar "{searchQuery}" ao Catálogo</span>
-                    </CommandItem>
-                  )}
-                  {filteredProducts.sort((a, b) => a.name.localeCompare(b.name)).map((product) => (
-                    <CommandItem
-                      key={product.id}
-                      value={product.name}
-                      onSelect={() => {
-                        // On click, we enforce the exact name and product object
-                        setSearchQuery(product.name);
-                        onValueChange(product.name, product);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          selectedValue === product.name ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      {product.name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </ScrollArea>
-          </Command>
-        </div>
-
-        <QuickCreateProductDialog
-          open={isQuickCreateOpen}
-          onOpenChange={setIsQuickCreateOpen}
-          defaultName={quickCreateName}
-          onSuccess={(newName) => {
-            // We set the value immediately. The product might not be in the 'products' list yet 
-            // until the context updates, but we want the UI to reflect the selection.
-            onValueChange(newName, undefined);
-            setSearchQuery(''); // Clear search on success
-          }}
-        />
+      <div className="rounded-md border">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Nome do produto..."
+            value={searchQuery}
+            onValueChange={handleInputChange}
+          />
+          <ScrollArea className="h-32">
+            <CommandList>
+              <CommandEmpty>
+                {searchQuery ? (
+                  <div className="p-2 text-sm text-muted-foreground">
+                    Nenhum produto encontrado. O nome será usado para um novo produto.
+                  </div>
+                ) : 'Comece a digitar...'}
+              </CommandEmpty>
+              <CommandGroup>
+                {searchQuery.length > 0 && !filteredProducts.some(p => normalizeString(p.name) === normalizeString(searchQuery)) && (
+                  <CommandItem
+                    key="create-new"
+                    value={`CREATE:${searchQuery}`}
+                    onSelect={() => {
+                      // Keep the typed name, just open the dialog to "Quick Create" if they want to add to catalog explicitly
+                      setQuickCreateName(searchQuery);
+                      setIsQuickCreateOpen(true);
+                    }}
+                    className="cursor-pointer text-blue-600 font-medium"
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    <span>Adicionar "{searchQuery}" ao Catálogo</span>
+                  </CommandItem>
+                )}
+                {filteredProducts.sort((a, b) => a.name.localeCompare(b.name)).map((product) => (
+                  <CommandItem
+                    key={product.id}
+                    value={product.name}
+                    onSelect={() => {
+                      // On click, we enforce the exact name and product object
+                      setSearchQuery(product.name);
+                      onValueChange(product.name, product);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedValue === product.name ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {product.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </ScrollArea>
+        </Command>
       </div>
-      );
+
+      <QuickCreateProductDialog
+        open={isQuickCreateOpen}
+        onOpenChange={setIsQuickCreateOpen}
+        defaultName={quickCreateName}
+        onSuccess={(newName) => {
+          // We set the value immediately. The product might not be in the 'products' list yet 
+          // until the context updates, but we want the UI to reflect the selection.
+          onValueChange(newName, undefined);
+          setSearchQuery(''); // Clear search on success
+        }}
+      />
+    </div>
+  );
 }

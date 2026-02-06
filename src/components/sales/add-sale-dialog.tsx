@@ -141,7 +141,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
   const watchedDiscountType = useWatch({ control: form.control, name: 'discountType' });
   const watchedDiscountValue = useWatch({ control: form.control, name: 'discountValue' });
   const watchedVatPercentage = useWatch({ control: form.control, name: 'vatPercentage' });
-  const watchedVatPercentage = useWatch({ control: form.control, name: 'vatPercentage' });
+
   const watchedApplyVat = useWatch({ control: form.control, name: 'applyVat' });
   const watchedCustomerId = useWatch({ control: form.control, name: 'customerId' });
 

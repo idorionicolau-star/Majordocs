@@ -27,7 +27,7 @@ import { formatCurrency, normalizeString } from '@/lib/utils';
 import { Search, Plus, User, Phone, Mail, Calendar, Edit, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CustomersPage() {
     const { canView, companyData, sales } = useInventory();
