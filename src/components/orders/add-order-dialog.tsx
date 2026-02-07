@@ -189,6 +189,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
                         categories={catalogCategories || []}
                         selectedValue={field.value}
                         onValueChange={handleProductSelect}
+                        placeholder="Pesquisar produto no catálogo..."
                       />
                     </FormControl>
                     <FormMessage />

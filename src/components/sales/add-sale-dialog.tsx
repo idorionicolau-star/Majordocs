@@ -323,6 +323,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                           categories={catalogCategories || []}
                           selectedValue={field.value}
                           onValueChange={handleProductSelect}
+                          placeholder="Pesquisar produto em estoque..."
                         />
                       </FormControl>
                       <FormMessage />

@@ -30,7 +30,7 @@ import { pt } from 'date-fns/locale';
 
 type Period = 'all_time' | 'daily' | 'weekly' | 'monthly' | 'custom';
 
-export function TopSales() {
+export function TopSales({ className }: { className?: string }) {
   const { sales, loading } = useContext(InventoryContext) || { sales: [], loading: true };
   const [sortBy, setSortBy] = useState<'revenue' | 'quantity'>('revenue');
   const [period, setPeriod] = useState<Period>('all_time');
@@ -98,7 +98,7 @@ export function TopSales() {
   const barColors = ["bg-cyan-500", "bg-blue-500", "bg-purple-500", "bg-pink-500", "bg-emerald-500"];
 
   return (
-    <Card className="glass-panel border-slate-200/50 dark:border-slate-800/50 shadow-none lg:col-span-1 h-full flex flex-col">
+    <Card className={cn("glass-panel border-slate-200/50 dark:border-slate-800/50 shadow-none lg:col-span-1 h-full flex flex-col", className)}>
       <CardHeader className="flex flex-col gap-3 pb-2">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <div>

@@ -7,7 +7,7 @@ import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { InventoryContext } from "@/context/inventory-context";
 import { useFinance } from "@/context/finance-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import {
     Select,
     SelectContent,
@@ -20,12 +20,14 @@ import { pt } from 'date-fns/locale';
 
 type Period = '6m' | 'this_year';
 
-export function FinancialHealthChart() {
+export function FinancialHealthChart({ className }: { className?: string }) {
     const { sales, loading: inventoryLoading } = useContext(InventoryContext) || { sales: [], loading: true };
     const { expenses, loading: financeLoading } = useFinance();
     const [period, setPeriod] = useState<Period>('6m');
 
     const loading = inventoryLoading || financeLoading;
+
+    // ... (rest of the component logic remains unchanged)
 
     const chartData = useMemo(() => {
         if (!sales || !expenses) return [];
@@ -92,7 +94,7 @@ export function FinancialHealthChart() {
     }
 
     return (
-        <Card className="glass-panel border-slate-200/50 dark:border-slate-800/50 shadow-none h-full">
+        <Card className={cn("glass-panel border-slate-200/50 dark:border-slate-800/50 shadow-none h-full", className)}>
             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-2">
                 <div>
                     <CardTitle className="text-xl text-foreground font-medium tracking-wide">Saúde Financeira</CardTitle>

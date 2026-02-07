@@ -20,7 +20,7 @@ import { pt } from 'date-fns/locale';
 
 type Period = '30d' | '6m' | 'this_year' | 'last_year';
 
-export function MonthlySalesChart() {
+export function MonthlySalesChart({ className }: { className?: string }) {
   const { sales, loading } = useContext(InventoryContext) || { sales: [], loading: true };
   const [period, setPeriod] = useState<Period>('6m');
 
@@ -113,7 +113,7 @@ export function MonthlySalesChart() {
   }
 
   return (
-    <Card className="glass-panel border-slate-200/50 dark:border-slate-800/50 shadow-none h-full">
+    <Card className={cn("glass-panel border-slate-200/50 dark:border-slate-800/50 shadow-none h-full", className)}>
       <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-0">
         <div>
           <CardTitle className="text-xl text-foreground font-medium tracking-wide">Vendas ao Longo do Tempo</CardTitle>

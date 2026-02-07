@@ -43,7 +43,7 @@ import Link from "next/link";
 import { DatePicker } from "@/components/ui/date-picker";
 import { isSameDay } from "date-fns";
 import { Card } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, normalizeString } from "@/lib/utils";
 
 
 export default function InventoryPage() {

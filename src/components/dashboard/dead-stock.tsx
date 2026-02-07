@@ -14,7 +14,7 @@ import { PackageX } from 'lucide-react';
 import { Skeleton } from "../ui/skeleton";
 import { cn } from "@/lib/utils";
 
-export function DeadStock() {
+export function DeadStock({ className }: { className?: string }) {
     const { products, sales, loading } = useContext(InventoryContext) || { products: [], sales: [], loading: true };
 
     const deadStockProducts = useMemo(() => {
@@ -31,7 +31,7 @@ export function DeadStock() {
     }, [products, sales]);
 
     return (
-        <Card className="glass-panel border-slate-200/50 dark:border-slate-800/50 shadow-none lg:col-span-1 h-full">
+        <Card className={cn("glass-panel border-slate-200/50 dark:border-slate-800/50 shadow-none lg:col-span-1 h-full", className)}>
             <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
                 <div>
                     <CardTitle className="flex items-center gap-2 text-foreground font-medium tracking-wide">

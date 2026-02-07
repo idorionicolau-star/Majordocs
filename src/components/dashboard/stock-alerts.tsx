@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
-export function StockAlerts() {
+export function StockAlerts({ className }: { className?: string }) {
     const { products, loading, companyData } = useContext(InventoryContext) || { products: [], loading: true, companyData: null };
     const [currentPage, setCurrentPage] = useState(1);
     const [isDownloading, setIsDownloading] = useState(false);
@@ -104,7 +104,7 @@ export function StockAlerts() {
 
     if (criticalStockProducts.length === 0) {
         return (
-            <Card className="glass-panel border-slate-200/50 dark:border-slate-800/50 shadow-none flex flex-col justify-center items-center h-full">
+            <Card className={cn("glass-panel border-slate-200/50 dark:border-slate-800/50 shadow-none flex flex-col justify-center items-center h-full", className)}>
                 <CardHeader className="items-center">
                     <CardTitle className="flex items-center gap-2 text-foreground">
                         <CheckCircle2 className="text-emerald-500" strokeWidth={1.5} />
@@ -119,7 +119,7 @@ export function StockAlerts() {
     }
 
     return (
-        <Card className="glass-panel border-red-500/20 dark:border-red-900/40 shadow-[0_0_20px_rgba(220,38,38,0.1)] h-full flex flex-col">
+        <Card className={cn("glass-panel border-red-500/20 dark:border-red-900/40 shadow-[0_0_20px_rgba(220,38,38,0.1)] h-full flex flex-col", className)}>
             <CardHeader className="pb-3 shrink-0">
                 <div className="flex items-center justify-between">
                     <div className="space-y-1">

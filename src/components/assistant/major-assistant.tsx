@@ -268,7 +268,10 @@ export function MajorAssistant({ variant = 'sheet', className }: { variant?: 'sh
 
     if (variant === 'card') {
         return (
-            <div className={cn("rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col h-full", className)}>
+            <div className={cn(
+                "rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col h-full",
+                className
+            )}>
                 <ChatInterface />
             </div>
         );

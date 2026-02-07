@@ -55,26 +55,30 @@ export default function DashboardPage() {
           <PrimaryKPIs />
 
 
-          {/* 3. Charts & Insights Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[500px]">
-            <div className="lg:col-span-2 h-full flex flex-col gap-4">
-              <FinancialHealthChart />
-              <MonthlySalesChart />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
-                <TopSales />
-                <DeadStock />
-              </div>
+          {/* 3. Charts & Insights Section - Row 1 */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <div className="lg:col-span-3">
+              <FinancialHealthChart className="h-full" />
             </div>
-            <div className="lg:col-span-1 h-full">
-              <MajorAssistant variant="card" className="h-full min-h-[500px]" />
+            <div className="lg:col-span-1">
+              <TopSales className="h-full" />
             </div>
           </div>
 
-          {/* 4. Bottom Section: Stock Alerts */}
-          <div className="grid grid-cols-1 gap-4">
-            <div className="h-full">
-              <StockAlerts />
+          {/* Row 2 */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <div className="lg:col-span-3">
+              <MonthlySalesChart className="h-full" />
             </div>
+            <div className="lg:col-span-1">
+              <DeadStock className="h-full" />
+            </div>
+          </div>
+
+          {/* Row 3 - Bottom Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[600px]">
+            <MajorAssistant variant="card" className="h-full" />
+            <StockAlerts className="h-full" />
           </div>
         </>
       ) : (

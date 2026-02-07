@@ -46,9 +46,9 @@ const formSchema = z.object({
 type AddProductionFormValues = z.infer<typeof formSchema>;
 
 interface AddProductionDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onAddProduction: (data: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAddProduction: (data: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => void;
 }
 
 export function AddProductionDialog({ open, onOpenChange, onAddProduction }: AddProductionDialogProps) {
@@ -59,7 +59,7 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
     locations,
     isMultiLocation
   } = inventoryContext || { catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false };
-  
+
   const form = useForm<AddProductionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -68,7 +68,7 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
       unit: "un",
     },
   });
-  
+
   const handleProductSelect = (productName: string, product?: CatalogProduct) => {
     form.setValue('productName', productName);
     if (product) {
@@ -82,7 +82,7 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
       const finalLocation = savedLocation && locations.some(l => l.id === savedLocation)
         ? savedLocation
         : (locations.length > 0 ? locations[0].id : "");
-      
+
       form.reset({
         productName: "",
         location: finalLocation,
@@ -94,14 +94,14 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
 
   function onSubmit(values: AddProductionFormValues) {
     if (isMultiLocation && !values.location) {
-      form.setError("location", { type: 'manual', message: 'Selecione uma localização.'});
+      form.setError("location", { type: 'manual', message: 'Selecione uma localização.' });
       return;
     }
 
     if (values.location) {
       localStorage.setItem('majorstockx-last-product-location', values.location);
     }
-    
+
     onAddProduction({
       productName: values.productName,
       quantity: values.quantity,
@@ -136,10 +136,11 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
                     <FormLabel>Produto</FormLabel>
                     <FormControl>
                       <CatalogProductSelector
-                          products={catalogProducts || []}
-                          categories={catalogCategories || []}
-                          selectedValue={field.value}
-                          onValueChange={handleProductSelect}
+                        products={catalogProducts || []}
+                        categories={catalogCategories || []}
+                        selectedValue={field.value}
+                        onValueChange={handleProductSelect}
+                        placeholder="Pesquisar no catálogo..."
                       />
                     </FormControl>
                     <FormMessage />
@@ -160,60 +161,60 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
                     </FormItem>
                   )}
                 />
-                 <FormField
-                    control={form.control}
-                    name="unit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Unidade</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                              <SelectItem value="un">Unidade (un)</SelectItem>
-                              <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
-                              <SelectItem value="m">Metro Linear (m)</SelectItem>
-                              <SelectItem value="cj">Conjunto (cj)</SelectItem>
-                              <SelectItem value="outro">Outro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <FormField
+                  control={form.control}
+                  name="unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unidade</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="un">Unidade (un)</SelectItem>
+                          <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
+                          <SelectItem value="m">Metro Linear (m)</SelectItem>
+                          <SelectItem value="cj">Conjunto (cj)</SelectItem>
+                          <SelectItem value="outro">Outro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
               {isMultiLocation && (
-                  <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Localização de Produção</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione uma localização" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {locations.map((location) => (
-                              <SelectItem key={location.id} value={location.id}>
-                                {location.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Localização de Produção</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma localização" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {locations.map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <DialogFooter className="pt-4">
-                  <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                  <Button type="submit">Registrar</Button>
+                <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
+                <Button type="submit">Registrar</Button>
               </DialogFooter>
             </form>
           </Form>
