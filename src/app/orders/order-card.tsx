@@ -3,8 +3,8 @@
 import type { Order, Sale } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, ClipboardList, Play, Check, CircleHelp, PlusCircle, TrendingUp, Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Calendar, User, ClipboardList, Play, Check, CircleHelp, PlusCircle, TrendingUp, Trash2, Printer } from "lucide-react";
+import { cn, downloadSaleDocument } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { AddProductionLogDialog } from "@/components/orders/add-production-log-dialog";
 import { FinalizeOrderDialog } from "@/components/orders/finalize-order-dialog";
@@ -30,6 +30,7 @@ interface OrderCardProps {
     onDeleteOrder: (orderId: string) => void;
     canEdit: boolean;
     associatedSale?: Sale;
+    companyData?: any;
 }
 
 const statusConfig = {
@@ -51,9 +52,9 @@ const statusConfig = {
     }
 };
 
-import { FinalizeOrderDialog } from "@/components/orders/finalize-order-dialog";
 
-export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteOrder, canEdit, associatedSale }: OrderCardProps) {
+
+export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteOrder, canEdit, associatedSale, companyData }: OrderCardProps) {
     const { icon: StatusIcon, color: statusColor } = statusConfig[order.status];
     const progress = order.quantity > 0 ? (order.quantityProduced / order.quantity) * 100 : 0;
     const remainingQuantity = order.quantity - order.quantityProduced;
@@ -188,6 +189,24 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
                                     saleAmountPaid={associatedSale.amountPaid || 0}
                                     saleTotal={associatedSale.totalValue}
                                 />
+                            )}
+                        </div>
+                    )}
+                    {order.status === 'Entregue' && (
+                        <div className="w-full space-y-2">
+                            <p className="text-sm font-bold text-emerald-600 text-center flex items-center justify-center gap-1 py-1">
+                                <Check className="h-4 w-4" /> Encomenda Entregue
+                            </p>
+                            {associatedSale && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full h-9"
+                                    onClick={() => downloadSaleDocument(associatedSale, companyData!)}
+                                >
+                                    <Printer className="mr-2 h-4 w-4" />
+                                    Imprimir Talão
+                                </Button>
                             )}
                         </div>
                     )}

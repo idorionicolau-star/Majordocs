@@ -92,7 +92,7 @@ export default function OrdersPage() {
 
         // 1. Create the Order
         const newOrder: Omit<Order, 'id'> = {
-          productId: formData.productName,
+          productId: formData.productId || formData.productName,
           productName: formData.productName,
           quantity: formData.quantity,
           unit: formData.unit!,
@@ -115,7 +115,7 @@ export default function OrdersPage() {
         const newSale: Omit<Sale, 'id'> = {
           orderId: orderRef.id,
           date: new Date().toISOString(),
-          productId: formData.productName,
+          productId: formData.productId || formData.productName,
           productName: formData.productName,
           quantity: formData.quantity,
           unit: formData.unit,
@@ -388,6 +388,7 @@ export default function OrdersPage() {
               onDeleteOrder={deleteOrder}
               canEdit={canEditOrders}
               associatedSale={sales.find(s => s.orderId === order.id)}
+              companyData={companyData}
             />
           ))}
           {filteredOrders.length === 0 && (
