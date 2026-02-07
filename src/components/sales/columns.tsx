@@ -158,7 +158,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-amber-600"
-                                onClick={() => options.onUpdateSale({ ...sale, amountPaid: sale.totalValue })}
+                                onClick={() => options.onUpdateSale({ ...sale, amountPaid: sale.totalValue, status: 'Pago' })}
                             >
                                 <DollarSign className="h-4 w-4" />
                                 <span className="sr-only">Confirmar Pagamento Total</span>

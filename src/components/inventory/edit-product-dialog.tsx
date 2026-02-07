@@ -39,11 +39,27 @@ import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   category: z.string().min(2, { message: "A categoria deve ter pelo menos 2 caracteres." }),
-  price: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
-  stock: z.coerce.number().min(0, { message: "O estoque não pode ser negativo." }),
+  price: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0, { message: "O preço não pode ser negativo." })),
+  stock: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0, { message: "O estoque não pode ser negativo." })),
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
-  lowStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
-  criticalStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
+  lowStockThreshold: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0, { message: "O limite não pode ser negativo." })),
+  criticalStockThreshold: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0, { message: "O limite não pode ser negativo." })),
   location: z.string().optional(),
 });
 
@@ -237,58 +253,59 @@ function EditProductDialogContent({ product, onProductUpdate, setOpen, locations
 }
 
 
+
+const EditProductTrigger = ({ trigger }: { trigger: 'icon' | 'button' | 'card-button' }) => {
+  if (trigger === 'icon') {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="p-3 h-auto w-auto text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all">
+                <Edit2 className="h-4 w-4" />
+                <span className="sr-only">Editar</span>
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Editar Produto</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+  if (trigger === 'card-button') {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" className="flex-1 h-8 sm:h-9">
+                <Edit2 className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent><p>Editar Produto</p></TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
+  }
+  return (
+    <DialogTrigger asChild>
+      <Button variant="outline" className="w-full">
+        <Edit2 className="mr-2 h-4 w-4" />
+        Editar
+      </Button>
+    </DialogTrigger>
+  )
+}
+
 export function EditProductDialog({ product, onProductUpdate, trigger, locations, isMultiLocation }: EditProductDialogProps) {
   const [open, setOpen] = useState(false);
 
-  const TriggerComponent = () => {
-    if (trigger === 'icon') {
-      return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="p-3 h-auto w-auto text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all">
-                  <Edit2 className="h-4 w-4" />
-                  <span className="sr-only">Editar</span>
-                </Button>
-              </DialogTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Editar Produto</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
-    if (trigger === 'card-button') {
-      return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="icon" className="flex-1 h-8 sm:h-9">
-                  <Edit2 className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-            </TooltipTrigger>
-            <TooltipContent><p>Editar Produto</p></TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )
-    }
-    return (
-      <DialogTrigger asChild>
-        <Button variant="outline" className="w-full">
-          <Edit2 className="mr-2 h-4 w-4" />
-          Editar
-        </Button>
-      </DialogTrigger>
-    )
-  }
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <TriggerComponent />
+      <EditProductTrigger trigger={trigger} />
       {open && <EditProductDialogContent product={product} onProductUpdate={onProductUpdate} setOpen={setOpen} locations={locations} isMultiLocation={isMultiLocation} />}
     </Dialog>
   );

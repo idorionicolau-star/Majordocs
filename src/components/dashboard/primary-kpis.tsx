@@ -256,7 +256,7 @@ export const PrimaryKPIs = () => {
                                 <div className="relative z-10 flex flex-col h-full items-center justify-center text-center">
                                     <p className="text-slate-400 text-[10px] font-bold tracking-wider uppercase">{card.title}</p>
                                     <h2 className="text-2xl font-bold" style={{ color: `var(--card-color)` }}>
-                                        {formatCurrency(card.value)}
+                                        {formatCurrency(card.value, { compact: true })}
                                     </h2>
                                     <div className="flex items-center gap-1 mt-1">
                                         <span className={cn("flex items-center text-xs font-bold gap-0.5", trendColor)}>

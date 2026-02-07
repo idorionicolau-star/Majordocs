@@ -17,7 +17,7 @@ import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/comp
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFirestore } from '@/firebase/provider';
-import { collection, addDoc, doc, updateDoc, arrayUnion, runTransaction } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc, arrayUnion, runTransaction, serverTimestamp, increment } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -41,6 +41,11 @@ export default function OrdersPage() {
   const [view, setView] = useState<'list' | 'grid'>('grid'); // 'list' view to be implemented
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  // Auto-Production Confirmation State
+  const [pendingConclusionOrder, setPendingConclusionOrder] = useState<Order | null>(null);
+  const [showAutoProductionConfirm, setShowAutoProductionConfirm] = useState(false);
+
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
@@ -159,25 +164,30 @@ export default function OrdersPage() {
   };
 
 
-  const handleUpdateOrderStatus = (orderId: string, newStatus: 'Pendente' | 'Em produção' | 'Concluída') => {
-    if (!firestore || !companyId) return;
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: 'Pendente' | 'Em produção' | 'Concluída') => {
+    if (!firestore || !companyId || !user) return;
 
     let orderToUpdate = orders.find(o => o.id === orderId);
 
     if (orderToUpdate) {
+      if (newStatus === 'Concluída' && orderToUpdate.quantityProduced < orderToUpdate.quantity) {
+        setPendingConclusionOrder(orderToUpdate);
+        setShowAutoProductionConfirm(true);
+        return;
+      }
+
       let update: Partial<Order> = { status: newStatus };
       if (newStatus === 'Em produção' && !orderToUpdate.productionStartDate) {
         update.productionStartDate = new Date().toISOString();
       }
 
       const orderDocRef = doc(firestore, `companies/${companyId}/orders`, orderId);
-      updateDoc(orderDocRef, update);
+      await updateDoc(orderDocRef, update);
 
-      if (newStatus === 'Concluída' && orderToUpdate) {
-        // Note: Stock is now updated via transferring production records, not here.
+      if (newStatus === 'Concluída') {
         toast({
           title: "Encomenda Concluída",
-          description: `A produção de ${orderToUpdate.quantity} ${orderToUpdate.unit} de "${orderToUpdate.productName}" foi concluída. Transfira os registos de produção para atualizar o stock.`
+          description: `A produção de ${orderToUpdate.quantity} ${orderToUpdate.unit} de "${orderToUpdate.productName}" está completa.`
         });
       } else {
         toast({
@@ -185,6 +195,74 @@ export default function OrdersPage() {
           description: `A encomenda está agora "${newStatus}".`
         });
       }
+    }
+  };
+
+  const confirmAutoProduction = async () => {
+    if (!firestore || !companyId || !user || !pendingConclusionOrder) return;
+
+    try {
+      const missingQty = pendingConclusionOrder.quantity - pendingConclusionOrder.quantityProduced;
+      const orderRef = doc(firestore, `companies/${companyId}/orders`, pendingConclusionOrder.id);
+      const productRef = doc(firestore, `companies/${companyId}/products`, pendingConclusionOrder.productId);
+      const productionsRef = collection(firestore, `companies/${companyId}/productions`);
+
+      await runTransaction(firestore, async (transaction) => {
+        // Check product existence before updating stock usage
+        const productSnap = await transaction.get(productRef);
+        if (!productSnap.exists()) {
+          throw new Error("Produto associado não encontrado.");
+        }
+
+        // 1. Update Order
+        const newLog: ProductionLog = {
+          id: `log-${Date.now()}`,
+          date: new Date().toISOString(),
+          quantity: missingQty,
+          notes: "Produção automática na conclusão da encomenda.",
+          registeredBy: user.username || 'Sistema',
+        };
+
+        transaction.update(orderRef, {
+          status: 'Concluída',
+          quantityProduced: pendingConclusionOrder.quantity, // Set to full
+          productionLogs: arrayUnion(newLog)
+        });
+
+        // 2. Create Production Record
+        const newProductionRef = doc(productionsRef);
+        transaction.set(newProductionRef, {
+          date: new Date().toISOString().split('T')[0],
+          productName: pendingConclusionOrder.productName,
+          quantity: missingQty,
+          unit: pendingConclusionOrder.unit,
+          location: pendingConclusionOrder.location,
+          registeredBy: user.username || 'Sistema',
+          status: 'Concluído',
+          orderId: pendingConclusionOrder.id
+        });
+
+        // 3. Update Product Stock (Increment)
+        transaction.update(productRef, {
+          stock: increment(missingQty)
+        });
+      });
+
+      toast({
+        title: "Produção Concluída e Stock Atualizado",
+        description: `Foram produzidas e adicionadas ao stock ${missingQty} unidades de "${pendingConclusionOrder.productName}".`,
+      });
+
+    } catch (error: any) {
+      console.error("Error confirming auto-production:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro na Auto-Produção",
+        description: error.message || "Não foi possível concluir a produção automática.",
+      });
+    } finally {
+      setShowAutoProductionConfirm(false);
+      setPendingConclusionOrder(null);
     }
   };
 
@@ -327,6 +405,26 @@ export default function OrdersPage() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleClear} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Sim, apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Auto-Production Confirmation Dialog */}
+      <AlertDialog open={showAutoProductionConfirm} onOpenChange={setShowAutoProductionConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Produção Incompleta</AlertDialogTitle>
+            <AlertDialogDescription>
+              A encomenda de **{pendingConclusionOrder?.productName}** tem apenas **{pendingConclusionOrder?.quantityProduced}** de **{pendingConclusionOrder?.quantity}** unidades produzidas.
+              <br /><br />
+              Deseja registar automaticamente a produção das **{pendingConclusionOrder && (pendingConclusionOrder.quantity - pendingConclusionOrder.quantityProduced)}** unidades restantes e adicionar ao stock?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setShowAutoProductionConfirm(false); setPendingConclusionOrder(null); }}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmAutoProduction} className="bg-emerald-600 hover:bg-emerald-700">
+              Sim, Produzir e Finalizar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

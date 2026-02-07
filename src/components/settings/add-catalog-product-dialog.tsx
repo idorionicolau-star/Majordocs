@@ -41,10 +41,22 @@ import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   category: z.string().min(2, { message: "A categoria é obrigatória." }),
-  price: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
+  price: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0, { message: "O preço não pode ser negativo." })),
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
-  lowStockThreshold: z.coerce.number().min(0),
-  criticalStockThreshold: z.coerce.number().min(0),
+  lowStockThreshold: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0)),
+  criticalStockThreshold: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0)),
 });
 
 type FormValues = z.infer<typeof formSchema>;

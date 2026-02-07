@@ -2,7 +2,7 @@ import { VirtuosoGrid } from 'react-virtuoso';
 import { Product, Location } from '@/lib/types';
 import { ProductCard } from './product-card';
 import { cn } from '@/lib/utils';
-import { forwardRef } from 'react';
+import { forwardRef, useMemo } from 'react';
 
 interface VirtualProductGridProps {
     products: Product[];
@@ -50,23 +50,24 @@ export function VirtualProductGrid({
     loading
 }: VirtualProductGridProps) {
 
-    const ItemContainer = ({ children, ...props }: any) => {
-        let widthClass = "w-full"; // Fallback
+    const ItemContainer = useMemo(() => {
+        return ({ children, ...props }: any) => {
+            let widthClass = "w-full"; // Fallback
 
-        // Calculate width based on columns and gap
-        // Calculate width based on columns and gap
-        // Mobile: w-full (1 column)
-        // Small/Medium and up: grid cols logic
-        if (gridCols === '3') widthClass = "w-full md:w-[calc(33.333%-0.8rem)]";
-        else if (gridCols === '4') widthClass = "w-full sm:w-[calc(50%-0.5rem)] md:w-[calc(25%-0.8rem)]";
-        else if (gridCols === '5') widthClass = "w-full sm:w-[calc(50%-0.5rem)] md:w-[calc(25%-0.8rem)] lg:w-[calc(20%-0.85rem)]";
+            // Calculate width based on columns and gap
+            // Mobile: w-full (1 column)
+            // Small/Medium and up: grid cols logic
+            if (gridCols === '3') widthClass = "w-full md:w-[calc(33.333%-0.8rem)]";
+            else if (gridCols === '4') widthClass = "w-full sm:w-[calc(50%-0.5rem)] md:w-[calc(25%-0.8rem)]";
+            else if (gridCols === '5') widthClass = "w-full sm:w-[calc(50%-0.5rem)] md:w-[calc(25%-0.8rem)] lg:w-[calc(20%-0.85rem)]";
 
-        return (
-            <div {...props} className={cn(widthClass, "mb-2")}>
-                {children}
-            </div>
-        );
-    };
+            return (
+                <div {...props} className={cn(widthClass, "mb-2")}>
+                    {children}
+                </div>
+            );
+        };
+    }, [gridCols]);
 
     return (
         <VirtuosoGrid
@@ -84,7 +85,7 @@ export function VirtualProductGrid({
                 Item: ItemContainer,
                 Footer: () => loading ? <div className="py-4 text-center text-sm text-muted-foreground">A carregar mais produtos...</div> : null
             }}
-            itemContent={(index, product) => (
+            itemContent={(index: number, product: Product) => (
                 <div style={{ height: '100%' }}>
                     <ProductCard
                         key={product.instanceId || product.id}

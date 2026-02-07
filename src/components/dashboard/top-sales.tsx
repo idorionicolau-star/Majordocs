@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { InventoryContext } from "@/context/inventory-context";
 import { Trophy, Calendar as CalendarIcon } from 'lucide-react';
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatCurrency, formatCompactNumber, cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 import {
   Select,
@@ -162,8 +162,8 @@ export function TopSales({ className }: { className?: string }) {
                 </span>
                 <span className="text-sm font-bold text-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
                   {sortBy === 'revenue'
-                    ? formatCurrency(product.totalValue)
-                    : `${product.quantity} ${product.unit}`
+                    ? formatCurrency(product.totalValue, { compact: true })
+                    : `${formatCompactNumber(product.quantity)} ${product.unit}`
                   }
                 </span>
               </div>

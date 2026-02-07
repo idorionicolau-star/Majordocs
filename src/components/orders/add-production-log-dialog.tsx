@@ -28,7 +28,11 @@ import type { Order } from '@/lib/types';
 import { InventoryContext } from '@/context/inventory-context';
 
 const formSchema = z.object({
-  quantity: z.coerce.number().min(0.01, { message: "A quantidade deve ser maior que zero." }),
+  quantity: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0.01, { message: "A quantidade deve ser maior que zero." })),
   notes: z.string().optional(),
 });
 

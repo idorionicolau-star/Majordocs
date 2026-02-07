@@ -58,7 +58,7 @@ export default function DashboardPage() {
           {/* 3. Charts & Insights Section - Row 1 */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <div className="lg:col-span-3">
-              <FinancialHealthChart className="h-full" />
+              <MonthlySalesChart className="h-full" />
             </div>
             <div className="lg:col-span-1">
               <TopSales className="h-full" />
@@ -68,7 +68,7 @@ export default function DashboardPage() {
           {/* Row 2 */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <div className="lg:col-span-3">
-              <MonthlySalesChart className="h-full" />
+              <FinancialHealthChart className="h-full" />
             </div>
             <div className="lg:col-span-1">
               <DeadStock className="h-full" />
@@ -76,7 +76,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Row 3 - Bottom Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[600px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[450px]">
             <MajorAssistant variant="card" className="h-full" />
             <StockAlerts className="h-full" />
           </div>

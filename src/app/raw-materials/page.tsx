@@ -63,17 +63,33 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 // Schemas
 const rawMaterialSchema = z.object({
     name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
-    stock: z.coerce.number().min(0, "O stock não pode ser negativo."),
+    stock: z.preprocess((val) => {
+        if (val === undefined || val === "" || val === null) return 0;
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+    }, z.number().min(0, "O stock não pode ser negativo.")),
     unit: z.enum(['kg', 'm³', 'un', 'L', 'saco']),
-    lowStockThreshold: z.coerce.number().min(0, "O limite deve ser um número positivo."),
-    cost: z.coerce.number().min(0, "O custo não pode ser negativo.").optional(),
+    lowStockThreshold: z.preprocess((val) => {
+        if (val === undefined || val === "" || val === null) return 0;
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+    }, z.number().min(0, "O limite deve ser um número positivo.")),
+    cost: z.preprocess((val) => {
+        if (val === undefined || val === "" || val === null) return 0;
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+    }, z.number().min(0, "O custo não pode ser negativo.").optional()),
 });
 type RawMaterialFormValues = z.infer<typeof rawMaterialSchema>;
 
 const recipeIngredientSchema = z.object({
     rawMaterialId: z.string(),
     rawMaterialName: z.string(),
-    quantity: z.coerce.number().min(0.01, "A quantidade deve ser positiva."),
+    quantity: z.preprocess((val) => {
+        if (val === undefined || val === "" || val === null) return 0;
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+    }, z.number().min(0.01, "A quantidade deve ser positiva.")),
 });
 const recipeSchema = z.object({
     productName: z.string().nonempty("Selecione um produto final."),
@@ -83,7 +99,11 @@ type RecipeFormValues = z.infer<typeof recipeSchema>;
 
 const productionSchema = z.object({
     recipeId: z.string().nonempty("Selecione uma receita."),
-    quantity: z.coerce.number().min(1, "A quantidade a produzir deve ser pelo menos 1."),
+    quantity: z.preprocess((val) => {
+        if (val === undefined || val === "" || val === null) return 0;
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+    }, z.number().min(1, "A quantidade a produzir deve ser pelo menos 1.")),
 });
 type ProductionFormValues = z.infer<typeof productionSchema>;
 

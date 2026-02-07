@@ -51,15 +51,27 @@ type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | '
 const formSchema = z.object({
   productId: z.string().optional(),
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
-  quantity: z.coerce.number().min(0.01, { message: "A quantidade deve ser maior que zero." }),
+  quantity: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0.01, { message: "A quantidade deve ser maior que zero." })),
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']),
-  unitPrice: z.coerce.number().min(0, "O preço não pode ser negativo."),
+  unitPrice: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0, "O preço não pode ser negativo.")),
   clientName: z.string().optional(),
   deliveryDate: z.date().optional(),
   location: z.string().optional(),
   paymentOption: z.enum(['full', 'partial']).default('full'),
   partialPaymentType: z.enum(['fixed', 'percentage']).default('fixed'),
-  partialPaymentValue: z.coerce.number().min(0).optional(),
+  partialPaymentValue: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0).optional()),
 });
 
 export type AddOrderFormValues = z.infer<typeof formSchema>;

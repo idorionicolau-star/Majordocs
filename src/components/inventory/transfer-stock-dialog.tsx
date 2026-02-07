@@ -40,7 +40,11 @@ const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
   fromLocationId: z.string().nonempty({ message: "Por favor, selecione a localização de origem." }),
   toLocationId: z.string().nonempty({ message: "Por favor, selecione a localização de destino." }),
-  quantity: z.coerce.number().min(0.01, { message: "A quantidade deve ser maior que 0.01." }),
+  quantity: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0.01, { message: "A quantidade deve ser maior que 0.01." })),
 }).refine(data => data.fromLocationId !== data.toLocationId, {
   message: "A localização de origem e destino não podem ser as mesmas.",
   path: ["toLocationId"],
@@ -49,14 +53,14 @@ const formSchema = z.object({
 type TransferFormValues = z.infer<typeof formSchema>;
 
 interface TransferStockDialogProps {
-    onTransfer: (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => void;
+  onTransfer: (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => void;
 }
 
 export function TransferStockDialog({ onTransfer }: TransferStockDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { products, locations } = useContext(InventoryContext) || { products: [], locations: [] };
-  
+
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -75,11 +79,11 @@ export function TransferStockDialog({ onTransfer }: TransferStockDialogProps) {
     if (!products) return [];
     const seen = new Set<string>();
     return products.filter(p => {
-        if (seen.has(p.name)) {
-            return false;
-        }
-        seen.add(p.name);
-        return true;
+      if (seen.has(p.name)) {
+        return false;
+      }
+      seen.add(p.name);
+      return true;
     });
   }, [products]);
 
@@ -91,9 +95,9 @@ export function TransferStockDialog({ onTransfer }: TransferStockDialogProps) {
 
   useEffect(() => {
     if (watchedQuantity > availableStock) {
-        form.setError("quantity", { type: "manual", message: `Stock insuficiente. Disponível: ${availableStock}` });
+      form.setError("quantity", { type: "manual", message: `Stock insuficiente. Disponível: ${availableStock}` });
     } else {
-        form.clearErrors("quantity");
+      form.clearErrors("quantity");
     }
   }, [watchedQuantity, availableStock, form]);
 
@@ -108,20 +112,20 @@ export function TransferStockDialog({ onTransfer }: TransferStockDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-        <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" size="icon" className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0">
-                            <Truck className="h-5 w-5" />
-                        </Button>
-                    </DialogTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                    <p>Transferir Stock</p>
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0">
+                <Truck className="h-5 w-5" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Transferir Stock</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Transferir Stock entre Localizações</DialogTitle>
@@ -137,7 +141,7 @@ export function TransferStockDialog({ onTransfer }: TransferStockDialogProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Produto</FormLabel>
-                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione um produto" />
@@ -154,54 +158,54 @@ export function TransferStockDialog({ onTransfer }: TransferStockDialogProps) {
               )}
             />
             <div className="grid grid-cols-2 gap-4">
-                <FormField
+              <FormField
                 control={form.control}
                 name="fromLocationId"
                 render={({ field }) => (
-                    <FormItem>
+                  <FormItem>
                     <FormLabel>De</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
+                      <FormControl>
                         <SelectTrigger>
-                            <SelectValue placeholder="Origem" />
+                          <SelectValue placeholder="Origem" />
                         </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
+                      </FormControl>
+                      <SelectContent>
                         {locations.map(location => (
-                            <SelectItem key={location.id} value={location.id}>
+                          <SelectItem key={location.id} value={location.id}>
                             {location.name}
-                            </SelectItem>
+                          </SelectItem>
                         ))}
-                        </SelectContent>
+                      </SelectContent>
                     </Select>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
-                <FormField
+              />
+              <FormField
                 control={form.control}
                 name="toLocationId"
                 render={({ field }) => (
-                    <FormItem>
+                  <FormItem>
                     <FormLabel>Para</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
+                      <FormControl>
                         <SelectTrigger>
-                            <SelectValue placeholder="Destino" />
+                          <SelectValue placeholder="Destino" />
                         </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
+                      </FormControl>
+                      <SelectContent>
                         {locations.map(location => (
-                            <SelectItem key={location.id} value={location.id}>
+                          <SelectItem key={location.id} value={location.id}>
                             {location.name}
-                            </SelectItem>
+                          </SelectItem>
                         ))}
-                        </SelectContent>
+                      </SelectContent>
                     </Select>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
+              />
             </div>
             <FormField
               control={form.control}
@@ -220,8 +224,8 @@ export function TransferStockDialog({ onTransfer }: TransferStockDialogProps) {
               )}
             />
             <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button type="submit" disabled={!form.formState.isValid}>Transferir</Button>
+              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={!form.formState.isValid}>Transferir</Button>
             </DialogFooter>
           </form>
         </Form>

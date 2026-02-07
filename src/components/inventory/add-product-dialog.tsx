@@ -41,14 +41,21 @@ import { PlusCircle } from 'lucide-react';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
+
+const robustNumber = z.preprocess((val) => {
+  if (val === undefined || val === "" || val === null) return 0;
+  const num = Number(val);
+  return isNaN(num) ? 0 : num;
+}, z.number().min(0, { message: "O valor não pode ser negativo." }));
+
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   category: z.string().min(1, { message: "A categoria é obrigatória." }),
-  price: z.coerce.number().min(0, { message: "O preço não pode ser negativo." }),
-  stock: z.coerce.number().min(0, { message: "O estoque não pode ser negativo." }),
+  price: robustNumber,
+  stock: robustNumber,
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
-  lowStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
-  criticalStockThreshold: z.coerce.number().min(0, { message: "O limite não pode ser negativo." }),
+  lowStockThreshold: robustNumber,
+  criticalStockThreshold: robustNumber,
   location: z.string().optional(),
 });
 

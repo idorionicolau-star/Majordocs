@@ -16,7 +16,7 @@ export function StockAlerts({ className }: { className?: string }) {
     const [isDownloading, setIsDownloading] = useState(false);
     const { toast } = useToast();
 
-    const ITEMS_PER_PAGE = 10;
+    const ITEMS_PER_PAGE = 5;
 
     const criticalStockProducts = useMemo(() => {
         if (!products) return [];

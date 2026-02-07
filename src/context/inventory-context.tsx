@@ -623,11 +623,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
               const oldStock = existingData.stock || 0;
               const docRef = doc(productsCollectionRef, productId);
 
-              transaction.update(docRef, { stock: oldStock + newStock, lastUpdated: new Date().toISOString().split('T')[0] });
+              transaction.update(docRef, { stock: oldStock + newStock, lastUpdated: new Date().toISOString() });
             } else {
               const newProduct: Omit<Product, 'id' | 'instanceId' | 'sourceIds'> = {
                 ...newProductData,
-                lastUpdated: new Date().toISOString().split('T')[0],
+                lastUpdated: new Date().toISOString(),
                 reservedStock: 0,
               };
               const newDocRef = doc(productsCollectionRef);
@@ -681,7 +681,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     productToUpdate.sourceIds.forEach(id => {
       const docRef = doc(productsCollectionRef, id);
-      batch.update(docRef, { ...restOfData, lastUpdated: new Date().toISOString().split('T')[0] });
+      batch.update(docRef, { ...restOfData, lastUpdated: new Date().toISOString() });
     });
 
     if (stock !== undefined) {
@@ -761,7 +761,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     try {
       await runTransaction(firestore, async (transaction) => {
         // 1. Update the product's stock
-        transaction.update(productRef, { stock: physicalCount });
+        transaction.update(productRef, { stock: physicalCount, lastUpdated: new Date().toISOString() });
 
         // 2. Create a stock movement record for the audit adjustment
         const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
@@ -813,17 +813,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
         const fromDocRef = doc(productsRef, fromProduct.id!);
         const newFromStock = fromProduct.stock - quantity;
-        transaction.update(fromDocRef, { stock: newFromStock });
+        transaction.update(fromDocRef, { stock: newFromStock, lastUpdated: new Date().toISOString() });
 
         checkStockAndNotify({ ...fromProduct, stock: newFromStock });
 
         if (toProduct && toProduct.id) {
           const toDocRef = doc(productsRef, toProduct.id);
-          transaction.update(toDocRef, { stock: toProduct.stock + quantity });
+          transaction.update(toDocRef, { stock: toProduct.stock + quantity, lastUpdated: new Date().toISOString() });
         } else {
           const { id, instanceId, ...restOfProduct } = fromProduct;
           const newDocRef = doc(productsRef);
-          transaction.set(newDocRef, { ...restOfProduct, location: toLocationId, stock: quantity, reservedStock: 0, lastUpdated: new Date().toISOString().split('T')[0] });
+          transaction.set(newDocRef, { ...restOfProduct, location: toLocationId, stock: quantity, reservedStock: 0, lastUpdated: new Date().toISOString() });
         }
 
         const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
@@ -863,7 +863,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const docRef = doc(firestore, `companies/${companyId}/products`, existingInstance.id);
       const batch = writeBatch(firestore);
       const newStock = existingInstance.stock + quantity;
-      batch.update(docRef, { stock: newStock });
+      batch.update(docRef, { stock: newStock, lastUpdated: new Date().toISOString() });
 
       checkStockAndNotify({ ...existingInstance, stock: newStock });
 
@@ -893,7 +893,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       const batch = writeBatch(firestore);
       const newProductRef = doc(productsRef);
-      batch.set(newProductRef, { ...restOfCatalogProduct, stock: quantity, reservedStock: 0, location: targetLocation, lastUpdated: new Date().toISOString().split('T')[0] });
+      batch.set(newProductRef, { ...restOfCatalogProduct, stock: quantity, reservedStock: 0, location: targetLocation, lastUpdated: new Date().toISOString() });
 
       checkStockAndNotify({ ...catalogProduct, id: newProductRef.id, stock: quantity } as Product);
 
@@ -1007,13 +1007,21 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const confirmSalePickup = useCallback(async (sale: Sale) => {
     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
 
-    const amountPaid = sale.amountPaid ?? 0;
+    const saleRef = doc(firestore, `companies/${companyId}/sales`, sale.id);
+    const saleSnap = await getDoc(saleRef);
+    if (!saleSnap.exists()) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Venda não encontrada.' });
+      return;
+    }
+    const freshSale = saleSnap.data() as Sale;
+
+    const amountPaid = freshSale.amountPaid ?? 0;
     // Allow for a small tolerance (e.g., 0.50) to account for rounding errors or negligible differences
-    if ((sale.totalValue - amountPaid) > 0.5) {
+    if ((freshSale.totalValue - amountPaid) > 0.5) {
       toast({
         variant: "destructive",
         title: 'Pagamento Incompleto',
-        description: `Não é possível confirmar o levantamento. O cliente ainda precisa de pagar ${formatCurrency(sale.totalValue - amountPaid)}.`,
+        description: `Não é possível confirmar o levantamento. O cliente ainda precisa de pagar ${formatCurrency(freshSale.totalValue - amountPaid)}.`,
         duration: 6000,
       });
       return;
@@ -1021,25 +1029,24 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     const productQuery = query(
       productsCollectionRef,
-      where("name", "==", sale.productName),
-      where("location", "==", sale.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
+      where("name", "==", freshSale.productName),
+      where("location", "==", freshSale.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
     );
-    const saleRef = doc(firestore, `companies/${companyId}/sales`, sale.id);
     const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
     await runTransaction(firestore, async (transaction) => {
       const productSnapshot = await getDocs(productQuery);
       if (productSnapshot.empty) {
-        throw new Error(`Produto "${sale.productName}" não encontrado para atualizar estoque.`);
+        throw new Error(`Produto "${freshSale.productName}" não encontrado para atualizar estoque.`);
       }
       const productDoc = productSnapshot.docs[0];
       const productData = productDoc.data() as Product;
 
-      const newStock = productData.stock - sale.quantity;
-      let newReservedStock = productData.reservedStock - sale.quantity;
+      const newStock = productData.stock - freshSale.quantity;
+      let newReservedStock = productData.reservedStock - freshSale.quantity;
 
       if (newReservedStock < 0) {
-        console.warn(`[Audit] Negative reserved stock detected for ${productData.name} during pickup. Clamped to 0. Was: ${productData.reservedStock}, Deducting: ${sale.quantity}`);
+        console.warn(`[Audit] Negative reserved stock detected for ${productData.name} during pickup. Clamped to 0. Was: ${productData.reservedStock}, Deducting: ${freshSale.quantity}`);
         newReservedStock = 0;
       }
 
@@ -1047,18 +1054,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         throw new Error("Erro Crítico: Stock insuficiente para realizar o levantamento."); // Physical stock MUST be sufficient
       }
 
-      transaction.update(productDoc.ref, { stock: newStock, reservedStock: newReservedStock });
+      transaction.update(productDoc.ref, { stock: newStock, reservedStock: newReservedStock, lastUpdated: new Date().toISOString() });
       transaction.update(saleRef, { status: 'Levantado' });
 
       checkStockAndNotify({ ...productData, stock: newStock });
 
       const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
         productId: productDoc.id,
-        productName: sale.productName,
+        productName: freshSale.productName,
         type: 'OUT',
-        quantity: -sale.quantity, // Negative for stock out
+        quantity: -freshSale.quantity, // Negative for stock out
         fromLocationId: productData.location,
-        reason: `Venda #${sale.guideNumber}`,
+        reason: `Venda #${freshSale.guideNumber}`,
         userId: user.id,
         userName: user.username,
       };
@@ -1236,10 +1243,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        transaction.update(saleRef, {
-          deletedAt: new Date().toISOString(),
-          deletedBy: user.username
-        });
+        // Hard delete the sale document
+        transaction.delete(saleRef);
       });
 
       toast({ title: 'Venda enviada para Lixeira', description: 'O stock foi reposto.' });
@@ -1364,7 +1369,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           if (productSnap.exists()) {
             const productData = productSnap.data() as Product;
             const newStock = (productData.stock || 0) - orderData.quantity;
-            transaction.update(productRef, { stock: newStock });
+            transaction.update(productRef, { stock: newStock, lastUpdated: new Date().toISOString() });
           }
         }
       });

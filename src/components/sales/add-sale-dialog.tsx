@@ -54,14 +54,30 @@ type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | '
 
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
-  quantity: z.coerce.number().min(0.01, "A quantidade deve ser maior que zero.").optional(),
+  quantity: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return undefined; // Optional field behavior
+    const num = Number(val);
+    return isNaN(num) ? undefined : num;
+  }, z.number().min(0.01, "A quantidade deve ser maior que zero.").optional()),
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
-  unitPrice: z.coerce.number().min(0, "O preço não pode ser negativo.").optional(),
+  unitPrice: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return undefined; // Optional field behavior
+    const num = Number(val);
+    return isNaN(num) ? undefined : num;
+  }, z.number().min(0, "O preço não pode ser negativo.").optional()),
   location: z.string().optional(),
   discountType: z.enum(['fixed', 'percentage']).default('fixed'),
-  discountValue: z.coerce.number().min(0, "O desconto não pode ser negativo.").optional(),
+  discountValue: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0, "O desconto não pode ser negativo.").optional()),
   applyVat: z.boolean().default(false),
-  vatPercentage: z.coerce.number().min(0, "O IVA deve ser um valor positivo.").max(100).optional(),
+  vatPercentage: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0, "O IVA deve ser um valor positivo.").max(100).optional()),
   documentType: z.enum(['Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo']),
   clientName: z.string().optional(),
   customerId: z.string().optional(),

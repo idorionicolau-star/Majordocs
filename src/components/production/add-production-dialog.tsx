@@ -38,7 +38,11 @@ type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | '
 
 const formSchema = z.object({
   productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
-  quantity: z.coerce.number().min(0.01, { message: "A quantidade deve ser maior que zero." }),
+  quantity: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0.01, { message: "A quantidade deve ser maior que zero." })),
   unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
   location: z.string().optional(),
 });

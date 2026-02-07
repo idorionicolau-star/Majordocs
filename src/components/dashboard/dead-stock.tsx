@@ -12,7 +12,7 @@ import {
 import { InventoryContext } from "@/context/inventory-context";
 import { PackageX } from 'lucide-react';
 import { Skeleton } from "../ui/skeleton";
-import { cn } from "@/lib/utils";
+import { cn, formatCompactNumber } from "@/lib/utils";
 
 export function DeadStock({ className }: { className?: string }) {
     const { products, sales, loading } = useContext(InventoryContext) || { products: [], sales: [], loading: true };
@@ -56,7 +56,7 @@ export function DeadStock({ className }: { className?: string }) {
                                     {product.name}
                                 </span>
                                 <span className="text-sm font-bold text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                                    {product.stock} {product.unit}
+                                    {formatCompactNumber(product.stock)} {product.unit}
                                 </span>
                             </div>
 

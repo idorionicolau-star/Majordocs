@@ -51,14 +51,19 @@ export function calculateSimilarity(str1: string, str2: string): number {
   return 1.0 - (distance / maxLength);
 }
 
+export function formatCompactNumber(value: number) {
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toLocaleString('pt-MZ', { maximumFractionDigits: 1 })}M`;
+  }
+  if (value >= 1000) {
+    return `${(value / 1000).toLocaleString('pt-MZ', { maximumFractionDigits: 1 })}k`;
+  }
+  return value.toLocaleString('pt-MZ');
+}
+
 export function formatCurrency(value: number, options?: Intl.NumberFormatOptions & { compact?: boolean }) {
   if (options?.compact) {
-    if (value >= 1_000_000) {
-      return `${(value / 1_000_000).toFixed(2)}M`;
-    }
-    if (value >= 10000) {
-      return `${(value / 1000).toFixed(0)}K`;
-    }
+    return formatCompactNumber(value);
   }
 
   return new Intl.NumberFormat('pt-MZ', {

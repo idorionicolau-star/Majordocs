@@ -36,9 +36,21 @@ import type { CatalogCategory } from '@/lib/types';
 const formSchema = z.object({
     name: z.string().nonempty({ message: "O nome é obrigatório." }),
     category: z.string().nonempty({ message: "A categoria é obrigatória." }),
-    price: z.coerce.number().min(0, "O preço não pode ser negativo."),
-    cost: z.coerce.number().min(0, "O custo não pode ser negativo."), // Although Product doesn't strictly have cost in type definition yet, user asked for it. We might map it or just store it. Actually Product type only has price. Let's check type.
-    stock: z.coerce.number().min(0, "O stock inicial não pode ser negativo."),
+    price: z.preprocess((val) => {
+        if (val === undefined || val === "" || val === null) return 0;
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+    }, z.number().min(0, "O preço não pode ser negativo.")),
+    cost: z.preprocess((val) => {
+        if (val === undefined || val === "" || val === null) return 0;
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+    }, z.number().min(0, "O custo não pode ser negativo.")),
+    stock: z.preprocess((val) => {
+        if (val === undefined || val === "" || val === null) return 0;
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+    }, z.number().min(0, "O stock inicial não pode ser negativo.")),
     unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).default('un'),
 });
 
