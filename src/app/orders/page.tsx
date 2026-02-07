@@ -204,14 +204,23 @@ export default function OrdersPage() {
     try {
       const missingQty = pendingConclusionOrder.quantity - pendingConclusionOrder.quantityProduced;
       const orderRef = doc(firestore, `companies/${companyId}/orders`, pendingConclusionOrder.id);
+
+      // Use a safe reference if productId likely doesn't exist, but we check existence anyway
+      // If pendingConclusionOrder.productId is just a name, this query will definitively fail to find a doc with that ID.
+      // We should check if it's a valid ID format or just rely on existence check.
       const productRef = doc(firestore, `companies/${companyId}/products`, pendingConclusionOrder.productId);
       const productionsRef = collection(firestore, `companies/${companyId}/productions`);
 
+      let productExists = false;
+      let productName = pendingConclusionOrder.productName;
+
       await runTransaction(firestore, async (transaction) => {
-        // Check product existence before updating stock usage
+        // Check product existence
         const productSnap = await transaction.get(productRef);
-        if (!productSnap.exists()) {
-          throw new Error("Produto associado não encontrado.");
+        productExists = productSnap.exists();
+
+        if (productExists) {
+          productName = productSnap.data().name;
         }
 
         // 1. Update Order
@@ -219,7 +228,9 @@ export default function OrdersPage() {
           id: `log-${Date.now()}`,
           date: new Date().toISOString(),
           quantity: missingQty,
-          notes: "Produção automática na conclusão da encomenda.",
+          notes: productExists
+            ? "Produção automática na conclusão da encomenda."
+            : "Produção automática (Aviso: Produto não associado ao stock).",
           registeredBy: user.username || 'Sistema',
         };
 
@@ -233,7 +244,7 @@ export default function OrdersPage() {
         const newProductionRef = doc(productionsRef);
         transaction.set(newProductionRef, {
           date: new Date().toISOString().split('T')[0],
-          productName: pendingConclusionOrder.productName,
+          productName: productName,
           quantity: missingQty,
           unit: pendingConclusionOrder.unit,
           location: pendingConclusionOrder.location,
@@ -242,16 +253,26 @@ export default function OrdersPage() {
           orderId: pendingConclusionOrder.id
         });
 
-        // 3. Update Product Stock (Increment)
-        transaction.update(productRef, {
-          stock: increment(missingQty)
-        });
+        // 3. Update Product Stock (Increment) - ONLY IF EXISTS
+        if (productExists) {
+          transaction.update(productRef, {
+            stock: increment(missingQty)
+          });
+        }
       });
 
-      toast({
-        title: "Produção Concluída e Stock Atualizado",
-        description: `Foram produzidas e adicionadas ao stock ${missingQty} unidades de "${pendingConclusionOrder.productName}".`,
-      });
+      if (productExists) {
+        toast({
+          title: "Produção Concluída e Stock Atualizado",
+          description: `Foram produzidas e adicionadas ao stock ${missingQty} unidades de "${productName}".`,
+        });
+      } else {
+        toast({
+          variant: "warning",
+          title: "Produção Concluída (Sem Stock)",
+          description: `A encomenda foi concluída, mas o produto associado não foi encontrado no stock para atualização.`,
+        });
+      }
 
     } catch (error: any) {
       console.error("Error confirming auto-production:", error);

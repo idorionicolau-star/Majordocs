@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MathInput } from "@/components/ui/math-input";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -358,7 +359,11 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                           {selectedProductInstance && <p className="text-xs text-muted-foreground">Disponível: {availableStock}</p>}
                         </div>
                         <FormControl>
-                          <Input type="number" step="any" min="0.01" {...field} placeholder="0.0" />
+                          <MathInput
+                            {...field}
+                            onValueChange={field.onChange}
+                            placeholder="0.0"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -371,7 +376,11 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                       <FormItem>
                         <FormLabel>Preço Unitário</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" {...field} placeholder="0.00" />
+                          <MathInput
+                            {...field}
+                            onValueChange={field.onChange}
+                            placeholder="0.00"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -506,7 +515,11 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
                             <FormItem>
                               <FormLabel>Valor do Desconto</FormLabel>
                               <FormControl>
-                                <Input type="number" min="0" {...field} placeholder="0.00" />
+                                <MathInput
+                                  {...field}
+                                  onValueChange={field.onChange}
+                                  placeholder="0.00"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>

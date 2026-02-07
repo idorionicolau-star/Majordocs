@@ -126,7 +126,7 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
               className="h-9"
             />
             <CommandList>
-              <ScrollArea className="h-[200px]">
+              <ScrollArea className="h-[200px]" thumbClassName="bg-slate-400 dark:bg-slate-600">
                 <CommandEmpty>
                   {searchQuery ? (
                     <div className="p-4 text-sm text-center text-muted-foreground">

@@ -13,16 +13,23 @@ import {
   Layers, // Using Layers for raw materials
   BrainCircuit,
   Banknote,
+  Book,
 } from 'lucide-react';
 
 export const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', id: 'dashboard', icon: LayoutDashboard },
   { title: 'Diagnóstico', href: '/diagnostico', id: 'diagnostico', icon: BrainCircuit },
   { title: 'Inventário', href: '/inventory', id: 'inventory', icon: Box },
-  { title: 'Histórico', href: '/inventory/history', id: 'inventory', icon: History, isSubItem: true },
+  { title: 'Histórico', href: '/inventory/history', id: 'inventory', isSubItem: true, icon: History },
   { title: 'Vendas', href: '/sales', id: 'sales', icon: ShoppingCart },
   { title: 'Clientes', href: '/customers', id: 'customers', icon: Users },
   { title: 'Matéria-Prima', href: '/raw-materials', id: 'raw-materials', icon: Layers },
+  {
+    title: "Catálogo",
+    id: "settings", // Using 'settings' permission for now as it was part of settings
+    href: "/catalog",
+    icon: Book,
+  },
   { title: 'Produção', href: '/production', id: 'production', icon: Hammer },
   { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList },
   { title: 'Financeiro', href: '/finance', id: 'finance', icon: Banknote },

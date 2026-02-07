@@ -22,7 +22,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function RecycleBin() {
-    const { products, sales, restoreItem, hardDelete, user } = useContext(InventoryContext) || { products: [], sales: [] };
+    const { allProducts: products, allSales: sales, restoreItem, hardDelete, user } = useContext(InventoryContext) || { allProducts: [], allSales: [] };
     const [searchQuery, setSearchQuery] = useState('');
     const [itemToRestore, setItemToRestore] = useState<{ id: string, name: string, type: 'product' | 'sale' } | null>(null);
     const [itemToDelete, setItemToDelete] = useState<{ id: string, name: string, type: 'product' | 'sale' } | null>(null);

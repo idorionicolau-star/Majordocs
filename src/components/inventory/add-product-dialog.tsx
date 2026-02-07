@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MathInput } from "@/components/ui/math-input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -53,7 +54,7 @@ const formSchema = z.object({
   category: z.string().min(1, { message: "A categoria é obrigatória." }),
   price: robustNumber,
   stock: robustNumber,
-  unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
+  unit: z.string().default('un'),
   lowStockThreshold: robustNumber,
   criticalStockThreshold: robustNumber,
   location: z.string().optional(),
@@ -69,7 +70,7 @@ interface AddProductDialogProps {
 
 export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProductDialogProps) {
   const inventoryContext = useContext(InventoryContext);
-  const { catalogCategories, catalogProducts, locations, isMultiLocation, addCatalogProduct, addCatalogCategory } = inventoryContext || { catalogCategories: [], catalogProducts: [], locations: [], isMultiLocation: false, addCatalogProduct: async () => { }, addCatalogCategory: async () => { } };
+  const { catalogCategories, catalogProducts, locations, isMultiLocation, addCatalogProduct, addCatalogCategory, availableUnits } = inventoryContext || { catalogCategories: [], catalogProducts: [], locations: [], isMultiLocation: false, addCatalogProduct: async () => { }, addCatalogCategory: async () => { }, availableUnits: [] };
   const [isCatalogProductSelected, setIsCatalogProductSelected] = useState(false);
   const { toast } = useToast();
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
@@ -351,7 +352,11 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
                   <FormItem>
                     <FormLabel>Preço Unitário (MT)</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" {...field} placeholder="0.00" />
+                      <MathInput
+                        {...field}
+                        onValueChange={field.onChange}
+                        placeholder="0.00"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -365,7 +370,11 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
                     <FormItem>
                       <FormLabel>Estoque Inicial</FormLabel>
                       <FormControl>
-                        <Input type="number" step="any" {...field} placeholder="0" />
+                        <MathInput
+                          {...field}
+                          onValueChange={field.onChange}
+                          placeholder="0"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -384,11 +393,9 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="un">Unidade (un)</SelectItem>
-                          <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
-                          <SelectItem value="m">Metro Linear (m)</SelectItem>
-                          <SelectItem value="cj">Conjunto (cj)</SelectItem>
-                          <SelectItem value="outro">Outro</SelectItem>
+                          {availableUnits.map((u: string) => (
+                            <SelectItem key={u} value={u}>{u}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -404,7 +411,11 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
                     <FormItem>
                       <FormLabel>Alerta Baixo</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} />
+                        <MathInput
+                          {...field}
+                          onValueChange={field.onChange}
+                          placeholder="10"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -417,7 +428,11 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
                     <FormItem>
                       <FormLabel>Alerta Crítico</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} />
+                        <MathInput
+                          {...field}
+                          onValueChange={field.onChange}
+                          placeholder="5"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

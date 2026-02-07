@@ -235,10 +235,10 @@ export default function SalesPage() {
     }
   };
 
-  const handleConfirmPickup = (sale: Sale) => {
+  const handleConfirmPickup = async (sale: Sale) => {
     try {
       if (!confirmSalePickup) throw new Error("Função de levantamento não disponível.");
-      confirmSalePickup(sale);
+      await confirmSalePickup(sale);
       toast({
         title: "Material Levantado",
         description: `O stock foi atualizado para a venda #${sale.guideNumber}.`,

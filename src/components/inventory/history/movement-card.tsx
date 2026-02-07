@@ -45,20 +45,28 @@ export function MovementCard({ movement, locationMap }: MovementCardProps) {
     } else if (movement.type === 'ADJUSTMENT') {
         locationText = toLocation || fromLocation;
     }
-    
+
     const isOut = movement.type === 'OUT' || (movement.type === 'ADJUSTMENT' && movement.quantity < 0);
     const quantityDisplay = movement.quantity > 0 && !isOut ? `+${movement.quantity}` : movement.quantity;
     const quantityColor = isOut ? "text-red-500" : "text-green-500";
 
     const reasonDisplay = movement.isAudit
         ? (
-            <>
-                <p className="font-semibold text-foreground">{movement.reason}</p>
-                <p className="text-xs">
-                    Ajuste de {movement.systemCountBefore} para {movement.physicalCount} ({movement.quantity > 0 ? '+' : ''}{movement.quantity})
-                </p>
-            </>
-          )
+            <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-yellow-500/15 text-yellow-600 hover:bg-yellow-500/25">
+                        Auditoria
+                    </span>
+                    <span className="font-medium text-foreground">{movement.reason}</span>
+                </div>
+                <div className="text-xs text-muted-foreground ml-1">
+                    Sistema: <span className="font-mono font-medium">{movement.systemCountBefore}</span>
+                    {' '}→{' '}
+                    Físico: <span className="font-mono font-medium">{movement.physicalCount}</span>
+                    {' '}(Ajuste: {movement.quantity > 0 ? '+' : ''}{movement.quantity})
+                </div>
+            </div>
+        )
         : movement.reason;
 
 
@@ -72,7 +80,7 @@ export function MovementCard({ movement, locationMap }: MovementCardProps) {
                     </CardTitle>
                     <p className="text-xs text-muted-foreground">{date}</p>
                 </div>
-                 <div className={cn("text-lg font-bold font-mono", quantityColor)}>
+                <div className={cn("text-lg font-bold font-mono", quantityColor)}>
                     {quantityDisplay}
                 </div>
             </CardHeader>

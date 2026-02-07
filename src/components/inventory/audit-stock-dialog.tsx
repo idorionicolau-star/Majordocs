@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MathInput } from "@/components/ui/math-input";
 import { FileCheck } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -104,7 +105,11 @@ function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProp
               <FormItem>
                 <FormLabel>Contagem Física Atual</FormLabel>
                 <FormControl>
-                  <Input type="number" step="any" {...field} />
+                  <MathInput
+                    {...field}
+                    onValueChange={field.onChange}
+                    placeholder="0"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

@@ -26,6 +26,7 @@ export type Employee = {
   email: string; // This is the full login email
   password?: string; // Should be handled securely, never stored in plain text
   role: 'Admin' | 'Employee' | 'Dono';
+
   companyId: string;
   permissions: Partial<Record<ModulePermission, PermissionLevel>>;
   profilePictureUrl?: string; // URL for the profile picture
@@ -50,6 +51,8 @@ export type Company = {
   isMultiLocation?: boolean;
   locations?: Location[];
   saleCounter?: number;
+  validUnits?: string[];
+  validCategories?: string[]; // Also adding categories while we are at it, for future proofing or if we want to migrate catalogCategories to here.
 };
 
 export type Location = {
@@ -70,7 +73,7 @@ export type Product = {
   criticalStockThreshold: number;
   lastUpdated: string;
   location?: string;
-  unit?: 'un' | 'm²' | 'm' | 'cj' | 'outro';
+  unit?: string;
   deletedAt?: string;
   deletedBy?: string;
 };
@@ -80,7 +83,7 @@ export type RawMaterial = {
   id: string;
   name: string;
   stock: number;
-  unit: 'kg' | 'm³' | 'un' | 'L' | 'saco';
+  unit: string;
   lowStockThreshold: number;
   cost?: number;
 };
@@ -126,7 +129,7 @@ export type Sale = {
   deletedAt?: string;
   deletedBy?: string;
   quantity: number;
-  unit?: 'un' | 'm²' | 'm' | 'cj' | 'outro';
+  unit?: string;
   unitPrice: number;
   subtotal: number;
   discount?: number;
@@ -148,7 +151,7 @@ export type Production = {
   date: string;
   productName: string;
   quantity: number;
-  unit?: 'un' | 'm²' | 'm' | 'cj' | 'outro';
+  unit?: string;
   registeredBy: string;
   location?: string;
   status: 'Concluído' | 'Transferido';
@@ -168,7 +171,7 @@ export type Order = {
   productId: string; // This can be the name or a catalog ID
   productName: string;
   quantity: number;
-  unit: 'un' | 'm²' | 'm' | 'cj' | 'outro';
+  unit: string;
   unitPrice?: number;
   totalValue?: number;
   clientName?: string;
@@ -266,7 +269,9 @@ export interface InventoryContextType {
 
   // Data related
   products: Product[];
+  allProducts: Product[];
   sales: Sale[];
+  allSales: Sale[];
   productions: Production[];
   orders: Order[];
   stockMovements: StockMovement[];
@@ -336,11 +341,20 @@ export interface InventoryContextType {
   addRecipe: (recipe: Omit<Recipe, 'id'>) => Promise<void>;
   updateRecipe: (recipeId: string, data: Partial<Recipe>) => Promise<void>;
   deleteRecipe: (recipeId: string) => Promise<void>;
-  produceFromRecipe: (recipeId: string, quantityToProduce: number) => Promise<void>;
+
   mergeProducts: (targetProductId: string, sourceProductIds: string[]) => Promise<void>;
   restoreItem: (collectionName: string, id: string) => Promise<void>;
   hardDelete: (collectionName: string, id: string) => Promise<void>;
   exportCompanyData: () => Promise<void>;
+
+  // Settings / Metadata
+  availableUnits: string[];
+  addUnit: (unit: string) => Promise<void>;
+  removeUnit: (unit: string) => Promise<void>;
+
+  availableCategories: string[];
+  addCategory: (category: string) => Promise<void>;
+  removeCategory: (category: string) => Promise<void>;
 }
 
 type CatalogProduct = Omit<

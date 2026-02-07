@@ -45,6 +45,7 @@ import {
   type CollectionReference,
   DocumentReference,
   limit,
+  arrayRemove,
 } from 'firebase/firestore';
 import { allPermissions } from '@/lib/data';
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
@@ -1076,23 +1077,119 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const addProduction = useCallback(async (prodData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
     if (!firestore || !companyId || !user) throw new Error("Contexto não pronto.");
 
-    const newProduction: Omit<Production, 'id'> = {
-      ...prodData,
-      date: new Date().toISOString().split('T')[0],
-      registeredBy: user.username || 'Desconhecido',
-      status: prodData.status || 'Concluído',
-      orderId: prodData.orderId,
-    };
+    const { productName, quantity, location, orderId, unit } = prodData;
+    const targetLocation = location || (isMultiLocation && locations.length > 0 ? locations[0].id : 'Principal');
 
-    const productionsRef = collection(firestore, `companies/${companyId}/productions`);
-    addDocumentNonBlocking(productionsRef, newProduction);
+    try {
+      await runTransaction(firestore, async (transaction) => {
+        // 1. Check for Recipe and Deduct Raw Materials
+        if (recipesData) {
+          const recipe = recipesData.find(r => r.productName === productName);
+          if (recipe) {
+            for (const ingredient of recipe.ingredients) {
+              const materialRef = doc(firestore, `companies/${companyId}/rawMaterials`, ingredient.rawMaterialId);
+              const materialDoc = await transaction.get(materialRef);
 
-    addNotification({
-      type: 'production',
-      message: `Produção de ${newProduction.quantity} ${newProduction.unit} de ${newProduction.productName} registada.`,
-      href: '/production',
-    });
-  }, [firestore, companyId, user, addNotification]);
+              if (!materialDoc.exists()) {
+                throw new Error(`Matéria-prima não encontrada (ID: ${ingredient.rawMaterialId}) para a receita de ${productName}.`);
+              }
+
+              const materialData = materialDoc.data() as RawMaterial;
+              const requiredQty = ingredient.quantity * quantity;
+              const newMatStock = (materialData.stock || 0) - requiredQty;
+
+              if (newMatStock < 0) {
+                throw new Error(`Stock insuficiente de ${materialData.name}. Necessário: ${requiredQty}, Disponível: ${materialData.stock}.`);
+              }
+
+              transaction.update(materialRef, { stock: newMatStock });
+            }
+          }
+        }
+
+        // 2. Update/Create Product Stock
+        const productsRef = collection(firestore, `companies/${companyId}/products`);
+        let productDocRef: DocumentReference;
+
+        // Query Firestore directly to find the product ID, ensuring we aren't relying on potentially stale context state
+        const q = query(productsRef, where("name", "==", productName), where("location", "==", targetLocation));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          // Product exists in DB
+          productDocRef = querySnapshot.docs[0].ref;
+          const pDoc = await transaction.get(productDocRef);
+
+          if (pDoc.exists()) {
+            const pData = pDoc.data() as Product;
+            const currentStock = pData.stock || 0;
+            transaction.update(productDocRef, {
+              stock: currentStock + quantity,
+              lastUpdated: new Date().toISOString()
+            });
+          }
+        } else {
+          // New Product Instance logic (from Catalog or scratch)
+          const catalogProduct = catalogProductsData?.find(p => p.name === productName);
+
+          productDocRef = doc(productsRef); // New ID
+          const newProductData = {
+            name: productName,
+            category: catalogProduct?.category || 'Geral',
+            stock: quantity,
+            reservedStock: 0,
+            price: catalogProduct?.price || 0,
+            location: targetLocation,
+            lastUpdated: new Date().toISOString(),
+            unit: unit || catalogProduct?.unit || 'un',
+            lowStockThreshold: catalogProduct?.lowStockThreshold || 10,
+            criticalStockThreshold: catalogProduct?.criticalStockThreshold || 5,
+          };
+          transaction.set(productDocRef, newProductData);
+        }
+
+        // 3. Create Production Record
+        const newProduction: Omit<Production, 'id'> = {
+          date: new Date().toISOString().split('T')[0],
+          productName,
+          quantity,
+          unit: unit || 'un',
+          registeredBy: user.username || 'Desconhecido',
+          status: 'Concluído',
+          location: targetLocation,
+          orderId
+        };
+        const productionsRef = collection(firestore, `companies/${companyId}/productions`);
+        transaction.set(doc(productionsRef), newProduction);
+
+        // 4. Create Stock Movement Log
+        const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+        const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+          productId: productDocRef.id, // We have the ref from above
+          productName,
+          type: 'IN',
+          quantity,
+          toLocationId: targetLocation,
+          reason: `Produção: ${quantity} ${unit || 'un'}`,
+          userId: user.id,
+          userName: user.username,
+        };
+        transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+
+      }); // End Transaction
+
+      addNotification({
+        type: 'production',
+        message: `Produção de ${quantity} ${unit || 'un'} de ${productName} registada e stock atualizado.`,
+        href: '/production',
+      });
+
+    } catch (e: any) {
+      console.error("Production error:", e);
+      toast({ variant: 'destructive', title: 'Erro na Produção', description: e.message });
+      throw e; // Re-throw so the dialog knows to stay open or handle error
+    }
+  }, [firestore, companyId, user, addNotification, recipesData, productsData, catalogProductsData, isMultiLocation, locations, toast]);
 
   const addProductionLog = useCallback((orderId: string, logData: { quantity: number; notes?: string }) => {
     if (!firestore || !companyId || !user || !ordersData) return;
@@ -1420,67 +1517,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Receita Removida' });
   }, [recipesCollectionRef, toast]);
 
-  const produceFromRecipe = useCallback(async (recipeId: string, quantityToProduce: number) => {
-    if (!firestore || !companyId || !user || !recipesData) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Dados de produção indisponíveis.' });
-      return;
-    }
 
-    const recipe = recipesData.find(r => r.id === recipeId);
-    if (!recipe) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Receita não encontrada.' });
-      return;
-    }
-
-    if (quantityToProduce <= 0) {
-      toast({ variant: 'destructive', title: 'Quantidade Inválida', description: 'A quantidade deve ser maior que zero.' });
-      return;
-    }
-
-    try {
-      await runTransaction(firestore, async (transaction) => {
-        // 1. Validate and Deduct Raw Materials atomically
-        for (const ingredient of recipe.ingredients) {
-          const materialRef = doc(firestore, `companies/${companyId}/rawMaterials`, ingredient.rawMaterialId);
-          const materialDoc = await transaction.get(materialRef);
-
-          if (!materialDoc.exists()) {
-            throw new Error(`Matéria-prima não encontrada (ID: ${ingredient.rawMaterialId}).`);
-          }
-
-          const materialData = materialDoc.data() as RawMaterial;
-          const requiredQty = ingredient.quantity * quantityToProduce;
-          const newStock = (materialData.stock || 0) - requiredQty;
-
-          if (newStock < 0) {
-            throw new Error(`Stock insuficiente de ${materialData.name}. Necessário: ${requiredQty}, Disponível: ${materialData.stock}.`);
-          }
-
-          transaction.update(materialRef, { stock: newStock });
-        }
-
-        // 2. Add to Production Log (Create new document)
-        const productionRef = doc(collection(firestore, `companies/${companyId}/productions`));
-        const newProduction: Omit<Production, 'id'> = {
-          date: new Date().toISOString().split('T')[0],
-          productName: recipe.productName,
-          quantity: quantityToProduce,
-          unit: catalogProductsData?.find(p => p.name === recipe.productName)?.unit || 'un',
-          registeredBy: user.username,
-          status: 'Concluído'
-        };
-        transaction.set(productionRef, newProduction);
-
-      });
-
-      toast({ title: 'Produção Registada', description: `Produção de ${quantityToProduce} ${recipe.productName} registada com sucesso. Stock de insumos atualizado.` });
-
-    } catch (e: any) {
-      console.error("Production error:", e);
-      toast({ variant: 'destructive', title: 'Erro na Produção', description: e.message });
-      throw e;
-    }
-  }, [firestore, companyId, user, recipesData, catalogProductsData, toast]);
 
   const restoreItem = useCallback(async (collectionName: string, id: string) => {
     if (!firestore || !companyId) return;
@@ -1498,9 +1535,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const hardDelete = useCallback(async (collectionName: string, id: string) => {
     if (!firestore || !companyId) return;
-    const docRef = doc(firestore, `companies/${companyId}/${collectionName}`, id);
-    await deleteDocumentNonBlocking(docRef);
-    toast({ title: 'Item Apagado Permanentemente' });
+    try {
+      const docRef = doc(firestore, `companies/${companyId}/${collectionName}`, id);
+      await deleteDoc(docRef); // Force standard delete to ensure it waits and updates
+      toast({ title: 'Item Apagado Permanentemente' });
+    } catch (error: any) {
+      console.error("Hard delete error:", error);
+      toast({ variant: 'destructive', title: 'Erro ao Apagar', description: error.message });
+    }
   }, [firestore, companyId, toast]);
 
   const exportCompanyData = useCallback(async () => {
@@ -1525,11 +1567,86 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     document.body.appendChild(downloadAnchorNode); // required for firefox
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
-  }, [companyData, products, salesData, toast]);
+  }, [productsData, salesData, companyData, products, toast]);
 
+  // --- Units & Categories Management ---
+  const availableUnits = useMemo(() => {
+    const defaultUnits = ['un', 'kg', 'm', 'm²', 'm³', 'L', 'cxs', 'saco', 'rolo', 'cj', 'ton', 'lata', 'galão'];
+    const companyUnits = companyData?.validUnits || [];
+    // Also include units currently in use by products to prevent data loss or hiding
+    const productUnits = productsData?.map(p => p.unit).filter(Boolean) as string[] || [];
+    const materialUnits = rawMaterialsData?.map(m => m.unit).filter(Boolean) as string[] || [];
 
+    // Merge unique
+    const allUnits = Array.from(new Set([...defaultUnits, ...companyUnits, ...productUnits, ...materialUnits]));
+    return allUnits.sort((a, b) => a.localeCompare(b));
+  }, [companyData, productsData, rawMaterialsData]);
 
+  const addUnit = useCallback(async (unit: string) => {
+    if (!firestore || !companyId) return;
+    try {
+      const companyRef = doc(firestore, 'companies', companyId);
+      await updateDoc(companyRef, {
+        validUnits: arrayUnion(unit)
+      });
+      toast({ title: 'Unidade Adicionada', description: `A unidade "${unit}" foi adicionada.` });
+    } catch (error) {
+      console.error("Error adding unit:", error);
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao adicionar unidade." });
+    }
+  }, [firestore, companyId, toast]);
 
+  const removeUnit = useCallback(async (unit: string) => {
+    if (!firestore || !companyId) return;
+    try {
+      const companyRef = doc(firestore, 'companies', companyId);
+      await updateDoc(companyRef, {
+        validUnits: arrayRemove(unit)
+      });
+      toast({ title: 'Unidade Removida', description: `A unidade "${unit}" foi removida da lista.` });
+    } catch (error) {
+      console.error("Error removing unit:", error);
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao remover unidade." });
+    }
+  }, [firestore, companyId, toast]);
+
+  const availableCategories = useMemo(() => {
+    const catalogCats = catalogCategoriesData?.map(c => c.name) || [];
+    const companyCats = companyData?.validCategories || [];
+    const productCats = productsData?.map(p => p.category).filter(Boolean) as string[] || [];
+
+    const allCats = Array.from(new Set([...catalogCats, ...companyCats, ...productCats]));
+    return allCats.sort((a, b) => a.localeCompare(b));
+  }, [catalogCategoriesData, companyData, productsData]);
+
+  const addCategory = useCallback(async (category: string) => {
+    if (!firestore || !companyId) return;
+    try {
+      // We update company-specific categories to keep it clean
+      const companyRef = doc(firestore, 'companies', companyId);
+      await updateDoc(companyRef, {
+        validCategories: arrayUnion(category)
+      });
+      toast({ title: 'Categoria Adicionada', description: `Categoria "${category}" adicionada.` });
+    } catch (error) {
+      console.error("Error adding category:", error);
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao adicionar categoria." });
+    }
+  }, [firestore, companyId, toast]);
+
+  const removeCategory = useCallback(async (category: string) => {
+    if (!firestore || !companyId) return;
+    try {
+      const companyRef = doc(firestore, 'companies', companyId);
+      await updateDoc(companyRef, {
+        validCategories: arrayRemove(category)
+      });
+      toast({ title: 'Categoria Removida', description: `Categoria "${category}" removida.` });
+    } catch (error) {
+      console.error("Error removing category:", error);
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao remover categoria." });
+    }
+  }, [firestore, companyId, toast]);
 
   // Products Merge Tool
   const mergeProducts = useCallback(async (targetProductId: string, sourceProductIds: string[]) => {
@@ -1585,12 +1702,60 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || stockMovementsLoading || catalogProductsLoading || catalogCategoriesLoading || rawMaterialsLoading || recipesLoading;
 
+  // 30-Day Retention Policy Cleanup
+  useEffect(() => {
+    if (!companyId || !firestore || !user || user.role !== 'Admin') return;
+
+    const cleanupOldDeletedItems = async () => {
+      const retentionPeriod = 30 * 24 * 60 * 60 * 1000; // 30 days in ms
+      const now = new Date().getTime();
+
+      // Check Products
+      if (productsData) {
+        productsData.forEach(p => {
+          if (p.deletedAt) {
+            const deletedDate = new Date(p.deletedAt).getTime();
+            if (now - deletedDate > retentionPeriod) {
+              console.log(`Auto-deleting old product: ${p.name}`);
+              hardDelete('products', p.id!);
+            }
+          }
+        });
+      }
+
+      // Check Sales
+      if (salesData) {
+        salesData.forEach(s => {
+          if (s.deletedAt) {
+            const deletedDate = new Date(s.deletedAt).getTime();
+            if (now - deletedDate > retentionPeriod) {
+              console.log(`Auto-deleting old sale: ${s.guideNumber}`);
+              hardDelete('sales', s.id);
+            }
+          }
+        });
+      }
+    };
+
+    // Run cleanup with a small delay to ensure data is loaded
+    const timer = setTimeout(cleanupOldDeletedItems, 5000);
+    return () => clearTimeout(timer);
+  }, [companyId, firestore, user, productsData, salesData, hardDelete]);
+
   const value: InventoryContextType = useMemo(() => ({
     user, firebaseUser, companyId, loading: isDataLoading,
     login, logout, resetPassword, registerCompany, profilePicture, setProfilePicture: handleSetProfilePicture,
     canView, canEdit,
-    companyData, products, sales: salesData || [], productions: productionsData || [],
-    orders: ordersData || [], stockMovements: stockMovementsData || [], catalogProducts: catalogProductsData || [], catalogCategories: catalogCategoriesData || [],
+    companyData,
+    products: (productsData || []).filter(p => !p.deletedAt),
+    allProducts: productsData || [],
+    sales: (salesData || []).filter(s => !s.deletedAt),
+    allSales: salesData || [],
+    productions: productionsData || [],
+    orders: ordersData || [],
+    stockMovements: stockMovementsData || [],
+    catalogProducts: catalogProductsData || [],
+    catalogCategories: catalogCategoriesData || [],
     rawMaterials: rawMaterialsData || [],
     recipes: recipesData || [],
     locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
@@ -1600,58 +1765,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
     addProduction, updateProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
     mergeProducts,
-    /* // Products Merge Tool
-    const mergeProducts = useCallback(async (targetProductId: string, sourceProductIds: string[]) => {
-      if (!productsCollectionRef || !firestore || !companyId) return;
-    
-      try {
-        const batch = writeBatch(firestore);
-        const targetProduct = productsData.find(p => p.id === targetProductId);
-    
-        if (!targetProduct) {
-          toast({ variant: 'destructive', title: 'Erro', description: 'Produto principal não encontrado.' });
-          return;
-        }
-    
-        let totalStockToAdd = 0;
-        let totalReservedToAdd = 0;
-        const sourceIdsRecord: string[] = targetProduct.sourceIds || [];
-    
-        // Calculate totals and mark sources for deletion
-        for (const sourceId of sourceProductIds) {
-          const sourceProduct = productsData.find(p => p.id === sourceId);
-          if (sourceProduct) {
-            totalStockToAdd += (sourceProduct.stock || 0);
-            totalReservedToAdd += (sourceProduct.reservedStock || 0);
-            sourceIdsRecord.push(sourceId);
-    
-            // Delete source product
-            const sourceRef = doc(productsCollectionRef, sourceId);
-            batch.delete(sourceRef);
-          }
-        }
-    
-        // Update target product
-        const targetRef = doc(productsCollectionRef, targetProductId);
-        batch.update(targetRef, {
-          stock: (targetProduct.stock || 0) + totalStockToAdd,
-          reservedStock: (targetProduct.reservedStock || 0) + totalReservedToAdd,
-          sourceIds: sourceIdsRecord,
-          lastUpdated: new Date().toISOString()
-        });
-    
-        await batch.commit();
-        toast({
-          title: 'Produtos Unificados!',
-          description: `${sourceProductIds.length} produtos foram fundidos em "${targetProduct.name}".`
-        });
-    
-      } catch (error) {
-        console.error("Error merging products:", error);
-        toast({ variant: 'destructive', title: 'Erro ao Unificar', description: 'Ocorreu um erro ao tentar unificar os produtos.' });
-      }
-    }, [productsCollectionRef, firestore, companyId, productsData, toast]); */
-
+    restoreItem,
+    hardDelete,
+    exportCompanyData,
 
     clearSales, clearProductions, clearOrders, clearStockMovements,
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
@@ -1663,12 +1779,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     addRecipe,
     updateRecipe,
     deleteRecipe,
-    produceFromRecipe,
+
+    // New Settings
+    availableUnits, addUnit, removeUnit,
+    availableCategories, addCategory, removeCategory,
+
   }), [
     user, firebaseUser, companyId, isDataLoading,
     login, logout, resetPassword, registerCompany, profilePicture, handleSetProfilePicture,
     canView, canEdit,
-    companyData, products, salesData, productionsData, ordersData, stockMovementsData, catalogProductsData, catalogCategoriesData,
+    companyData, productsData, salesData, productionsData, ordersData, stockMovementsData, catalogProductsData, catalogCategoriesData,
     rawMaterialsData, recipesData,
     locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
     businessStartDate,
@@ -1686,11 +1806,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     addRecipe,
     updateRecipe,
     deleteRecipe,
-    produceFromRecipe,
+
     mergeProducts,
     restoreItem,
     hardDelete,
     exportCompanyData,
+
+    availableUnits, addUnit, removeUnit,
+    availableCategories, addCategory, removeCategory,
   ]);
 
   return (

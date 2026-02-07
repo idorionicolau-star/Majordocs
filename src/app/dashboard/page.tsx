@@ -23,7 +23,7 @@ import { MajorAssistant } from "@/components/assistant/major-assistant";
 
 
 export default function DashboardPage() {
-  const { user, products, loading } = useContext(InventoryContext) || { user: null, products: [], loading: true };
+  const { user, products, catalogProducts, loading } = useContext(InventoryContext) || { user: null, products: [], catalogProducts: [], loading: true };
   const isPrivilegedUser = user?.role === 'Admin' || user?.role === 'Dono';
 
   if (loading) {
@@ -38,8 +38,10 @@ export default function DashboardPage() {
     );
   }
 
-  // SHOW WELCOME SCREEN IF NO PRODUCTS
-  if (!loading && products.length === 0) {
+  // SHOW WELCOME SCREEN IF NO PRODUCTS AND NO CATALOG
+  // If the user has a catalog but no inventory, they should see the dashboard to start working.
+  // We only show welcome screen if the system is completely empty.
+  if (!loading && products.length === 0 && (!catalogProducts || catalogProducts.length === 0)) {
     return <EmptyStateWelcome />;
   }
 

@@ -26,7 +26,36 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+[
+  {
+    "TargetContent": "import { Input } from \"@/components/ui/input\";",
+    "ReplacementContent": "import { Input } from \"@/components/ui/input\";\nimport { MathInput } from \"@/components/ui/math-input\";",
+    "StartLine": 29,
+    "EndLine": 29,
+    "AllowMultiple": false
+  },
+  {
+    "TargetContent": "                  <FormControl>\n                    <Input type=\"number\" step=\"0.01\" {...field} />\n                  </FormControl>",
+    "ReplacementContent": "                  <FormControl>\n                    <MathInput \n                      {...field} \n                      onValueChange={field.onChange} \n                      placeholder=\"0.00\" \n                    />\n                  </FormControl>",
+    "StartLine": 170,
+    "EndLine": 172,
+    "AllowMultiple": false
+  },
+  {
+    "TargetContent": "                  <FormControl>\n                    <Input type=\"number\" step=\"any\" {...field} />\n                  </FormControl>",
+    "ReplacementContent": "                  <FormControl>\n                     <MathInput \n                      {...field} \n                      onValueChange={field.onChange} \n                      placeholder=\"0\"\n                    />\n                  </FormControl>",
+    "StartLine": 184,
+    "EndLine": 186,
+    "AllowMultiple": false
+  },
+  {
+    "TargetContent": "                  <FormControl>\n                    <Input type=\"number\" {...field} />\n                  </FormControl>",
+    "ReplacementContent": "                  <FormControl>\n                    <MathInput \n                      {...field} \n                      onValueChange={field.onChange} \n                      placeholder=\"0\"\n                    />\n                  </FormControl>",
+    "StartLine": 223,
+    "EndLine": 225,
+    "AllowMultiple": true
+  }
+]
 import { Edit2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,7 +78,7 @@ const formSchema = z.object({
     const num = Number(val);
     return isNaN(num) ? 0 : num;
   }, z.number().min(0, { message: "O estoque não pode ser negativo." })),
-  unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
+  unit: z.string().default('un'),
   lowStockThreshold: z.preprocess((val) => {
     if (val === undefined || val === "" || val === null) return 0;
     const num = Number(val);
@@ -74,6 +103,7 @@ interface EditProductDialogProps {
 }
 
 function EditProductDialogContent({ product, onProductUpdate, setOpen, locations, isMultiLocation }: Omit<EditProductDialogProps, 'trigger'> & { setOpen: (open: boolean) => void }) {
+  const { availableUnits } = useInventory();
   const form = useForm<EditProductFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -201,11 +231,9 @@ function EditProductDialogContent({ product, onProductUpdate, setOpen, locations
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="un">Unidade (un)</SelectItem>
-                        <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
-                        <SelectItem value="m">Metro Linear (m)</SelectItem>
-                        <SelectItem value="cj">Conjunto (cj)</SelectItem>
-                        <SelectItem value="outro">Outro</SelectItem>
+                        {availableUnits.map((u: string) => (
+                          <SelectItem key={u} value={u}>{u}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

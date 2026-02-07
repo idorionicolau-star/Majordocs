@@ -68,7 +68,7 @@ const rawMaterialSchema = z.object({
         const num = Number(val);
         return isNaN(num) ? 0 : num;
     }, z.number().min(0, "O stock não pode ser negativo.")),
-    unit: z.enum(['kg', 'm³', 'un', 'L', 'saco']),
+    unit: z.string().min(1, "Selecione uma unidade"),
     lowStockThreshold: z.preprocess((val) => {
         if (val === undefined || val === "" || val === null) return 0;
         const num = Number(val);
@@ -110,7 +110,7 @@ type ProductionFormValues = z.infer<typeof productionSchema>;
 
 // Raw Materials Manager Component
 const RawMaterialsManager = () => {
-    const { rawMaterials, addRawMaterial, updateRawMaterial, deleteRawMaterial, loading, companyData } = useContext(InventoryContext)!;
+    const { rawMaterials, addRawMaterial, updateRawMaterial, deleteRawMaterial, loading, companyData, availableUnits } = useContext(InventoryContext)!;
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [materialToEdit, setMaterialToEdit] = useState<RawMaterial | null>(null);
     const [materialToDelete, setMaterialToDelete] = useState<RawMaterial | null>(null);
@@ -118,12 +118,12 @@ const RawMaterialsManager = () => {
 
     const form = useForm<RawMaterialFormValues>({
         resolver: zodResolver(rawMaterialSchema),
-        defaultValues: { name: '', stock: 0, unit: 'kg', lowStockThreshold: 0, cost: 0 },
+        defaultValues: { name: '', stock: 0, unit: 'un', lowStockThreshold: 0, cost: 0 },
     });
 
     const handleOpenDialog = (material: RawMaterial | null = null) => {
         setMaterialToEdit(material);
-        form.reset(material ? { ...material, cost: material.cost || 0 } : { name: '', stock: 0, unit: 'kg', lowStockThreshold: 10, cost: 0 });
+        form.reset(material ? { ...material, cost: material.cost || 0 } : { name: '', stock: 0, unit: 'un', lowStockThreshold: 10, cost: 0 });
         setIsDialogOpen(true);
     };
 
@@ -246,7 +246,7 @@ const RawMaterialsManager = () => {
                             </div>
                             <FormField control={form.control} name="unit" render={({ field }) => (
                                 <FormItem><FormLabel>Unidade</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>
-                                    <SelectItem value="kg">kg</SelectItem><SelectItem value="m³">m³</SelectItem><SelectItem value="un">un</SelectItem><SelectItem value="L">L</SelectItem><SelectItem value="saco">saco</SelectItem>
+                                    {availableUnits.map((u: string) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
                                 </SelectContent></Select><FormMessage /></FormItem>
                             )} />
                             <FormField control={form.control} name="lowStockThreshold" render={({ field }) => (
@@ -427,7 +427,7 @@ const RecipesManager = () => {
 
 // Production From Recipe Component
 const ProductionFromRecipe = () => {
-    const { recipes, produceFromRecipe, loading } = useContext(InventoryContext)!;
+    const { recipes, addProduction, loading } = useContext(InventoryContext)!;
     const { toast } = useToast();
     const form = useForm<ProductionFormValues>({
         resolver: zodResolver(productionSchema),
@@ -436,9 +436,31 @@ const ProductionFromRecipe = () => {
 
     const onSubmit = async (values: ProductionFormValues) => {
         try {
-            await produceFromRecipe(values.recipeId, values.quantity);
+            const recipe = recipes.find(r => r.id === values.recipeId);
+            if (!recipe) {
+                toast({ variant: 'destructive', title: 'Erro', description: 'Receita não encontrada.' });
+                return;
+            }
+            // We need to pass unit. Ideally we get it from product catalog, but addProduction handles catalog lookup if we don't pass unit? 
+            // addProduction signature: (prodData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>)
+            // It expects unit. 
+            // In the previous addProduction implementation, I set unit default to 'un' if not provided or found in catalog?
+            // "unit: catalogProduct?.unit || 'un'" in addProduction. So we can pass 'un' or let it handle it?
+            // Wait, addProduction takes "unit". If I don't pass it, it might be undefined.
+            // My updated addProduction: "const { productName, quantity, location, orderId, unit } = prodData;"
+            // "unit: unit || catalogProduct?.unit || 'un',"
+            // So if I pass undefined, it tries to find it. Good.
+
+            await addProduction({
+                productName: recipe.productName,
+                quantity: values.quantity,
+                // unit: recipe.productUnit? No recipe doesn't store unit usually, product does.
+            });
+
+            toast({ title: 'Sucesso', description: 'Produção registada.' });
+            form.reset();
         } catch (error: any) {
-            // Error is already toasted in context, but we could add more UI feedback here if needed
+            // Error is already toasted in context, but we ensure form reset or not?
         }
     };
 
