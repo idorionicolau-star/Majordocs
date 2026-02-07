@@ -215,7 +215,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
         <DialogHeader>
           <DialogTitle>Adicionar Novo Produto</DialogTitle>
           <DialogDescription>
-            Preencha os detalhes abaixo para adicionar um novo produto ao inventário.
+            Selecione um produto do catálogo ou digite um novo nome para criar.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[70vh] -mr-3 pr-3">

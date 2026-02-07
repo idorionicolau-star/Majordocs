@@ -1,10 +1,8 @@
 
-'use client';
-
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { Product } from '@/lib/types';
 import { Button } from "@/components/ui/button";
-import { Check, PlusCircle } from "lucide-react";
+import { Check, PlusCircle, ChevronsUpDown, Search } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -20,6 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn, normalizeString, calculateSimilarity } from '@/lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
 import {
@@ -30,7 +33,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import dynamic from 'next/dynamic';
-// Dynamically import QuickCreateProductDialog to avoid circular dependency initialization issues
+
 const QuickCreateProductDialog = dynamic(() => import('./quick-create-product-dialog').then(mod => mod.QuickCreateProductDialog), {
   loading: () => null,
   ssr: false
@@ -44,9 +47,11 @@ interface CatalogProductSelectorProps {
   categories: CatalogCategory[];
   selectedValue: string;
   onValueChange: (value: string, product?: CatalogProduct) => void;
+  placeholder?: string;
 }
 
-export function CatalogProductSelector({ products, categories, selectedValue, onValueChange }: CatalogProductSelectorProps) {
+export function CatalogProductSelector({ products, categories, selectedValue, onValueChange, placeholder = "Selecionar produto..." }: CatalogProductSelectorProps) {
+  const [open, setOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -62,108 +67,119 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
     return prods;
   }, [products, categoryFilter, searchQuery]);
 
-  const selectedProduct = products.find(p => p.name === selectedValue);
-
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [quickCreateName, setQuickCreateName] = useState('');
-
   const [isSimilarityWarningOpen, setIsSimilarityWarningOpen] = useState(false);
   const [similarCandidates, setSimilarCandidates] = useState<CatalogProduct[]>([]);
   const [potentialDuplicateName, setPotentialDuplicateName] = useState('');
 
-  // Import dynamically or at top? Top is better for React components.
-  // Added import at top via separate instruction if possible, or just assume I can add it here if I replace the whole file or use multi-replace to add import. 
-  // I'll assume I need to add import. I will do it in a separate edit or use multi_replace for safer editing.
-
-  // Actually, I'll use multi_replace to handle imports and the component body.
-
-
-  // Sync searchQuery with selectedValue when it changes externally (e.g. form reset)
-  useEffect(() => {
-    setSearchQuery(selectedValue || '');
-  }, [selectedValue]);
-
   const handleInputChange = (val: string) => {
     setSearchQuery(val);
-    // Check if the typed value matches a product exactly
-    const match = products.find(p => p.name.toLowerCase() === val.toLowerCase());
-    onValueChange(val, match);
   };
+
+  const handleSelect = useCallback((name: string, product?: CatalogProduct) => {
+    onValueChange(name, product);
+    setOpen(false);
+    setSearchQuery('');
+  }, [onValueChange]);
 
   return (
     <div className="flex flex-col gap-2">
-      <Select onValueChange={setCategoryFilter} defaultValue="all">
-        <SelectTrigger>
-          <SelectValue placeholder="Filtrar por Categoria" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas as Categorias</SelectItem>
-          {categories.sort((a, b) => a.name.localeCompare(b.name)).map(cat => (
-            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <div className="rounded-md border">
-        <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="Nome do produto..."
-            value={searchQuery}
-            onValueChange={handleInputChange}
-          />
-          <ScrollArea className="h-32">
-            <CommandList>
-              <CommandEmpty>
-                {searchQuery ? (
-                  <div className="p-2 text-sm text-muted-foreground">
-                    Nenhum produto encontrado. O nome será usado para um novo produto.
-                  </div>
-                ) : 'Comece a digitar...'}
-              </CommandEmpty>
-              <CommandGroup>
-                {searchQuery.length > 0 && !filteredProducts.some(p => normalizeString(p.name) === normalizeString(searchQuery)) && (
-                  <CommandItem
-                    key="create-new"
-                    value={`CREATE:${searchQuery}`}
-                    onSelect={() => {
-                      const candidates = products.filter(p => calculateSimilarity(p.name, searchQuery) >= 0.7);
-                      if (candidates.length > 0) {
-                        setSimilarCandidates(candidates);
-                        setPotentialDuplicateName(searchQuery);
-                        setIsSimilarityWarningOpen(true);
-                      } else {
-                        setQuickCreateName(searchQuery);
-                        setIsQuickCreateOpen(true);
-                      }
-                    }}
-                    className="cursor-pointer text-blue-600 font-medium"
-                  >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    <span>Adicionar "{searchQuery}" ao Catálogo</span>
-                  </CommandItem>
-                )}
-                {filteredProducts.sort((a, b) => a.name.localeCompare(b.name)).map((product) => (
-                  <CommandItem
-                    key={product.id}
-                    value={product.name}
-                    onSelect={() => {
-                      setSearchQuery(product.name);
-                      onValueChange(product.name, product);
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        selectedValue === product.name ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {product.name}
-                  </CommandItem>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between h-10 px-3 font-normal"
+          >
+            <div className="flex items-center gap-2 truncate">
+              <Search className="h-4 w-4 shrink-0 opacity-50" />
+              {selectedValue ? (
+                <span className="truncate">{selectedValue}</span>
+              ) : (
+                <span className="text-muted-foreground">{placeholder}</span>
+              )}
+            </div>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <div className="p-2 border-b">
+            <Select onValueChange={setCategoryFilter} value={categoryFilter}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Filtrar por Categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Categorias</SelectItem>
+                {categories.sort((a, b) => a.name.localeCompare(b.name)).map(cat => (
+                  <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                 ))}
-              </CommandGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder="Pesquisar produto..."
+              value={searchQuery}
+              onValueChange={handleInputChange}
+              className="h-9"
+            />
+            <CommandList>
+              <ScrollArea className="h-[200px]">
+                <CommandEmpty>
+                  {searchQuery ? (
+                    <div className="p-4 text-sm text-center text-muted-foreground">
+                      Nenhum produto encontrado.
+                    </div>
+                  ) : (
+                    <div className="p-4 text-sm text-center text-muted-foreground">
+                      Comece a digitar...
+                    </div>
+                  )}
+                </CommandEmpty>
+                <CommandGroup>
+                  {searchQuery.length > 0 && !filteredProducts.some(p => normalizeString(p.name) === normalizeString(searchQuery)) && (
+                    <CommandItem
+                      onSelect={() => {
+                        const candidates = products.filter(p => calculateSimilarity(p.name, searchQuery) >= 0.7);
+                        if (candidates.length > 0) {
+                          setSimilarCandidates(candidates);
+                          setPotentialDuplicateName(searchQuery);
+                          setIsSimilarityWarningOpen(true);
+                        } else {
+                          setQuickCreateName(searchQuery);
+                          setIsQuickCreateOpen(true);
+                        }
+                        setOpen(false);
+                      }}
+                      className="cursor-pointer text-primary font-medium"
+                    >
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      <span>Criar "{searchQuery}"</span>
+                    </CommandItem>
+                  )}
+                  {filteredProducts.sort((a, b) => a.name.localeCompare(b.name)).map((product) => (
+                    <CommandItem
+                      key={product.id}
+                      value={product.name}
+                      onSelect={() => handleSelect(product.name, product)}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedValue === product.name ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {product.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </ScrollArea>
             </CommandList>
-          </ScrollArea>
-        </Command>
-      </div>
+          </Command>
+        </PopoverContent>
+      </Popover>
 
       <Dialog open={isSimilarityWarningOpen} onOpenChange={setIsSimilarityWarningOpen}>
         <DialogContent>
@@ -178,10 +194,9 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
               <Button
                 key={candidate.id}
                 variant="outline"
-                className="justify-start"
+                className="justify-start focus-visible:ring-0"
                 onClick={() => {
-                  setSearchQuery(candidate.name);
-                  onValueChange(candidate.name, candidate);
+                  handleSelect(candidate.name, candidate);
                   setIsSimilarityWarningOpen(false);
                   setSimilarCandidates([]);
                 }}
@@ -214,6 +229,7 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
         onSuccess={(newName) => {
           onValueChange(newName, undefined);
           setSearchQuery('');
+          setOpen(false);
         }}
       />
     </div>
