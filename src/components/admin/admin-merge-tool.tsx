@@ -126,7 +126,7 @@ export function AdminMergeTool() {
     return (
         <Card className="w-full">
             <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <CardTitle className="text-xl flex items-center gap-2">
                             <GitMerge className="h-5 w-5 text-purple-500" />
@@ -136,7 +136,7 @@ export function AdminMergeTool() {
                             Ferramenta de Administrador para corrigir duplicatas e unificar registos.
                         </CardDescription>
                     </div>
-                    <Button onClick={handleScan} disabled={isScanning}>
+                    <Button onClick={handleScan} disabled={isScanning} className="w-full md:w-auto">
                         {isScanning ? <Wand2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
                         {isScanning ? 'A Analisar...' : 'Procurar Duplicatas'}
                     </Button>

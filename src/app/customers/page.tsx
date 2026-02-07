@@ -28,6 +28,7 @@ import { Search, Plus, User, Phone, Mail, Calendar, Edit, Trash2 } from 'lucide-
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
 
 export default function CustomersPage() {
     const { canView, companyData, sales } = useInventory();
@@ -41,6 +42,12 @@ export default function CustomersPage() {
 
     // Form State
     const [formData, setFormData] = useState({ name: '', phone: '', email: '', notes: '' });
+
+    const namePlaceholder = useDynamicPlaceholder('person');
+    const phonePlaceholder = useDynamicPlaceholder('phone');
+    const emailPlaceholder = useDynamicPlaceholder('email');
+    const notesPlaceholder = useDynamicPlaceholder('generic');
+    const searchPlaceholder = useDynamicPlaceholder('person');
 
     if (!canView('customers')) {
         return <div className="p-8 text-center">Você não tem permissão para aceder a este módulo.</div>;
@@ -120,21 +127,21 @@ export default function CustomersPage() {
                         <form onSubmit={handleAddSubmit} className="space-y-4 py-4">
                             <div className="space-y-2">
                                 <Label htmlFor="name">Nome Completo</Label>
-                                <Input id="name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required placeholder="Ex: João Silva" />
+                                <Input id="name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required placeholder={namePlaceholder} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="phone">Telefone</Label>
-                                    <Input id="phone" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="+258..." />
+                                    <Input id="phone" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder={phonePlaceholder} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="email">E-mail</Label>
-                                    <Input id="email" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="email@exemplo.com" />
+                                    <Input id="email" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder={emailPlaceholder} />
                                 </div>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="notes">Notas</Label>
-                                <Input id="notes" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} placeholder="Preferências, observações..." />
+                                <Input id="notes" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} placeholder={notesPlaceholder} />
                             </div>
                             <DialogFooter>
                                 <Button type="submit">Guardar Cliente</Button>
@@ -159,7 +166,7 @@ export default function CustomersPage() {
                     <div className="relative w-full">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <Input
-                            placeholder="Pesquisar por nome, telefone ou email..."
+                            placeholder={searchPlaceholder}
                             className="pl-10 h-12 text-lg bg-white dark:bg-slate-900 shadow-sm border-slate-200 dark:border-slate-800 focus-visible:ring-primary"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}

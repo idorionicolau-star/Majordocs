@@ -1073,7 +1073,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       ...prodData,
       date: new Date().toISOString().split('T')[0],
       registeredBy: user.username || 'Desconhecido',
-      status: 'Concluído',
+      status: prodData.status || 'Concluído',
+      orderId: prodData.orderId,
     };
 
     const productionsRef = collection(firestore, `companies/${companyId}/productions`);
@@ -1118,7 +1119,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         unit: orderToUpdate.unit,
         location: orderToUpdate.location,
         registeredBy: user.username || 'Desconhecido',
-        status: 'Concluído'
+        status: 'Concluído',
+        orderId: orderId // Link production to order
       };
       batch.set(doc(productionsRef), newProduction);
 
@@ -1321,6 +1323,59 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     deleteDocumentNonBlocking(doc(ordersCollectionRef, orderId));
     toast({ title: 'Encomenda Apagada' });
   }, [ordersCollectionRef, toast]);
+
+  const finalizeOrder = useCallback(async (orderId: string, finalPayment: number) => {
+    if (!firestore || !companyId || !user) return;
+
+    try {
+      // 1. Get Sale ID (outside transaction query)
+      const salesRef = collection(firestore, `companies/${companyId}/sales`);
+      const q = query(salesRef, where("orderId", "==", orderId));
+      const salesSnap = await getDocs(q);
+      const saleDoc = salesSnap.docs[0];
+
+      await runTransaction(firestore, async (transaction) => {
+        // 2. Get Order
+        const orderRef = doc(firestore, `companies/${companyId}/orders`, orderId);
+        const orderSnap = await transaction.get(orderRef);
+        if (!orderSnap.exists()) throw new Error("Encomenda não encontrada.");
+        const orderData = orderSnap.data() as Order;
+
+        // 3. Update Sale
+        if (saleDoc) {
+          const saleRef = doc(firestore, `companies/${companyId}/sales`, saleDoc.id);
+          const currentSale = saleDoc.data() as Sale;
+          const newAmountPaid = (currentSale.amountPaid || 0) + finalPayment;
+
+          transaction.update(saleRef, {
+            amountPaid: newAmountPaid,
+            status: 'Levantado',
+            paymentStatus: newAmountPaid >= currentSale.totalValue ? 'Pago' : 'Parcial'
+          });
+        }
+
+        // 4. Update Order Status
+        transaction.update(orderRef, { status: 'Entregue' });
+
+        // 5. Deduct Stock from Inventory
+        if (orderData.productId) {
+          const productRef = doc(firestore, `companies/${companyId}/products`, orderData.productId);
+          const productSnap = await transaction.get(productRef);
+          if (productSnap.exists()) {
+            const productData = productSnap.data() as Product;
+            const newStock = (productData.stock || 0) - orderData.quantity;
+            transaction.update(productRef, { stock: newStock });
+          }
+        }
+      });
+
+      toast({ title: 'Encomenda Finalizada', description: 'Stock atualizado e venda registada.' });
+
+    } catch (e: any) {
+      console.error("Error finalizing order:", e);
+      toast({ variant: 'destructive', title: 'Erro ao Finalizar', description: e.message });
+    }
+  }, [firestore, companyId, user, toast]);
 
   const addRawMaterial = useCallback(async (material: Omit<RawMaterial, 'id'>) => {
     if (!rawMaterialsCollectionRef) return;
@@ -1538,7 +1593,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     chatHistory, setChatHistory,
     addProduct, updateProduct, deleteProduct, clearProductsCollection,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
-    addProduction, updateProduction, deleteProduction, deleteOrder, deleteSale,
+    addProduction, updateProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
     mergeProducts,
     /* // Products Merge Tool
     const mergeProducts = useCallback(async (targetProductId: string, sourceProductIds: string[]) => {
@@ -1615,7 +1670,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     chatHistory, setChatHistory,
     addProduct, updateProduct, deleteProduct, clearProductsCollection,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
-    addProduction, updateProduction, deleteProduction, deleteOrder, deleteSale,
+    addProduction, updateProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
     clearSales, clearProductions, clearOrders, clearStockMovements,
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
     recalculateReservedStock,

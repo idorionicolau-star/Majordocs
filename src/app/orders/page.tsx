@@ -45,7 +45,7 @@ export default function OrdersPage() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { orders, companyId, loading: inventoryLoading, user, canEdit, deleteOrder, clearOrders, addNotification, addProductionLog, companyData } = inventoryContext || { orders: [], companyId: null, loading: true, user: null, canEdit: () => false, deleteOrder: () => { }, clearOrders: async () => { }, addNotification: () => { }, addProductionLog: () => { }, companyData: null };
+  const { orders, sales, companyId, loading: inventoryLoading, user, canEdit, deleteOrder, clearOrders, addNotification, addProductionLog, companyData } = inventoryContext || { orders: [], sales: [], companyId: null, loading: true, user: null, canEdit: () => false, deleteOrder: () => { }, clearOrders: async () => { }, addNotification: () => { }, addProductionLog: () => { }, companyData: null };
 
   const canEditOrders = canEdit('orders');
   const isAdmin = user?.role === 'Admin';
@@ -387,6 +387,7 @@ export default function OrdersPage() {
               onAddProductionLog={addProductionLog}
               onDeleteOrder={deleteOrder}
               canEdit={canEditOrders}
+              associatedSale={sales.find(s => s.orderId === order.id)}
             />
           ))}
           {filteredOrders.length === 0 && (

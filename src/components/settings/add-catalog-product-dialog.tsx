@@ -36,6 +36,7 @@ import * as z from "zod";
 import type { Product } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { ScrollArea } from '../ui/scroll-area';
+import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -50,8 +51,8 @@ type FormValues = z.infer<typeof formSchema>;
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
 interface AddCatalogProductDialogProps {
-    categories: string[];
-    onAdd: (product: Omit<CatalogProduct, 'id'>) => void;
+  categories: string[];
+  onAdd: (product: Omit<CatalogProduct, 'id'>) => void;
 }
 
 function AddCatalogProductDialogContent({ categories, onAdd, setOpen }: AddCatalogProductDialogProps & { setOpen: (open: boolean) => void }) {
@@ -72,134 +73,139 @@ function AddCatalogProductDialogContent({ categories, onAdd, setOpen }: AddCatal
     setOpen(false);
   }
 
+  const namePlaceholder = useDynamicPlaceholder('product');
+  const pricePlaceholder = useDynamicPlaceholder('money');
+
+
+
   return (
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Adicionar Produto ao Catálogo</DialogTitle>
-          <DialogDescription>
-            Crie um novo produto base que poderá ser usado no inventário.
-          </DialogDescription>
-        </DialogHeader>
-        <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
+    <DialogContent className="sm:max-w-md">
+      <DialogHeader>
+        <DialogTitle>Adicionar Produto ao Catálogo</DialogTitle>
+        <DialogDescription>
+          Crie um novo produto base que poderá ser usado no inventário.
+        </DialogDescription>
+      </DialogHeader>
+      <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
             <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Categoria</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma categoria" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {categories.map(category => (
-                            <SelectItem key={category} value={category}>{category}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoria</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma categoria" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {categories.map(category => (
+                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
             <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Nome do Produto</FormLabel>
-                    <FormControl>
-                        <Input placeholder="Ex: Grelha 30x30 Xadrez" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome do Produto</FormLabel>
+                  <FormControl>
+                    <Input placeholder={namePlaceholder} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
             <div className="grid grid-cols-2 gap-4">
-                <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Preço Padrão</FormLabel>
-                        <FormControl>
-                            <Input type="number" step="0.01" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="unit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Unidade</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                              <SelectItem value="un">Unidade (un)</SelectItem>
-                              <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
-                              <SelectItem value="m">Metro Linear (m)</SelectItem>
-                              <SelectItem value="cj">Conjunto (cj)</SelectItem>
-                              <SelectItem value="outro">Outro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preço Padrão</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder={pricePlaceholder} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="unit"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Unidade</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="un">Unidade (un)</SelectItem>
+                        <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
+                        <SelectItem value="m">Metro Linear (m)</SelectItem>
+                        <SelectItem value="cj">Conjunto (cj)</SelectItem>
+                        <SelectItem value="outro">Outro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
-               <FormField
+              <FormField
                 control={form.control}
                 name="lowStockThreshold"
                 render={({ field }) => (
-                    <FormItem>
+                  <FormItem>
                     <FormLabel>Alerta Baixo</FormLabel>
                     <FormControl>
-                        <Input type="number" {...field} />
+                      <Input type="number" {...field} />
                     </FormControl>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
-                <FormField
+              />
+              <FormField
                 control={form.control}
                 name="criticalStockThreshold"
                 render={({ field }) => (
-                    <FormItem>
+                  <FormItem>
                     <FormLabel>Alerta Crítico</FormLabel>
                     <FormControl>
-                        <Input type="number" {...field} />
+                      <Input type="number" {...field} />
                     </FormControl>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
+              />
             </div>
             <DialogFooter className="pt-4">
-                <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button type="submit">Adicionar ao Catálogo</Button>
+              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit">Adicionar ao Catálogo</Button>
             </DialogFooter>
           </form>
         </Form>
-        </ScrollArea>
-      </DialogContent>
+      </ScrollArea>
+    </DialogContent>
   );
 }
 
 
 export function AddCatalogProductDialog(props: AddCatalogProductDialogProps) {
   const [open, setOpen] = useState(false);
-  
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <TooltipProvider>
@@ -207,8 +213,8 @@ export function AddCatalogProductDialog(props: AddCatalogProductDialogProps) {
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
               <Button size="icon" className="rounded-full h-9 w-9">
-                  <Plus className="h-5 w-5" />
-                  <span className="sr-only">Adicionar Produto ao Catálogo</span>
+                <Plus className="h-5 w-5" />
+                <span className="sr-only">Adicionar Produto ao Catálogo</span>
               </Button>
             </DialogTrigger>
           </TooltipTrigger>

@@ -41,7 +41,7 @@ interface AddProductionLogDialogProps {
 
 export function AddProductionLogDialog({ order, onAddLog }: AddProductionLogDialogProps) {
   const [open, setOpen] = useState(false);
-  const inventoryContext = useContext(InventoryContext);
+
 
   const form = useForm<AddLogFormValues>({
     resolver: zodResolver(formSchema),
@@ -49,14 +49,16 @@ export function AddProductionLogDialog({ order, onAddLog }: AddProductionLogDial
       notes: "",
     },
   });
-  
+
   const remainingQuantity = order.quantity - order.quantityProduced;
 
   function onSubmit(values: AddLogFormValues) {
     if (values.quantity > remainingQuantity) {
-        form.setError("quantity", { type: "manual", message: `A quantidade excede o restante. Faltam ${remainingQuantity}.` });
-        return;
+      form.setError("quantity", { type: "manual", message: `A quantidade excede o restante. Faltam ${remainingQuantity}.` });
+      return;
     }
+
+
 
     onAddLog(order.id, values);
     form.reset();
@@ -67,14 +69,14 @@ export function AddProductionLogDialog({ order, onAddLog }: AddProductionLogDial
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" className="flex-1" size="sm">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Registar
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Registar
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Registar Progresso de Produção</DialogTitle>
-          <p className='text-sm text-muted-foreground'>Para a encomenda #{order.id.slice(-6).toUpperCase()} de {order.productName}</p>
+          <DialogTitle>Registar Produção da Encomenda</DialogTitle>
+          <p className='text-sm text-muted-foreground'>Encomenda #{order.id.slice(-6).toUpperCase()} • {order.productName}</p>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">

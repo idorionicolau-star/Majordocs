@@ -7,14 +7,14 @@ import { Calendar, User, Hammer, Package, CheckCircle, MapPin, Trash2, Edit } fr
 import { Button } from "../ui/button";
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { EditProductionDialog } from "./edit-production-dialog";
@@ -34,7 +34,7 @@ export function ProductionCard({ production, onTransfer, onDelete, onUpdate, vie
     const isCondensed = viewMode === 'condensed';
     const isTransferred = production.status === 'Transferido';
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    
+
     const handleDelete = () => {
         onDelete(production.id);
         setShowDeleteConfirm(false);
@@ -42,95 +42,102 @@ export function ProductionCard({ production, onTransfer, onDelete, onUpdate, vie
 
     return (
         <>
-         <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Apagar Registo de Produção?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Tem a certeza que quer apagar permanentemente este registo de produção? Esta ação não pode ser desfeita.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        Apagar
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Apagar Registo de Produção?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Tem a certeza que quer apagar permanentemente este registo de produção? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Apagar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
-        <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 relative shadow-sm">
-            <CardHeader className="p-1 sm:p-2">
-                 <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-2">
-                        <Hammer className="h-5 w-5 text-primary mt-0.5"/>
-                        <div>
-                            <CardTitle className="text-xs font-bold leading-tight">{production.productName}</CardTitle>
-                            <CardDescription className={cn("text-[10px]", isCondensed && "hidden")}>ID: {production.id.slice(-6)}</CardDescription>
+            <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 relative shadow-sm">
+                <CardHeader className="p-1 sm:p-2">
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-2">
+                            <Hammer className="h-5 w-5 text-primary mt-0.5" />
+                            <div>
+                                <CardTitle className="text-xs font-bold leading-tight flex items-center gap-2">
+                                    {production.productName}
+                                    {production.orderId && (
+                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                                            Enc.
+                                        </span>
+                                    )}
+                                </CardTitle>
+                                <CardDescription className={cn("text-[10px]", isCondensed && "hidden")}>ID: {production.id.slice(-6)}</CardDescription>
+                            </div>
                         </div>
+                        {canEdit && !isTransferred && (
+                            <div className="flex items-center">
+                                <EditProductionDialog production={production} onUpdate={onUpdate} />
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={() => setShowDeleteConfirm(true)}>
+                                    <Trash2 className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        )}
                     </div>
-                    {canEdit && !isTransferred && (
-                         <div className="flex items-center">
-                            <EditProductionDialog production={production} onUpdate={onUpdate} />
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={() => setShowDeleteConfirm(true)}>
-                                <Trash2 className="h-3 w-3" />
-                            </Button>
-                        </div>
-                    )}
-                 </div>
-            </CardHeader>
-            <CardContent className="flex-grow space-y-2 p-1 sm:p-2">
-                 <div className={cn(
-                     "flex items-baseline justify-center text-center py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50",
-                     isCondensed ? "flex-col" : ""
+                </CardHeader>
+                <CardContent className="flex-grow space-y-2 p-1 sm:p-2">
+                    <div className={cn(
+                        "flex items-baseline justify-center text-center py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50",
+                        isCondensed ? "flex-col" : ""
                     )}>
-                    <span className={cn("font-black text-primary", isCondensed ? "text-xl" : "text-3xl")}>{production.quantity}</span>
-                    <span className="text-[10px] sm:text-xs font-bold text-muted-foreground">/{production.unit || 'un'}</span>
-                </div>
-                 
-                 <div className={cn("text-xs text-muted-foreground space-y-1", isCondensed && "text-center")}>
-                    <div className="flex items-center gap-1.5 justify-center">
-                        <Calendar size={12} />
-                        <span>{new Date(production.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
+                        <span className={cn("font-black text-primary", isCondensed ? "text-xl" : "text-3xl")}>{production.quantity}</span>
+                        <span className="text-[10px] sm:text-xs font-bold text-muted-foreground">/{production.unit || 'un'}</span>
                     </div>
-                    {locationName && (
-                      <div className="flex items-center gap-1.5 justify-center">
-                          <MapPin size={12} />
-                          <span>{locationName}</span>
-                      </div>
+
+                    <div className={cn("text-xs text-muted-foreground space-y-1", isCondensed && "text-center")}>
+                        <div className="flex items-center gap-1.5 justify-center">
+                            <Calendar size={12} />
+                            <span>{new Date(production.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
+                        </div>
+                        {locationName && (
+                            <div className="flex items-center gap-1.5 justify-center">
+                                <MapPin size={12} />
+                                <span>{locationName}</span>
+                            </div>
+                        )}
+                        <div className="flex items-center gap-1.5 justify-center">
+                            <User size={12} />
+                            <span>{production.registeredBy}</span>
+                        </div>
+                    </div>
+                </CardContent>
+                {canEdit && <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
+                    {!isTransferred && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button className="flex-1" variant="outline" size="sm" onClick={() => onTransfer(production)}>
+                                        <Package className="h-4 w-4 mr-2" />
+                                        Transferir
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Transferir para Inventário</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                     )}
-                    <div className="flex items-center gap-1.5 justify-center">
-                        <User size={12} />
-                        <span>{production.registeredBy}</span>
+                </CardFooter>}
+                {isTransferred && (
+                    <div className="absolute bottom-2 right-2 z-10">
+                        <div className="flex items-center gap-1.5 text-[hsl(var(--chart-2))] bg-emerald-50 dark:bg-emerald-950/70 px-2 py-1 rounded-md border border-emerald-200 dark:border-emerald-800">
+                            <CheckCircle className="h-3 w-3" />
+                            <span className="font-bold text-[10px]">Transferido</span>
+                        </div>
                     </div>
-                 </div>
-            </CardContent>
-            {canEdit && <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">
-               {!isTransferred && (
-                 <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button className="flex-1" variant="outline" size="sm" onClick={() => onTransfer(production)}>
-                                <Package className="h-4 w-4 mr-2" />
-                                Transferir
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Transferir para Inventário</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-               )}
-            </CardFooter>}
-            {isTransferred && (
-                <div className="absolute bottom-2 right-2 z-10">
-                    <div className="flex items-center gap-1.5 text-[hsl(var(--chart-2))] bg-emerald-50 dark:bg-emerald-950/70 px-2 py-1 rounded-md border border-emerald-200 dark:border-emerald-800">
-                        <CheckCircle className="h-3 w-3" />
-                        <span className="font-bold text-[10px]">Transferido</span>
-                    </div>
-                </div>
-            )}
-        </Card>
+                )}
+            </Card>
         </>
     );
 }

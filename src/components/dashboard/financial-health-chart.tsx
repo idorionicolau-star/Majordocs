@@ -107,7 +107,7 @@ export function FinancialHealthChart() {
                     </SelectContent>
                 </Select>
             </CardHeader>
-            <CardContent className="pl-0 pr-6 pt-4">
+            <CardContent className="pl-2 pr-6 pt-4">
                 <ChartContainer config={chartConfig} className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -122,11 +122,11 @@ export function FinancialHealthChart() {
                                 className="text-muted-foreground"
                             />
                             <YAxis
-                                tickFormatter={(value) => formatCurrency(value as number).replace(",00", "").replace(/\s?MZN/, "")}
+                                tickFormatter={(value) => formatCurrency(value as number, { compact: true })}
                                 tickLine={false}
                                 axisLine={false}
                                 tickMargin={8}
-                                width={70}
+                                width={80}
                                 fontSize={12}
                                 stroke="currentColor"
                                 className="text-muted-foreground"

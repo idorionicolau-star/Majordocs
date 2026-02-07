@@ -31,12 +31,21 @@ import {
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { formatCurrency, normalizeString } from '@/lib/utils';
-import { Search, Plus, TrendingUp, TrendingDown, DollarSign, Calendar, Trash2 } from 'lucide-react';
+import { Search, Plus, TrendingUp, TrendingDown, DollarSign, Calendar, Trash2, Printer, Download } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import dynamic from 'next/dynamic';
+import { printFinancialReport } from '@/lib/report-utils';
+
+// Dynamically import PDFDownloadLink to avoid SSR issues with @react-pdf/renderer
+const PDFDownloadLink = dynamic(
+    () => import('@react-pdf/renderer').then((mod) => mod.PDFDownloadLink),
+    { ssr: false, loading: () => <Button variant="outline" disabled><Download className="w-4 h-4 mr-2" /> A carregar...</Button> }
+);
+import { FinancialReportPDF } from '@/components/finance/financial-report-pdf';
 
 export default function FinancePage() {
-    const { canView, sales } = useInventory();
+    const { canView, sales, companyData } = useInventory();
     const { expenses, addExpense, deleteExpense, loading } = useFinance();
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -90,51 +99,93 @@ export default function FinancePage() {
                         Controle de receitas, despesas e margens de lucro.
                     </p>
                 </div>
-                <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 transition-all hover:scale-105 active:scale-95">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Registar Despesa
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Registar Nova Despesa</DialogTitle>
-                        </DialogHeader>
-                        <form onSubmit={handleAddSubmit} className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <Label>Descrição</Label>
-                                <Input value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} required placeholder="Ex: Conta de Luz" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
+                <div className="flex gap-2">
+                    {/* Print Button */}
+                    <Button
+                        variant="outline"
+                        className="text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        onClick={() => printFinancialReport({
+                            companyName: companyData?.name || 'Minha Empresa',
+                            period: format(new Date(), "MMMM yyyy", { locale: ptBR }),
+                            totalIncome,
+                            totalExpenses,
+                            netProfit,
+                            sales: currentMonthSales,
+                            expenses: currentMonthExpenses
+                        })}
+                    >
+                        <Printer className="w-4 h-4 mr-2" />
+                        Imprimir
+                    </Button>
+
+                    <PDFDownloadLink
+                        document={
+                            <FinancialReportPDF
+                                companyName={companyData?.name || 'Minha Empresa'}
+                                period={format(new Date(), "MMMM yyyy", { locale: ptBR })}
+                                totalIncome={totalIncome}
+                                totalExpenses={totalExpenses}
+                                netProfit={netProfit}
+                                sales={currentMonthSales}
+                                expenses={currentMonthExpenses}
+                            />
+                        }
+                        fileName={`Relatorio_Financeiro_${format(new Date(), "MMM_yyyy")}.pdf`}
+                    >
+                        {({ loading: pdfLoading }: any) => (
+                            <Button className="bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600" disabled={pdfLoading}>
+                                <Download className="w-4 h-4 mr-2" />
+                                {pdfLoading ? 'A preparar...' : 'Baixar PDF'}
+                            </Button>
+                        )}
+                    </PDFDownloadLink>
+
+                    <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 transition-all hover:scale-105 active:scale-95">
+                                <Plus className="w-4 h-4 mr-2" />
+                                Registar Despesa
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Registar Nova Despesa</DialogTitle>
+                            </DialogHeader>
+                            <form onSubmit={handleAddSubmit} className="space-y-4 py-4">
                                 <div className="space-y-2">
-                                    <Label>Valor (MZN)</Label>
-                                    <Input type="number" step="0.01" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} required placeholder="0.00" />
+                                    <Label>Descrição</Label>
+                                    <Input value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} required placeholder="Ex: Conta de Luz" />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Categoria</Label>
-                                    <Select value={formData.category} onValueChange={v => setFormData({ ...formData, category: v })}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecione" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Salários">Salários</SelectItem>
-                                            <SelectItem value="Aluguel">Aluguel</SelectItem>
-                                            <SelectItem value="Utilidades">Utilidades (Água, Luz)</SelectItem>
-                                            <SelectItem value="Matéria-Prima">Matéria-Prima</SelectItem>
-                                            <SelectItem value="Marketing">Marketing</SelectItem>
-                                            <SelectItem value="Impostos">Impostos</SelectItem>
-                                            <SelectItem value="Outros">Outros</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Valor (MZN)</Label>
+                                        <Input type="number" step="0.01" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} required placeholder="0.00" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Categoria</Label>
+                                        <Select value={formData.category} onValueChange={v => setFormData({ ...formData, category: v })}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecione" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Salários">Salários</SelectItem>
+                                                <SelectItem value="Aluguel">Aluguel</SelectItem>
+                                                <SelectItem value="Utilidades">Utilidades (Água, Luz)</SelectItem>
+                                                <SelectItem value="Matéria-Prima">Matéria-Prima</SelectItem>
+                                                <SelectItem value="Marketing">Marketing</SelectItem>
+                                                <SelectItem value="Impostos">Impostos</SelectItem>
+                                                <SelectItem value="Outros">Outros</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
-                            </div>
-                            <DialogFooter>
-                                <Button type="submit" className="bg-red-500 hover:bg-red-600">Confirmar Despesa</Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
+                                <DialogFooter>
+                                    <Button type="submit" className="bg-red-500 hover:bg-red-600">Confirmar Despesa</Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
 
             {/* KPIs */}

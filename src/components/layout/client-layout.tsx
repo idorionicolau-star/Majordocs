@@ -97,7 +97,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         </Suspense>
         <div className="flex min-h-screen w-full bg-transparent">
           <Sidebar />
-          <div className="flex flex-col flex-1 h-screen overflow-hidden transition-[margin,width] duration-300 ease-in-out md:ml-24">
+          <div className="flex flex-col flex-1 h-screen overflow-hidden transition-[margin,width] duration-300 ease-in-out md:ml-64">
             <Header onSearchClick={() => setOpenCommandMenu(true)} />
             <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto main-content">
               <Suspense fallback={

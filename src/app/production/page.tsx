@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { List, LayoutGrid, ChevronDown, Lock, MapPin, Trash2, PlusCircle, Plus, Printer, Download } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { ToastAction } from "@/components/ui/toast";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { ProductionCard } from "@/components/production/production-card";
 import { cn } from "@/lib/utils";
@@ -37,6 +39,7 @@ import { columns } from "@/components/production/columns";
 export default function ProductionPage() {
   const inventoryContext = useContext(InventoryContext);
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
 
@@ -115,6 +118,11 @@ export default function ProductionPage() {
       toast({
         title: "Transferência Concluída",
         description: `${productionToTransfer.quantity} unidades de ${productionToTransfer.productName} foram adicionadas ao inventário.`,
+        action: (
+          <ToastAction altText="Ver no Inventário" onClick={() => router.push(`/inventory?search=${encodeURIComponent(productionToTransfer.productName)}`)}>
+            Ver no Inventário
+          </ToastAction>
+        ),
       });
 
       setProductionToTransfer(null);

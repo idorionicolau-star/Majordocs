@@ -18,8 +18,8 @@ export function EmptyStateWelcome() {
                 Bem-vindo ao MajorStockX! 🚀
             </h2>
 
-            <p className="text-muted-foreground max-w-md mb-8 leading-relaxed">
-                O seu quartel-general ainda está vazio. Para começar a gerir o seu império de materiais, precisamos de registar os primeiros produtos.
+            <p className="text-muted-foreground max-w-lg mb-8 leading-relaxed text-lg">
+                O registo de materiais é imperativo para ativar a inteligência do sistema e garantir a máxima eficiência operacional.
             </p>
 
             <div className="relative group">

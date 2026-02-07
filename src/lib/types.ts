@@ -74,16 +74,7 @@ export type Product = {
   deletedAt?: string;
   deletedBy?: string;
 };
-category: string;
-stock: number;
-reservedStock: number;
-price: number;
-lowStockThreshold: number;
-criticalStockThreshold: number;
-lastUpdated: string;
-location ?: string;
-unit ?: 'un' | 'm²' | 'm' | 'cj' | 'outro';
-};
+
 
 export type RawMaterial = {
   id: string;
@@ -161,6 +152,7 @@ export type Production = {
   registeredBy: string;
   location?: string;
   status: 'Concluído' | 'Transferido';
+  orderId?: string;
 };
 
 export type ProductionLog = {
@@ -182,7 +174,7 @@ export type Order = {
   clientName?: string;
   deliveryDate?: string;
   location?: string;
-  status: 'Pendente' | 'Em produção' | 'Concluída';
+  status: 'Pendente' | 'Em produção' | 'Concluída' | 'Entregue';
   productionStartDate?: string | null;
   quantityProduced: number;
   productionLogs: ProductionLog[];
@@ -324,6 +316,7 @@ export interface InventoryContextType {
   updateProduction: (productionId: string, data: Partial<Production>) => void;
   deleteProduction: (productionId: string) => void;
   deleteOrder: (orderId: string) => void;
+  finalizeOrder: (orderId: string, finalPayment: number) => Promise<void>;
   clearSales: () => Promise<void>;
   clearProductions: () => Promise<void>;
   clearOrders: () => Promise<void>;
