@@ -428,6 +428,7 @@ export default function ProductionPage() {
           ) : (
             <VirtuosoGrid
               useWindowScroll
+              increaseViewportBy={500}
               data={filteredProductions}
               totalCount={filteredProductions.length}
               components={{
@@ -459,6 +460,7 @@ export default function ProductionPage() {
           {filteredProductions.length > 0 ? (
             <Virtuoso
               useWindowScroll
+              increaseViewportBy={500}
               data={filteredProductions}
               itemContent={(index, production) => (
                 <div className="pb-3">

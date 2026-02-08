@@ -86,6 +86,7 @@ export default function InventoryPage() {
     updateProduct,
     deleteProduct,
     transferStock,
+    clearProductsCollection,
     loading: inventoryLoading,
     canEdit,
     canView,
@@ -524,7 +525,7 @@ export default function InventoryPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteProduct} variant="destructive">Apagar</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDeleteProduct} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Apagar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -539,7 +540,7 @@ export default function InventoryPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearInventory} variant="destructive">
+            <AlertDialogAction onClick={handleClearInventory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Sim, apagar tudo
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -783,6 +784,7 @@ export default function InventoryPage() {
           filteredProducts.length > 0 ? (
             <VirtuosoGrid
               useWindowScroll
+              increaseViewportBy={500}
               data={filteredProducts}
               totalCount={filteredProducts.length}
               components={{
@@ -808,6 +810,8 @@ export default function InventoryPage() {
                   onAttemptDelete={setProductToDelete}
                   viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
                   canEdit={canEditInventory}
+                  locations={locations}
+                  isMultiLocation={isMultiLocation}
                   locationName={locations.find(l => l.id === product.location)?.name}
                 />
               )}

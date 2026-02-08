@@ -21,6 +21,7 @@ interface ProductCardProps {
     canEdit: boolean;
     locations: Location[];
     isMultiLocation: boolean;
+    locationName?: string;
 }
 
 export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMode = 'normal', canEdit, locations, isMultiLocation }: ProductCardProps) {

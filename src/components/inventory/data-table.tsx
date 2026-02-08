@@ -89,6 +89,7 @@ export function InventoryDataTable<TData extends Product, TValue>({
                   <td colSpan={columns.length} className="p-0 border-0">
                     <Virtuoso
                       useWindowScroll
+                      increaseViewportBy={500}
                       data={table.getRowModel().rows}
                       totalCount={table.getRowModel().rows.length}
                       itemContent={(index, row) => (

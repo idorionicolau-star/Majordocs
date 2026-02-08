@@ -27,6 +27,7 @@ export function VirtualSalesGrid({ // Keeping name to avoid breaking import imme
     return (
         <VirtuosoGrid
             useWindowScroll
+            increaseViewportBy={500}
             data={sales}
             totalCount={sales.length}
             components={{

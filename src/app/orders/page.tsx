@@ -541,6 +541,7 @@ export default function OrdersPage() {
           {filteredOrders.length > 0 ? (
             <VirtuosoGrid
               useWindowScroll
+              increaseViewportBy={500}
               data={filteredOrders}
               totalCount={filteredOrders.length}
               components={{
