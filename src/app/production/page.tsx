@@ -34,7 +34,8 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
 import { isSameDay, format } from "date-fns";
 import { Card } from "@/components/ui/card";
-import { columns } from "@/components/production/columns";
+import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
+import { forwardRef } from 'react';
 
 export default function ProductionPage() {
   const inventoryContext = useContext(InventoryContext);
@@ -421,17 +422,24 @@ export default function ProductionPage() {
           </div>
         </Card>
 
-        <div className="hidden md:block">
+        <div className="hidden md:block h-[calc(100vh-250px)]">
           {view === 'list' ? (
             <ProductionDataTable columns={columns({})} data={filteredProductions} />
           ) : (
-            <div className={cn(
-              "grid gap-2 sm:gap-4",
-              gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
-              gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
-              gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
-            )}>
-              {filteredProductions.map(production => (
+            <VirtuosoGrid
+              style={{ height: '100%' }}
+              data={filteredProductions}
+              totalCount={filteredProductions.length}
+              components={{
+                List: forwardRef((props, ref) => <div {...props} ref={ref} className={cn(
+                  "grid gap-2 sm:gap-4 pb-20",
+                  gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
+                  gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
+                  gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
+                )} />),
+                Item: forwardRef((props, ref) => <div {...props} ref={ref} className="h-full" />)
+              }}
+              itemContent={(index, production) => (
                 <ProductionCard
                   key={production.id}
                   production={production}
@@ -442,25 +450,31 @@ export default function ProductionPage() {
                   canEdit={canEditProduction}
                   locationName={locations.find(l => l.id === production.location)?.name}
                 />
-              ))}
-            </div>
+              )}
+            />
           )}
         </div>
 
-        <div className="md:hidden space-y-3">
+        <div className="md:hidden h-[calc(100vh-200px)]">
           {filteredProductions.length > 0 ? (
-            filteredProductions.map(production => (
-              <ProductionCard
-                key={production.id}
-                production={production}
-                onTransfer={() => setProductionToTransfer(production)}
-                onDelete={handleDeleteCallback}
-                onUpdate={updateProduction}
-                viewMode='normal'
-                canEdit={canEditProduction}
-                locationName={locations.find(l => l.id === production.location)?.name}
-              />
-            ))
+            <Virtuoso
+              style={{ height: '100%' }}
+              data={filteredProductions}
+              itemContent={(index, production) => (
+                <div className="pb-3">
+                  <ProductionCard
+                    key={production.id}
+                    production={production}
+                    onTransfer={() => setProductionToTransfer(production)}
+                    onDelete={handleDeleteCallback}
+                    onUpdate={updateProduction}
+                    viewMode='normal'
+                    canEdit={canEditProduction}
+                    locationName={locations.find(l => l.id === production.location)?.name}
+                  />
+                </div>
+              )}
+            />
           ) : (
             <Card className="text-center py-12 text-muted-foreground">
               Nenhum registo de produção encontrado.
