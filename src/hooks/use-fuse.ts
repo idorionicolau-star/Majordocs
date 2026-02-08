@@ -46,5 +46,4 @@ export function useFuse<T>(
     return results;
 }
 
-return results;
-}
+
