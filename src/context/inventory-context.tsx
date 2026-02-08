@@ -51,7 +51,7 @@ import { allPermissions } from '@/lib/data';
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
 import { format, eachMonthOfInterval, subMonths } from 'date-fns';
 import { pt } from 'date-fns/locale';
-import { downloadSaleDocument, formatCurrency } from '@/lib/utils';
+import { downloadSaleDocument, formatCurrency, normalizeString } from '@/lib/utils';
 import {
   addDocumentNonBlocking,
   deleteDocumentNonBlocking,
@@ -610,21 +610,68 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const processAdd = async () => {
         try {
           await runTransaction(firestore, async (transaction) => {
-            const q = query(productsCollectionRef, where("name", "==", name), where("location", "==", location || ""));
+            // NEW ROBUST CHECK: Check client-side data for normalized match first
+            // This catches "Cafe" vs "Café" which Firestore's exact match misses
+            let existingProductId: string | null = null;
 
-            const querySnapshot = await getDocs(q);
+            if (productsData) {
+              const normalizedNewName = normalizeString(name);
+              const targetLoc = location || "";
+
+              const match = productsData.find(p =>
+                normalizeString(p.name) === normalizedNewName &&
+                (p.location === targetLoc || (!p.location && !targetLoc))
+              );
+
+              if (match) {
+                existingProductId = match.id || null;
+                console.log(`[Robust Check] Found existing product for "${name}" -> "${match.name}" (ID: ${match.id})`);
+              }
+            }
+
+            // If we found a match in our loaded data, we use THAT id. 
+            // Otherwise, we fall back to the query (which might still find exact matches if data wasn't loaded yet)
+
+            let querySnapshot;
+            if (existingProductId) {
+              // We intentionally skip the query or just use it as fallback? 
+              // Best to just get the doc directly if we know the ID.
+              // But to keep logic flow similar, let's just use the ID.
+            } else {
+              const q = query(productsCollectionRef, where("name", "==", name), where("location", "==", location || ""));
+              querySnapshot = await getDocs(q);
+            }
 
             let productId: string;
             const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
-            if (!querySnapshot.empty) {
-              const existingDoc = querySnapshot.docs[0];
-              productId = existingDoc.id;
-              const existingData = existingDoc.data();
-              const oldStock = existingData.stock || 0;
-              const docRef = doc(productsCollectionRef, productId);
+            if (existingProductId || (querySnapshot && !querySnapshot.empty)) {
+              if (existingProductId) {
+                productId = existingProductId;
+              } else {
+                productId = querySnapshot!.docs[0].id; // We know it's not empty here
+              }
 
-              transaction.update(docRef, { stock: oldStock + newStock, lastUpdated: new Date().toISOString() });
+              const docRef = doc(productsCollectionRef, productId);
+              const existingDocSnap = await transaction.get(docRef); // Read inside transaction for safety
+
+              if (existingDocSnap.exists()) {
+                const existingData = existingDocSnap.data();
+                const oldStock = existingData.stock || 0;
+                transaction.update(docRef, { stock: oldStock + newStock, lastUpdated: new Date().toISOString() });
+              } else {
+                // Should not happen if ID was valid, but handle gracefully?
+                // treating as new
+                const newProduct: Omit<Product, 'id' | 'instanceId' | 'sourceIds'> = {
+                  ...newProductData,
+                  lastUpdated: new Date().toISOString(),
+                  reservedStock: 0,
+                };
+                const newDocRef = doc(productsCollectionRef);
+                transaction.set(newDocRef, newProduct);
+                productId = newDocRef.id;
+              }
+
             } else {
               const newProduct: Omit<Product, 'id' | 'instanceId' | 'sourceIds'> = {
                 ...newProductData,
@@ -638,11 +685,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
             const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
               productId: productId,
-              productName: name,
+              productName: name, // We store the name AS ENTERED or AS EXISTING? Usually As Entered for log fidelity, or Existing for consistency?
+              // Let's keep "name" (as entered) for the movement log so we know what they typed.
               type: 'IN',
               quantity: newStock,
               toLocationId: location,
-              reason: querySnapshot.empty ? `Criação de novo produto` : `Entrada de novo lote`,
+              reason: (existingProductId || (querySnapshot && !querySnapshot.empty)) ? `Entrada de novo lote (Match)` : `Criação de novo produto`,
               userId: user.id,
               userName: user.username,
             };

@@ -35,10 +35,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Product, Location } from '@/lib/types';
 import { InventoryContext } from '@/context/inventory-context';
+import { calculateSimilarity } from '@/lib/utils';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { ScrollArea } from '../ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, AlertTriangle } from 'lucide-react';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -70,11 +71,12 @@ interface AddProductDialogProps {
 
 export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProductDialogProps) {
   const inventoryContext = useContext(InventoryContext);
-  const { catalogCategories, catalogProducts, locations, isMultiLocation, addCatalogProduct, addCatalogCategory, availableUnits } = inventoryContext || { catalogCategories: [], catalogProducts: [], locations: [], isMultiLocation: false, addCatalogProduct: async () => { }, addCatalogCategory: async () => { }, availableUnits: [] };
+  const { products, catalogCategories, catalogProducts, locations, isMultiLocation, addCatalogProduct, addCatalogCategory, availableUnits } = inventoryContext || { products: [], catalogCategories: [], catalogProducts: [], locations: [], isMultiLocation: false, addCatalogProduct: async () => { }, addCatalogCategory: async () => { }, availableUnits: [] };
   const [isCatalogProductSelected, setIsCatalogProductSelected] = useState(false);
   const { toast } = useToast();
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [similarProduct, setSimilarProduct] = useState<{ name: string; match: number } | null>(null);
 
   const form = useForm<AddProductFormValues>({
     resolver: zodResolver(formSchema),
@@ -232,20 +234,85 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
               <FormField
                 control={form.control}
                 name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Produto</FormLabel>
-                    <FormControl>
-                      <CatalogProductSelector
-                        products={catalogProducts}
-                        categories={catalogCategories}
-                        selectedValue={field.value}
-                        onValueChange={handleProductSelect}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  // Watch for changes to drive the fuzzy logic
+                  // eslint-disable-next-line react-hooks/rules-of-hooks
+                  useEffect(() => {
+                    if (!field.value || field.value.length < 3) {
+                      setSimilarProduct(null);
+                      return;
+                    }
+
+                    const handler = setTimeout(() => {
+                      let bestMatch = null;
+                      let maxSim = 0;
+
+                      // Check against EXISTING inventory products to avoid duplicates
+                      const potentialMatches = products || [];
+
+                      for (const p of products) {
+                        const sim = calculateSimilarity(field.value, p.name);
+                        // Threshold: > 0.8 means highly similar but not identical (identical = 1.0)
+                        // We exclude 1.0 because exact matches are handled by the main logic (or we want to warn them anyway?)
+                        // Actually, if it's 1.0, they probably know. We care about "Cafe" vs "Café".
+                        if (sim > 0.8 && sim < 1.0) {
+                          if (sim > maxSim) {
+                            maxSim = sim;
+                            bestMatch = p;
+                          }
+                        }
+                      }
+
+                      if (bestMatch) {
+                        setSimilarProduct({ name: bestMatch.name, match: maxSim });
+                      } else {
+                        setSimilarProduct(null);
+                      }
+                    }, 500);
+
+                    return () => clearTimeout(handler);
+                  }, [field.value, products]);
+
+                  return (
+                    <FormItem>
+                      <FormLabel>Produto</FormLabel>
+                      <FormControl>
+                        <CatalogProductSelector
+                          products={catalogProducts}
+                          categories={catalogCategories}
+                          selectedValue={field.value}
+                          onValueChange={handleProductSelect}
+                        />
+                      </FormControl>
+
+                      {similarProduct && (
+                        <div className="mt-2 text-sm p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md flex gap-3 items-start animate-in fade-in slide-in-from-top-2 duration-300">
+                          <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="font-medium text-yellow-800 dark:text-yellow-400">Possível Duplicado Encontrado</p>
+                            <p className="text-yellow-700 dark:text-yellow-300 mt-1">
+                              Existe um produto muito similar no seu inventário: <strong>"{similarProduct.name}"</strong>.
+                            </p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="mt-2 border-yellow-300 bg-yellow-100 hover:bg-yellow-200 text-yellow-900 dark:bg-yellow-800 dark:text-yellow-100 dark:border-yellow-700 dark:hover:bg-yellow-700 w-full sm:w-auto"
+                              onClick={() => {
+                                handleProductSelect(similarProduct.name, undefined); // Updates name and clears others if needed, mostly sets name
+                                setSimilarProduct(null);
+                              }}
+                              type="button"
+                            >
+                              Corrigir para "{similarProduct.name}"
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      <FormMessage />
+                    </FormItem>
+                  )
+                }}
               />
 
               <FormField
