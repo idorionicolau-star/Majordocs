@@ -33,6 +33,8 @@ import {
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
+import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
+import { forwardRef } from 'react';
 
 
 export default function OrdersPage() {
@@ -535,21 +537,37 @@ export default function OrdersPage() {
           </div>
         </Card>
 
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredOrders.map(order => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              onUpdateStatus={handleUpdateOrderStatus}
-              onAddProductionLog={addProductionLog}
-              onDeleteOrder={handleDeleteCallback}
-              canEdit={canEditOrders}
-              associatedSale={sales.find(s => s.orderId === order.id)}
-              companyData={companyData}
+        <div className="h-[calc(100vh-320px)] sm:h-[calc(100vh-280px)]">
+          {filteredOrders.length > 0 ? (
+            <VirtuosoGrid
+              style={{ height: '100%', width: '100%' }}
+              data={filteredOrders}
+              totalCount={filteredOrders.length}
+              components={{
+                List: forwardRef((props, ref) => (
+                  <div
+                    {...props}
+                    ref={ref}
+                    className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-20"
+                  />
+                )),
+                Item: forwardRef((props, ref) => <div {...props} ref={ref} className="h-full" />)
+              }}
+              itemContent={(index, order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  onUpdateStatus={handleUpdateOrderStatus}
+                  onAddProductionLog={addProductionLog}
+                  onDeleteOrder={handleDeleteCallback}
+                  canEdit={canEditOrders}
+                  associatedSale={sales.find(s => s.orderId === order.id)}
+                  companyData={companyData}
+                />
+              )}
             />
-          ))}
-          {filteredOrders.length === 0 && (
-            <div className="col-span-full text-center text-muted-foreground py-10">
+          ) : (
+            <div className="text-center text-muted-foreground py-10">
               <p>Nenhuma encomenda encontrada com os filtros atuais.</p>
             </div>
           )}

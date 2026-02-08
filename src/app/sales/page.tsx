@@ -425,7 +425,7 @@ export default function SalesPage() {
           </div>
         </Card>
 
-        <div className="space-y-4">
+        <div className="h-[calc(100vh-350px)] sm:h-[calc(100vh-300px)]">
           {view === 'list' ? (
             <SalesDataTable
               columns={columns({

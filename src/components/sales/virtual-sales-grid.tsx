@@ -1,6 +1,8 @@
 import { Sale } from '@/lib/types';
 import { SaleCard } from './sale-card';
 import { cn } from '@/lib/utils';
+import { VirtuosoGrid } from 'react-virtuoso';
+import { forwardRef } from 'react';
 
 interface SalesGridProps {
     sales: Sale[];
@@ -23,13 +25,26 @@ export function VirtualSalesGrid({ // Keeping name to avoid breaking import imme
 }: SalesGridProps) {
 
     return (
-        <div className={cn(
-            "grid gap-2 sm:gap-4 pb-4",
-            gridCols === '3' && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
-            gridCols === '4' && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
-            gridCols === '5' && "grid-cols-1 sm:grid-cols-3 lg:grid-cols-5"
-        )}>
-            {sales.map(sale => (
+        <VirtuosoGrid
+            style={{ height: '100%', width: '100%' }}
+            data={sales}
+            totalCount={sales.length}
+            components={{
+                List: forwardRef((props, ref) => (
+                    <div
+                        {...props}
+                        ref={ref}
+                        className={cn(
+                            "grid gap-2 sm:gap-4 pb-20",
+                            gridCols === '3' && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+                            gridCols === '4' && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+                            gridCols === '5' && "grid-cols-1 sm:grid-cols-3 lg:grid-cols-5"
+                        )}
+                    />
+                )),
+                Item: forwardRef((props, ref) => <div {...props} ref={ref} className="h-full" />)
+            }}
+            itemContent={(index, sale) => (
                 <SaleCard
                     key={sale.id}
                     sale={sale}
@@ -40,7 +55,7 @@ export function VirtualSalesGrid({ // Keeping name to avoid breaking import imme
                     canEdit={canEdit}
                     locationName={locations.find(l => l.id === sale.location)?.name}
                 />
-            ))}
-        </div>
+            )}
+        />
     );
 }
