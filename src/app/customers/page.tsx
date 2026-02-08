@@ -103,49 +103,52 @@ export default function CustomersPage() {
     return (
         <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold font-headline text-slate-900 dark:text-white">Gestão de Clientes</h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1">
-                        Gerencie a sua base de clientes e visualize o histórico de compras.
-                    </p>
+            {/* Header */}
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold font-headline text-slate-900 dark:text-white">Gestão de Clientes</h1>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                            Base de clientes e histórico de compras.
+                        </p>
+                    </div>
+                    <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all active:scale-95">
+                                <Plus className="w-4 h-4 mr-2" />
+                                Novo Cliente
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Adicionar Novo Cliente</DialogTitle>
+                            </DialogHeader>
+                            <form onSubmit={handleAddSubmit} className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">Nome Completo</Label>
+                                    <Input id="name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required placeholder={namePlaceholder} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="phone">Telefone</Label>
+                                        <Input id="phone" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder={phonePlaceholder} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="email">E-mail</Label>
+                                        <Input id="email" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder={emailPlaceholder} />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="notes">Notas</Label>
+                                    <Input id="notes" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} placeholder={notesPlaceholder} />
+                                </div>
+                                <DialogFooter>
+                                    <Button type="submit" className="w-full">Guardar Cliente</Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
                 </div>
-                <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Novo Cliente
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Adicionar Novo Cliente</DialogTitle>
-                        </DialogHeader>
-                        <form onSubmit={handleAddSubmit} className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Nome Completo</Label>
-                                <Input id="name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required placeholder={namePlaceholder} />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="phone">Telefone</Label>
-                                    <Input id="phone" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder={phonePlaceholder} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">E-mail</Label>
-                                    <Input id="email" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder={emailPlaceholder} />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="notes">Notas</Label>
-                                <Input id="notes" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} placeholder={notesPlaceholder} />
-                            </div>
-                            <DialogFooter>
-                                <Button type="submit">Guardar Cliente</Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
             </div>
 
             {/* Stats/Search */}
@@ -173,7 +176,8 @@ export default function CustomersPage() {
             </div>
 
             {/* Table */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+            {/* Desktop Table */}
+            <div className="hidden md:block rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
                 <Table>
                     <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
                         <TableRow>
@@ -196,8 +200,8 @@ export default function CustomersPage() {
                                 <TableRow key={customer.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                     <TableCell className="font-medium">
                                         <div className="flex items-center gap-3">
-                                            <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xs">
-                                                {customer.name.charAt(0).toUpperCase()}
+                                            <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xs uppercase">
+                                                {customer.name.charAt(0)}
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="text-slate-900 dark:text-white font-headline">{customer.name}</span>
@@ -240,6 +244,59 @@ export default function CustomersPage() {
                         )}
                     </TableBody>
                 </Table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-4">
+                {filteredCustomers.length === 0 ? (
+                    <Card className="p-8 text-center text-slate-500 bg-white/50 dark:bg-slate-900/50 border-dashed">
+                        {loading ? 'A carregar...' : 'Nenhum cliente encontrado.'}
+                    </Card>
+                ) : (
+                    filteredCustomers.map((customer) => (
+                        <Card key={customer.id} className="overflow-hidden border-slate-200 dark:border-slate-800">
+                            <CardContent className="p-4">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold uppercase transition-transform active:scale-90" onClick={() => setViewingCustomer(customer)}>
+                                            {customer.name.charAt(0)}
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <h3 className="font-bold text-slate-900 dark:text-white leading-tight">{customer.name}</h3>
+                                            <span className="text-xs text-slate-500">{customer.phone || 'Sem telefone'}</span>
+                                        </div>
+                                    </div>
+                                    <div className="bg-primary/10 text-primary px-2 py-1 rounded text-sm font-bold font-mono">
+                                        {formatCurrency(customer.totalPurchases || 0, { compact: true })}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 mb-4 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg">
+                                    <div className="flex items-center gap-1.5">
+                                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                        <span>Última visita: {customer.lastVisit ? format(new Date(customer.lastVisit), "d/MM/yy") : '-'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <Mail className="w-3.5 h-3.5 text-slate-400" />
+                                        <span className="truncate">{customer.email || '-'}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <Button variant="outline" size="sm" className="flex-1 h-9" onClick={() => setViewingCustomer(customer)}>
+                                        <User className="h-4 w-4 mr-2" /> Histórico
+                                    </Button>
+                                    <Button variant="outline" size="sm" className="h-9 px-3" onClick={() => openEdit(customer)}>
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-9 px-3 text-red-500 hover:bg-red-50" onClick={() => handleDelete(customer.id)}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
             </div>
 
             {/* Edit Dialog */}

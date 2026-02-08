@@ -92,18 +92,69 @@ export default function FinancePage() {
     return (
         <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold font-headline text-slate-900 dark:text-white">Fluxo Financeiro</h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1">
-                        Controle de receitas, despesas e margens de lucro.
-                    </p>
+            {/* Header */}
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold font-headline text-slate-900 dark:text-white">Fluxo Financeiro</h1>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                            Controle de receitas, despesas e margens.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                            <DialogTrigger asChild>
+                                <Button className="flex-1 sm:flex-none bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 transition-all active:scale-95">
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Registar Despesa
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[425px]">
+                                <DialogHeader>
+                                    <DialogTitle>Registar Nova Despesa</DialogTitle>
+                                </DialogHeader>
+                                <form onSubmit={handleAddSubmit} className="space-y-4 py-4">
+                                    <div className="space-y-2">
+                                        <Label>Descrição</Label>
+                                        <Input value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} required placeholder="Ex: Conta de Luz" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Valor (MZN)</Label>
+                                            <Input type="number" step="0.01" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} required placeholder="0.00" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Categoria</Label>
+                                            <Select value={formData.category} onValueChange={v => setFormData({ ...formData, category: v })}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Selecione" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Salários">Salários</SelectItem>
+                                                    <SelectItem value="Aluguel">Aluguel</SelectItem>
+                                                    <SelectItem value="Utilidades">Utilidades</SelectItem>
+                                                    <SelectItem value="Matéria-Prima">Matéria-Prima</SelectItem>
+                                                    <SelectItem value="Marketing">Marketing</SelectItem>
+                                                    <SelectItem value="Impostos">Impostos</SelectItem>
+                                                    <SelectItem value="Outros">Outros</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <Button type="submit" className="w-full bg-red-500 hover:bg-red-600">Confirmar Despesa</Button>
+                                    </DialogFooter>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                 </div>
-                <div className="flex gap-2">
-                    {/* Print Button */}
+
+                <div className="flex flex-wrap gap-2">
                     <Button
                         variant="outline"
-                        className="text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        size="sm"
+                        className="flex-1 sm:flex-none text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700"
                         onClick={() => printFinancialReport({
                             companyName: companyData?.name || 'Minha Empresa',
                             period: format(new Date(), "MMMM yyyy", { locale: ptBR }),
@@ -133,58 +184,12 @@ export default function FinancePage() {
                         fileName={`Relatorio_Financeiro_${format(new Date(), "MMM_yyyy")}.pdf`}
                     >
                         {({ loading: pdfLoading }: any) => (
-                            <Button className="bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600" disabled={pdfLoading}>
+                            <Button variant="outline" size="sm" className="w-full sm:w-auto" disabled={pdfLoading}>
                                 <Download className="w-4 h-4 mr-2" />
                                 {pdfLoading ? 'A preparar...' : 'Baixar PDF'}
                             </Button>
                         )}
                     </PDFDownloadLink>
-
-                    <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 transition-all hover:scale-105 active:scale-95">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Registar Despesa
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Registar Nova Despesa</DialogTitle>
-                            </DialogHeader>
-                            <form onSubmit={handleAddSubmit} className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                    <Label>Descrição</Label>
-                                    <Input value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} required placeholder="Ex: Conta de Luz" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label>Valor (MZN)</Label>
-                                        <Input type="number" step="0.01" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} required placeholder="0.00" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Categoria</Label>
-                                        <Select value={formData.category} onValueChange={v => setFormData({ ...formData, category: v })}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Selecione" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Salários">Salários</SelectItem>
-                                                <SelectItem value="Aluguel">Aluguel</SelectItem>
-                                                <SelectItem value="Utilidades">Utilidades (Água, Luz)</SelectItem>
-                                                <SelectItem value="Matéria-Prima">Matéria-Prima</SelectItem>
-                                                <SelectItem value="Marketing">Marketing</SelectItem>
-                                                <SelectItem value="Impostos">Impostos</SelectItem>
-                                                <SelectItem value="Outros">Outros</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <Button type="submit" className="bg-red-500 hover:bg-red-600">Confirmar Despesa</Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
                 </div>
             </div>
 
@@ -231,20 +236,21 @@ export default function FinancePage() {
 
             {/* Expenses List */}
             <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <h2 className="text-xl font-bold font-headline">Registo de Despesas</h2>
-                    <div className="relative w-64">
+                    <div className="relative w-full sm:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <Input
                             placeholder="Pesquisar despesa..."
-                            className="pl-10 h-10"
+                            className="pl-10 h-10 w-full"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
                 </div>
 
-                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+                {/* Desktop Table */}
+                <div className="hidden md:block rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
                     <Table>
                         <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
                             <TableRow>
@@ -292,6 +298,43 @@ export default function FinancePage() {
                             )}
                         </TableBody>
                     </Table>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="md:hidden space-y-3">
+                    {filteredExpenses.length === 0 ? (
+                        <Card className="p-8 text-center text-slate-500 bg-white/50 dark:bg-slate-900/50 border-dashed">
+                            {loading ? 'A carregar...' : 'Nenhuma despesa encontrada.'}
+                        </Card>
+                    ) : (
+                        filteredExpenses.map((expense) => (
+                            <Card key={expense.id} className="overflow-hidden border-slate-200 dark:border-slate-800">
+                                <CardContent className="p-4">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="space-y-1">
+                                            <h3 className="font-bold text-slate-800 dark:text-slate-200">{expense.description}</h3>
+                                            <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-500">
+                                                {expense.category}
+                                            </span>
+                                        </div>
+                                        <p className="text-lg font-black text-red-600 dark:text-red-400">
+                                            -{formatCurrency(expense.amount)}
+                                        </p>
+                                    </div>
+                                    <div className="flex justify-between items-center pt-3 border-t border-slate-100 dark:border-slate-800">
+                                        <div className="flex items-center gap-1.5 text-slate-500 text-xs">
+                                            <Calendar className="w-3.5 h-3.5" />
+                                            {format(new Date(expense.date), "d MMM yyyy", { locale: ptBR })}
+                                        </div>
+                                        <Button variant="ghost" size="sm" onClick={() => deleteExpense(expense.id)} className="h-8 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30">
+                                            <Trash2 className="h-4 w-4 mr-1.5" />
+                                            Apagar
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))
+                    )}
                 </div>
             </div>
         </div>

@@ -183,12 +183,16 @@ const RawMaterialsManager = () => {
                 <CardDescription>Adicione e gira o stock das suas matérias-primas.</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="flex flex-col sm:flex-row justify-end mb-4 gap-2">
-                    <Button onClick={handleDownload} variant="outline" className="w-full sm:w-auto"><Download className="mr-2 h-4 w-4" /> Baixar PDF</Button>
-                    <Button onClick={handlePrint} variant="outline" className="w-full sm:w-auto"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
-                    <Button onClick={() => handleOpenDialog()} className="w-full sm:w-auto">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Matéria-Prima
-                    </Button>
+                <div className="flex flex-col sm:flex-row justify-between mb-6 gap-3 pt-2">
+                    <div className="flex flex-col gap-2 w-full sm:w-auto">
+                        <Button onClick={() => handleOpenDialog()} className="w-full sm:w-auto bg-primary text-white">
+                            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Matéria-Prima
+                        </Button>
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <Button onClick={handleDownload} variant="outline" size="sm" className="flex-1 sm:flex-none"><Download className="mr-2 h-4 w-4" /> PDF</Button>
+                        <Button onClick={handlePrint} variant="outline" size="sm" className="flex-1 sm:flex-none"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
+                    </div>
                 </div>
                 <div className="rounded-md border overflow-x-auto">
                     <Table>
@@ -211,8 +215,10 @@ const RawMaterialsManager = () => {
                                     <TableCell>{material.unit}</TableCell>
                                     <TableCell>{material.lowStockThreshold}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(material)}><Edit className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => setMaterialToDelete(material)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                        <div className="flex justify-end gap-1">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(material)}><Edit className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMaterialToDelete(material)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             )) : (
@@ -355,12 +361,14 @@ const RecipesManager = () => {
         <Card>
             <CardHeader><CardTitle>Receitas de Produção</CardTitle><CardDescription>Defina os componentes para cada produto final.</CardDescription></CardHeader>
             <CardContent>
-                <div className="flex justify-end mb-4 gap-2">
-                    <Button onClick={handleDownload} variant="outline"><Download className="mr-2 h-4 w-4" /> Baixar PDF</Button>
-                    <Button onClick={handlePrint} variant="outline"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
-                    <Button onClick={() => handleOpenDialog()}>
+                <div className="flex flex-col sm:flex-row justify-between mb-6 gap-3 pt-2">
+                    <Button onClick={() => handleOpenDialog()} className="w-full sm:w-auto order-first sm:order-last bg-primary text-white">
                         <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Receita
                     </Button>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <Button onClick={handleDownload} variant="outline" size="sm" className="flex-1 sm:flex-none"><Download className="mr-2 h-4 w-4" /> PDF</Button>
+                        <Button onClick={handlePrint} variant="outline" size="sm" className="flex-1 sm:flex-none"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
+                    </div>
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {recipes.map(recipe => (
@@ -563,13 +571,13 @@ const CostsManager = () => {
             <CardHeader>
                 <CardTitle>Análise de Custos de Produção</CardTitle>
                 <CardDescription>Custo por unidade para cada produto com base nas suas receitas e no custo da matéria-prima.</CardDescription>
-                <div className="flex justify-end pt-2 gap-2">
-                    <Button onClick={handleDownload} variant="outline" size="sm"><Download className="mr-2 h-4 w-4" /> Baixar PDF</Button>
-                    <Button onClick={handlePrint} variant="outline" size="sm"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
+                <div className="flex flex-col sm:flex-row justify-end pt-2 gap-2">
+                    <Button onClick={handleDownload} variant="outline" size="sm" className="w-full sm:w-auto"><Download className="mr-2 h-4 w-4" /> Baixar PDF</Button>
+                    <Button onClick={handlePrint} variant="outline" size="sm" className="w-full sm:w-auto"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
