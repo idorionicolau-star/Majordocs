@@ -22,10 +22,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function RecycleBin() {
-    const { allProducts: products, allSales: sales, restoreItem, hardDelete, user, confirmAction } = useContext(InventoryContext) || { allProducts: [], allSales: [], confirmAction: () => { } };
+    const { allProducts: products, allSales: sales, allOrders: orders, allProductions: productions, restoreItem, hardDelete, user, confirmAction } = useContext(InventoryContext) || { allProducts: [], allSales: [], allOrders: [], allProductions: [], confirmAction: () => { } };
     const [searchQuery, setSearchQuery] = useState('');
-    const [itemToRestore, setItemToRestore] = useState<{ id: string, name: string, type: 'product' | 'sale' } | null>(null);
-    const [itemToDelete, setItemToDelete] = useState<{ id: string, name: string, type: 'product' | 'sale' } | null>(null);
+    const [itemToRestore, setItemToRestore] = useState<{ id: string, name: string, type: 'product' | 'sale' | 'order' | 'production' } | null>(null);
+    const [itemToDelete, setItemToDelete] = useState<{ id: string, name: string, type: 'product' | 'sale' | 'order' | 'production' } | null>(null);
 
     // We need to fetch *deleted* items.
     // However, the context's `products` and `sales` usually Filter Out deleted items?
@@ -54,6 +54,14 @@ export function RecycleBin() {
         return sales?.filter(s => s.deletedAt) || [];
     }, [sales]);
 
+    const deletedOrders = useMemo(() => {
+        return orders?.filter(o => o.deletedAt) || [];
+    }, [orders]);
+
+    const deletedProductions = useMemo(() => {
+        return productions?.filter(p => p.deletedAt) || [];
+    }, [productions]);
+
     const filteredProducts = deletedProducts.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -63,21 +71,46 @@ export function RecycleBin() {
         (s.guideNumber || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const filteredOrders = deletedOrders.filter(o =>
+        (o.productName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (o.clientName || '').toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const filteredProductions = deletedProductions.filter(p =>
+        (p.productName || '').toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     const handleRestore = async () => {
         if (!itemToRestore || !restoreItem || !confirmAction) return;
         confirmAction(async () => {
-            const collection = itemToRestore.type === 'product' ? 'products' : 'sales';
-            await restoreItem(collection, itemToRestore.id);
-            setItemToRestore(null);
+            let collection = '';
+            switch (itemToRestore.type) {
+                case 'product': collection = 'products'; break;
+                case 'sale': collection = 'sales'; break;
+                case 'order': collection = 'orders'; break;
+                case 'production': collection = 'productions'; break;
+            }
+            if (collection) {
+                await restoreItem(collection, itemToRestore.id);
+                setItemToRestore(null);
+            }
         }, "Restaurar Item", "Confirme com a sua palavra-passe para restaurar este item.");
     };
 
     const handleHardDelete = async () => {
         if (!itemToDelete || !hardDelete || !confirmAction) return;
         confirmAction(async () => {
-            const collection = itemToDelete.type === 'product' ? 'products' : 'sales';
-            await hardDelete(collection, itemToDelete.id);
-            setItemToDelete(null);
+            let collection = '';
+            switch (itemToDelete.type) {
+                case 'product': collection = 'products'; break;
+                case 'sale': collection = 'sales'; break;
+                case 'order': collection = 'orders'; break;
+                case 'production': collection = 'productions'; break;
+            }
+            if (collection) {
+                await hardDelete(collection, itemToDelete.id);
+                setItemToDelete(null);
+            }
         }, "Excluir Permanentemente", "Esta ação é irreversível. O item será apagado para sempre.");
     };
 
@@ -111,9 +144,11 @@ export function RecycleBin() {
             </CardHeader>
             <CardContent>
                 <Tabs defaultValue="products">
-                    <TabsList className="grid w-full grid-cols-2">
+                    <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="products">Produtos ({deletedProducts.length})</TabsTrigger>
                         <TabsTrigger value="sales">Vendas ({deletedSales.length})</TabsTrigger>
+                        <TabsTrigger value="orders">Encomendas ({deletedOrders.length})</TabsTrigger>
+                        <TabsTrigger value="production">Produção ({deletedProductions.length})</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="products">
@@ -162,6 +197,62 @@ export function RecycleBin() {
                                                     <RefreshCw className="h-4 w-4" />
                                                 </Button>
                                                 <Button size="icon" variant="outline" className="h-8 w-8 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setItemToDelete({ id: sale.id, name: `Venda ${sale.guideNumber}`, type: 'sale' })}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </ScrollArea>
+                    </TabsContent>
+
+                    <TabsContent value="orders">
+                        <ScrollArea className="h-[300px] border rounded-md bg-background">
+                            {filteredOrders.length === 0 ? (
+                                <p className="text-center p-4 text-muted-foreground text-sm">Nenhuma encomenda na lixeira.</p>
+                            ) : (
+                                <div className="divide-y">
+                                    {filteredOrders.map(order => (
+                                        <div key={order.id} className="p-3 flex items-center justify-between hover:bg-muted/50">
+                                            <div>
+                                                <p className="font-medium text-sm">{order.productName} (Qty: {order.quantity})</p>
+                                                <p className="text-xs text-muted-foreground">Cliente: {order.clientName || 'N/A'}</p>
+                                                <p className="text-xs text-muted-foreground">Apagado a: {order.deletedAt ? format(new Date(order.deletedAt), "dd/MM/yyyy HH:mm", { locale: pt }) : 'N/A'}</p>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button size="icon" variant="outline" className="h-8 w-8 text-green-600" onClick={() => setItemToRestore({ id: order.id, name: `Encomenda de ${order.productName}`, type: 'order' })}>
+                                                    <RefreshCw className="h-4 w-4" />
+                                                </Button>
+                                                <Button size="icon" variant="outline" className="h-8 w-8 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setItemToDelete({ id: order.id, name: `Encomenda de ${order.productName}`, type: 'order' })}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </ScrollArea>
+                    </TabsContent>
+
+                    <TabsContent value="production">
+                        <ScrollArea className="h-[300px] border rounded-md bg-background">
+                            {filteredProductions.length === 0 ? (
+                                <p className="text-center p-4 text-muted-foreground text-sm">Nenhum registo de produção na lixeira.</p>
+                            ) : (
+                                <div className="divide-y">
+                                    {filteredProductions.map(prod => (
+                                        <div key={prod.id} className="p-3 flex items-center justify-between hover:bg-muted/50">
+                                            <div>
+                                                <p className="font-medium text-sm">{prod.productName} (Qty: {prod.quantity})</p>
+                                                <p className="text-xs text-muted-foreground">Data: {format(new Date(prod.date), "dd/MM/yyyy")}</p>
+                                                <p className="text-xs text-muted-foreground">Apagado a: {prod.deletedAt ? format(new Date(prod.deletedAt), "dd/MM/yyyy HH:mm", { locale: pt }) : 'N/A'}</p>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button size="icon" variant="outline" className="h-8 w-8 text-green-600" onClick={() => setItemToRestore({ id: prod.id, name: `Produção de ${prod.productName}`, type: 'production' })}>
+                                                    <RefreshCw className="h-4 w-4" />
+                                                </Button>
+                                                <Button size="icon" variant="outline" className="h-8 w-8 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setItemToDelete({ id: prod.id, name: `Produção de ${prod.productName}`, type: 'production' })}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>

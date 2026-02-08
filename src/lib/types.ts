@@ -156,6 +156,8 @@ export type Production = {
   location?: string;
   status: 'Concluído' | 'Transferido';
   orderId?: string;
+  deletedAt?: string;
+  deletedBy?: string;
 };
 
 export type ProductionLog = {
@@ -181,6 +183,8 @@ export type Order = {
   productionStartDate?: string | null;
   quantityProduced: number;
   productionLogs: ProductionLog[];
+  deletedAt?: string;
+  deletedBy?: string;
 };
 
 export type MovementType = 'IN' | 'OUT' | 'TRANSFER' | 'ADJUSTMENT';
@@ -273,7 +277,9 @@ export interface InventoryContextType {
   sales: Sale[];
   allSales: Sale[];
   productions: Production[];
+  allProductions: Production[]; // Included for Recycle Bin
   orders: Order[];
+  allOrders: Order[]; // Included for Recycle Bin
   stockMovements: StockMovement[];
   catalogProducts: CatalogProduct[];
   catalogCategories: CatalogCategory[];
