@@ -44,6 +44,8 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { isSameDay } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { formatCurrency, normalizeString } from "@/lib/utils";
+import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
+import { forwardRef } from 'react';
 
 
 import { useFuse } from "@/hooks/use-fuse";
@@ -60,8 +62,7 @@ export default function InventoryPage() {
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(60);
 
   useEffect(() => {
     const handleResize = () => {
@@ -387,15 +388,10 @@ export default function InventoryPage() {
     return result;
   }, [searchedProducts, sortBy]);
 
-  // Reset page when filters change
+  // Reset scroll when filters change - Optional with Virtuoso Window Scroll
   useEffect(() => {
-    setCurrentPage(1);
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }, [selectedLocation, nameFilter, categoryFilter, dateFilter, sortBy]);
-
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentProducts = filteredProducts.slice(startIndex, endIndex);
 
   const handleClearInventory = async () => {
     if (clearProductsCollection && confirmAction) {
@@ -780,17 +776,31 @@ export default function InventoryPage() {
               isMultiLocation: isMultiLocation,
               locations: locations
             })}
-            data={currentProducts}
+            data={filteredProducts}
+            useVirtualization
           />
         ) : (
           filteredProducts.length > 0 ? (
-            <div className={cn(
-              "grid gap-2 sm:gap-4",
-              gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
-              gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
-              gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
-            )}>
-              {currentProducts.map(product => (
+            <VirtuosoGrid
+              useWindowScroll
+              data={filteredProducts}
+              totalCount={filteredProducts.length}
+              components={{
+                List: forwardRef((props, ref) => (
+                  <div
+                    {...props}
+                    ref={ref}
+                    className={cn(
+                      "grid gap-2 sm:gap-4 pb-20",
+                      gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
+                      gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
+                      gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
+                    )}
+                  />
+                )),
+                Item: forwardRef((props, ref) => <div {...props} ref={ref} className="h-full" />)
+              }}
+              itemContent={(index, product) => (
                 <ProductCard
                   key={product.instanceId}
                   product={product}
@@ -798,56 +808,19 @@ export default function InventoryPage() {
                   onAttemptDelete={setProductToDelete}
                   viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
                   canEdit={canEditInventory}
-                  locations={locations}
-                  isMultiLocation={isMultiLocation}
+                  locationName={locations.find(l => l.id === product.location)?.name}
                 />
-              ))}
-            </div>
+              )}
+            />
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>Nenhum produto no inventário.</p>
+            <Card className="text-center py-12 text-muted-foreground">
+              <p>Nenhum produto encontrado com os filtros atuais.</p>
               {canEditInventory && <p className="text-sm">Comece por adicionar um novo produto.</p>}
-            </div>
+            </Card>
           )
         )}
 
-        {/* Pagination Controls */}
-        {filteredProducts.length > itemsPerPage && (
-          <div className="flex items-center justify-between border-t pt-4">
-            <div className="text-sm text-muted-foreground hidden sm:block">
-              A mostrar <span className="font-medium text-foreground">{startIndex + 1}-{Math.min(endIndex, filteredProducts.length)}</span> de <span className="font-medium text-foreground">{filteredProducts.length}</span> produtos
-            </div>
-            <div className="flex items-center gap-2 mx-auto sm:mx-0">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => {
-                  setCurrentPage(p => Math.max(1, p - 1));
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                disabled={currentPage === 1}
-                className="h-9 w-9"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="text-sm font-medium">
-                Página {currentPage} de {totalPages}
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => {
-                  setCurrentPage(p => Math.min(totalPages, p + 1));
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                disabled={currentPage === totalPages}
-                className="h-9 w-9"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+        {/* Pagination buttons - Removed in favor of Virtualization */}
 
         {isAdmin && (
           <Card className="mt-8">
