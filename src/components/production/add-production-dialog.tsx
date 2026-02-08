@@ -139,10 +139,10 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
                 name="productName"
                 render={({ field }) => (
                   <CatalogProductSelector
-                    value={field.value}
-                    onSelect={handleProductSelect}
-                    catalogProducts={catalogProducts}
-                    catalogCategories={catalogCategories}
+                    selectedValue={field.value}
+                    onValueChange={handleProductSelect}
+                    products={catalogProducts}
+                    categories={catalogCategories}
                   />
                 )}
               />
