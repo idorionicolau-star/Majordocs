@@ -134,7 +134,7 @@ export default function SettingsPage() {
   const [isClient, setIsClient] = useState(false);
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
-  const { user, clearProductsCollection } = inventoryContext || {};
+  const { user, clearProductsCollection, confirmAction } = inventoryContext || {};
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState("profile");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -275,12 +275,14 @@ export default function SettingsPage() {
   };
 
   const handleClearProducts = async () => {
-    if (clearProductsCollection) {
-      toast({ title: "A limpar...", description: "A apagar todos os produtos do inventário no Firestore." });
-      await clearProductsCollection();
-      toast({ title: "Sucesso!", description: "A coleção de produtos foi limpa." });
+    if (clearProductsCollection && confirmAction) {
+      confirmAction(async () => {
+        toast({ title: "A limpar...", description: "A apagar todos os produtos do inventário no Firestore." });
+        await clearProductsCollection();
+        toast({ title: "Sucesso!", description: "A coleção de produtos foi limpa." });
+        setShowClearConfirm(false);
+      }, "Limpar Inventário", "Esta ação é irreversível e apagará todos os produtos. Confirme com a sua palavra-passe.");
     }
-    setShowClearConfirm(false);
   };
 
 

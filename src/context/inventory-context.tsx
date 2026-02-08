@@ -53,10 +53,9 @@ import { format, eachMonthOfInterval, subMonths } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { downloadSaleDocument, formatCurrency, normalizeString } from '@/lib/utils';
 import {
-  addDocumentNonBlocking,
-  deleteDocumentNonBlocking,
   updateDocumentNonBlocking
 } from '@/firebase/non-blocking-updates';
+import { PasswordConfirmationDialog } from '@/components/auth/password-confirmation-dialog';
 
 
 type CatalogProduct = Omit<
@@ -83,6 +82,27 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const auth = getFirebaseAuth();
   const wasSyncing = useRef(false);
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    action: (() => Promise<void>) | null;
+    title: string;
+    description: string;
+  }>({
+    open: false,
+    action: null,
+    title: '',
+    description: '',
+  });
+
+  const confirmAction = useCallback((action: () => Promise<void>, title?: string, description?: string) => {
+    setConfirmDialog({
+      open: true,
+      action,
+      title: title || "Confirmação de Segurança",
+      description: description || "Esta ação requer a sua palavra-passe para ser confirmada.",
+    });
+  }, []);
 
   const [companyData, setCompanyData] = useState<Company | null>(null);
 
@@ -1416,8 +1436,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // Hard delete the sale document
-        transaction.delete(saleRef);
+        // Soft delete the sale document
+        transaction.update(saleRef, {
+          deletedAt: new Date().toISOString(),
+          deletedBy: user.username
+        });
       });
 
       toast({ title: 'Venda enviada para Lixeira', description: 'O stock foi reposto.' });
@@ -1485,8 +1508,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const deleteProduction = useCallback((productionId: string) => {
     if (!productionsCollectionRef) return;
-    deleteDocumentNonBlocking(doc(productionsCollectionRef, productionId));
-    toast({ title: 'Registo de Produção Apagado' });
+    const docRef = doc(productionsCollectionRef, productionId);
+    updateDocumentNonBlocking(docRef, { deletedAt: new Date().toISOString() });
+    toast({ title: 'Registo de Produção movido para Lixeira' });
   }, [productionsCollectionRef, toast]);
 
   const updateProduction = useCallback((productionId: string, data: Partial<Production>) => {
@@ -1496,11 +1520,50 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Registo de Produção Atualizado' });
   }, [productionsCollectionRef, toast]);
 
-  const deleteOrder = useCallback((orderId: string) => {
-    if (!ordersCollectionRef) return;
-    deleteDocumentNonBlocking(doc(ordersCollectionRef, orderId));
-    toast({ title: 'Encomenda Apagada' });
-  }, [ordersCollectionRef, toast]);
+  const deleteOrder = useCallback(async (orderId: string) => {
+    if (!ordersCollectionRef || !firestore || !companyId) return;
+
+    try {
+      const orderRef = doc(ordersCollectionRef, orderId);
+      const orderSnap = await getDoc(orderRef);
+
+      if (orderSnap.exists()) {
+        const orderData = orderSnap.data() as Order;
+
+        // If order is pending or in production, we need to release the Reserved Stock
+        if ((orderData.status === 'Pendente' || orderData.status === 'Em produção') && orderData.productId) {
+          const productRef = doc(firestore, `companies/${companyId}/products`, orderData.productId);
+          await runTransaction(firestore, async (transaction) => {
+            const pDoc = await transaction.get(productRef);
+            if (pDoc.exists()) {
+              const pData = pDoc.data() as Product;
+              const currentReserved = pData.reservedStock || 0;
+              const quantityToRelease = orderData.quantity;
+
+              // Clamp to 0 to avoid negative stock if data is somehow inconsistent
+              const newReserved = Math.max(0, currentReserved - quantityToRelease);
+
+              transaction.update(productRef, {
+                reservedStock: newReserved,
+                lastUpdated: new Date().toISOString()
+              });
+            }
+            // Perform the soft delete within the transaction or after? 
+            // Transaction is safer for stock. 
+            // Soft delete is just an update to the order doc.
+            transaction.update(orderRef, { deletedAt: new Date().toISOString() });
+          });
+        } else {
+          // Standard soft delete for completed/delivered orders (stock was already handled)
+          await updateDocumentNonBlocking(orderRef, { deletedAt: new Date().toISOString() });
+        }
+        toast({ title: 'Encomenda movida para Lixeira' });
+      }
+    } catch (e: any) {
+      console.error("Error deleting order:", e);
+      toast({ variant: 'destructive', title: 'Erro ao Apagar', description: e.message });
+    }
+  }, [ordersCollectionRef, firestore, companyId, toast]);
 
   const finalizeOrder = useCallback(async (orderId: string, finalPayment: number) => {
     if (!firestore || !companyId || !user) return;
@@ -1542,7 +1605,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           if (productSnap.exists()) {
             const productData = productSnap.data() as Product;
             const newStock = (productData.stock || 0) - orderData.quantity;
-            transaction.update(productRef, { stock: newStock, lastUpdated: new Date().toISOString() });
+
+            // Also deduct from Reserved Stock since it's now being picked up
+            let newReserved = (productData.reservedStock || 0) - orderData.quantity;
+            if (newReserved < 0) newReserved = 0; // Prevent negative
+
+            transaction.update(productRef, {
+              stock: newStock,
+              reservedStock: newReserved,
+              lastUpdated: new Date().toISOString()
+            });
           }
         }
       });
@@ -1827,8 +1899,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     allProducts: productsData || [],
     sales: (salesData || []).filter(s => !s.deletedAt),
     allSales: salesData || [],
-    productions: productionsData || [],
-    orders: ordersData || [],
+    allSales: salesData || [],
+    productions: (productionsData || []).filter(p => !p.deletedAt), // Filter soft deleted productions
+    allProductions: productionsData || [],
+    orders: (ordersData || []).filter(o => !o.deletedAt), // Filter soft deleted orders
+    allOrders: ordersData || [],
     stockMovements: stockMovementsData || [],
     catalogProducts: catalogProductsData || [],
     catalogCategories: catalogCategoriesData || [],
@@ -1889,12 +1964,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     exportCompanyData,
 
     availableUnits, addUnit, removeUnit,
+
     availableCategories, addCategory, removeCategory,
+
+    confirmAction, // Expose helper
   ]);
 
   return (
     <InventoryContext.Provider value={value}>
       {children}
+      <PasswordConfirmationDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+        onConfirm={async () => {
+          if (confirmDialog.action) {
+            await confirmDialog.action();
+          }
+        }}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+      />
     </InventoryContext.Provider>
   );
 }

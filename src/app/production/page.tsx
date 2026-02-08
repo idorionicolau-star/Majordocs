@@ -52,7 +52,7 @@ export default function ProductionPage() {
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const { productions, companyId, companyData, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation, deleteProduction, updateProduction, clearProductions } = inventoryContext || { productions: [], companyId: null, companyData: null, updateProductStock: () => { }, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false, deleteProduction: () => { }, updateProduction: () => { }, clearProductions: async () => { } };
+  const { productions, companyId, companyData, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation, deleteProduction, updateProduction, clearProductions, confirmAction } = inventoryContext || { productions: [], companyId: null, companyData: null, updateProductStock: () => { }, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false, deleteProduction: () => { }, updateProduction: () => { }, clearProductions: async () => { }, confirmAction: () => { } };
 
   const canEditProduction = canEdit('production');
   const canViewProduction = canView('production');
@@ -151,10 +151,20 @@ export default function ProductionPage() {
   }, [productions, nameFilter, locationFilter, isMultiLocation, dateFilter]);
 
   const handleClear = async () => {
-    if (clearProductions) {
-      await clearProductions();
+    if (clearProductions && confirmAction) {
+      confirmAction(async () => {
+        await clearProductions();
+        setShowClearConfirm(false);
+      }, "Limpar Toda a Produção", "Tem a certeza absoluta? Esta ação requer a sua palavra-passe e é irreversível.");
     }
-    setShowClearConfirm(false);
+  };
+
+  const handleDeleteCallback = (id: string) => {
+    if (confirmAction && deleteProduction) {
+      confirmAction(async () => {
+        await deleteProduction(id);
+      }, "Apagar Registo de Produção", "Esta ação moverá o registo para a lixeira. Confirme com a sua palavra-passe.");
+    }
   };
 
   const handlePrintReport = () => {
@@ -426,7 +436,7 @@ export default function ProductionPage() {
                   key={production.id}
                   production={production}
                   onTransfer={() => setProductionToTransfer(production)}
-                  onDelete={deleteProduction}
+                  onDelete={handleDeleteCallback}
                   onUpdate={updateProduction}
                   viewMode={gridCols === '5' ? 'condensed' : 'normal'}
                   canEdit={canEditProduction}
@@ -444,7 +454,7 @@ export default function ProductionPage() {
                 key={production.id}
                 production={production}
                 onTransfer={() => setProductionToTransfer(production)}
-                onDelete={deleteProduction}
+                onDelete={handleDeleteCallback}
                 onUpdate={updateProduction}
                 viewMode='normal'
                 canEdit={canEditProduction}

@@ -51,7 +51,7 @@ export function CatalogManager() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { companyId } = inventoryContext || {};
+  const { companyId, confirmAction } = inventoryContext || {};
 
   const [activeTab, setActiveTab] = useState("categories");
   const [highlightProductsTab, setHighlightProductsTab] = useState(false);
@@ -190,37 +190,41 @@ export function CatalogManager() {
   }
 
   const confirmDeleteCategory = async () => {
-    if (categoryToDelete && firestore && companyId) {
-      const isUsed = products?.some(p => p.category === categoryToDelete.name);
-      if (isUsed) {
-        toast({
-          variant: 'destructive',
-          title: 'Não é possível remover',
-          description: `A categoria "${categoryToDelete.name}" está a ser usada por produtos.`,
-        });
-      } else {
-        toast({ title: 'A remover categoria...' });
-        try {
-          await deleteDoc(doc(firestore, `companies/${companyId}/catalogCategories`, categoryToDelete.id));
-          toast({ title: 'Categoria Removida' });
-        } catch (e) {
-          toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover a categoria.' });
+    if (categoryToDelete && firestore && companyId && confirmAction) {
+      confirmAction(async () => {
+        const isUsed = products?.some(p => p.category === categoryToDelete.name);
+        if (isUsed) {
+          toast({
+            variant: 'destructive',
+            title: 'Não é possível remover',
+            description: `A categoria "${categoryToDelete.name}" está a ser usada por produtos.`,
+          });
+        } else {
+          toast({ title: 'A remover categoria...' });
+          try {
+            await deleteDoc(doc(firestore, `companies/${companyId}/catalogCategories`, categoryToDelete.id));
+            toast({ title: 'Categoria Removida' });
+          } catch (e) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover a categoria.' });
+          }
         }
-      }
-      setCategoryToDelete(null);
+        setCategoryToDelete(null);
+      }, "Remover Categoria", "Confirme com a sua palavra-passe para remover esta categoria.");
     }
   };
 
   const confirmDeleteProduct = async () => {
-    if (productToDelete && firestore && companyId) {
-      toast({ title: 'A remover produto...' });
-      try {
-        await deleteDoc(doc(firestore, `companies/${companyId}/catalogProducts`, productToDelete.id));
-        toast({ title: 'Produto Removido do Catálogo' });
-      } catch (e) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover o produto.' });
-      }
-      setProductToDelete(null);
+    if (productToDelete && firestore && companyId && confirmAction) {
+      confirmAction(async () => {
+        toast({ title: 'A remover produto...' });
+        try {
+          await deleteDoc(doc(firestore, `companies/${companyId}/catalogProducts`, productToDelete.id));
+          toast({ title: 'Produto Removido do Catálogo' });
+        } catch (e) {
+          toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover o produto.' });
+        }
+        setProductToDelete(null);
+      }, "Remover Produto do Catálogo", "Confirme com a sua palavra-passe para remover este produto.");
     }
   }
 
@@ -332,22 +336,24 @@ export function CatalogManager() {
   };
 
   const handleDeleteSelectedProducts = async () => {
-    if (!firestore || !companyId || selectedProducts.length === 0) return;
+    if (!firestore || !companyId || selectedProducts.length === 0 || !confirmAction) return;
 
-    toast({ title: `A apagar ${selectedProducts.length} produtos...` });
-    try {
-      const batch = writeBatch(firestore);
-      selectedProducts.forEach(productId => {
-        const docRef = doc(firestore, `companies/${companyId}/catalogProducts`, productId);
-        batch.delete(docRef);
-      });
-      await batch.commit();
-      toast({ title: 'Produtos Apagados', description: `${selectedProducts.length} produtos foram removidos do catálogo.` });
-      setSelectedProducts([]);
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível apagar os produtos selecionados.' });
-    }
-    setShowDeleteSelectedProductsConfirm(false);
+    confirmAction(async () => {
+      toast({ title: `A apagar ${selectedProducts.length} produtos...` });
+      try {
+        const batch = writeBatch(firestore);
+        selectedProducts.forEach(productId => {
+          const docRef = doc(firestore, `companies/${companyId}/catalogProducts`, productId);
+          batch.delete(docRef);
+        });
+        await batch.commit();
+        toast({ title: 'Produtos Apagados', description: `${selectedProducts.length} produtos foram removidos do catálogo.` });
+        setSelectedProducts([]);
+      } catch (e) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível apagar os produtos selecionados.' });
+      }
+      setShowDeleteSelectedProductsConfirm(false);
+    }, "Apagar Produtos Selecionados", `Tem a certeza que deseja apagar ${selectedProducts.length} produtos?`);
   };
 
   const handleToggleSelectAllCategories = (checked: boolean) => {
@@ -367,35 +373,37 @@ export function CatalogManager() {
   };
 
   const handleDeleteSelectedCategories = async () => {
-    if (!firestore || !companyId || selectedCategories.length === 0) return;
+    if (!firestore || !companyId || selectedCategories.length === 0 || !confirmAction) return;
 
-    const categoriesToDelete = filteredCategories.filter(c => selectedCategories.includes(c.id));
-    const usedCategories = categoriesToDelete.filter(c => products?.some(p => p.category === c.name));
+    confirmAction(async () => {
+      const categoriesToDelete = filteredCategories.filter(c => selectedCategories.includes(c.id));
+      const usedCategories = categoriesToDelete.filter(c => products?.some(p => p.category === c.name));
 
-    if (usedCategories.length > 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Não é possível apagar',
-        description: `As seguintes categorias estão em uso: ${usedCategories.map(c => c.name).join(', ')}`,
-      });
+      if (usedCategories.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Não é possível apagar',
+          description: `As seguintes categorias estão em uso: ${usedCategories.map(c => c.name).join(', ')}`,
+        });
+        setShowDeleteSelectedCategoriesConfirm(false);
+        return;
+      }
+
+      toast({ title: `A apagar ${selectedCategories.length} categorias...` });
+      try {
+        const batch = writeBatch(firestore);
+        selectedCategories.forEach(categoryId => {
+          const docRef = doc(firestore, `companies/${companyId}/catalogCategories`, categoryId);
+          batch.delete(docRef);
+        });
+        await batch.commit();
+        toast({ title: 'Categorias Apagadas', description: `${selectedCategories.length} categorias foram removidas.` });
+        setSelectedCategories([]);
+      } catch (e) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível apagar as categorias selecionadas.' });
+      }
       setShowDeleteSelectedCategoriesConfirm(false);
-      return;
-    }
-
-    toast({ title: `A apagar ${selectedCategories.length} categorias...` });
-    try {
-      const batch = writeBatch(firestore);
-      selectedCategories.forEach(categoryId => {
-        const docRef = doc(firestore, `companies/${companyId}/catalogCategories`, categoryId);
-        batch.delete(docRef);
-      });
-      await batch.commit();
-      toast({ title: 'Categorias Apagadas', description: `${selectedCategories.length} categorias foram removidas.` });
-      setSelectedCategories([]);
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível apagar as categorias selecionadas.' });
-    }
-    setShowDeleteSelectedCategoriesConfirm(false);
+    }, "Apagar Categorias Selecionadas", `Tem a certeza que deseja apagar ${selectedCategories.length} categorias?`);
   };
 
   const isAllProductsSelected = filteredProducts.length > 0 && selectedProducts.length === filteredProducts.length;

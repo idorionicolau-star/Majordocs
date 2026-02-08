@@ -90,8 +90,11 @@ export default function InventoryPage() {
     canView,
     user,
     clearProductsCollection,
+    deleteProduct,
+    clearProductsCollection,
     companyData,
-  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => { }, updateProduct: () => { }, deleteProduct: () => { }, transferStock: () => { }, loading: true, canEdit: () => false, canView: () => false, user: null, clearProductsCollection: async () => { }, companyData: null };
+    confirmAction,
+  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => { }, updateProduct: () => { }, deleteProduct: () => { }, transferStock: () => { }, loading: true, canEdit: () => false, canView: () => false, user: null, clearProductsCollection: async () => { }, companyData: null, confirmAction: () => { } };
 
   const canEditInventory = canEdit('inventory');
   const canViewInventory = canView('inventory');
@@ -156,13 +159,15 @@ export default function InventoryPage() {
 
 
   const confirmDeleteProduct = () => {
-    if (productToDelete && productToDelete.instanceId) {
-      deleteProduct(productToDelete.instanceId);
-      toast({
-        title: "Produto Apagado",
-        description: `O produto "${productToDelete.name}" foi removido do inventário.`,
-      });
-      setProductToDelete(null);
+    if (confirmAction && productToDelete && productToDelete.instanceId) {
+      confirmAction(async () => {
+        await deleteProduct(productToDelete.instanceId);
+        toast({
+          title: "Produto Apagado",
+          description: `O produto "${productToDelete.name}" foi removido do inventário.`,
+        });
+        setProductToDelete(null);
+      }, "Apagar Produto", "Esta ação moverá o produto para a lixeira. Confirme com a sua palavra-passe.");
     }
   };
 
@@ -396,10 +401,12 @@ export default function InventoryPage() {
   const currentProducts = filteredProducts.slice(startIndex, endIndex);
 
   const handleClearInventory = async () => {
-    if (clearProductsCollection) {
-      await clearProductsCollection();
+    if (clearProductsCollection && confirmAction) {
+      confirmAction(async () => {
+        await clearProductsCollection();
+        setShowClearConfirm(false);
+      }, "Limpar Todo o Inventário", "Tem a certeza absoluta? Esta ação apagará todos os produtos e é irreversível. Requer a sua palavra-passe.");
     }
-    setShowClearConfirm(false);
   };
 
   const reportTitle = useMemo(() => {

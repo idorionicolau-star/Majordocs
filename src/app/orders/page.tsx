@@ -51,7 +51,7 @@ export default function OrdersPage() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { orders, sales, companyId, loading: inventoryLoading, user, canEdit, deleteOrder, clearOrders, addNotification, addProductionLog, companyData } = inventoryContext || { orders: [], sales: [], companyId: null, loading: true, user: null, canEdit: () => false, deleteOrder: () => { }, clearOrders: async () => { }, addNotification: () => { }, addProductionLog: () => { }, companyData: null };
+  const { orders, sales, companyId, loading: inventoryLoading, user, canEdit, deleteOrder, clearOrders, addNotification, addProductionLog, companyData, confirmAction } = inventoryContext || { orders: [], sales: [], companyId: null, loading: true, user: null, canEdit: () => false, deleteOrder: () => { }, clearOrders: async () => { }, addNotification: () => { }, addProductionLog: () => { }, companyData: null, confirmAction: () => { } };
 
   const canEditOrders = canEdit('orders');
   const isAdmin = user?.role === 'Admin';
@@ -92,6 +92,27 @@ export default function OrdersPage() {
         const companyDoc = await transaction.get(companyRef);
         if (!companyDoc.exists()) {
           throw new Error("Empresa não encontrada.");
+        }
+
+        // Check Product Stock for Reservation
+        let productRef: any = null;
+        let productData: any = null;
+
+        if (formData.productId) {
+          const pRef = doc(firestore, `companies/${companyId}/products`, formData.productId);
+          const pDoc = await transaction.get(pRef);
+          if (pDoc.exists()) {
+            productRef = pRef;
+            productData = pDoc.data();
+
+            const currentStock = productData.stock || 0;
+            const currentReserved = productData.reservedStock || 0;
+            const available = currentStock - currentReserved;
+
+            if (available < formData.quantity) {
+              throw new Error(`Stock insuficiente. Disponível: ${available} ${formData.unit}`);
+            }
+          }
         }
 
         // --- All WRITES after ---
@@ -140,6 +161,14 @@ export default function OrdersPage() {
 
         // 3. Update company saleCounter
         transaction.update(companyRef, { saleCounter: newSaleCounter });
+
+        // 4. Update Product Reserved Stock
+        if (productRef && productData) {
+          transaction.update(productRef, {
+            reservedStock: (productData.reservedStock || 0) + formData.quantity,
+            lastUpdated: new Date().toISOString()
+          });
+        }
       });
 
       toast({
@@ -302,10 +331,20 @@ export default function OrdersPage() {
   const filteredOrders = useFuse(statusFilteredOrders, nameFilter, { keys: ['productName', 'clientName'] });
 
   const handleClear = async () => {
-    if (clearOrders) {
-      await clearOrders();
+    if (clearOrders && confirmAction) {
+      confirmAction(async () => {
+        await clearOrders();
+        setShowClearConfirm(false);
+      }, "Limpar Todas as Encomendas", "Tem a certeza absoluta? Esta ação requer a sua palavra-passe e é irreversível.");
     }
-    setShowClearConfirm(false);
+  };
+
+  const handleDeleteCallback = (id: string) => {
+    if (confirmAction && deleteOrder) {
+      confirmAction(async () => {
+        await deleteOrder(id);
+      }, "Apagar Encomenda", "Esta ação moverá a encomenda para a lixeira. Confirme com a sua palavra-passe.");
+    }
   };
 
   const handlePrintReport = () => {
@@ -503,7 +542,7 @@ export default function OrdersPage() {
               order={order}
               onUpdateStatus={handleUpdateOrderStatus}
               onAddProductionLog={addProductionLog}
-              onDeleteOrder={deleteOrder}
+              onDeleteOrder={handleDeleteCallback}
               canEdit={canEditOrders}
               associatedSale={sales.find(s => s.orderId === order.id)}
               companyData={companyData}

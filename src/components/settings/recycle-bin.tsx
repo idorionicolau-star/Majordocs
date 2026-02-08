@@ -22,7 +22,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function RecycleBin() {
-    const { allProducts: products, allSales: sales, restoreItem, hardDelete, user } = useContext(InventoryContext) || { allProducts: [], allSales: [] };
+    const { allProducts: products, allSales: sales, restoreItem, hardDelete, user, confirmAction } = useContext(InventoryContext) || { allProducts: [], allSales: [], confirmAction: () => { } };
     const [searchQuery, setSearchQuery] = useState('');
     const [itemToRestore, setItemToRestore] = useState<{ id: string, name: string, type: 'product' | 'sale' } | null>(null);
     const [itemToDelete, setItemToDelete] = useState<{ id: string, name: string, type: 'product' | 'sale' } | null>(null);
@@ -64,17 +64,21 @@ export function RecycleBin() {
     );
 
     const handleRestore = async () => {
-        if (!itemToRestore || !restoreItem) return;
-        const collection = itemToRestore.type === 'product' ? 'products' : 'sales';
-        await restoreItem(collection, itemToRestore.id);
-        setItemToRestore(null);
+        if (!itemToRestore || !restoreItem || !confirmAction) return;
+        confirmAction(async () => {
+            const collection = itemToRestore.type === 'product' ? 'products' : 'sales';
+            await restoreItem(collection, itemToRestore.id);
+            setItemToRestore(null);
+        }, "Restaurar Item", "Confirme com a sua palavra-passe para restaurar este item.");
     };
 
     const handleHardDelete = async () => {
-        if (!itemToDelete || !hardDelete) return;
-        const collection = itemToDelete.type === 'product' ? 'products' : 'sales';
-        await hardDelete(collection, itemToDelete.id);
-        setItemToDelete(null);
+        if (!itemToDelete || !hardDelete || !confirmAction) return;
+        confirmAction(async () => {
+            const collection = itemToDelete.type === 'product' ? 'products' : 'sales';
+            await hardDelete(collection, itemToDelete.id);
+            setItemToDelete(null);
+        }, "Excluir Permanentemente", "Esta ação é irreversível. O item será apagado para sempre.");
     };
 
     if (!user || user.role !== 'Admin') return <div className="p-4 text-center text-muted-foreground">Acesso restrito a administradores.</div>;

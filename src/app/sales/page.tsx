@@ -60,7 +60,9 @@ export default function SalesPage() {
     canView,
     locations,
     isMultiLocation,
+    isMultiLocation,
     clearSales,
+    confirmAction,
   } = inventoryContext || {
     loading: true,
     addSale: async () => { },
@@ -73,6 +75,7 @@ export default function SalesPage() {
     locations: [],
     isMultiLocation: false,
     clearSales: async () => { },
+    confirmAction: () => { }
   };
 
   const canEditSales = canEdit('sales');
@@ -253,10 +256,20 @@ export default function SalesPage() {
   };
 
   const handleClearSales = async () => {
-    if (clearSales) {
-      await clearSales();
+    if (clearSales && confirmAction) {
+      confirmAction(async () => {
+        await clearSales();
+        setShowClearConfirm(false);
+      }, "Limpar Todas as Vendas", "Tem a certeza absoluta? Esta ação requer a sua palavra-passe e é irreversível.");
     }
-    setShowClearConfirm(false);
+  };
+
+  const handleDeleteCallback = (id: string) => {
+    if (confirmAction && deleteSale) {
+      confirmAction(async () => {
+        await deleteSale(id); // Ensure deleteSale returns Promise<void> or void
+      }, "Apagar Venda", "Esta ação apagará o registo e reporá o stock. Confirme com a sua palavra-passe.");
+    }
   };
 
   if (!companyId) {
@@ -265,6 +278,13 @@ export default function SalesPage() {
 
   return (
     <>
+      {/* Custom Alert Dialog removed, using PasswordConfirmation which is global in context. 
+          Actually, the admin button still opens showClearConfirm dialog?
+          Wait, handleClearSales calls confirmAction which opens another dialog.
+          So if I keep showClearConfirm, I have two dialogs.
+          Admin clicks "Clear Sales" -> showClearConfirm opens (Are you sure?) -> "Yes" -> confirmAction opens (Password?).
+          This double confirmation is good for "Clear All". 
+      */}
       <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -421,7 +441,7 @@ export default function SalesPage() {
               sales={paginatedSales}
               onUpdateSale={handleUpdateSale}
               onConfirmPickup={handleConfirmPickup}
-              onDeleteSale={deleteSale}
+              onDeleteSale={handleDeleteCallback}
               canEdit={canEditSales}
               locations={locations}
               gridCols={gridCols}

@@ -355,6 +355,8 @@ export interface InventoryContextType {
   availableCategories: string[];
   addCategory: (category: string) => Promise<void>;
   removeCategory: (category: string) => Promise<void>;
+
+  confirmAction: (action: () => Promise<void>, title?: string, description?: string) => void;
 }
 
 type CatalogProduct = Omit<

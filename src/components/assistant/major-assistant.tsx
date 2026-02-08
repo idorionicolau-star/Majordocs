@@ -1,5 +1,7 @@
 "use client";
 
+import DOMPurify from 'dompurify';
+
 import { useState, useEffect, useRef, useContext } from "react";
 import {
     Sparkles,
@@ -118,7 +120,7 @@ const ChatInterface = ({ messages, input, setInput, handleSend, isLoading, scrol
                             ) : (
                                 <div
                                     className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>ol]:list-decimal [&>ol]:pl-4 [&>ul]:list-disc [&>ul]:pl-4"
-                                    dangerouslySetInnerHTML={{ __html: msg.content }}
+                                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.content) }}
                                 />
                             )}
                         </div>
