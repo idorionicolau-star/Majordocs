@@ -29,6 +29,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
+import { useFuse } from '@/hooks/use-fuse';
 
 export default function CustomersPage() {
     const { canView, companyData, sales } = useInventory();
@@ -53,11 +54,7 @@ export default function CustomersPage() {
         return <div className="p-8 text-center">Você não tem permissão para aceder a este módulo.</div>;
     }
 
-    const filteredCustomers = customers.filter(c =>
-        normalizeString(c.name).includes(normalizeString(searchTerm)) ||
-        (c.phone && c.phone.includes(searchTerm)) ||
-        (c.email && normalizeString(c.email).includes(normalizeString(searchTerm)))
-    );
+    const filteredCustomers = useFuse(customers, searchTerm, { keys: ['name', 'phone', 'email'] });
 
     const handleAddSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

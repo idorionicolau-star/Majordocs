@@ -4,6 +4,7 @@
 
 import { useState, useMemo, useContext, useEffect } from "react";
 import { useSearchParams } from 'next/navigation';
+import { useFuse } from '@/hooks/use-fuse';
 import type { Order, Sale, ProductionLog, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Filter, List, LayoutGrid, ChevronDown, Lock, Trash2, PlusCircle, Plus, Printer, Download } from "lucide-react";
@@ -288,19 +289,17 @@ export default function OrdersPage() {
   };
 
 
-  const filteredOrders = useMemo(() => {
+
+
+  const statusFilteredOrders = useMemo(() => {
     let result = orders;
-    if (nameFilter) {
-      result = result.filter(o =>
-        o.productName.toLowerCase().includes(nameFilter.toLowerCase()) ||
-        (o.clientName && o.clientName.toLowerCase().includes(nameFilter.toLowerCase()))
-      );
-    }
     if (statusFilter !== 'all') {
       result = result.filter(o => o.status === statusFilter);
     }
     return result;
-  }, [orders, nameFilter, statusFilter]);
+  }, [orders, statusFilter]);
+
+  const filteredOrders = useFuse(statusFilteredOrders, nameFilter, { keys: ['productName', 'clientName'] });
 
   const handleClear = async () => {
     if (clearOrders) {
