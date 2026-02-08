@@ -24,8 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export function RecycleBin() {
     const { allProducts: products, allSales: sales, allOrders: orders, allProductions: productions, restoreItem, hardDelete, user, confirmAction } = useContext(InventoryContext) || { allProducts: [], allSales: [], allOrders: [], allProductions: [], confirmAction: () => { } };
     const [searchQuery, setSearchQuery] = useState('');
-    const [itemToRestore, setItemToRestore] = useState<{ id: string, name: string, type: 'product' | 'sale' | 'order' | 'production' } | null>(null);
-    const [itemToDelete, setItemToDelete] = useState<{ id: string, name: string, type: 'product' | 'sale' | 'order' | 'production' } | null>(null);
+
 
     // We need to fetch *deleted* items.
     // However, the context's `products` and `sales` usually Filter Out deleted items?
@@ -80,38 +79,36 @@ export function RecycleBin() {
         (p.productName || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const handleRestore = async () => {
-        if (!itemToRestore || !restoreItem || !confirmAction) return;
+    const handleRestore = async (item: { id: string, name: string, type: 'product' | 'sale' | 'order' | 'production' }) => {
+        if (!restoreItem || !confirmAction) return;
         confirmAction(async () => {
             let collection = '';
-            switch (itemToRestore.type) {
+            switch (item.type) {
                 case 'product': collection = 'products'; break;
                 case 'sale': collection = 'sales'; break;
                 case 'order': collection = 'orders'; break;
                 case 'production': collection = 'productions'; break;
             }
             if (collection) {
-                await restoreItem(collection, itemToRestore.id);
-                setItemToRestore(null);
+                await restoreItem(collection, item.id);
             }
-        }, "Restaurar Item", "Confirme com a sua palavra-passe para restaurar este item.");
+        }, "Restaurar Item", `Tem a certeza que deseja restaurar "${item.name}"? Ele voltará a aparecer nas listas principais. Confirme com a sua palavra-passe.`);
     };
 
-    const handleHardDelete = async () => {
-        if (!itemToDelete || !hardDelete || !confirmAction) return;
+    const handleHardDelete = async (item: { id: string, name: string, type: 'product' | 'sale' | 'order' | 'production' }) => {
+        if (!hardDelete || !confirmAction) return;
         confirmAction(async () => {
             let collection = '';
-            switch (itemToDelete.type) {
+            switch (item.type) {
                 case 'product': collection = 'products'; break;
                 case 'sale': collection = 'sales'; break;
                 case 'order': collection = 'orders'; break;
                 case 'production': collection = 'productions'; break;
             }
             if (collection) {
-                await hardDelete(collection, itemToDelete.id);
-                setItemToDelete(null);
+                await hardDelete(collection, item.id);
             }
-        }, "Excluir Permanentemente", "Esta ação é irreversível. O item será apagado para sempre.");
+        }, "Excluir Permanentemente", `Esta ação é irreversível. O item "${item.name}" será apagado para sempre. Confirme com a sua palavra-passe.`);
     };
 
     if (!user || user.role !== 'Admin') return <div className="p-4 text-center text-muted-foreground">Acesso restrito a administradores.</div>;
@@ -165,10 +162,10 @@ export function RecycleBin() {
                                                 <p className="text-xs text-muted-foreground">Por: {product.deletedBy || 'Desconhecido'}</p>
                                             </div>
                                             <div className="flex gap-2">
-                                                <Button size="icon" variant="outline" className="h-8 w-8 text-green-600" onClick={() => setItemToRestore({ id: product.id!, name: product.name, type: 'product' })}>
+                                                <Button size="icon" variant="outline" className="h-8 w-8 text-green-600" onClick={() => handleRestore({ id: product.id!, name: product.name, type: 'product' })}>
                                                     <RefreshCw className="h-4 w-4" />
                                                 </Button>
-                                                <Button size="icon" variant="outline" className="h-8 w-8 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setItemToDelete({ id: product.id!, name: product.name, type: 'product' })}>
+                                                <Button size="icon" variant="outline" className="h-8 w-8 text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleHardDelete({ id: product.id!, name: product.name, type: 'product' })}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
@@ -193,10 +190,10 @@ export function RecycleBin() {
                                                 <p className="text-xs text-muted-foreground">Apagado a: {sale.deletedAt ? format(new Date(sale.deletedAt), "dd/MM/yyyy HH:mm", { locale: pt }) : 'N/A'}</p>
                                             </div>
                                             <div className="flex gap-2">
-                                                <Button size="icon" variant="outline" className="h-8 w-8 text-green-600" onClick={() => setItemToRestore({ id: sale.id, name: `Venda ${sale.guideNumber}`, type: 'sale' })}>
+                                                <Button size="icon" variant="outline" className="h-8 w-8 text-green-600" onClick={() => handleRestore({ id: sale.id, name: `Venda ${sale.guideNumber}`, type: 'sale' })}>
                                                     <RefreshCw className="h-4 w-4" />
                                                 </Button>
-                                                <Button size="icon" variant="outline" className="h-8 w-8 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setItemToDelete({ id: sale.id, name: `Venda ${sale.guideNumber}`, type: 'sale' })}>
+                                                <Button size="icon" variant="outline" className="h-8 w-8 text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleHardDelete({ id: sale.id, name: `Venda ${sale.guideNumber}`, type: 'sale' })}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
@@ -221,10 +218,10 @@ export function RecycleBin() {
                                                 <p className="text-xs text-muted-foreground">Apagado a: {order.deletedAt ? format(new Date(order.deletedAt), "dd/MM/yyyy HH:mm", { locale: pt }) : 'N/A'}</p>
                                             </div>
                                             <div className="flex gap-2">
-                                                <Button size="icon" variant="outline" className="h-8 w-8 text-green-600" onClick={() => setItemToRestore({ id: order.id, name: `Encomenda de ${order.productName}`, type: 'order' })}>
+                                                <Button size="icon" variant="outline" className="h-8 w-8 text-green-600" onClick={() => handleRestore({ id: order.id, name: `Encomenda de ${order.productName}`, type: 'order' })}>
                                                     <RefreshCw className="h-4 w-4" />
                                                 </Button>
-                                                <Button size="icon" variant="outline" className="h-8 w-8 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setItemToDelete({ id: order.id, name: `Encomenda de ${order.productName}`, type: 'order' })}>
+                                                <Button size="icon" variant="outline" className="h-8 w-8 text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleHardDelete({ id: order.id, name: `Encomenda de ${order.productName}`, type: 'order' })}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
@@ -249,10 +246,10 @@ export function RecycleBin() {
                                                 <p className="text-xs text-muted-foreground">Apagado a: {prod.deletedAt ? format(new Date(prod.deletedAt), "dd/MM/yyyy HH:mm", { locale: pt }) : 'N/A'}</p>
                                             </div>
                                             <div className="flex gap-2">
-                                                <Button size="icon" variant="outline" className="h-8 w-8 text-green-600" onClick={() => setItemToRestore({ id: prod.id, name: `Produção de ${prod.productName}`, type: 'production' })}>
+                                                <Button size="icon" variant="outline" className="h-8 w-8 text-green-600" onClick={() => handleRestore({ id: prod.id, name: `Produção de ${prod.productName}`, type: 'production' })}>
                                                     <RefreshCw className="h-4 w-4" />
                                                 </Button>
-                                                <Button size="icon" variant="outline" className="h-8 w-8 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setItemToDelete({ id: prod.id, name: `Produção de ${prod.productName}`, type: 'production' })}>
+                                                <Button size="icon" variant="outline" className="h-8 w-8 text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleHardDelete({ id: prod.id, name: `Produção de ${prod.productName}`, type: 'production' })}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
@@ -265,38 +262,7 @@ export function RecycleBin() {
                 </Tabs>
             </CardContent>
 
-            <Dialog open={!!itemToRestore} onOpenChange={(open) => !open && setItemToRestore(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Restaurar Item</DialogTitle>
-                        <DialogDescription>
-                            Tem a certeza que deseja restaurar "{itemToRestore?.name}"? Ele voltará a aparecer nas listas principais.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setItemToRestore(null)}>Cancelar</Button>
-                        <Button onClick={handleRestore} className="bg-green-600 hover:bg-green-700">Restaurar</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
 
-            <Dialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle className="text-destructive">Excluir Permanentemente</DialogTitle>
-                        <DialogDescription>
-                            <span className="flex items-center gap-2 font-bold text-red-600 mb-2">
-                                <AlertTriangle className="h-4 w-4" /> Ação Irreversível
-                            </span>
-                            Tem a certeza que deseja apagar permanentemente "{itemToDelete?.name}"? Esta ação não pode ser desfeita.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setItemToDelete(null)}>Cancelar</Button>
-                        <Button variant="destructive" onClick={handleHardDelete}>Apagar Para Sempre</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </Card>
     );
 }

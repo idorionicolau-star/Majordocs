@@ -110,10 +110,9 @@ type ProductionFormValues = z.infer<typeof productionSchema>;
 
 // Raw Materials Manager Component
 const RawMaterialsManager = () => {
-    const { rawMaterials, addRawMaterial, updateRawMaterial, deleteRawMaterial, loading, companyData, availableUnits } = useContext(InventoryContext)!;
+    const { rawMaterials, addRawMaterial, updateRawMaterial, deleteRawMaterial, loading, companyData, availableUnits, confirmAction } = useContext(InventoryContext)!;
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [materialToEdit, setMaterialToEdit] = useState<RawMaterial | null>(null);
-    const [materialToDelete, setMaterialToDelete] = useState<RawMaterial | null>(null);
     const { toast } = useToast();
 
     const form = useForm<RawMaterialFormValues>({
@@ -217,7 +216,13 @@ const RawMaterialsManager = () => {
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-1">
                                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(material)}><Edit className="h-4 w-4" /></Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMaterialToDelete(material)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                                                if (confirmAction) {
+                                                    confirmAction(async () => {
+                                                        await deleteRawMaterial(material.id);
+                                                    }, "Apagar Matéria-Prima", `Tem a certeza que quer apagar "${material.name}"? Esta ação não pode ser desfeita.`);
+                                                }
+                                            }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -266,23 +271,14 @@ const RawMaterialsManager = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* Delete Confirmation */}
-            <AlertDialog open={!!materialToDelete} onOpenChange={() => setMaterialToDelete(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader><AlertDialogTitle>Tem a certeza?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription></AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => { deleteRawMaterial(materialToDelete!.id); setMaterialToDelete(null); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Apagar</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+
         </Card>
     );
 };
 
 // Recipes Manager Component
 const RecipesManager = () => {
-    const { recipes, catalogProducts, rawMaterials, addRecipe, updateRecipe, deleteRecipe, loading, companyData } = useContext(InventoryContext)!;
+    const { recipes, catalogProducts, rawMaterials, addRecipe, updateRecipe, deleteRecipe, loading, companyData, confirmAction } = useContext(InventoryContext)!;
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
     const { toast } = useToast();
@@ -385,7 +381,13 @@ const RecipesManager = () => {
                             </CardContent>
                             <CardFooter>
                                 <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(recipe)}><Edit className="h-4 w-4" /></Button>
-                                <Button variant="ghost" size="icon" onClick={() => deleteRecipe(recipe.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                <Button variant="ghost" size="icon" onClick={() => {
+                                    if (confirmAction) {
+                                        confirmAction(async () => {
+                                            await deleteRecipe(recipe.id);
+                                        }, "Apagar Receita", `Tem a certeza que quer apagar a receita de "${recipe.productName}"? Esta ação não pode ser desfeita.`);
+                                    }
+                                }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                             </CardFooter>
                         </Card>
                     ))}

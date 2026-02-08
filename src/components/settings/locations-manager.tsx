@@ -23,7 +23,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 
 export function LocationsManager() {
-  const { companyData, updateCompany } = useContext(InventoryContext) || {};
+  const { companyData, updateCompany, confirmAction } = useContext(InventoryContext) || {};
   const { toast } = useToast();
 
   const isMultiLocation = companyData?.isMultiLocation || false;
@@ -31,7 +31,6 @@ export function LocationsManager() {
 
   const [newLocationName, setNewLocationName] = useState('');
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
-  const [locationToDelete, setLocationToDelete] = useState<Location | null>(null);
 
   const handleToggleMultiLocation = (checked: boolean) => {
     if (updateCompany) {
@@ -65,26 +64,26 @@ export function LocationsManager() {
   const handleUpdateLocation = () => {
     if (!editingLocation || !newLocationName.trim()) return;
     if (locations && locations.find(l => l.name.toLowerCase() === newLocationName.trim().toLowerCase() && l.id !== editingLocation.id)) {
-        toast({ variant: 'destructive', title: 'Localização já existe' });
-        return;
+      toast({ variant: 'destructive', title: 'Localização já existe' });
+      return;
     }
 
     if (updateCompany) {
-        const updatedLocations = locations.map(l => l.id === editingLocation.id ? { ...l, name: newLocationName.trim() } : l);
-        updateCompany({ locations: updatedLocations });
-        setEditingLocation(null);
-        setNewLocationName('');
-        toast({ title: 'Localização Atualizada' });
+      const updatedLocations = locations.map(l => l.id === editingLocation.id ? { ...l, name: newLocationName.trim() } : l);
+      updateCompany({ locations: updatedLocations });
+      setEditingLocation(null);
+      setNewLocationName('');
+      toast({ title: 'Localização Atualizada' });
     }
   };
-  
-  const confirmDeleteLocation = () => {
-    if (locationToDelete && updateCompany) {
-        // Here you might add a check if the location is being used by any products
-        const updatedLocations = locations.filter(l => l.id !== locationToDelete.id);
-        updateCompany({ locations: updatedLocations });
-        setLocationToDelete(null);
+
+  const handleDeleteLocation = (location: Location) => {
+    if (confirmAction && updateCompany) {
+      confirmAction(async () => {
+        const updatedLocations = locations.filter(l => l.id !== location.id);
+        await updateCompany({ locations: updatedLocations });
         toast({ title: 'Localização Removida' });
+      }, "Remover Localização", `Tem a certeza que deseja remover permanentemente a localização "${location.name}"?`);
     }
   };
 
@@ -95,13 +94,13 @@ export function LocationsManager() {
           <AlertDialogHeader>
             <AlertDialogTitle>Editar Localização</AlertDialogTitle>
             <div className="pt-4">
-                <Label htmlFor="location-name-edit">Nome da Localização</Label>
-                <Input 
-                    id="location-name-edit"
-                    value={newLocationName}
-                    onChange={(e) => setNewLocationName(e.target.value)}
-                    className="mt-2"
-                />
+              <Label htmlFor="location-name-edit">Nome da Localização</Label>
+              <Input
+                id="location-name-edit"
+                value={newLocationName}
+                onChange={(e) => setNewLocationName(e.target.value)}
+                className="mt-2"
+              />
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -110,25 +109,14 @@ export function LocationsManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
-      <AlertDialog open={!!locationToDelete} onOpenChange={() => setLocationToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
-            <AlertDialogDescription>Esta ação irá remover permanentemente a localização "{locationToDelete?.name}".</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteLocation} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Apagar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
+
 
       <div className="flex items-center space-x-2">
-        <Switch 
-            id="multi-location-switch" 
-            checked={isMultiLocation}
-            onCheckedChange={handleToggleMultiLocation}
+        <Switch
+          id="multi-location-switch"
+          checked={isMultiLocation}
+          onCheckedChange={handleToggleMultiLocation}
         />
         <Label htmlFor="multi-location-switch">Ativar modo Multi-Localização</Label>
       </div>
@@ -137,8 +125,8 @@ export function LocationsManager() {
         <div className="space-y-4 pt-4 border-t">
           <h4 className="font-medium">Gerir Localizações</h4>
           <div className="flex items-center gap-2">
-            <Input 
-              placeholder="Nome da nova localização" 
+            <Input
+              placeholder="Nome da nova localização"
               value={newLocationName}
               onChange={(e) => setNewLocationName(e.target.value)}
             />
@@ -157,7 +145,7 @@ export function LocationsManager() {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingLocation(location); setNewLocationName(location.name); }}>
                       <Edit className="h-4 w-4 text-muted-foreground" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setLocationToDelete(location)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteLocation(location)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>

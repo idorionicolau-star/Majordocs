@@ -79,8 +79,6 @@ export function CatalogManager() {
   const { data: products, isLoading: productsLoading } = useCollection<CatalogProduct>(catalogProductsCollectionRef);
   const { data: categories, isLoading: categoriesLoading } = useCollection<CatalogCategory>(catalogCategoriesCollectionRef);
 
-  const [categoryToDelete, setCategoryToDelete] = useState<CatalogCategory | null>(null);
-  const [productToDelete, setProductToDelete] = useState<CatalogProduct | null>(null);
   const [categoryToEdit, setCategoryToEdit] = useState<CatalogCategory | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
@@ -189,44 +187,42 @@ export function CatalogManager() {
     setNewCategoryName(category.name);
   }
 
-  const confirmDeleteCategory = async () => {
-    if (categoryToDelete && firestore && companyId && confirmAction) {
+  const handleDeleteCategory = (category: CatalogCategory) => {
+    if (firestore && companyId && confirmAction) {
       confirmAction(async () => {
-        const isUsed = products?.some(p => p.category === categoryToDelete.name);
+        const isUsed = products?.some(p => p.category === category.name);
         if (isUsed) {
           toast({
             variant: 'destructive',
             title: 'Não é possível remover',
-            description: `A categoria "${categoryToDelete.name}" está a ser usada por produtos.`,
+            description: `A categoria "${category.name}" está a ser usada por produtos.`,
           });
         } else {
           toast({ title: 'A remover categoria...' });
           try {
-            await deleteDoc(doc(firestore, `companies/${companyId}/catalogCategories`, categoryToDelete.id));
+            await deleteDoc(doc(firestore, `companies/${companyId}/catalogCategories`, category.id));
             toast({ title: 'Categoria Removida' });
           } catch (e) {
             toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover a categoria.' });
           }
         }
-        setCategoryToDelete(null);
-      }, "Remover Categoria", "Confirme com a sua palavra-passe para remover esta categoria.");
+      }, "Remover Categoria", `Tem a certeza que deseja remover permanentemente a categoria "${category.name}"? Apenas pode remover categorias que não estejam a ser usadas por nenhum produto. Confirme com a sua palavra-passe.`);
     }
   };
 
-  const confirmDeleteProduct = async () => {
-    if (productToDelete && firestore && companyId && confirmAction) {
+  const handleDeleteProduct = (product: CatalogProduct) => {
+    if (firestore && companyId && confirmAction) {
       confirmAction(async () => {
         toast({ title: 'A remover produto...' });
         try {
-          await deleteDoc(doc(firestore, `companies/${companyId}/catalogProducts`, productToDelete.id));
+          await deleteDoc(doc(firestore, `companies/${companyId}/catalogProducts`, product.id));
           toast({ title: 'Produto Removido do Catálogo' });
         } catch (e) {
           toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover o produto.' });
         }
-        setProductToDelete(null);
-      }, "Remover Produto do Catálogo", "Confirme com a sua palavra-passe para remover este produto.");
+      }, "Remover Produto do Catálogo", `Tem a certeza que deseja remover "${product.name}" do seu catálogo de produtos base? Confirme com a sua palavra-passe.`);
     }
-  }
+  };
 
   const handleUpdateProduct = async (updatedProduct: CatalogProduct) => {
     if (!firestore || !updatedProduct.id || !companyId) return;
@@ -411,35 +407,7 @@ export function CatalogManager() {
 
   return (
     <>
-      <AlertDialog open={!!categoryToDelete} onOpenChange={(open) => !open && setCategoryToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação irá remover permanentemente a categoria "{categoryToDelete?.name}". Apenas pode remover categorias que não estejam a ser usadas por nenhum produto.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteCategory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Apagar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
-      <AlertDialog open={!!productToDelete} onOpenChange={(open) => !open && setProductToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação irá remover "{productToDelete?.name}" do seu catálogo de produtos base. Isto não afeta o stock existente no inventário.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteProduct} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Apagar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <AlertDialog open={showDeleteSelectedProductsConfirm} onOpenChange={setShowDeleteSelectedProductsConfirm}>
         <AlertDialogContent>
@@ -606,7 +574,7 @@ export function CatalogManager() {
                           categories={categories?.map(c => c.name) || []}
                           onUpdate={handleUpdateProduct}
                         />
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setProductToDelete(product)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteProduct(product)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
@@ -708,7 +676,7 @@ export function CatalogManager() {
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditingCategory(category)}>
                           <Edit className="h-4 w-4 text-muted-foreground" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCategoryToDelete(category)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteCategory(category)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>

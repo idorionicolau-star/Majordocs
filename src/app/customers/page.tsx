@@ -32,7 +32,7 @@ import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
 import { useFuse } from '@/hooks/use-fuse';
 
 export default function CustomersPage() {
-    const { canView, companyData, sales } = useInventory();
+    const { canView, companyData, sales, confirmAction } = useInventory();
     const { customers, addCustomer, updateCustomer, deleteCustomer, loading } = useCRM();
     const { toast } = useToast();
 
@@ -90,9 +90,11 @@ export default function CustomersPage() {
         setEditingCustomer(customer);
     };
 
-    const handleDelete = async (id: string) => {
-        if (confirm('Tem a certeza que deseja remover este cliente?')) {
-            await deleteCustomer(id);
+    const handleDelete = async (customer: any) => {
+        if (confirmAction) {
+            confirmAction(async () => {
+                await deleteCustomer(customer.id);
+            }, "Remover Cliente", `Tem a certeza que deseja remover o cliente "${customer.name}"? Esta ação não pode ser desfeita.`);
         }
     };
 
@@ -234,7 +236,7 @@ export default function CustomersPage() {
                                             <Button variant="ghost" size="icon" onClick={() => openEdit(customer)} className="h-8 w-8 text-slate-500 hover:text-slate-900 hover:bg-slate-100">
                                                 <Edit className="h-4 w-4" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => handleDelete(customer.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
+                                            <Button variant="ghost" size="icon" onClick={() => handleDelete(customer)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
@@ -289,7 +291,7 @@ export default function CustomersPage() {
                                     <Button variant="outline" size="sm" className="h-9 px-3" onClick={() => openEdit(customer)}>
                                         <Edit className="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm" className="h-9 px-3 text-red-500 hover:bg-red-50" onClick={() => handleDelete(customer.id)}>
+                                    <Button variant="ghost" size="sm" className="h-9 px-3 text-red-500 hover:bg-red-50" onClick={() => handleDelete(customer)}>
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </div>

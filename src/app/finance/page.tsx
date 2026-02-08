@@ -45,7 +45,7 @@ const PDFDownloadLink = dynamic(
 import { FinancialReportPDF } from '@/components/finance/financial-report-pdf';
 
 export default function FinancePage() {
-    const { canView, sales, companyData } = useInventory();
+    const { canView, sales, companyData, confirmAction } = useInventory();
     const { expenses, addExpense, deleteExpense, loading } = useFinance();
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -289,7 +289,13 @@ export default function FinancePage() {
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => deleteExpense(expense.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button variant="ghost" size="icon" onClick={() => {
+                                                if (confirmAction) {
+                                                    confirmAction(async () => {
+                                                        await deleteExpense(expense.id);
+                                                    }, "Apagar Despesa", `Tem a certeza que quer apagar a despesa "${expense.description}"? Esta ação não pode ser desfeita.`);
+                                                }
+                                            }} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </TableCell>
@@ -326,7 +332,13 @@ export default function FinancePage() {
                                             <Calendar className="w-3.5 h-3.5" />
                                             {format(new Date(expense.date), "d MMM yyyy", { locale: ptBR })}
                                         </div>
-                                        <Button variant="ghost" size="sm" onClick={() => deleteExpense(expense.id)} className="h-8 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30">
+                                        <Button variant="ghost" size="sm" onClick={() => {
+                                            if (confirmAction) {
+                                                confirmAction(async () => {
+                                                    await deleteExpense(expense.id);
+                                                }, "Apagar Despesa", `Tem a certeza que quer apagar a despesa "${expense.description}"? Esta ação não pode ser desfeita.`);
+                                            }
+                                        }} className="h-8 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30">
                                             <Trash2 className="h-4 w-4 mr-1.5" />
                                             Apagar
                                         </Button>

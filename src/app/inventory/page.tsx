@@ -157,16 +157,15 @@ export default function InventoryPage() {
   };
 
 
-  const confirmDeleteProduct = () => {
-    if (confirmAction && productToDelete && productToDelete.instanceId) {
+  const handleConfirmDeleteProduct = (product: Product) => {
+    if (confirmAction && product && product.instanceId) {
       confirmAction(async () => {
-        await deleteProduct(productToDelete.instanceId);
+        await deleteProduct(product.instanceId);
         toast({
           title: "Produto Apagado",
-          description: `O produto "${productToDelete.name}" foi removido do inventário.`,
+          description: `O produto "${product.name}" foi removido do inventário.`,
         });
-        setProductToDelete(null);
-      }, "Apagar Produto", "Esta ação moverá o produto para a lixeira. Confirme com a sua palavra-passe.");
+      }, "Apagar Produto", `Tem a certeza que quer apagar "${product.name}"? Esta ação moverá o produto para a lixeira. Confirme com a sua palavra-passe.`);
     }
   };
 
@@ -514,22 +513,6 @@ export default function InventoryPage() {
 
   return (
     <>
-      <AlertDialog open={!!productToDelete} onOpenChange={(open) => !open && setProductToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isto irá apagar permanentemente o produto
-              "{productToDelete?.name}" do seu inventário.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteProduct} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Apagar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -771,7 +754,7 @@ export default function InventoryPage() {
         {view === 'list' ? (
           <InventoryDataTable
             columns={columns({
-              onAttemptDelete: (product) => setProductToDelete(product),
+              onAttemptDelete: handleConfirmDeleteProduct,
               onProductUpdate: handleUpdateProduct,
               canEdit: canEditInventory,
               isMultiLocation: isMultiLocation,
@@ -807,7 +790,7 @@ export default function InventoryPage() {
                   key={product.instanceId}
                   product={product}
                   onProductUpdate={handleUpdateProduct}
-                  onAttemptDelete={setProductToDelete}
+                  onAttemptDelete={handleConfirmDeleteProduct}
                   viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
                   canEdit={canEditInventory}
                   locations={locations}
