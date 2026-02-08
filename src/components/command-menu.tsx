@@ -14,6 +14,8 @@ import { InventoryContext } from "@/context/inventory-context"
 import type { Product } from "@/lib/types"
 import { Box, Sparkles, Loader2 as Loader } from "lucide-react"
 
+import { useFuse } from "@/hooks/use-fuse"
+
 interface CommandMenuProps {
   open: boolean
   setOpen: (open: boolean) => void
@@ -61,8 +63,10 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
     setSearch(value);
   }
 
+  const filteredProducts = useFuse(uniqueProducts, search, { keys: ['name'] });
+
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
+    <CommandDialog open={open} onOpenChange={setOpen} shouldFilter={false}>
       <CommandInput
         placeholder="Pesquisar produtos ou perguntar à IA..."
         value={search}
@@ -80,9 +84,9 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
           </CommandGroup>
         )}
 
-        {uniqueProducts.length > 0 && (
+        {filteredProducts.length > 0 && (
           <CommandGroup heading="Produtos do Inventário">
-            {uniqueProducts.map((product: Product) => (
+            {filteredProducts.map((product: Product) => (
               <CommandItem
                 key={product.instanceId}
                 value={product.name}

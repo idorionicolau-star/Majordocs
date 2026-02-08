@@ -24,6 +24,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn, normalizeString, calculateSimilarity } from '@/lib/utils';
+import { useFuse } from '@/hooks/use-fuse';
 import { ScrollArea } from '../ui/scroll-area';
 import {
   Dialog,
@@ -55,46 +56,14 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredProducts = useMemo(() => {
-    let prods = products;
-    if (categoryFilter !== 'all') {
-      prods = prods.filter(p => p.category === categoryFilter);
-    }
-    if (searchQuery && searchQuery.length > 1) { // Only filter if query has substance
-      const normalizedQuery = normalizeString(searchQuery);
 
-      // We want to sort primarily by "includes" (exact logic) 
-      // AND secondarily by "fuzzy match" (robust logic)
 
-      prods = prods.filter(p => {
-        const normName = normalizeString(p.name);
-        if (normName.includes(normalizedQuery)) return true;
+  const categoryFilteredProducts = useMemo(() => {
+    if (categoryFilter === 'all') return products;
+    return products.filter(p => p.category === categoryFilter);
+  }, [products, categoryFilter]);
 
-        // Fuzzy fallback for typos (like "Cimnto" -> "Cimento")
-        // Only checks if query is long enough to avoid noise
-        if (searchQuery.length >= 3) {
-          const similarity = calculateSimilarity(p.name, searchQuery);
-          return similarity > 0.6; // generous threshold for search visibility
-        }
-        return false;
-      }).sort((a, b) => {
-        const normA = normalizeString(a.name);
-        const normB = normalizeString(b.name);
-        const aIncludes = normA.includes(normalizedQuery);
-        const bIncludes = normB.includes(normalizedQuery);
-
-        // Prioritize exact substring match
-        if (aIncludes && !bIncludes) return -1;
-        if (!aIncludes && bIncludes) return 1;
-
-        // If both fuzzy or both exact, sort by similarity score to query
-        const simA = calculateSimilarity(a.name, searchQuery);
-        const simB = calculateSimilarity(b.name, searchQuery);
-        return simB - simA;
-      });
-    }
-    return prods;
-  }, [products, categoryFilter, searchQuery]);
+  const filteredProducts = useFuse(categoryFilteredProducts, searchQuery, { keys: ['name'] });
 
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [quickCreateName, setQuickCreateName] = useState('');

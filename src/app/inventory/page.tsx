@@ -46,6 +46,8 @@ import { Card } from "@/components/ui/card";
 import { formatCurrency, normalizeString } from "@/lib/utils";
 
 
+import { useFuse } from "@/hooks/use-fuse";
+
 export default function InventoryPage() {
   const inventoryContext = useContext(InventoryContext);
   const searchParams = useSearchParams();
@@ -186,6 +188,7 @@ export default function InventoryPage() {
             color: #333;
             margin: 0;
             padding: 2rem;
+            
           }
           .container {
             width: 100%;
@@ -334,16 +337,12 @@ export default function InventoryPage() {
     return Array.from(categorySet);
   }, [products]);
 
-  const filteredProducts = useMemo(() => {
+  // Pre-filter by category, location, and date BEFORE fuzzy search
+  const preFilteredProducts = useMemo(() => {
     let result = [...products];
 
     if (selectedLocation !== 'all') {
       result = result.filter(p => p.location === selectedLocation);
-    }
-
-    if (nameFilter) {
-      const normalizedFilter = normalizeString(nameFilter);
-      result = result.filter(p => normalizeString(p.name).includes(normalizedFilter));
     }
 
     if (categoryFilter.length > 0) {
@@ -353,6 +352,16 @@ export default function InventoryPage() {
     if (dateFilter) {
       result = result.filter(p => isSameDay(new Date(p.lastUpdated), dateFilter));
     }
+
+    return result;
+  }, [products, selectedLocation, categoryFilter, dateFilter]);
+
+  // Apply fuzzy search on the pre-filtered list
+  const searchedProducts = useFuse(preFilteredProducts, nameFilter, { keys: ['name', 'barcode', 'sku'] });
+
+  const filteredProducts = useMemo(() => {
+    // Apply sorting to the searched results
+    let result = [...searchedProducts];
 
     // Sorting logic
     switch (sortBy) {
@@ -374,7 +383,7 @@ export default function InventoryPage() {
     }
 
     return result;
-  }, [products, selectedLocation, nameFilter, categoryFilter, dateFilter, sortBy]);
+  }, [searchedProducts, sortBy]);
 
   // Reset page when filters change
   useEffect(() => {
