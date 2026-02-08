@@ -422,12 +422,12 @@ export default function ProductionPage() {
           </div>
         </Card>
 
-        <div className="hidden md:block h-[calc(100vh-250px)]">
+        <div className="hidden md:block">
           {view === 'list' ? (
             <ProductionDataTable columns={columns({})} data={filteredProductions} />
           ) : (
             <VirtuosoGrid
-              style={{ height: '100%' }}
+              useWindowScroll
               data={filteredProductions}
               totalCount={filteredProductions.length}
               components={{
@@ -455,10 +455,10 @@ export default function ProductionPage() {
           )}
         </div>
 
-        <div className="md:hidden h-[calc(100vh-200px)]">
+        <div className="md:hidden">
           {filteredProductions.length > 0 ? (
             <Virtuoso
-              style={{ height: '100%' }}
+              useWindowScroll
               data={filteredProductions}
               itemContent={(index, production) => (
                 <div className="pb-3">

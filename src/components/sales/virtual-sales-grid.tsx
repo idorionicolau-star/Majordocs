@@ -26,7 +26,7 @@ export function VirtualSalesGrid({ // Keeping name to avoid breaking import imme
 
     return (
         <VirtuosoGrid
-            style={{ height: '100%', width: '100%' }}
+            useWindowScroll
             data={sales}
             totalCount={sales.length}
             components={{

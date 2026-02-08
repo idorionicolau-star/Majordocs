@@ -537,10 +537,10 @@ export default function OrdersPage() {
           </div>
         </Card>
 
-        <div className="h-[calc(100vh-320px)] sm:h-[calc(100vh-280px)]">
+        <div>
           {filteredOrders.length > 0 ? (
             <VirtuosoGrid
-              style={{ height: '100%', width: '100%' }}
+              useWindowScroll
               data={filteredOrders}
               totalCount={filteredOrders.length}
               components={{
