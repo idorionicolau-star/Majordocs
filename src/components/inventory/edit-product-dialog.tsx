@@ -26,36 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-[
-  {
-    "TargetContent": "import { Input } from \"@/components/ui/input\";",
-    "ReplacementContent": "import { Input } from \"@/components/ui/input\";\nimport { MathInput } from \"@/components/ui/math-input\";",
-    "StartLine": 29,
-    "EndLine": 29,
-    "AllowMultiple": false
-  },
-  {
-    "TargetContent": "                  <FormControl>\n                    <Input type=\"number\" step=\"0.01\" {...field} />\n                  </FormControl>",
-    "ReplacementContent": "                  <FormControl>\n                    <MathInput \n                      {...field} \n                      onValueChange={field.onChange} \n                      placeholder=\"0.00\" \n                    />\n                  </FormControl>",
-    "StartLine": 170,
-    "EndLine": 172,
-    "AllowMultiple": false
-  },
-  {
-    "TargetContent": "                  <FormControl>\n                    <Input type=\"number\" step=\"any\" {...field} />\n                  </FormControl>",
-    "ReplacementContent": "                  <FormControl>\n                     <MathInput \n                      {...field} \n                      onValueChange={field.onChange} \n                      placeholder=\"0\"\n                    />\n                  </FormControl>",
-    "StartLine": 184,
-    "EndLine": 186,
-    "AllowMultiple": false
-  },
-  {
-    "TargetContent": "                  <FormControl>\n                    <Input type=\"number\" {...field} />\n                  </FormControl>",
-    "ReplacementContent": "                  <FormControl>\n                    <MathInput \n                      {...field} \n                      onValueChange={field.onChange} \n                      placeholder=\"0\"\n                    />\n                  </FormControl>",
-    "StartLine": 223,
-    "EndLine": 225,
-    "AllowMultiple": true
-  }
-]
+
 import { Edit2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -64,6 +35,7 @@ import type { Product, Location } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { ScrollArea } from '../ui/scroll-area';
 import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
+import { useInventory } from "@/context/inventory-context";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),

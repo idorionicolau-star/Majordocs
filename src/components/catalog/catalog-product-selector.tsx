@@ -224,8 +224,19 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
         open={isQuickCreateOpen}
         onOpenChange={setIsQuickCreateOpen}
         defaultName={quickCreateName}
-        onSuccess={(newName) => {
-          onValueChange(newName, undefined);
+        onSuccess={(newName, productDetails) => {
+          // Construct a temporary CatalogProduct object for immediate selection
+          const tempProduct: CatalogProduct | undefined = productDetails ? {
+            id: 'temp-' + Date.now(),
+            name: newName,
+            category: productDetails.category,
+            unit: productDetails.unit,
+            price: 0,
+            description: '',
+            image: ''
+          } : undefined;
+
+          onValueChange(newName, tempProduct);
           setSearchQuery('');
           setOpen(false);
         }}

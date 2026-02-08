@@ -930,21 +930,49 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       await batch.commit();
 
     } else {
-      if (!catalogProduct) {
-        // toast is handled by caller or we throw to let caller know
-        const errorMsg = `Produto Base Não Encontrado: Adicione "${productName}" ao catálogo primeiro.`;
-        // We still show toast here for immediate feedback if not caught, but we must throw.
-        // Better to JUST throw and let caller handle toast, but for safety lets throw.
-        throw new Error(errorMsg);
+      let productDataToUse: Partial<Product> = {};
+
+      if (catalogProduct) {
+        const { id, ...rest } = catalogProduct;
+        productDataToUse = rest;
+      } else {
+        // Fallback: Try to find ANY existing instance of this product to use as blueprint
+        const blueprint = products.find(p => p.name === productName);
+        if (blueprint) {
+          const { id, instanceId, stock, reservedStock, location, lastUpdated, ...rest } = blueprint;
+          productDataToUse = rest;
+        } else {
+          // Last resort: Defaults. This allows "On Demand" products to be transferred even if not in catalog yet
+          // (Though they SHOULD be in catalog if using Quick Create correctly, but this is a safety net)
+          productDataToUse = {
+            name: productName,
+            category: 'Geral',
+            price: 0,
+            unit: 'un',
+            lowStockThreshold: 5,
+            criticalStockThreshold: 2
+          };
+        }
       }
-      const { id, ...restOfCatalogProduct } = catalogProduct;
+
       const productsRef = collection(firestore, `companies/${companyId}/products`);
 
       const batch = writeBatch(firestore);
       const newProductRef = doc(productsRef);
-      batch.set(newProductRef, { ...restOfCatalogProduct, stock: quantity, reservedStock: 0, location: targetLocation, lastUpdated: new Date().toISOString() });
 
-      checkStockAndNotify({ ...catalogProduct, id: newProductRef.id, stock: quantity } as Product);
+      const newProductData = {
+        ...productDataToUse,
+        stock: quantity,
+        reservedStock: 0,
+        location: targetLocation,
+        lastUpdated: new Date().toISOString()
+      };
+
+      batch.set(newProductRef, newProductData);
+
+      // Notify and Link if it was a catalog match (or just created)
+      // checkStockAndNotify expects a Product with ID.
+      checkStockAndNotify({ ...newProductData, id: newProductRef.id } as Product);
 
       const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
         productId: newProductRef.id,
