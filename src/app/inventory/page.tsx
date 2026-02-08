@@ -89,9 +89,6 @@ export default function InventoryPage() {
     canEdit,
     canView,
     user,
-    clearProductsCollection,
-    deleteProduct,
-    clearProductsCollection,
     companyData,
     confirmAction,
   } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => { }, updateProduct: () => { }, deleteProduct: () => { }, transferStock: () => { }, loading: true, canEdit: () => false, canView: () => false, user: null, clearProductsCollection: async () => { }, companyData: null, confirmAction: () => { } };

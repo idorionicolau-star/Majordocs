@@ -60,7 +60,6 @@ export default function SalesPage() {
     canView,
     locations,
     isMultiLocation,
-    isMultiLocation,
     clearSales,
     confirmAction,
   } = inventoryContext || {
