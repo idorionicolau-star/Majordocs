@@ -208,7 +208,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
   const availableStock = selectedProductInstance ? selectedProductInstance.stock - selectedProductInstance.reservedStock : 0;
 
   const handleProductSelect = (productName: string, product?: CatalogProduct) => {
-    form.setValue('productName', productName);
+    form.setValue('productName', productName, { shouldValidate: true });
     if (product) {
       form.setValue('unitPrice', product.price);
       form.setValue('unit', product.unit || 'un');

@@ -337,7 +337,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
 export function EditSaleDialog(props: EditSaleDialogProps) {
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      {props.open && <EditSaleDialogContent {...props} />}
+      <EditSaleDialogContent {...props} />
     </Dialog>
   )
 }

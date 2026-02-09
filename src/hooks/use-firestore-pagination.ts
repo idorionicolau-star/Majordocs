@@ -18,6 +18,7 @@ interface UseFirestorePaginationResult<T> {
     hasMore: boolean;
     loadMore: () => Promise<void>;
     reload: () => Promise<void>;
+    updateItem: (id: string, partialData: Partial<T>) => void;
 }
 
 export function useFirestorePagination<T = DocumentData>(
@@ -108,5 +109,12 @@ export function useFirestorePagination<T = DocumentData>(
         reload();
     }, [reload]);
 
-    return { data, loading, error, hasMore, loadMore, reload };
+    // Manual update function
+    const updateItem = useCallback((id: string, partialData: Partial<T>) => {
+        setData(prev => prev.map(item =>
+            item.id === id ? { ...item, ...partialData } : item
+        ));
+    }, []);
+
+    return { data, loading, error, hasMore, loadMore, reload, updateItem };
 }

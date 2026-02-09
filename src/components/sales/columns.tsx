@@ -126,29 +126,29 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
                 </TooltipProvider>
             )}
 
-            {canEdit && <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
+            {canEdit && (
+                <>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditDialogOpen(true)}>
                                     <Edit className="h-4 w-4" />
                                     <span className="sr-only">Editar Venda</span>
                                 </Button>
-                            </DialogTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Editar Venda</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-                <EditSaleDialog
-                    sale={sale}
-                    onUpdateSale={options.onUpdateSale}
-                    onOpenChange={setIsEditDialogOpen}
-                    open={isEditDialogOpen}
-                />
-            </Dialog>}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Editar Venda</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                    <EditSaleDialog
+                        sale={sale}
+                        onUpdateSale={options.onUpdateSale}
+                        onOpenChange={setIsEditDialogOpen}
+                        open={isEditDialogOpen}
+                    />
+                </>
+            )}
 
             {canEdit && (sale.amountPaid || 0) < sale.totalValue && (
                 <TooltipProvider>

@@ -124,7 +124,8 @@ export default function SalesPage() {
     data: sales,
     loading: salesLoading,
     loadMore,
-    hasMore
+    hasMore,
+    updateItem
   } = useFirestorePagination<Sale>(
     salesQuery as any,
     500, // Increase fetch limit to support client-side pagination
@@ -230,6 +231,10 @@ export default function SalesPage() {
     if (updatedSale.id && firestore && companyId) {
       const saleDocRef = doc(firestore, `companies/${companyId}/sales`, updatedSale.id);
       updateDoc(saleDocRef, updatedSale as any);
+
+      // Update local state immediately
+      updateItem(updatedSale.id, updatedSale);
+
       toast({
         title: "Venda Atualizada",
         description: `A venda #${updatedSale.guideNumber} foi atualizada com sucesso.`,
@@ -241,6 +246,12 @@ export default function SalesPage() {
     try {
       if (!confirmSalePickup) throw new Error("Função de levantamento não disponível.");
       await confirmSalePickup(sale);
+
+      // Update local state immediately
+      if (sale.id) {
+        updateItem(sale.id, { status: 'Levantado' });
+      }
+
       toast({
         title: "Material Levantado",
         description: `O stock foi atualizado para a venda #${sale.guideNumber}.`,

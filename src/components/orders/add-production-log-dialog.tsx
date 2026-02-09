@@ -54,25 +54,36 @@ export function AddProductionLogDialog({ order, onAddLog }: AddProductionLogDial
     },
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const remainingQuantity = order.quantity - order.quantityProduced;
 
-  function onSubmit(values: AddLogFormValues) {
+  async function onSubmit(values: AddLogFormValues) {
     if (values.quantity > remainingQuantity) {
       form.setError("quantity", { type: "manual", message: `A quantidade excede o restante. Faltam ${remainingQuantity}.` });
       return;
     }
 
+    setIsSubmitting(true);
 
+    // Simulate a brief delay for better UX
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     onAddLog(order.id, values);
-    form.reset();
+
     setOpen(false);
+
+    // Reset form after dialog close animation
+    setTimeout(() => {
+      form.reset();
+      setIsSubmitting(false);
+    }, 300);
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="flex-1" size="sm">
+        <Button variant="outline" className="flex-1" size="sm" onClick={(e) => e.stopPropagation()}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Registar
         </Button>
@@ -94,7 +105,7 @@ export function AddProductionLogDialog({ order, onAddLog }: AddProductionLogDial
                     <p className='text-xs text-muted-foreground'>Faltam: {remainingQuantity}</p>
                   </div>
                   <FormControl>
-                    <Input type="number" step="any" min="0.01" max={remainingQuantity} {...field} placeholder="0.0" />
+                    <Input type="number" step="any" min="0.01" max={remainingQuantity} {...field} placeholder="0.0" disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -107,15 +118,24 @@ export function AddProductionLogDialog({ order, onAddLog }: AddProductionLogDial
                 <FormItem>
                   <FormLabel>Notas (Opcional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Alguma observação sobre a produção de hoje?" {...field} />
+                    <Textarea placeholder="Alguma observação sobre a produção de hoje?" {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button type="submit">Adicionar Registo</Button>
+              <Button type="button" variant="secondary" onClick={() => setOpen(false)} disabled={isSubmitting}>Cancelar</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    A registar...
+                  </>
+                ) : (
+                  "Adicionar Registo"
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

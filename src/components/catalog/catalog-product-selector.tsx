@@ -231,9 +231,9 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
             name: newName,
             category: productDetails.category,
             unit: productDetails.unit,
-            price: 0,
-            description: '',
-            image: ''
+            price: productDetails.price,
+            lowStockThreshold: 10,
+            criticalStockThreshold: 5,
           } : undefined;
 
           onValueChange(newName, tempProduct);

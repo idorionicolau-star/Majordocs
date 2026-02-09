@@ -130,7 +130,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
   }, [open, form, locations]);
 
   const handleProductSelect = (productName: string, product?: CatalogProduct) => {
-    form.setValue('productName', productName);
+    form.setValue('productName', productName, { shouldValidate: true });
     if (product) {
       form.setValue('productId', product.id);
       form.setValue('unit', product.unit || 'un');

@@ -38,6 +38,7 @@ const formSchema = z.object({
     name: z.string().nonempty({ message: "O nome é obrigatório." }),
     category: z.string().nonempty({ message: "A categoria é obrigatória." }),
     unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).default('un'),
+    price: z.coerce.number().min(0, { message: "O preço deve ser positivo." }).default(0),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -46,13 +47,15 @@ interface QuickCreateProductDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     defaultName: string;
-    onSuccess: (productName: string, productDetails?: { unit: string; category: string }) => void;
+    onSuccess: (productName: string, productDetails?: { unit: string; category: string; price: number }) => void;
 }
 
 export function QuickCreateProductDialog({ open, onOpenChange, defaultName, onSuccess }: QuickCreateProductDialogProps) {
     const inventoryContext = useContext(InventoryContext);
-    const { addCatalogProduct, catalogCategories } = inventoryContext || { addCatalogProduct: async () => { }, catalogCategories: [] };
+
+    const { addCatalogProduct, addCatalogCategory, catalogCategories } = inventoryContext || { addCatalogProduct: async () => { }, addCatalogCategory: async () => { }, catalogCategories: [] };
     const { toast } = useToast();
+    const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -60,29 +63,48 @@ export function QuickCreateProductDialog({ open, onOpenChange, defaultName, onSu
             name: defaultName,
             category: "",
             unit: 'un',
+            price: 0,
         },
     });
 
     useEffect(() => {
         if (open) {
+            setIsCreatingCategory(false);
             form.reset({
                 name: defaultName,
                 category: "",
                 unit: 'un',
+                price: 0,
             });
         }
     }, [open, defaultName, form]);
 
     const onSubmit = async (values: FormValues) => {
+        // 0. Ensure Category Exists
+        if (isCreatingCategory && values.category.trim() !== "") {
+            try {
+                // Determine if it already exists (case insensitive) to prevent duplicates at UI level
+                // (Context also handles this, but good to be safe)
+                const exists = catalogCategories?.some((c: CatalogCategory) => c.name.toLowerCase() === values.category.trim().toLowerCase());
+                if (!exists) {
+                    await addCatalogCategory(values.category.trim());
+                }
+            } catch (error) {
+                console.error("Failed to create category", error);
+                toast({ variant: "destructive", title: "Erro na Categoria", description: "Não foi possível criar a nova categoria." });
+                return;
+            }
+        }
+
         // 1. Add to Catalog ONLY (Persistent definition)
         try {
             await addCatalogProduct({
                 name: values.name,
                 category: values.category,
-                price: 0, // Default to 0 for now, can be edited later
+                price: values.price,
                 unit: values.unit,
-                description: "",
-                image: "",
+                lowStockThreshold: 10,
+                criticalStockThreshold: 5,
             });
         } catch (error) {
             console.error("Failed to add to catalog", error);
@@ -97,7 +119,7 @@ export function QuickCreateProductDialog({ open, onOpenChange, defaultName, onSu
         });
 
         // Pass back details to auto-fill
-        onSuccess(values.name, { unit: values.unit, category: values.category });
+        onSuccess(values.name, { unit: values.unit, category: values.category, price: values.price });
         onOpenChange(false);
     };
 
@@ -125,25 +147,17 @@ export function QuickCreateProductDialog({ open, onOpenChange, defaultName, onSu
                                 </FormItem>
                             )}
                         />
+
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
-                                name="category"
+                                name="price"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Categoria</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Selecione..." />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {catalogCategories?.map((cat: CatalogCategory) => (
-                                                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <FormLabel>Preço Base (MT)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" min="0" step="0.01" {...field} />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -171,6 +185,50 @@ export function QuickCreateProductDialog({ open, onOpenChange, defaultName, onSu
                                 )}
                             />
                         </div>
+
+                        <FormField
+                            control={form.control}
+                            name="category"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <div className="flex items-center justify-between">
+                                        <FormLabel>Categoria</FormLabel>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 px-2 text-xs text-muted-foreground hover:text-primary"
+                                            onClick={() => {
+                                                setIsCreatingCategory(!isCreatingCategory);
+                                                form.setValue('category', ''); // Clear on toggle
+                                            }}
+                                        >
+                                            {isCreatingCategory ? "Escolher Existente" : "+ Nova Categoria"}
+                                        </Button>
+                                    </div>
+                                    {isCreatingCategory ? (
+                                        <FormControl>
+                                            <Input placeholder="Nome da nova categoria..." {...field} />
+                                        </FormControl>
+                                    ) : (
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Selecione..." />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {catalogCategories?.map((cat: CatalogCategory) => (
+                                                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
                         <DialogFooter>
                             <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
                             <Button type="submit">Criar Produto</Button>

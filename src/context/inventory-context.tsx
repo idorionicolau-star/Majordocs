@@ -53,7 +53,8 @@ import { format, eachMonthOfInterval, subMonths } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { downloadSaleDocument, formatCurrency, normalizeString } from '@/lib/utils';
 import {
-  updateDocumentNonBlocking
+  updateDocumentNonBlocking,
+  addDocumentNonBlocking
 } from '@/firebase/non-blocking-updates';
 import { PasswordConfirmationDialog } from '@/components/auth/password-confirmation-dialog';
 
