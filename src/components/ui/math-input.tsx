@@ -126,16 +126,16 @@ export const MathInput = React.forwardRef<HTMLInputElement, MathInputProps>(
                                 <KeyButton char="4" />
                                 <KeyButton char="5" />
                                 <KeyButton char="6" />
-                                <KeyButton char="-" icon={Minus} variant="secondary" />
+                                <KeyButton char="-" variant="secondary" />
 
                                 <KeyButton char="1" />
                                 <KeyButton char="2" />
                                 <KeyButton char="3" />
-                                <KeyButton char="+" icon={Plus} variant="secondary" />
+                                <KeyButton char="+" variant="secondary" />
 
                                 <KeyButton char="0" className="col-span-2" />
                                 <KeyButton char="." />
-                                <KeyButton char="=" variant="default" icon={Equal} />
+                                <KeyButton char="=" variant="default" />
 
                                 <Button
                                     variant="ghost"
