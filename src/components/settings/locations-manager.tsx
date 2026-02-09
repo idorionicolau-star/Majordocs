@@ -23,69 +23,40 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 
 export function LocationsManager() {
-  const { companyData, updateCompany, confirmAction } = useContext(InventoryContext) || {};
+  const { companyData, updateCompany } = useContext(InventoryContext) || {};
   const { toast } = useToast();
 
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const [newLocationName, setNewLocationName] = useState('');
   const isMultiLocation = companyData?.isMultiLocation || false;
   const locations = companyData?.locations || [];
 
-  const [newLocationName, setNewLocationName] = useState('');
-  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const handleAddLocation = async () => {
+    if (!newLocationName.trim() || !updateCompany) return;
+    const newLocation: Location = { id: uuidv4(), name: newLocationName.trim() };
+    const updatedLocations = [...locations, newLocation];
+    await updateCompany({ locations: updatedLocations });
+    setNewLocationName('');
+    toast({ title: 'Localização Adicionada' });
+  };
 
-  const handleToggleMultiLocation = (checked: boolean) => {
+  const handleUpdateLocation = async () => {
+    if (!editingLocation || !newLocationName.trim() || !updateCompany) return;
+    const updatedLocations = locations.map(l => l.id === editingLocation.id ? { ...l, name: newLocationName.trim() } : l);
+    await updateCompany({ locations: updatedLocations });
+    setEditingLocation(null);
+    setNewLocationName('');
+    toast({ title: 'Localização Atualizada' });
+  };
+
+  const handleToggleMultiLocation = async (checked: boolean) => {
     if (updateCompany) {
-      updateCompany({ isMultiLocation: checked });
-      toast({
-        title: `Multi-Localização ${checked ? 'Ativado' : 'Desativado'}`,
-        description: checked ? 'Pode agora gerir o stock em várias localizações.' : 'Todo o stock será gerido num único local.',
-      });
+      await updateCompany({ isMultiLocation: checked });
+      toast({ title: checked ? 'Modo Multi-Localização Ativado' : 'Modo Multi-Localização Desativado' });
     }
   };
 
-  const handleAddLocation = () => {
-    if (!newLocationName.trim()) {
-      toast({ variant: 'destructive', title: 'Nome inválido' });
-      return;
-    }
-    if (locations && locations.find(l => l.name.toLowerCase() === newLocationName.trim().toLowerCase())) {
-      toast({ variant: 'destructive', title: 'Localização já existe' });
-      return;
-    }
-
-    if (updateCompany) {
-      const newLocation = { id: uuidv4(), name: newLocationName.trim() };
-      const updatedLocations = [...locations, newLocation];
-      updateCompany({ locations: updatedLocations });
-      setNewLocationName('');
-      toast({ title: 'Localização Adicionada' });
-    }
-  };
-
-  const handleUpdateLocation = () => {
-    if (!editingLocation || !newLocationName.trim()) return;
-    if (locations && locations.find(l => l.name.toLowerCase() === newLocationName.trim().toLowerCase() && l.id !== editingLocation.id)) {
-      toast({ variant: 'destructive', title: 'Localização já existe' });
-      return;
-    }
-
-    if (updateCompany) {
-      const updatedLocations = locations.map(l => l.id === editingLocation.id ? { ...l, name: newLocationName.trim() } : l);
-      updateCompany({ locations: updatedLocations });
-      setEditingLocation(null);
-      setNewLocationName('');
-      toast({ title: 'Localização Atualizada' });
-    }
-  };
-
-  const handleDeleteLocation = (location: Location) => {
-    if (confirmAction && updateCompany) {
-      confirmAction(async () => {
-        const updatedLocations = locations.filter(l => l.id !== location.id);
-        await updateCompany({ locations: updatedLocations });
-        toast({ title: 'Localização Removida' });
-      }, "Remover Localização", `Tem a certeza que deseja remover permanentemente a localização "${location.name}"?`);
-    }
-  };
+  // No deletion in locations manager
 
   return (
     <div className="space-y-6">
@@ -144,9 +115,6 @@ export function LocationsManager() {
                   <div className="flex items-center">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingLocation(location); setNewLocationName(location.name); }}>
                       <Edit className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteLocation(location)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
                 </li>

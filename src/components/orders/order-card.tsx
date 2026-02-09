@@ -1,16 +1,25 @@
-
 "use client";
 
 import type { Order } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, ClipboardList, Play, Check, CircleHelp, PlusCircle, TrendingUp, Trash2 } from "lucide-react";
+import { Calendar, User, Play, Check, CircleHelp, TrendingUp, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { AddProductionLogDialog } from "./add-production-log-dialog";
 import { differenceInDays, addDays } from 'date-fns';
-import { useState } from "react";
-
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface OrderCardProps {
     order: Order;
@@ -32,6 +41,10 @@ const statusConfig = {
     'Concluída': {
         color: 'text-[hsl(var(--chart-2))]',
         icon: Check,
+    },
+    'Entregue': {
+        color: 'text-muted-foreground',
+        icon: Check,
     }
 };
 
@@ -40,7 +53,6 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
     const progress = order.quantity > 0 ? (order.quantityProduced / order.quantity) * 100 : 0;
     const remainingQuantity = order.quantity - order.quantityProduced;
 
-
     const calculateEstimatedCompletionDate = () => {
         if (!order.productionStartDate || order.quantityProduced <= 0) {
             return null;
@@ -48,7 +60,7 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
 
         const startDate = new Date(order.productionStartDate);
         const today = new Date();
-        const daysInProduction = differenceInDays(today, startDate) + 1; // +1 to include the start day
+        const daysInProduction = differenceInDays(today, startDate) + 1;
 
         if (daysInProduction <= 0) return null;
 
@@ -61,8 +73,6 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
 
         return estimatedDate;
     };
-
-
 
     const estimatedCompletionDate = calculateEstimatedCompletionDate();
 
@@ -82,9 +92,37 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
                             <span>{order.status}</span>
                         </div>
                         {canEdit && (
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={() => onDeleteOrder(order.id)}>
-                                <Trash2 className="h-3 w-3" />
-                            </Button>
+                            <AlertDialog>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                                                    <Trash2 className="h-4 w-4" />
+                                                    <span className="sr-only">Apagar Encomenda</span>
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Apagar Encomenda</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Esta ação irá mover a encomenda para a lixeira e repor o stock reservado.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => onDeleteOrder(order.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                            Apagar
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         )}
                     </div>
                 </div>

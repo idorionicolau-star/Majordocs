@@ -1,25 +1,21 @@
-
-
 "use client";
+
 
 import { useState, useMemo, useContext, useEffect } from "react";
 import { useSearchParams } from 'next/navigation';
 import { useFuse } from '@/hooks/use-fuse';
-import type { Order, Sale, ProductionLog, ModulePermission } from "@/lib/types";
+import type { Order, Sale, ProductionLog } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Filter, List, LayoutGrid, ChevronDown, Lock, Trash2, PlusCircle, Plus, Printer, Download } from "lucide-react";
+import { Filter, Printer, Download, Plus } from "lucide-react";
 import { AddOrderDialog, AddOrderFormValues } from "@/components/orders/add-order-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { OrderCard } from "@/components/orders/order-card";
-import { cn } from "@/lib/utils";
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFirestore } from '@/firebase/provider';
-import { collection, addDoc, doc, updateDoc, arrayUnion, runTransaction, serverTimestamp, increment } from "firebase/firestore";
-import { Badge } from "@/components/ui/badge";
+import { collection, doc, updateDoc, arrayUnion, runTransaction, increment } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +29,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
-import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
+import { VirtuosoGrid } from 'react-virtuoso';
 import { forwardRef } from 'react';
 
 
@@ -41,9 +37,7 @@ export default function OrdersPage() {
   const searchParams = useSearchParams();
   const [nameFilter, setNameFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [view, setView] = useState<'list' | 'grid'>('grid'); // 'list' view to be implemented
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Auto-Production Confirmation State
   const [pendingConclusionOrder, setPendingConclusionOrder] = useState<Order | null>(null);
@@ -53,10 +47,9 @@ export default function OrdersPage() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { orders, sales, companyId, loading: inventoryLoading, user, canEdit, deleteOrder, clearOrders, addNotification, addProductionLog, companyData, confirmAction } = inventoryContext || { orders: [], sales: [], companyId: null, loading: true, user: null, canEdit: () => false, deleteOrder: () => { }, clearOrders: async () => { }, addNotification: () => { }, addProductionLog: () => { }, companyData: null, confirmAction: () => { } };
+  const { orders, companyId, loading: inventoryLoading, user, canEdit, addNotification, addProductionLog, deleteOrder, companyData } = inventoryContext || { orders: [], sales: [], companyId: null, loading: true, user: null, canEdit: () => false, addNotification: () => { }, addProductionLog: () => { }, deleteOrder: () => { }, companyData: null };
 
   const canEditOrders = canEdit('orders');
-  const isAdmin = user?.role === 'Admin';
 
 
   useEffect(() => {
@@ -70,7 +63,7 @@ export default function OrdersPage() {
     if (!firestore || !companyId || !user) return;
 
     const subtotal = formData.unitPrice * formData.quantity;
-    const totalValue = subtotal; // Simplified total for an order
+    const totalValue = subtotal;
 
     let amountPaid = totalValue;
     if (formData.paymentOption === 'partial') {
@@ -155,7 +148,7 @@ export default function OrdersPage() {
           soldBy: user.username,
           guideNumber: guideNumber,
           location: formData.location,
-          status: 'Pago', // Marked as paid to reserve, but not yet 'picked up'
+          status: 'Pago',
           documentType: 'Encomenda',
           clientName: formData.clientName,
         };
@@ -236,10 +229,6 @@ export default function OrdersPage() {
     try {
       const missingQty = pendingConclusionOrder.quantity - pendingConclusionOrder.quantityProduced;
       const orderRef = doc(firestore, `companies/${companyId}/orders`, pendingConclusionOrder.id);
-
-      // Use a safe reference if productId likely doesn't exist, but we check existence anyway
-      // If pendingConclusionOrder.productId is just a name, this query will definitively fail to find a doc with that ID.
-      // We should check if it's a valid ID format or just rely on existence check.
       const productRef = doc(firestore, `companies/${companyId}/products`, pendingConclusionOrder.productId);
       const productionsRef = collection(firestore, `companies/${companyId}/productions`);
 
@@ -247,7 +236,6 @@ export default function OrdersPage() {
       let productName = pendingConclusionOrder.productName;
 
       await runTransaction(firestore, async (transaction) => {
-        // Check product existence
         const productSnap = await transaction.get(productRef);
         productExists = productSnap.exists();
 
@@ -255,7 +243,6 @@ export default function OrdersPage() {
           productName = productSnap.data().name;
         }
 
-        // 1. Update Order
         const newLog: ProductionLog = {
           id: `log-${Date.now()}`,
           date: new Date().toISOString(),
@@ -268,11 +255,10 @@ export default function OrdersPage() {
 
         transaction.update(orderRef, {
           status: 'Concluída',
-          quantityProduced: pendingConclusionOrder.quantity, // Set to full
+          quantityProduced: pendingConclusionOrder.quantity,
           productionLogs: arrayUnion(newLog)
         });
 
-        // 2. Create Production Record
         const newProductionRef = doc(productionsRef);
         transaction.set(newProductionRef, {
           date: new Date().toISOString().split('T')[0],
@@ -285,7 +271,6 @@ export default function OrdersPage() {
           orderId: pendingConclusionOrder.id
         });
 
-        // 3. Update Product Stock (Increment) - ONLY IF EXISTS
         if (productExists) {
           transaction.update(productRef, {
             stock: increment(missingQty)
@@ -320,8 +305,6 @@ export default function OrdersPage() {
   };
 
 
-
-
   const statusFilteredOrders = useMemo(() => {
     let result = orders;
     if (statusFilter !== 'all') {
@@ -332,22 +315,6 @@ export default function OrdersPage() {
 
   const filteredOrders = useFuse(statusFilteredOrders, nameFilter, { keys: ['productName', 'clientName'] });
 
-  const handleClear = async () => {
-    if (clearOrders && confirmAction) {
-      confirmAction(async () => {
-        await clearOrders();
-        setShowClearConfirm(false);
-      }, "Limpar Todas as Encomendas", "Tem a certeza absoluta? Esta ação requer a sua palavra-passe e é irreversível.");
-    }
-  };
-
-  const handleDeleteCallback = (id: string) => {
-    if (confirmAction && deleteOrder) {
-      confirmAction(async () => {
-        await deleteOrder(id);
-      }, "Apagar Encomenda", "Esta ação moverá a encomenda para a lixeira. Confirme com a sua palavra-passe.");
-    }
-  };
 
   const handlePrintReport = () => {
     const printWindow = window.open('', '', 'height=800,width=800');
@@ -438,6 +405,14 @@ export default function OrdersPage() {
     });
   };
 
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      await deleteOrder(orderId);
+    } catch (error: any) {
+      // Error handled in context
+    }
+  };
+
   if (inventoryLoading) {
     return (
       <div className="space-y-4">
@@ -454,24 +429,6 @@ export default function OrdersPage() {
 
   return (
     <>
-      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação é irreversível e irá apagar permanentemente **todas** as encomendas.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClear} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Sim, apagar tudo
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Auto-Production Confirmation Dialog */}
       <AlertDialog open={showAutoProductionConfirm} onOpenChange={setShowAutoProductionConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -560,10 +517,8 @@ export default function OrdersPage() {
                   order={order}
                   onUpdateStatus={handleUpdateOrderStatus}
                   onAddProductionLog={addProductionLog}
-                  onDeleteOrder={handleDeleteCallback}
+                  onDeleteOrder={handleDeleteOrder}
                   canEdit={canEditOrders}
-                  associatedSale={sales.find(s => s.orderId === order.id)}
-                  companyData={companyData}
                 />
               )}
             />
@@ -573,21 +528,6 @@ export default function OrdersPage() {
             </div>
           )}
         </div>
-
-        {isAdmin && (
-          <Card className="mt-8">
-            <div className="p-6 flex flex-col items-center text-center">
-              <h3 className="font-semibold mb-2">Zona de Administrador</h3>
-              <p className="text-sm text-muted-foreground mb-4 max-w-md">
-                Esta ação é irreversível e irá apagar permanentemente **todas** as encomendas.
-              </p>
-              <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Limpar Encomendas
-              </Button>
-            </div>
-          </Card>
-        )}
 
       </div>
       {canEditOrders && (

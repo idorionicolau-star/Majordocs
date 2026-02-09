@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect, useContext } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from 'next/navigation';
 import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
@@ -36,7 +36,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ProductCard } from "@/components/inventory/product-card";
 import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
-import { InventoryContext } from "@/context/inventory-context";
+import { useInventory } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -51,7 +51,22 @@ import { forwardRef } from 'react';
 import { useFuse } from "@/hooks/use-fuse";
 
 export default function InventoryPage() {
-  const inventoryContext = useContext(InventoryContext);
+  const {
+    products,
+    locations,
+    isMultiLocation,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    transferStock,
+    clearProductsCollection,
+    loading: inventoryLoading,
+    canEdit,
+    canView,
+    user,
+    companyData,
+    confirmAction,
+  } = useInventory();
   const searchParams = useSearchParams();
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [nameFilter, setNameFilter] = useState("");
@@ -78,22 +93,6 @@ export default function InventoryPage() {
   const [sortBy, setSortBy] = useState<'stock_desc' | 'stock_asc' | 'name_asc' | 'date_desc'>('stock_desc');
   const { toast } = useToast();
 
-  const {
-    products,
-    locations,
-    isMultiLocation,
-    addProduct,
-    updateProduct,
-    deleteProduct,
-    transferStock,
-    clearProductsCollection,
-    loading: inventoryLoading,
-    canEdit,
-    canView,
-    user,
-    companyData,
-    confirmAction,
-  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => { }, updateProduct: () => { }, deleteProduct: () => { }, transferStock: () => { }, loading: true, canEdit: () => false, canView: () => false, user: null, clearProductsCollection: async () => { }, companyData: null, confirmAction: () => { } };
 
   const canEditInventory = canEdit('inventory');
   const canViewInventory = canView('inventory');
@@ -158,14 +157,19 @@ export default function InventoryPage() {
 
 
   const handleConfirmDeleteProduct = (product: Product) => {
-    if (confirmAction && product && product.instanceId) {
+    // If it's a merged product, it might use instanceId as its main identifier for our UI
+    const deleteId = product.instanceId || product.id;
+
+    if (confirmAction && product && deleteId) {
       confirmAction(async () => {
-        await deleteProduct(product.instanceId);
+        await deleteProduct(deleteId);
         toast({
           title: "Produto Apagado",
           description: `O produto "${product.name}" foi removido do inventário.`,
         });
       }, "Apagar Produto", `Tem a certeza que quer apagar "${product.name}"? Esta ação moverá o produto para a lixeira. Confirme com a sua palavra-passe.`);
+    } else {
+      console.warn("Could not delete product: missing confirmAction, product, or ID", { hasConfirm: !!confirmAction, product, deleteId });
     }
   };
 

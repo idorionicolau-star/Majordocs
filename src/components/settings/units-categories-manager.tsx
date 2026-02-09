@@ -4,14 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Tag, Ruler } from "lucide-react";
+import { Plus, Tag, Ruler } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 
 export function UnitsCategoriesManager() {
     const {
-        availableUnits, addUnit, removeUnit,
-        availableCategories, addCategory, removeCategory,
+        availableUnits, addUnit,
+        availableCategories, addCategory,
         canEdit
     } = useInventory();
 
@@ -29,12 +29,6 @@ export function UnitsCategoriesManager() {
         setNewUnit("");
     };
 
-    const handleRemoveUnit = async (unit: string) => {
-        if (confirm(`Tem a certeza que deseja remover a unidade "${unit}"?`)) {
-            await removeUnit(unit);
-        }
-    };
-
     const handleAddCategory = async () => {
         if (!newCategory.trim()) return;
         if (availableCategories.includes(newCategory.trim())) {
@@ -43,12 +37,6 @@ export function UnitsCategoriesManager() {
         }
         await addCategory(newCategory.trim());
         setNewCategory("");
-    };
-
-    const handleRemoveCategory = async (category: string) => {
-        if (confirm(`Tem a certeza que deseja remover a categoria "${category}"?`)) {
-            await removeCategory(category);
-        }
     };
 
     if (!canEdit('settings')) {
@@ -87,12 +75,6 @@ export function UnitsCategoriesManager() {
                         {availableUnits.map((unit) => (
                             <Badge key={unit} variant="secondary" className="px-3 py-1 text-sm flex items-center gap-2">
                                 {unit}
-                                <button
-                                    onClick={() => handleRemoveUnit(unit)}
-                                    className="text-slate-400 hover:text-destructive transition-colors ml-1"
-                                >
-                                    <Trash2 className="w-3 h-3" />
-                                </button>
                             </Badge>
                         ))}
                         {availableUnits.length === 0 && (
@@ -132,12 +114,6 @@ export function UnitsCategoriesManager() {
                         {availableCategories.map((cat) => (
                             <Badge key={cat} variant="outline" className="px-3 py-1 text-sm flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800">
                                 {cat}
-                                <button
-                                    onClick={() => handleRemoveCategory(cat)}
-                                    className="text-slate-400 hover:text-destructive transition-colors ml-1"
-                                >
-                                    <Trash2 className="w-3 h-3" />
-                                </button>
                             </Badge>
                         ))}
                         {availableCategories.length === 0 && (

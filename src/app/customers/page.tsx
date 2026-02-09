@@ -90,13 +90,7 @@ export default function CustomersPage() {
         setEditingCustomer(customer);
     };
 
-    const handleDelete = async (customer: any) => {
-        if (confirmAction) {
-            confirmAction(async () => {
-                await deleteCustomer(customer.id);
-            }, "Remover Cliente", `Tem a certeza que deseja remover o cliente "${customer.name}"? Esta ação não pode ser desfeita.`);
-        }
-    };
+    // Deletion removed
 
     const getCustomerHistory = (customerId: string) => {
         return sales.filter(s => s.customerId === customerId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -236,9 +230,6 @@ export default function CustomersPage() {
                                             <Button variant="ghost" size="icon" onClick={() => openEdit(customer)} className="h-8 w-8 text-slate-500 hover:text-slate-900 hover:bg-slate-100">
                                                 <Edit className="h-4 w-4" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => handleDelete(customer)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -290,9 +281,6 @@ export default function CustomersPage() {
                                     </Button>
                                     <Button variant="outline" size="sm" className="h-9 px-3" onClick={() => openEdit(customer)}>
                                         <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="h-9 px-3 text-red-500 hover:bg-red-50" onClick={() => handleDelete(customer)}>
-                                        <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </div>
                             </CardContent>

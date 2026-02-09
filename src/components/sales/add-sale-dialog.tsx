@@ -104,7 +104,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
     locations,
     isMultiLocation,
   } = inventoryContext || { products: [], catalogProducts: [], catalogCategories: [], user: null, locations: [], isMultiLocation: false };
-  const { customers } = useCRM();
+  const { customers, addCustomer } = useCRM();
   const { toast } = useToast();
 
   const form = useForm<AddSaleFormValues>({
@@ -240,7 +240,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
   }, [watchedQuantity, availableStock, selectedProductInstance, watchedProductName, watchedLocation, form, products]);
 
 
-  function onSubmit(values: AddSaleFormValues) {
+  async function onSubmit(values: AddSaleFormValues) {
     if (!user) {
       toast({ variant: "destructive", title: "Erro de Validação", description: "Utilizador não autenticado." });
       return;
@@ -260,6 +260,26 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
       localStorage.setItem('majorstockx-last-product-location', values.location);
     }
 
+    let finalCustomerId = values.customerId === 'new' ? undefined : values.customerId;
+
+    // Auto-save logic
+    if (values.clientName && !finalCustomerId) {
+      const normalizedName = values.clientName.trim();
+      const existingCustomer = customers.find(c => c.name.toLowerCase() === normalizedName.toLowerCase());
+
+      if (existingCustomer) {
+        finalCustomerId = existingCustomer.id;
+      } else {
+        try {
+          const newId = await addCustomer({ name: normalizedName });
+          if (newId) finalCustomerId = newId;
+        } catch (error) {
+          console.error("Failed to auto-create customer:", error);
+          // We continue without ID if creation fails, just saving the name string
+        }
+      }
+    }
+
     const newSale: Omit<Sale, 'id' | 'guideNumber'> = {
       date: values.date.toISOString(),
       productId: products?.find(p => p.name === values.productName)?.id || 'unknown',
@@ -277,7 +297,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
       location: values.location,
       documentType: values.documentType,
       clientName: values.clientName,
-      customerId: values.customerId === 'new' ? undefined : values.customerId,
+      customerId: finalCustomerId,
       notes: values.notes,
     };
 

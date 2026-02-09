@@ -15,6 +15,7 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
+    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { EditProductionDialog } from "./edit-production-dialog";
@@ -52,11 +53,39 @@ export function ProductionCard({ production, onTransfer, onDelete, onUpdate, vie
                         </div>
                     </div>
                     {canEdit && !isTransferred && (
-                        <div className="flex items-center">
+                        <div className="flex items-center gap-1">
                             <EditProductionDialog production={production} onUpdate={onUpdate} />
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={() => onDelete(production.id)}>
-                                <Trash2 className="h-3 w-3" />
-                            </Button>
+                            <AlertDialog>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                                                    <Trash2 className="h-4 w-4" />
+                                                    <span className="sr-only">Apagar Produção</span>
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Apagar Produção</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Esta ação irá mover o registo de produção para a lixeira.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => onDelete(production.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                            Apagar
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                     )}
                 </div>

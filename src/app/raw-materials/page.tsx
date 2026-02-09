@@ -215,14 +215,14 @@ const RawMaterialsManager = () => {
                                     <TableCell>{material.lowStockThreshold}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-1">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                                                confirmAction(async () => {
+                                                    await deleteRawMaterial(material.id);
+                                                }, "Apagar Matéria-Prima", `Tem a certeza que deseja apagar "${material.name}"? Esta ação não pode ser desfeita.`);
+                                            }}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
                                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(material)}><Edit className="h-4 w-4" /></Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-                                                if (confirmAction) {
-                                                    confirmAction(async () => {
-                                                        await deleteRawMaterial(material.id);
-                                                    }, "Apagar Matéria-Prima", `Tem a certeza que quer apagar "${material.name}"? Esta ação não pode ser desfeita.`);
-                                                }
-                                            }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -254,17 +254,15 @@ const RawMaterialsManager = () => {
                                 </div>
                             </CardContent>
                             <CardFooter className="p-2 flex justify-end gap-2 bg-muted/20">
-                                <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(material)}>
-                                    <Edit className="h-4 w-4 mr-2" /> Editar
-                                </Button>
-                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => {
-                                    if (confirmAction) {
-                                        confirmAction(async () => {
-                                            await deleteRawMaterial(material.id);
-                                        }, "Apagar Matéria-Prima", `Tem a certeza que quer apagar "${material.name}"? Esta ação não pode ser desfeita.`);
-                                    }
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                                    confirmAction(async () => {
+                                        await deleteRawMaterial(material.id);
+                                    }, "Apagar Matéria-Prima", `Tem a certeza que deseja apagar "${material.name}"? Esta ação não pode ser desfeita.`);
                                 }}>
                                     <Trash2 className="h-4 w-4 mr-2" /> Apagar
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(material)}>
+                                    <Edit className="h-4 w-4 mr-2" /> Editar
                                 </Button>
                             </CardFooter>
                         </Card>
@@ -421,13 +419,6 @@ const RecipesManager = () => {
                             </CardContent>
                             <CardFooter>
                                 <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(recipe)}><Edit className="h-4 w-4" /></Button>
-                                <Button variant="ghost" size="icon" onClick={() => {
-                                    if (confirmAction) {
-                                        confirmAction(async () => {
-                                            await deleteRecipe(recipe.id);
-                                        }, "Apagar Receita", `Tem a certeza que quer apagar a receita de "${recipe.productName}"? Esta ação não pode ser desfeita.`);
-                                    }
-                                }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                             </CardFooter>
                         </Card>
                     ))}
@@ -460,7 +451,6 @@ const RecipesManager = () => {
                                             <FormField control={form.control} name={`ingredients.${index}.quantity`} render={({ field }) => (
                                                 <FormItem><FormControl><Input type="number" {...field} className="w-24" /></FormControl></FormItem>
                                             )} />
-                                            <Button type="button" variant="destructive" size="icon" onClick={() => removeIngredient(index)}><Trash2 className="h-4 w-4" /></Button>
                                         </div>
                                     ))}
                                     <Button type="button" variant="outline" size="sm" onClick={addIngredient} className="mt-2">Adicionar Ingrediente</Button>

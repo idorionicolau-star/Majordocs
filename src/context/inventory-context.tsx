@@ -54,7 +54,8 @@ import { pt } from 'date-fns/locale';
 import { downloadSaleDocument, formatCurrency, normalizeString } from '@/lib/utils';
 import {
   updateDocumentNonBlocking,
-  addDocumentNonBlocking
+  addDocumentNonBlocking,
+  deleteDocumentNonBlocking
 } from '@/firebase/non-blocking-updates';
 import { PasswordConfirmationDialog } from '@/components/auth/password-confirmation-dialog';
 
@@ -83,27 +84,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const auth = getFirebaseAuth();
   const wasSyncing = useRef(false);
-
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean;
-    action: (() => Promise<void>) | null;
-    title: string;
-    description: string;
-  }>({
-    open: false,
-    action: null,
-    title: '',
-    description: '',
-  });
-
-  const confirmAction = useCallback((action: () => Promise<void>, title?: string, description?: string) => {
-    setConfirmDialog({
-      open: true,
-      action,
-      title: title || "Confirmação de Segurança",
-      description: description || "Esta ação requer a sua palavra-passe para ser confirmada.",
-    });
-  }, []);
 
   const [companyData, setCompanyData] = useState<Company | null>(null);
 
@@ -411,12 +391,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const productsCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
-    return query(collection(firestore, `companies/${companyId}/products`));
+    return collection(firestore, `companies/${companyId}/products`);
   }, [firestore, companyId]);
 
   const salesCollectionRef = useMemoFirebase(() => {
     if (!firestore || !companyId) return null;
-    return query(collection(firestore, `companies/${companyId}/sales`));
+    return collection(firestore, `companies/${companyId}/sales`);
   }, [firestore, companyId]);
 
   const productionsCollectionRef = useMemoFirebase(() => {
@@ -496,17 +476,23 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     const productMap = new Map<string, Product & { sourceIds: string[] }>();
 
-    productsData.forEach(p => {
+    // Filter out deleted items FIRST
+    const activeProducts = productsData.filter(p => !p.deletedAt);
+
+    activeProducts.forEach(p => {
       const key = `${p.name}|${p.location || 'default'}`;
-      const productWithInstanceId = { ...p, instanceId: p.id };
+      // Ensure instanceId is ALWAYS present and unique-ish for React keys
+      const productWithInstanceId = { ...p, instanceId: p.id || `inst-${p.name}-${p.location}` } as Product;
 
       if (productMap.has(key)) {
         const existing = productMap.get(key)!;
         existing.stock += productWithInstanceId.stock;
         existing.reservedStock += productWithInstanceId.reservedStock;
-        existing.sourceIds.push(productWithInstanceId.id);
+        if (productWithInstanceId.id && !existing.sourceIds?.includes(productWithInstanceId.id)) {
+          existing.sourceIds = [...(existing.sourceIds || []), productWithInstanceId.id];
+        }
       } else {
-        productMap.set(key, { ...productWithInstanceId, sourceIds: [productWithInstanceId.id] });
+        productMap.set(key, { ...productWithInstanceId, sourceIds: productWithInstanceId.id ? [productWithInstanceId.id] : [] });
       }
     });
 
@@ -673,7 +659,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                 productId = querySnapshot!.docs[0].id; // We know it's not empty here
               }
 
-              const docRef = doc(productsCollectionRef, productId);
+              const docRef = doc(productsCollectionRef as CollectionReference, productId);
               const existingDocSnap = await transaction.get(docRef); // Read inside transaction for safety
 
               if (existingDocSnap.exists()) {
@@ -688,7 +674,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                   lastUpdated: new Date().toISOString(),
                   reservedStock: 0,
                 };
-                const newDocRef = doc(productsCollectionRef);
+                const newDocRef = doc(productsCollectionRef as CollectionReference);
                 transaction.set(newDocRef, newProduct);
                 productId = newDocRef.id;
               }
@@ -715,7 +701,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
               userId: user.id,
               userName: user.username,
             };
-            const movementDocRef = doc(movementsRef);
+            const movementDocRef = doc(movementsRef as CollectionReference);
             transaction.set(movementDocRef, { ...movement, timestamp: serverTimestamp() });
           });
 
@@ -755,11 +741,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     });
 
     if (stock !== undefined) {
-      const firstDocRef = doc(productsCollectionRef, productToUpdate.sourceIds[0]);
+      const firstDocRef = doc(productsCollectionRef as CollectionReference, productToUpdate.sourceIds[0]);
       batch.update(firstDocRef, { stock });
 
       for (let i = 1; i < productToUpdate.sourceIds.length; i++) {
-        const otherDocRef = doc(productsCollectionRef, productToUpdate.sourceIds[i]);
+        const otherDocRef = doc(productsCollectionRef as CollectionReference, productToUpdate.sourceIds[i]);
         batch.update(otherDocRef, { stock: 0, reservedStock: 0 });
       }
     }
@@ -773,46 +759,75 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [productsCollectionRef, products, checkStockAndNotify, firestore]);
 
-  const deleteProduct = useCallback((instanceId: string) => {
+  const deleteProduct = useCallback(async (instanceId: string) => {
     if (!productsCollectionRef || !instanceId || !firestore || !user) return;
     const productToDelete = products.find(p => p.instanceId === instanceId);
-    if (!productToDelete || !productToDelete.sourceIds) return;
+    if (!productToDelete) return;
 
     const batch = writeBatch(firestore);
-    productToDelete.sourceIds.forEach(id => {
-      const docRef = doc(productsCollectionRef, id);
-      batch.update(docRef, {
-        deletedAt: new Date().toISOString(),
-        deletedBy: user.username
+
+    const idsToDelete = productToDelete.sourceIds && productToDelete.sourceIds.length > 0
+      ? productToDelete.sourceIds
+      : [productToDelete.id || instanceId];
+
+    idsToDelete.forEach(id => {
+      if (id) {
+        const docRef = doc(productsCollectionRef as CollectionReference, id);
+        batch.update(docRef, {
+          deletedAt: new Date().toISOString(),
+          deletedBy: user.username
+        });
+      }
+    });
+
+    try {
+      await batch.commit();
+      toast({ title: 'Produto movido para a Lixeira', description: 'Pode restaurá-lo nas Definições.' });
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      toast({ variant: 'destructive', title: 'Erro ao apagar', description: 'Tente novamente.' });
+    }
+  }, [productsCollectionRef, products, firestore, user, toast]);
+
+  const clearProductsCollection = useCallback(async () => {
+    if (!productsCollectionRef || !firestore || !user) return;
+    const batch = writeBatch(firestore);
+    let count = 0;
+
+    products.forEach(product => {
+      const idsToDelete = product.sourceIds && product.sourceIds.length > 0
+        ? product.sourceIds
+        : [product.id || product.instanceId];
+
+      idsToDelete.forEach(id => {
+        if (id) {
+          const docRef = doc(productsCollectionRef as CollectionReference, id);
+          batch.update(docRef, {
+            deletedAt: new Date().toISOString(),
+            deletedBy: user.username
+          });
+          count++;
+        }
       });
     });
 
-    batch.commit().then(() => {
-      toast({ title: 'Produto movido para a Lixeira', description: 'Pode restaurá-lo nas Definições.' });
-    });
+    if (count === 0) return;
 
-  }, [productsCollectionRef, firestore, products, user, toast]);
-
-  const clearCollection = useCallback(async (collectionRef: CollectionReference | null, toastTitle: string) => {
-    if (!collectionRef) {
-      toast({ variant: "destructive", title: "Erro", description: "Referência da coleção não disponível." });
-      return;
+    try {
+      await batch.commit();
+      toast({
+        title: "Inventário Limpo",
+        description: `${count} produtos movidos para a lixeira.`,
+      });
+    } catch (error) {
+      console.error("Error clearing inventory:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao Limpar",
+        description: "Não foi possível limpar o inventário.",
+      });
     }
-    toast({ title: "A limpar...", description: `A apagar todos os registos de ${toastTitle}.` });
-    const querySnapshot = await getDocs(collectionRef);
-    const batch = writeBatch(firestore);
-    querySnapshot.forEach((doc) => {
-      batch.delete(doc.ref);
-    });
-    await batch.commit();
-    toast({ title: "Sucesso!", description: `Todos os registos de ${toastTitle} foram apagados.` });
-  }, [firestore, toast]);
-
-  const clearProductsCollection = useCallback(() => clearCollection(productsCollectionRef, "Inventário"), [clearCollection, productsCollectionRef]);
-  const clearSales = useCallback(() => clearCollection(salesCollectionRef, "Vendas"), [clearCollection, salesCollectionRef]);
-  const clearProductions = useCallback(() => clearCollection(productionsCollectionRef, "Produção"), [clearCollection, productionsCollectionRef]);
-  const clearOrders = useCallback(() => clearCollection(ordersCollectionRef, "Encomendas"), [clearCollection, ordersCollectionRef]);
-  const clearStockMovements = useCallback(() => clearCollection(stockMovementsCollectionRef, "Histórico de Movimentos"), [clearCollection, stockMovementsCollectionRef]);
+  }, [productsCollectionRef, products, firestore, user, toast]);
 
   const auditStock = useCallback(async (product: Product, physicalCount: number, reason: string) => {
     if (!firestore || !companyId || !user || !product.id) return;
@@ -1636,14 +1651,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const updateRawMaterial = useCallback(async (materialId: string, data: Partial<RawMaterial>) => {
     if (!rawMaterialsCollectionRef) return;
-    const docRef = doc(rawMaterialsCollectionRef, materialId);
+    const docRef = doc(rawMaterialsCollectionRef as CollectionReference, materialId);
     updateDocumentNonBlocking(docRef, data);
     toast({ title: 'Matéria-Prima Atualizada' });
   }, [rawMaterialsCollectionRef, toast]);
 
   const deleteRawMaterial = useCallback(async (materialId: string) => {
     if (!rawMaterialsCollectionRef) return;
-    deleteDocumentNonBlocking(doc(rawMaterialsCollectionRef, materialId));
+    deleteDocumentNonBlocking(doc(rawMaterialsCollectionRef as CollectionReference, materialId));
     toast({ title: 'Matéria-Prima Removida' });
   }, [rawMaterialsCollectionRef, toast]);
 
@@ -1655,16 +1670,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const updateRecipe = useCallback(async (recipeId: string, data: Partial<Recipe>) => {
     if (!recipesCollectionRef) return;
-    const docRef = doc(recipesCollectionRef, recipeId);
+    const docRef = doc(recipesCollectionRef as CollectionReference, recipeId);
     updateDocumentNonBlocking(docRef, data);
     toast({ title: 'Receita Atualizada' });
   }, [recipesCollectionRef, toast]);
 
+  /*
   const deleteRecipe = useCallback(async (recipeId: string) => {
     if (!recipesCollectionRef) return;
-    deleteDocumentNonBlocking(doc(recipesCollectionRef, recipeId));
+    deleteDocumentNonBlocking(doc(recipesCollectionRef as CollectionReference, recipeId));
     toast({ title: 'Receita Removida' });
   }, [recipesCollectionRef, toast]);
+  */
 
 
 
@@ -1803,6 +1820,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     try {
       const batch = writeBatch(firestore);
+      if (!productsData) return;
       const targetProduct = productsData.find(p => p.id === targetProductId);
 
       if (!targetProduct) {
@@ -1816,20 +1834,20 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       // Calculate totals and mark sources for deletion
       for (const sourceId of sourceProductIds) {
-        const sourceProduct = productsData.find(p => p.id === sourceId);
+        const sourceProduct = productsData?.find(p => p.id === sourceId);
         if (sourceProduct) {
           totalStockToAdd += (sourceProduct.stock || 0);
           totalReservedToAdd += (sourceProduct.reservedStock || 0);
           sourceIdsRecord.push(sourceId);
 
           // Delete source product
-          const sourceRef = doc(productsCollectionRef, sourceId);
+          const sourceRef = doc(productsCollectionRef as CollectionReference, sourceId);
           batch.delete(sourceRef);
         }
       }
 
       // Update target product
-      const targetRef = doc(productsCollectionRef, targetProductId);
+      const targetRef = doc(productsCollectionRef as CollectionReference, targetProductId);
       batch.update(targetRef, {
         stock: (targetProduct.stock || 0) + totalStockToAdd,
         reservedStock: (targetProduct.reservedStock || 0) + totalReservedToAdd,
@@ -1891,19 +1909,36 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer);
   }, [companyId, firestore, user, productsData, salesData, hardDelete]);
 
+  // confirmAction implementation
+  const [confirmationAction, setConfirmationAction] = useState<(() => Promise<void>) | null>(null);
+  const [confirmationTitle, setConfirmationTitle] = useState<string>("Confirmação");
+  const [confirmationMessage, setConfirmationMessage] = useState<string>("");
+
+  const confirmAction = useCallback((action: () => Promise<void>, title: string = "Confirmação", message: string = "Tem a certeza?") => {
+    setConfirmationAction(() => action);
+    setConfirmationTitle(title);
+    setConfirmationMessage(message);
+  }, []);
+
+  const handleConfirm = async () => {
+    if (confirmationAction) {
+      await confirmationAction();
+      setConfirmationAction(null);
+    }
+  };
+
   const value: InventoryContextType = useMemo(() => ({
     user, firebaseUser, companyId, loading: isDataLoading,
     login, logout, resetPassword, registerCompany, profilePicture, setProfilePicture: handleSetProfilePicture,
     canView, canEdit,
     companyData,
-    products: (productsData || []).filter(p => !p.deletedAt),
+    products: products,
     allProducts: productsData || [],
     sales: (salesData || []).filter(s => !s.deletedAt),
     allSales: salesData || [],
-    allSales: salesData || [],
-    productions: (productionsData || []).filter(p => !p.deletedAt), // Filter soft deleted productions
+    productions: (productionsData || []).filter(p => !p.deletedAt),
     allProductions: productionsData || [],
-    orders: (ordersData || []).filter(o => !o.deletedAt), // Filter soft deleted orders
+    orders: (ordersData || []).filter(o => !o.deletedAt),
     allOrders: ordersData || [],
     stockMovements: stockMovementsData || [],
     catalogProducts: catalogProductsData || [],
@@ -1913,15 +1948,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
     businessStartDate,
     chatHistory, setChatHistory,
-    addProduct, updateProduct, deleteProduct, clearProductsCollection,
+    addProduct, updateProduct, deleteProduct,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
     addProduction, updateProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
+    clearProductsCollection,
     mergeProducts,
     restoreItem,
     hardDelete,
     exportCompanyData,
 
-    clearSales, clearProductions, clearOrders, clearStockMovements,
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
     recalculateReservedStock,
     addCatalogProduct, addCatalogCategory,
@@ -1930,12 +1965,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     deleteRawMaterial,
     addRecipe,
     updateRecipe,
-    deleteRecipe,
+    // deleteRecipe,
 
-    // New Settings
-    availableUnits, addUnit, removeUnit,
-    availableCategories, addCategory, removeCategory,
+    availableUnits, addUnit, // removeUnit,
+    availableCategories, addCategory, // removeCategory,
 
+    confirmAction,
   }), [
     user, firebaseUser, companyId, isDataLoading,
     login, logout, resetPassword, registerCompany, profilePicture, handleSetProfilePicture,
@@ -1945,45 +1980,34 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
     businessStartDate,
     chatHistory, setChatHistory,
-    addProduct, updateProduct, deleteProduct, clearProductsCollection,
+    addProduct, updateProduct, deleteProduct,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
     addProduction, updateProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
-    clearSales, clearProductions, clearOrders, clearStockMovements,
+    clearProductsCollection,
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
     recalculateReservedStock,
     addCatalogProduct, addCatalogCategory,
     addRawMaterial,
     updateRawMaterial,
-    deleteRawMaterial,
     addRecipe,
     updateRecipe,
-    deleteRecipe,
-
     mergeProducts,
     restoreItem,
-    hardDelete,
     exportCompanyData,
-
-    availableUnits, addUnit, removeUnit,
-
-    availableCategories, addCategory, removeCategory,
-
-    confirmAction, // Expose helper
+    availableUnits, addUnit,
+    availableCategories, addCategory,
+    confirmAction,
   ]);
 
   return (
     <InventoryContext.Provider value={value}>
       {children}
       <PasswordConfirmationDialog
-        open={confirmDialog.open}
-        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
-        onConfirm={async () => {
-          if (confirmDialog.action) {
-            await confirmDialog.action();
-          }
-        }}
-        title={confirmDialog.title}
-        description={confirmDialog.description}
+        open={!!confirmationAction}
+        onOpenChange={(open) => !open && setConfirmationAction(null)}
+        onConfirm={handleConfirm}
+        title={confirmationTitle}
+        description={confirmationMessage}
       />
     </InventoryContext.Provider>
   );

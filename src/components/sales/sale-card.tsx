@@ -1,14 +1,10 @@
 
-
-"use client";
-
-import type { Sale } from "@/lib/types";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils";
-import { Calendar, User, CheckCircle, PackageCheck, MapPin, Trash2 } from "lucide-react";
+import { Calendar, User, CheckCircle, PackageCheck, MapPin } from "lucide-react";
 import { SaleActions } from "./columns";
 import { Button } from "../ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn, formatCurrency } from "@/lib/utils";
+import { Sale } from "@/lib/types";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -27,7 +23,7 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, vi
 
     const actionsProps = {
         row: { original: sale },
-        options: { onUpdateSale, onConfirmPickup, canEdit },
+        options: { onUpdateSale, onConfirmPickup, onDeleteSale, canEdit },
     };
 
     const isPartiallyPaid = sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue;
@@ -45,11 +41,6 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, vi
                             {sale.productName}
                         </Link>
                     </CardTitle>
-                    {canEdit && (
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={() => onDeleteSale(sale.id)}>
-                            <Trash2 className="h-3 w-3" />
-                        </Button>
-                    )}
                 </div>
                 <CardDescription className={cn("text-[10px]", isCondensed && "hidden")}>
                     {sale.documentType} #{sale.guideNumber}

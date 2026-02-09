@@ -305,19 +305,13 @@ export interface InventoryContextType {
   ) => void;
   updateProduct: (instanceId: string, updatedData: Partial<Product>) => void;
   deleteProduct: (instanceId: string) => void;
-  clearProductsCollection: () => Promise<void>;
-  auditStock: (product: Product, physicalCount: number, reason: string) => void;
-  transferStock: (
-    productName: string,
-    fromLocationId: string,
-    toLocationId: string,
-    quantity: number
-  ) => void;
   updateProductStock: (
     productName: string,
     quantity: number,
     locationId?: string
   ) => Promise<void>;
+  auditStock: (product: Product, newQuantity: number, reason: string) => Promise<void>;
+  transferStock: (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => Promise<void>;
   updateCompany: (details: Partial<Company>) => Promise<void>;
   addSale: (newSaleData: Omit<Sale, 'id' | 'guideNumber'>, reserveStock?: boolean) => void;
   confirmSalePickup: (sale: Sale) => void;
@@ -328,10 +322,8 @@ export interface InventoryContextType {
   deleteProduction: (productionId: string) => void;
   deleteOrder: (orderId: string) => void;
   finalizeOrder: (orderId: string, finalPayment: number) => Promise<void>;
-  clearSales: () => Promise<void>;
-  clearProductions: () => Promise<void>;
-  clearOrders: () => Promise<void>;
-  clearStockMovements: () => Promise<void>;
+
+  clearProductsCollection: () => Promise<void>;
   markNotificationAsRead: (id: string) => void;
   markAllAsRead: () => void;
   clearNotifications: () => void;
@@ -346,7 +338,7 @@ export interface InventoryContextType {
   deleteRawMaterial: (materialId: string) => Promise<void>;
   addRecipe: (recipe: Omit<Recipe, 'id'>) => Promise<void>;
   updateRecipe: (recipeId: string, data: Partial<Recipe>) => Promise<void>;
-  deleteRecipe: (recipeId: string) => Promise<void>;
+  // deleteRecipe: (recipeId: string) => Promise<void>;
 
   mergeProducts: (targetProductId: string, sourceProductIds: string[]) => Promise<void>;
   restoreItem: (collectionName: string, id: string) => Promise<void>;
@@ -356,13 +348,12 @@ export interface InventoryContextType {
   // Settings / Metadata
   availableUnits: string[];
   addUnit: (unit: string) => Promise<void>;
-  removeUnit: (unit: string) => Promise<void>;
+  // removeUnit: (unit: string) => Promise<void>;
 
   availableCategories: string[];
   addCategory: (category: string) => Promise<void>;
-  removeCategory: (category: string) => Promise<void>;
-
-  confirmAction: (action: () => Promise<void>, title?: string, description?: string) => void;
+  // removeCategory: (category: string) => Promise<void>;
+  confirmAction: (action: () => Promise<void>, title?: string, message?: string) => void;
 }
 
 type CatalogProduct = Omit<

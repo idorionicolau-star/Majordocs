@@ -5,7 +5,7 @@ import * as React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { Sale, Company } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import { Edit, Printer, FileSearch, CheckCircle, PackageCheck, Download, DollarSign, Mail } from "lucide-react"
+import { Edit, Printer, FileSearch, CheckCircle, PackageCheck, Download, DollarSign, Mail, Trash2 } from "lucide-react"
 import { useCRM } from "@/context/crm-context"
 import { useToast } from "@/hooks/use-toast"
 import { SaleDetailsDialogContent } from "./sale-details-dialog"
@@ -16,6 +16,17 @@ import {
     Dialog,
     DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { InventoryContext } from "@/context/inventory-context"
 import { cn } from "@/lib/utils"
 
@@ -26,6 +37,7 @@ import { SalePDF } from "./SalePDF";
 interface ColumnsOptions {
     onUpdateSale: (sale: Sale) => void;
     onConfirmPickup: (sale: Sale) => void;
+    onDeleteSale: (saleId: string) => void;
     canEdit: boolean;
 }
 
@@ -211,6 +223,40 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>
+
+            {canEdit && (
+                <AlertDialog>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Apagar Venda</span>
+                                    </Button>
+                                </AlertDialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Apagar Venda</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Esta ação irá mover a venda para a lixeira e repor o stock do produto associado.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => options.onDeleteSale(sale.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                Apagar
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
         </div>
     )
 }

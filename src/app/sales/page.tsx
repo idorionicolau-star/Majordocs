@@ -9,28 +9,16 @@ import { VirtualSalesGrid } from "@/components/sales/virtual-sales-grid";
 import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronDown, Filter, MapPin, Trash2, Plus } from "lucide-react";
+import { List, LayoutGrid, ChevronDown, Filter, MapPin, Plus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { doc, updateDoc } from "firebase/firestore";
 import { useFirestore } from '@/firebase/provider';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
-import { isSameDay } from "date-fns";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Card } from "@/components/ui/card";
 import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
 import { collection, where, orderBy, QueryConstraint } from "firebase/firestore";
@@ -44,7 +32,6 @@ export default function SalesPage() {
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [locationFilter, setLocationFilter] = useState<string>('all');
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
@@ -60,8 +47,6 @@ export default function SalesPage() {
     canView,
     locations,
     isMultiLocation,
-    clearSales,
-    confirmAction,
   } = inventoryContext || {
     loading: true,
     addSale: async () => { },
@@ -73,13 +58,10 @@ export default function SalesPage() {
     canView: () => false,
     locations: [],
     isMultiLocation: false,
-    clearSales: async () => { },
-    confirmAction: () => { }
   };
 
   const canEditSales = canEdit('sales');
   const canViewSales = canView('sales');
-  const isAdmin = user?.role === 'Admin';
 
   // --- Firestore Pagination Query Construction ---
   const salesQuery = useMemo(() => {
@@ -90,36 +72,24 @@ export default function SalesPage() {
   const queryConstraints = useMemo(() => {
     const constraints: QueryConstraint[] = [];
 
-    // 1. Status Filter
     if (statusFilter !== 'all') {
       constraints.push(where('status', '==', statusFilter));
     }
 
-    // 2. Location Filter
     if (isMultiLocation && locationFilter !== 'all') {
       constraints.push(where('location', '==', locationFilter));
     }
 
-    // 3. Name Filter (Search by productName or guideNumber)
-    // Basic prefix search on productName (limitation: cannot OR guideNumber efficiently server-side without multiple queries)
     if (nameFilter) {
       constraints.push(where('productName', '>=', nameFilter));
       constraints.push(where('productName', '<=', nameFilter + '\uf8ff'));
-    }
-    // 4. Date Filter - Exact match on Date object stored as string/timestamp?
-    // Sale type usually saves ISO string or timestamp. 
-    // The previous client-side logic used `isSameDay`.
-    // Server-side: `where('date', '>=', startOfDay), where('date', '<=', endOfDay)`.
-    // We'll skip complex date filtering server-side for this iteration and default to sorting.
-    else {
-      // Default Sort
+    } else {
       constraints.push(orderBy('date', 'desc'));
     }
 
     return constraints;
-  }, [statusFilter, locationFilter, isMultiLocation, nameFilter, dateFilter]);
+  }, [statusFilter, locationFilter, isMultiLocation, nameFilter]);
 
-  // Use the Hook
   const {
     data: sales,
     loading: salesLoading,
@@ -128,7 +98,7 @@ export default function SalesPage() {
     updateItem
   } = useFirestorePagination<Sale>(
     salesQuery as any,
-    500, // Increase fetch limit to support client-side pagination
+    500,
     salesQuery ? queryConstraints : []
   );
 
@@ -139,21 +109,17 @@ export default function SalesPage() {
     const handleResize = () => {
       setItemsPerPage(window.innerWidth >= 768 ? 60 : 10);
     };
-
-    // Initial check
     handleResize();
-
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [nameFilter, statusFilter, dateFilter, locationFilter]);
 
-  const totalPages = Math.ceil(sales.length / itemsPerPage);
-  const paginatedSales = sales.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(sales.filter(s => !s.deletedAt).length / itemsPerPage);
+  const paginatedSales = sales.filter(s => !s.deletedAt).slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -161,14 +127,6 @@ export default function SalesPage() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (hasMore) {
       loadMore();
-      // We might need to handle the "after load, go to next page" logic, 
-      // but for simplicity, we load more into the buffer and user might need to click next again 
-      // or we rely on the fact that if we have more, we just let them click next if the buffer filled up.
-      // Actually, useFirestorePagination loads *into* 'sales'.
-      // If we are at the end of current 'sales' list and 'hasMore' is true, we should load more.
-      // For this implementation, let's keep it simple: "Load More" button if needed, or auto-load.
-      // Standard "Next" usually implies we have the data. 
-      // With 500 limit, we likely have it.
     }
   };
 
@@ -182,13 +140,9 @@ export default function SalesPage() {
       setAddDialogOpen(true);
     }
     const nameQuery = searchParams.get('nameFilter');
-    if (nameQuery) {
-      setNameFilter(nameQuery);
-    }
+    if (nameQuery) setNameFilter(nameQuery);
     const statusQuery = searchParams.get('statusFilter');
-    if (statusQuery) {
-      setStatusFilter(statusQuery);
-    }
+    if (statusQuery) setStatusFilter(statusQuery);
   }, [searchParams, canEditSales]);
 
   useEffect(() => {
@@ -231,10 +185,7 @@ export default function SalesPage() {
     if (updatedSale.id && firestore && companyId) {
       const saleDocRef = doc(firestore, `companies/${companyId}/sales`, updatedSale.id);
       updateDoc(saleDocRef, updatedSale as any);
-
-      // Update local state immediately
       updateItem(updatedSale.id, updatedSale);
-
       toast({
         title: "Venda Atualizada",
         description: `A venda #${updatedSale.guideNumber} foi atualizada com sucesso.`,
@@ -246,12 +197,9 @@ export default function SalesPage() {
     try {
       if (!confirmSalePickup) throw new Error("Função de levantamento não disponível.");
       await confirmSalePickup(sale);
-
-      // Update local state immediately
       if (sale.id) {
         updateItem(sale.id, { status: 'Levantado' });
       }
-
       toast({
         title: "Material Levantado",
         description: `O stock foi atualizado para a venda #${sale.guideNumber}.`,
@@ -265,20 +213,12 @@ export default function SalesPage() {
     }
   };
 
-  const handleClearSales = async () => {
-    if (clearSales && confirmAction) {
-      confirmAction(async () => {
-        await clearSales();
-        setShowClearConfirm(false);
-      }, "Limpar Todas as Vendas", "Tem a certeza absoluta? Esta ação requer a sua palavra-passe e é irreversível.");
-    }
-  };
-
-  const handleDeleteCallback = (id: string) => {
-    if (confirmAction && deleteSale) {
-      confirmAction(async () => {
-        await deleteSale(id); // Ensure deleteSale returns Promise<void> or void
-      }, "Apagar Venda", "Esta ação apagará o registo e reporá o stock. Confirme com a sua palavra-passe.");
+  const handleDeleteSale = async (saleId: string) => {
+    try {
+      await deleteSale(saleId);
+      updateItem(saleId, { deletedAt: new Date().toISOString() } as any);
+    } catch (error: any) {
+      // Error handled in context
     }
   };
 
@@ -288,32 +228,19 @@ export default function SalesPage() {
 
   return (
     <>
-      {/* Custom Alert Dialog removed, using PasswordConfirmation which is global in context. 
-          Actually, the admin button still opens showClearConfirm dialog?
-          Wait, handleClearSales calls confirmAction which opens another dialog.
-          So if I keep showClearConfirm, I have two dialogs.
-          Admin clicks "Clear Sales" -> showClearConfirm opens (Are you sure?) -> "Yes" -> confirmAction opens (Password?).
-          This double confirmation is good for "Clear All". 
-      */}
-      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação é irreversível e irá apagar permanentemente **todas** as vendas.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearSales} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Sim, apagar tudo
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
-
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Vendas</h1>
+            <p className="text-muted-foreground">Gerencie as suas vendas e saídas de stock.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Venda
+            </Button>
+          </div>
+        </div>
 
         <Card className="glass-panel p-4 border-none shrink-0">
           <div className="space-y-4">
@@ -374,142 +301,129 @@ export default function SalesPage() {
                   )}
                 </TooltipProvider>
               </div>
-              <ScrollArea
-                className="w-full md:w-auto pb-2"
-              >
-                <div className="flex items-center gap-2">
+
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="shadow-sm h-12 w-12 flex-shrink-0 bg-background/50" size="icon">
+                            <Filter className="h-5 w-5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Filtrar por Status</p></TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <DropdownMenuContent align="end" className="w-[200px]">
+                    <DropdownMenuLabel>Filtrar por Status</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuRadioGroup value={statusFilter} onValueChange={setStatusFilter}>
+                      <DropdownMenuRadioItem value="all">Todos</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="Pago">Pago</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="Levantado">Levantado</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {isMultiLocation && (
                   <DropdownMenu>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="shadow-sm h-12 w-12 flex-shrink-0 bg-background/50" size="icon">
-                              <Filter className="h-5 w-5" />
+                            <Button variant="outline" className="h-12 w-12 flex-shrink-0 bg-background/50" size="icon">
+                              <MapPin className="h-5 w-5" />
                             </Button>
                           </DropdownMenuTrigger>
                         </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Filtrar por Status</p>
-                        </TooltipContent>
+                        <TooltipContent><p>Filtrar por Localização</p></TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Filtrar por Status</DropdownMenuLabel>
+                    <DropdownMenuContent align="end" className="w-[200px]">
+                      <DropdownMenuLabel>Filtrar por Local</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuCheckboxItem checked={statusFilter === 'all'} onCheckedChange={() => setStatusFilter('all')}>Todos</DropdownMenuCheckboxItem>
-                      <DropdownMenuCheckboxItem checked={statusFilter === 'Pago'} onCheckedChange={() => setStatusFilter('Pago')}>Pagas não levantadas</DropdownMenuCheckboxItem>
-                      <DropdownMenuCheckboxItem checked={statusFilter === 'Levantado'} onCheckedChange={() => setStatusFilter('Levantado')}>Levantadas</DropdownMenuCheckboxItem>
+                      <DropdownMenuRadioGroup value={locationFilter} onValueChange={setLocationFilter}>
+                        <DropdownMenuRadioItem value="all">Todas</DropdownMenuRadioItem>
+                        {locations.map(loc => (
+                          <DropdownMenuRadioItem key={loc.id} value={loc.id}>{loc.name}</DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  {isMultiLocation && canViewSales && (
-                    <DropdownMenu>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" className="h-12 w-12 flex-shrink-0 bg-background/50" size="icon">
-                                <MapPin className="mr-2 h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Filtrar por Localização</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <DropdownMenuContent align="end">
-                        <ScrollArea className="h-48">
-                          <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuCheckboxItem checked={locationFilter === 'all'} onCheckedChange={() => setLocationFilter('all')}>Todas</DropdownMenuCheckboxItem>
-                          {locations.map(loc => (
-                            <DropdownMenuCheckboxItem key={loc.id} checked={locationFilter === loc.id} onCheckedChange={() => setLocationFilter(loc.id)}>{loc.name}</DropdownMenuCheckboxItem>
-                          ))}
-                        </ScrollArea>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-                <ScrollBar orientation="horizontal" className="md:hidden" />
-              </ScrollArea>
+                )}
+              </div>
             </div>
           </div>
         </Card>
 
-        <div className="space-y-4">
-          {view === 'list' ? (
-            <SalesDataTable
-              columns={columns({
-                onUpdateSale: handleUpdateSale,
-                onConfirmPickup: handleConfirmPickup,
-                canEdit: canEditSales
-              })}
-              data={paginatedSales}
-            />
-          ) : (
-            <VirtualSalesGrid
-              sales={paginatedSales}
-              onUpdateSale={handleUpdateSale}
-              onConfirmPickup={handleConfirmPickup}
-              onDeleteSale={handleDeleteCallback}
-              canEdit={canEditSales}
-              locations={locations}
-              gridCols={gridCols}
-            />
-          )}
+        {inventoryLoading || salesLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ) : (
+          <>
+            <div className="space-y-4">
+              {view === 'list' ? (
+                <SalesDataTable
+                  columns={columns({
+                    onUpdateSale: handleUpdateSale,
+                    onConfirmPickup: handleConfirmPickup,
+                    onDeleteSale: handleDeleteSale,
+                    canEdit: canEditSales
+                  })}
+                  data={paginatedSales}
+                />
+              ) : (
+                <VirtualSalesGrid
+                  sales={paginatedSales}
+                  onUpdateSale={handleUpdateSale}
+                  onConfirmPickup={handleConfirmPickup}
+                  onDeleteSale={handleDeleteSale}
+                  canEdit={canEditSales}
+                  locations={locations}
+                  gridCols={gridCols}
+                />
+              )}
 
-          {!salesLoading && sales.length === 0 && (
-            <Card className="text-center py-12 text-muted-foreground mt-4">
-              Nenhuma venda encontrada com os filtros atuais.
-            </Card>
-          )}
+              {!salesLoading && sales.length === 0 && (
+                <Card className="text-center py-12 text-muted-foreground mt-4">
+                  Nenhuma venda encontrada com os filtros atuais.
+                </Card>
+              )}
 
-          {/* Pagination Controls */}
-          {sales.length > 0 && (
-            <div className="flex items-center justify-between py-4">
-              <div className="flex-1 text-sm text-muted-foreground">
-                Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, sales.length)} de {sales.length} vendas
-                {hasMore && " (carregado)"}
-              </div>
-              <div className="space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePreviousPage}
-                  disabled={currentPage === 1}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNextPage}
-                  disabled={currentPage >= totalPages && !hasMore}
-                >
-                  Próximo
-                </Button>
-              </div>
+              {sales.length > 0 && (
+                <div className="flex items-center justify-between py-4">
+                  <div className="flex-1 text-sm text-muted-foreground">
+                    Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, sales.length)} de {sales.length} vendas
+                    {hasMore && " (carregado)"}
+                  </div>
+                  <div className="space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePreviousPage}
+                      disabled={currentPage === 1}
+                    >
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleNextPage}
+                      disabled={currentPage >= totalPages && !hasMore}
+                    >
+                      Próximo
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-
-          {isAdmin && (
-            <Card className="mt-8 mb-6">
-              <div className="p-6 flex flex-col items-center text-center">
-                <h3 className="font-semibold mb-2">Zona de Administrador</h3>
-                <p className="text-sm text-muted-foreground mb-4 max-w-md">
-                  Esta ação é irreversível e irá apagar permanentemente **todas** as vendas.
-                </p>
-                <Button
-                  variant="destructive"
-                  onClick={() => setShowClearConfirm(true)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Limpar Vendas
-                </Button>
-              </div>
-            </Card>
-          )}
-        </div>
+          </>
+        )}
 
         {canEditSales && (
           <>

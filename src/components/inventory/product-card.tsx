@@ -4,7 +4,7 @@ import type { Product, Location } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertCircle, Edit2, Trash2, PackageCheck, History } from "lucide-react";
+import { AlertCircle, Trash2, PackageCheck, History } from "lucide-react";
 import { getStockStatus } from "./columns";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,17 @@ import { EditProductDialog } from "./edit-product-dialog";
 import { AuditStockDialog } from "./audit-stock-dialog";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ProductCardProps {
     product: Product;
@@ -108,16 +119,14 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                                 <TooltipTrigger asChild>
                                     <Button
                                         variant="outline"
-                                        className="text-destructive hover:bg-destructive/10 hover:text-destructive flex-1 h-8 sm:h-9"
-                                        size={'icon'}
+                                        size="icon"
                                         onClick={() => onAttemptDelete(product)}
+                                        className="flex-1 h-8 sm:h-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                     >
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Apagar Produto</p>
-                                </TooltipContent>
+                                <TooltipContent><p>Apagar Produto</p></TooltipContent>
                             </Tooltip>
                         </>
                     )}

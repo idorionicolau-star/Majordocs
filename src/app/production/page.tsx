@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
 import { ProductionDataTable } from "@/components/production/data-table";
+import { columns } from "@/components/production/columns";
 import { AddProductionDialog } from "@/components/production/add-production-dialog";
 import type { Production, Location, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,7 @@ export default function ProductionPage() {
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const { productions, companyId, companyData, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation, deleteProduction, updateProduction, clearProductions, confirmAction } = inventoryContext || { productions: [], companyId: null, companyData: null, updateProductStock: () => { }, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false, deleteProduction: () => { }, updateProduction: () => { }, clearProductions: async () => { }, confirmAction: () => { } };
+  const { productions, companyId, companyData, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation, deleteProduction, updateProduction, confirmAction } = inventoryContext || { productions: [], companyId: null, companyData: null, updateProductStock: () => { }, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false, deleteProduction: () => { }, updateProduction: () => { }, confirmAction: () => { } };
 
   const canEditProduction = canEdit('production');
   const canViewProduction = canView('production');
@@ -137,6 +138,15 @@ export default function ProductionPage() {
     }
   };
 
+  const handleDeleteProduction = async (productionId: string) => {
+    try {
+      await deleteProduction(productionId);
+      // Local state update not strictly needed if context uses listeners, but good for consistency
+    } catch (error: any) {
+      // Error handled in context
+    }
+  };
+
   const filteredProductions = useMemo(() => {
     let result = productions;
     if (nameFilter) {
@@ -150,23 +160,6 @@ export default function ProductionPage() {
     }
     return result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [productions, nameFilter, locationFilter, isMultiLocation, dateFilter]);
-
-  const handleClear = async () => {
-    if (clearProductions && confirmAction) {
-      confirmAction(async () => {
-        await clearProductions();
-        setShowClearConfirm(false);
-      }, "Limpar Toda a Produção", "Tem a certeza absoluta? Esta ação requer a sua palavra-passe e é irreversível.");
-    }
-  };
-
-  const handleDeleteCallback = (id: string) => {
-    if (confirmAction && deleteProduction) {
-      confirmAction(async () => {
-        await deleteProduction(id);
-      }, "Apagar Registo de Produção", "Esta ação moverá o registo para a lixeira. Confirme com a sua palavra-passe.");
-    }
-  };
 
   const handlePrintReport = () => {
     const printWindow = window.open('', '', 'height=800,width=800');
@@ -290,23 +283,6 @@ export default function ProductionPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação é irreversível e irá apagar permanentemente **toda** a produção registada.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClear} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Sim, apagar tudo
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -424,7 +400,7 @@ export default function ProductionPage() {
 
         <div className="hidden md:block">
           {view === 'list' ? (
-            <ProductionDataTable columns={columns({})} data={filteredProductions} />
+            <ProductionDataTable columns={columns({ onDeleteProduction: handleDeleteProduction, canEdit: canEditProduction })} data={filteredProductions} />
           ) : (
             <VirtuosoGrid
               useWindowScroll
@@ -445,7 +421,7 @@ export default function ProductionPage() {
                   key={production.id}
                   production={production}
                   onTransfer={() => setProductionToTransfer(production)}
-                  onDelete={handleDeleteCallback}
+                  onDelete={handleDeleteProduction}
                   onUpdate={updateProduction}
                   viewMode={gridCols === '5' ? 'condensed' : 'normal'}
                   canEdit={canEditProduction}
@@ -468,7 +444,7 @@ export default function ProductionPage() {
                     key={production.id}
                     production={production}
                     onTransfer={() => setProductionToTransfer(production)}
-                    onDelete={handleDeleteCallback}
+                    onDelete={handleDeleteProduction}
                     onUpdate={updateProduction}
                     viewMode='normal'
                     canEdit={canEditProduction}
@@ -484,24 +460,6 @@ export default function ProductionPage() {
           )}
         </div>
 
-
-        {isAdmin && (
-          <Card className="mt-8">
-            <div className="p-6 flex flex-col items-center text-center">
-              <h3 className="font-semibold mb-2">Zona de Administrador</h3>
-              <p className="text-sm text-muted-foreground mb-4 max-w-md">
-                Esta ação é irreversível e irá apagar permanentemente **toda** a produção registada.
-              </p>
-              <Button
-                variant="destructive"
-                onClick={() => setShowClearConfirm(true)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Limpar Produção
-              </Button>
-            </div>
-          </Card>
-        )}
 
         {canEditProduction && (
           <>

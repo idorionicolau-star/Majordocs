@@ -8,7 +8,7 @@ interface SalesGridProps {
     sales: Sale[];
     onUpdateSale: (sale: Sale) => void;
     onConfirmPickup: (sale: Sale) => void;
-    onDeleteSale: (id: string) => void;
+    onDeleteSale: (saleId: string) => void;
     canEdit: boolean;
     locations: Array<{ id: string, name: string }>;
     gridCols: '3' | '4' | '5';

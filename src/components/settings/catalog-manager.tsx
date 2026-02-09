@@ -51,15 +51,13 @@ export function CatalogManager() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { companyId, confirmAction } = inventoryContext || {};
+  const { companyId } = inventoryContext || {};
 
   const [activeTab, setActiveTab] = useState("categories");
   const [highlightProductsTab, setHighlightProductsTab] = useState(false);
 
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [showDeleteSelectedProductsConfirm, setShowDeleteSelectedProductsConfirm] = useState(false);
-  const [showDeleteSelectedCategoriesConfirm, setShowDeleteSelectedCategoriesConfirm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [currentProductPage, setCurrentProductPage] = useState(1);
@@ -187,141 +185,18 @@ export function CatalogManager() {
     setNewCategoryName(category.name);
   }
 
-  const handleDeleteCategory = (category: CatalogCategory) => {
-    if (firestore && companyId && confirmAction) {
-      confirmAction(async () => {
-        const isUsed = products?.some(p => p.category === category.name);
-        if (isUsed) {
-          toast({
-            variant: 'destructive',
-            title: 'Não é possível remover',
-            description: `A categoria "${category.name}" está a ser usada por produtos.`,
-          });
-        } else {
-          toast({ title: 'A remover categoria...' });
-          try {
-            await deleteDoc(doc(firestore, `companies/${companyId}/catalogCategories`, category.id));
-            toast({ title: 'Categoria Removida' });
-          } catch (e) {
-            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover a categoria.' });
-          }
-        }
-      }, "Remover Categoria", `Tem a certeza que deseja remover permanentemente a categoria "${category.name}"? Apenas pode remover categorias que não estejam a ser usadas por nenhum produto. Confirme com a sua palavra-passe.`);
-    }
-  };
-
-  const handleDeleteProduct = (product: CatalogProduct) => {
-    if (firestore && companyId && confirmAction) {
-      confirmAction(async () => {
-        toast({ title: 'A remover produto...' });
-        try {
-          await deleteDoc(doc(firestore, `companies/${companyId}/catalogProducts`, product.id));
-          toast({ title: 'Produto Removido do Catálogo' });
-        } catch (e) {
-          toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover o produto.' });
-        }
-      }, "Remover Produto do Catálogo", `Tem a certeza que deseja remover "${product.name}" do seu catálogo de produtos base? Confirme com a sua palavra-passe.`);
-    }
-  };
-
-  const handleUpdateProduct = async (updatedProduct: CatalogProduct) => {
-    if (!firestore || !updatedProduct.id || !companyId) return;
-    toast({ title: 'A atualizar produto...' });
-    try {
-      const productDocRef = doc(firestore, `companies/${companyId}/catalogProducts`, updatedProduct.id);
-      const { id, ...dataToUpdate } = updatedProduct;
-      await updateDoc(productDocRef, dataToUpdate);
-      toast({ title: "Produto do Catálogo Atualizado" });
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar o produto.' });
-    }
-  };
-
-  const handleBulkImport = async (importedProducts: ProductImportData[]) => {
-    if (!firestore || !companyId || !catalogProductsCollectionRef || !catalogCategoriesCollectionRef) return;
-
-    toast({ title: `A importar ${importedProducts.length} produtos...`, description: "Isto pode demorar um momento." });
-
-    try {
-      const batch = writeBatch(firestore);
-      const existingCategories = new Set(categories?.map(c => c.name.toLowerCase()));
-      const newCategories = new Set<string>();
-
-      // Find new categories to create
-      importedProducts.forEach(p => {
-        const catLower = p.category.toLowerCase();
-        if (!existingCategories.has(catLower)) {
-          newCategories.add(p.category);
-        }
-      });
-
-      // Add new categories to the batch
-      newCategories.forEach(catName => {
-        const newCatRef = doc(catalogCategoriesCollectionRef);
-        batch.set(newCatRef, { name: catName });
-      });
-
-      // Upsert products
-      for (const productData of importedProducts) {
-        const q = query(catalogProductsCollectionRef, where("name", "==", productData.name));
-        const querySnapshot = await getDocs(q);
-
-        if (querySnapshot.empty) {
-          // Product does not exist, create it
-          const newProdRef = doc(catalogProductsCollectionRef);
-          batch.set(newProdRef, productData);
-        } else {
-          // Product exists, update it
-          const existingDocRef = querySnapshot.docs[0].ref;
-          batch.update(existingDocRef, productData);
-        }
-      }
-
-      await batch.commit();
-      toast({ title: "Importação Concluída", description: `${importedProducts.length} produtos e ${newCategories.size} novas categorias foram importados/atualizados.` });
-
-    } catch (e) {
-      console.error("Bulk import error: ", e);
-      toast({ variant: 'destructive', title: 'Erro na Importação', description: 'Ocorreu um erro ao guardar os dados.' });
-    }
-  };
-
-
   const filteredProducts = useMemo(() => {
     if (!products) return [];
-    const sorted = [...products].sort((a, b) => a.name.localeCompare(b.name));
-    if (!searchQuery) return sorted;
-    return sorted.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.category.toLowerCase().includes(searchQuery.toLowerCase()));
+    return products.filter(p =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
   }, [products, searchQuery]);
 
   const totalProductPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const paginatedProducts = useMemo(() => {
-    const startIndex = (currentProductPage - 1) * itemsPerPage;
-    return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredProducts, currentProductPage]);
+  const paginatedProducts = filteredProducts.slice((currentProductPage - 1) * itemsPerPage, currentProductPage * itemsPerPage);
 
-
-  const filteredCategories = useMemo(() => {
-    if (!categories) return [];
-    const sorted = [...categories].sort((a, b) => a.name.localeCompare(b.name));
-    if (!searchQuery) return sorted;
-    return sorted.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [categories, searchQuery]);
-
-  const totalCategoryPages = Math.ceil(filteredCategories.length / itemsPerPage);
-  const paginatedCategories = useMemo(() => {
-    const startIndex = (currentCategoryPage - 1) * itemsPerPage;
-    return filteredCategories.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredCategories, currentCategoryPage]);
-
-
-  const handleToggleSelectAllProducts = (checked: boolean) => {
-    if (checked) {
-      setSelectedProducts(filteredProducts.map(p => p.id));
-    } else {
-      setSelectedProducts([]);
-    }
-  };
+  const isAllProductsSelected = paginatedProducts.length > 0 && paginatedProducts.every(p => selectedProducts.includes(p.id));
 
   const handleToggleSelectProduct = (productId: string, checked: boolean) => {
     if (checked) {
@@ -331,34 +206,36 @@ export function CatalogManager() {
     }
   };
 
-  const handleDeleteSelectedProducts = async () => {
-    if (!firestore || !companyId || selectedProducts.length === 0 || !confirmAction) return;
-
-    confirmAction(async () => {
-      toast({ title: `A apagar ${selectedProducts.length} produtos...` });
-      try {
-        const batch = writeBatch(firestore);
-        selectedProducts.forEach(productId => {
-          const docRef = doc(firestore, `companies/${companyId}/catalogProducts`, productId);
-          batch.delete(docRef);
-        });
-        await batch.commit();
-        toast({ title: 'Produtos Apagados', description: `${selectedProducts.length} produtos foram removidos do catálogo.` });
-        setSelectedProducts([]);
-      } catch (e) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível apagar os produtos selecionados.' });
-      }
-      setShowDeleteSelectedProductsConfirm(false);
-    }, "Apagar Produtos Selecionados", `Tem a certeza que deseja apagar ${selectedProducts.length} produtos?`);
-  };
-
-  const handleToggleSelectAllCategories = (checked: boolean) => {
+  const handleToggleSelectAllProducts = (checked: boolean) => {
     if (checked) {
-      setSelectedCategories(filteredCategories.map(c => c.id));
+      const currentPageIds = paginatedProducts.map(p => p.id);
+      setSelectedProducts(prev => Array.from(new Set([...prev, ...currentPageIds])));
     } else {
-      setSelectedCategories([]);
+      const currentPageIds = paginatedProducts.map(p => p.id);
+      setSelectedProducts(prev => prev.filter(id => !currentPageIds.includes(id)));
     }
   };
+
+  const handleUpdateProduct = async (productId: string, updatedData: Partial<CatalogProduct>) => {
+    if (!firestore || !companyId) return;
+    try {
+      const productRef = doc(firestore, `companies/${companyId}/catalogProducts`, productId);
+      await updateDoc(productRef, updatedData);
+      toast({ title: 'Produto Atualizado' });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar o produto.' });
+    }
+  };
+
+  const filteredCategories = useMemo(() => {
+    if (!categories) return [];
+    return categories.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [categories, searchQuery]);
+
+  const totalCategoryPages = Math.ceil(filteredCategories.length / itemsPerPage);
+  const paginatedCategories = filteredCategories.slice((currentCategoryPage - 1) * itemsPerPage, currentCategoryPage * itemsPerPage);
+
+  const isAllCategoriesSelected = paginatedCategories.length > 0 && paginatedCategories.every(c => selectedCategories.includes(c.id));
 
   const handleToggleSelectCategory = (categoryId: string, checked: boolean) => {
     if (checked) {
@@ -368,77 +245,34 @@ export function CatalogManager() {
     }
   };
 
-  const handleDeleteSelectedCategories = async () => {
-    if (!firestore || !companyId || selectedCategories.length === 0 || !confirmAction) return;
-
-    confirmAction(async () => {
-      const categoriesToDelete = filteredCategories.filter(c => selectedCategories.includes(c.id));
-      const usedCategories = categoriesToDelete.filter(c => products?.some(p => p.category === c.name));
-
-      if (usedCategories.length > 0) {
-        toast({
-          variant: 'destructive',
-          title: 'Não é possível apagar',
-          description: `As seguintes categorias estão em uso: ${usedCategories.map(c => c.name).join(', ')}`,
-        });
-        setShowDeleteSelectedCategoriesConfirm(false);
-        return;
-      }
-
-      toast({ title: `A apagar ${selectedCategories.length} categorias...` });
-      try {
-        const batch = writeBatch(firestore);
-        selectedCategories.forEach(categoryId => {
-          const docRef = doc(firestore, `companies/${companyId}/catalogCategories`, categoryId);
-          batch.delete(docRef);
-        });
-        await batch.commit();
-        toast({ title: 'Categorias Apagadas', description: `${selectedCategories.length} categorias foram removidas.` });
-        setSelectedCategories([]);
-      } catch (e) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível apagar as categorias selecionadas.' });
-      }
-      setShowDeleteSelectedCategoriesConfirm(false);
-    }, "Apagar Categorias Selecionadas", `Tem a certeza que deseja apagar ${selectedCategories.length} categorias?`);
+  const handleToggleSelectAllCategories = (checked: boolean) => {
+    if (checked) {
+      const currentPageIds = paginatedCategories.map(c => c.id);
+      setSelectedCategories(prev => Array.from(new Set([...prev, ...currentPageIds])));
+    } else {
+      const currentPageIds = paginatedCategories.map(c => c.id);
+      setSelectedCategories(prev => prev.filter(id => !currentPageIds.includes(id)));
+    }
   };
 
-  const isAllProductsSelected = filteredProducts.length > 0 && selectedProducts.length === filteredProducts.length;
-  const isAllCategoriesSelected = filteredCategories.length > 0 && selectedCategories.length === filteredCategories.length;
+  const handleBulkImport = async (importedProducts: any[]) => {
+    if (!catalogProductsCollectionRef || !firestore) return;
+    toast({ title: 'A importar produtos...' });
+    try {
+      const batch = writeBatch(firestore);
+      importedProducts.forEach(prod => {
+        const newDocRef = doc(catalogProductsCollectionRef);
+        batch.set(newDocRef, prod);
+      });
+      await batch.commit();
+      toast({ title: 'Importação Concluída', description: `${importedProducts.length} produtos importados.` });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Erro na importação.' });
+    }
+  };
 
   return (
     <>
-
-
-      <AlertDialog open={showDeleteSelectedProductsConfirm} onOpenChange={setShowDeleteSelectedProductsConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Apagar Produtos Selecionados?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem a certeza que quer apagar os {selectedProducts.length} produtos selecionados do catálogo? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteSelectedProducts} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sim, Apagar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showDeleteSelectedCategoriesConfirm} onOpenChange={setShowDeleteSelectedCategoriesConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Apagar Categorias Selecionadas?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem a certeza que quer apagar as {selectedCategories.length} categorias selecionadas? Apenas categorias que não estão a ser utilizadas por nenhum produto podem ser apagadas.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteSelectedCategories} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sim, Apagar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <AlertDialog open={!!categoryToEdit} onOpenChange={(open) => !open && setCategoryToEdit(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -461,7 +295,7 @@ export function CatalogManager() {
             <AlertDialogAction onClick={handleEditCategory}>Salvar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog >
 
       <AlertDialog open={showAddCategoryDialog} onOpenChange={setShowAddCategoryDialog}>
         <AlertDialogContent>
@@ -518,12 +352,6 @@ export function CatalogManager() {
             <div className="flex justify-between items-center">
               <div className='flex items-center gap-4'>
                 <p className="text-sm text-muted-foreground">A gerir {products?.length || 0} produtos base do catálogo.</p>
-                {selectedProducts.length > 0 && (
-                  <Button variant="destructive" size="sm" onClick={() => setShowDeleteSelectedProductsConfirm(true)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Apagar ({selectedProducts.length})
-                  </Button>
-                )}
               </div>
               <div className="flex items-center gap-2">
                 <AddCatalogProductDialog
@@ -574,9 +402,6 @@ export function CatalogManager() {
                           categories={categories?.map(c => c.name) || []}
                           onUpdate={handleUpdateProduct}
                         />
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteProduct(product)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
                       </TableCell>
                     </TableRow>
                   )) : (
@@ -624,12 +449,6 @@ export function CatalogManager() {
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4">
                 <p className="text-sm text-muted-foreground">A gerir {categories?.length || 0} categorias de produtos.</p>
-                {selectedCategories.length > 0 && (
-                  <Button variant="destructive" size="sm" onClick={() => setShowDeleteSelectedCategoriesConfirm(true)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Apagar ({selectedCategories.length})
-                  </Button>
-                )}
               </div>
               <Button
                 size="sm"
@@ -675,9 +494,6 @@ export function CatalogManager() {
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditingCategory(category)}>
                           <Edit className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteCategory(category)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
                     </TableRow>

@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useContext, useEffect, useMemo } from 'react';
+import { useCRM } from '@/context/crm-context';
 import {
   Dialog,
   DialogContent,
@@ -85,6 +86,7 @@ interface AddOrderDialogProps {
 export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialogProps) {
   const inventoryContext = useContext(InventoryContext);
   const { catalogProducts, catalogCategories, locations, isMultiLocation } = inventoryContext || { catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false };
+  const { customers, addCustomer } = useCRM();
 
   const form = useForm<AddOrderFormValues>({
     resolver: zodResolver(formSchema),
@@ -160,7 +162,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
   const balanceDue = totalValue - amountPaid;
 
 
-  function onSubmit(values: AddOrderFormValues) {
+  async function onSubmit(values: AddOrderFormValues) {
     if (isMultiLocation && !values.location) {
       form.setError("location", { type: "manual", message: "Selecione uma localização." });
       return;
@@ -168,6 +170,21 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
 
     if (values.location) {
       localStorage.setItem('majorstockx-last-product-location', values.location);
+    }
+
+    // Auto-save logic for Orders
+    if (values.clientName) {
+      const normalizedName = values.clientName.trim();
+      const existingCustomer = customers.find(c => c.name.toLowerCase() === normalizedName.toLowerCase());
+
+      if (!existingCustomer) {
+        try {
+          await addCustomer({ name: normalizedName });
+        } catch (error) {
+          console.error("Failed to auto-create customer from order:", error);
+          // Continue anyway
+        }
+      }
     }
 
     onAddOrder(values);

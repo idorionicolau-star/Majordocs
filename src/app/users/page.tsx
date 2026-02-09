@@ -49,12 +49,12 @@ export default function UsersPage() {
     if (!firestore || !companyId) return null;
     return collection(firestore, `companies/${companyId}/employees`);
   }, [firestore, companyId]);
-  
+
   const { data: employees, isLoading: employeesLoading } = useCollection<Employee>(employeesCollectionRef);
-  
+
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
-  const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId' | 'email'> & {email: string}) => {
+  const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | 'companyId' | 'email'> & { email: string }) => {
     if (!firestore || !companyId || !companyData) return;
 
     const safeCompanyName = (companyData.name || "company").toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9-]/g, '');
@@ -69,10 +69,10 @@ export default function UsersPage() {
       const newUserId = userCredential.user.uid;
 
       // 2. Run transaction to create both employee and user map documents
-       await runTransaction(firestore, async (transaction) => {
-        const permissionsToSet = employeeData.role === 'Admin' 
-            ? allPermissions.reduce((acc, p) => ({...acc, [p.id]: 'write' as PermissionLevel}), {} as Record<ModulePermission, PermissionLevel>) 
-            : employeeData.permissions;
+      await runTransaction(firestore, async (transaction) => {
+        const permissionsToSet = employeeData.role === 'Admin'
+          ? allPermissions.reduce((acc, p) => ({ ...acc, [p.id]: 'write' as PermissionLevel }), {} as Record<ModulePermission, PermissionLevel>)
+          : employeeData.permissions;
 
         // The object to save in the company's employee subcollection. Note: NO password.
         const employeeForFirestore: Omit<Employee, 'id' | 'password'> = {
@@ -82,7 +82,7 @@ export default function UsersPage() {
           companyId: companyId,
           permissions: permissionsToSet
         };
-        
+
         // Path to the detailed employee document
         const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, newUserId);
         transaction.set(employeeDocRef, employeeForFirestore);
@@ -90,7 +90,7 @@ export default function UsersPage() {
         // Path to the user map document
         const userMapDocRef = doc(firestore, `users/${newUserId}`);
         transaction.set(userMapDocRef, { companyId: companyId });
-       });
+      });
 
 
       toast({
@@ -112,20 +112,20 @@ export default function UsersPage() {
       });
       console.error("Erro ao adicionar funcionário: ", error);
     } finally {
-        // Clean up the secondary app
-        await deleteApp(secondaryApp);
+      // Clean up the secondary app
+      await deleteApp(secondaryApp);
     }
   };
 
   const handleUpdateEmployee = async (employee: Employee) => {
     if (!firestore || !companyId || !employee.id) return;
-    
+
     const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employee.id);
-    
+
     const { id, companyId: _, password, ...updateData } = employee;
-    
+
     await updateDoc(employeeDocRef, updateData);
-    
+
     toast({
       title: "Funcionário Atualizado",
       description: `As informações de "${employee.username}" foram atualizadas.`,
@@ -133,20 +133,7 @@ export default function UsersPage() {
   };
 
   const handleDeleteEmployee = async () => {
-    if (employeeToDelete && employeeToDelete.id && firestore && companyId) {
-      // Deleting the user from Firestore. Deleting from Auth should be done via a Cloud Function for security.
-      const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employeeToDelete.id);
-      await deleteDoc(employeeDocRef);
-
-      const userMapDocRef = doc(firestore, `users`, employeeToDelete.id);
-      await deleteDoc(userMapDocRef);
-
-      toast({
-        title: "Funcionário Removido",
-        description: `O funcionário "${employeeToDelete.username}" foi removido da base de dados.`,
-      });
-      setEmployeeToDelete(null);
-    }
+    // Removal disabled
   };
 
   if (loading || employeesLoading) {
@@ -161,54 +148,54 @@ export default function UsersPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
-        <AlertDialog open={!!employeeToDelete} onOpenChange={(open) => !open && setEmployeeToDelete(null)}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Esta ação irá remover permanentemente o funcionário "{employeeToDelete?.username}". A conta de autenticação terá de ser removida manualmente na consola Firebase.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteEmployee} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remover</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-        <div className="flex flex-col md:flex-row justify-end items-start md:items-center gap-4">
-            {isAdmin && <AddEmployeeDialog onAddEmployee={handleAddEmployee} />}
-        </div>
-      
-        <div className="hidden md:block">
-            <UsersDataTable 
-                columns={columns({
-                    onDelete: (employee) => setEmployeeToDelete(employee),
-                    onUpdate: handleUpdateEmployee,
-                    currentUserId: user?.id,
-                    isAdmin: isAdmin,
-                    companyName: companyData?.name || null
-                })} 
-                data={employees || []} 
+      <AlertDialog open={!!employeeToDelete} onOpenChange={(open) => !open && setEmployeeToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação irá remover permanentemente o funcionário "{employeeToDelete?.username}". A conta de autenticação terá de ser removida manualmente na consola Firebase.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteEmployee} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remover</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <div className="flex flex-col md:flex-row justify-end items-start md:items-center gap-4">
+        {isAdmin && <AddEmployeeDialog onAddEmployee={handleAddEmployee} />}
+      </div>
+
+      <div className="hidden md:block">
+        <UsersDataTable
+          columns={columns({
+            onDelete: (employee) => setEmployeeToDelete(employee),
+            onUpdate: handleUpdateEmployee,
+            currentUserId: user?.id,
+            isAdmin: isAdmin,
+            companyName: companyData?.name || null
+          })}
+          data={employees || []}
+        />
+      </div>
+      <div className="md:hidden space-y-3">
+        {(employees && employees.length > 0) ? (
+          employees.map(employee => (
+            <EmployeeCard
+              key={employee.id}
+              employee={employee}
+              onDelete={setEmployeeToDelete}
+              onUpdate={handleUpdateEmployee}
+              currentUserId={user?.id}
+              isAdmin={isAdmin}
             />
-        </div>
-        <div className="md:hidden space-y-3">
-          {(employees && employees.length > 0) ? (
-            employees.map(employee => (
-              <EmployeeCard 
-                key={employee.id}
-                employee={employee}
-                onDelete={setEmployeeToDelete}
-                onUpdate={handleUpdateEmployee}
-                currentUserId={user?.id}
-                isAdmin={isAdmin}
-              />
-            ))
-          ) : (
-            <Card className="text-center py-12 text-muted-foreground">
-              Nenhum funcionário encontrado.
-            </Card>
-          )}
-        </div>
+          ))
+        ) : (
+          <Card className="text-center py-12 text-muted-foreground">
+            Nenhum funcionário encontrado.
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

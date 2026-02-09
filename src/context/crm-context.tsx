@@ -8,7 +8,7 @@ import { toast } from '@/hooks/use-toast';
 
 interface CRMContextType {
     customers: Customer[];
-    addCustomer: (customerData: Omit<Customer, 'id' | 'totalPurchases' | 'lastVisit'>) => Promise<void>;
+    addCustomer: (customerData: Omit<Customer, 'id' | 'totalPurchases' | 'lastVisit'>) => Promise<string | undefined>;
     updateCustomer: (id: string, data: Partial<Customer>) => Promise<void>;
     deleteCustomer: (id: string) => Promise<void>;
     loading: boolean;
@@ -51,11 +51,11 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         return () => unsubscribe();
     }, [companyId]);
 
-    const addCustomer = async (customerData: Omit<Customer, 'id' | 'totalPurchases' | 'lastVisit'>) => {
-        if (!companyId || !user) return;
+    const addCustomer = async (customerData: Omit<Customer, 'id' | 'totalPurchases' | 'lastVisit'>): Promise<string | undefined> => {
+        if (!companyId || !user) return undefined;
         try {
             const customersRef = collection(db, `companies/${companyId}/customers`);
-            await addDoc(customersRef, {
+            const docRef = await addDoc(customersRef, {
                 ...customerData,
                 totalPurchases: 0,
                 lastVisit: new Date().toISOString(),
@@ -63,6 +63,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
                 createdAt: serverTimestamp(),
             });
             toast({ title: "Cliente adicionado", description: `${customerData.name} foi registado com sucesso.` });
+            return docRef.id;
         } catch (error) {
             console.error("Error adding customer:", error);
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o cliente." });
