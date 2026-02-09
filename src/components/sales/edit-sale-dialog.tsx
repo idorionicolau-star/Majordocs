@@ -31,7 +31,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Product, Sale } from '@/lib/types';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { InventoryContext } from '@/context/inventory-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { ScrollArea } from '../ui/scroll-area';
@@ -113,6 +113,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
   const watchedProductName = useWatch({ control: form.control, name: 'productName' });
   const watchedQuantity = useWatch({ control: form.control, name: 'quantity' });
   const watchedUnitPrice = useWatch({ control: form.control, name: 'unitPrice' });
+  const watchedAmountPaid = useWatch({ control: form.control, name: 'amountPaid' });
 
   const handleProductSelect = (productName: string, product?: CatalogProduct) => {
     form.setValue('productName', productName);
@@ -123,6 +124,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
   };
 
   const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
+  const missingAmount = totalValue - (watchedAmountPaid || 0);
   const isFromOrder = sale.documentType === 'Encomenda';
 
   function onSubmit(values: EditSaleFormValues) {
@@ -317,9 +319,17 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
               )}
             />
 
-            <div className="rounded-lg bg-muted p-4 text-right">
-              <p className="text-sm font-medium text-muted-foreground">Novo Valor Total</p>
-              <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-lg bg-muted p-4 text-right">
+                <p className="text-sm font-medium text-muted-foreground">Valor em Falta</p>
+                <p className={cn("text-2xl font-bold", missingAmount > 0.1 ? "text-red-500" : "text-green-500")}>
+                  {formatCurrency(Math.max(0, missingAmount))}
+                </p>
+              </div>
+              <div className="rounded-lg bg-muted p-4 text-right">
+                <p className="text-sm font-medium text-muted-foreground">Novo Valor Total</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
+              </div>
             </div>
 
             <DialogFooter className="pt-4">

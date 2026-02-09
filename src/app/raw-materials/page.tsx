@@ -193,7 +193,7 @@ const RawMaterialsManager = () => {
                         <Button onClick={handlePrint} variant="outline" size="sm" className="flex-1 sm:flex-none"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
                     </div>
                 </div>
-                <div className="rounded-md border overflow-x-auto">
+                <div className="rounded-md border overflow-x-auto hidden md:block">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -233,6 +233,46 @@ const RawMaterialsManager = () => {
                             )}
                         </TableBody>
                     </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="grid grid-cols-1 gap-4 md:hidden">
+                    {rawMaterials && rawMaterials.length > 0 ? rawMaterials.map((material) => (
+                        <Card key={material.id}>
+                            <CardHeader className="p-4 pb-2">
+                                <CardTitle className="text-lg">{material.name}</CardTitle>
+                                <CardDescription>Stock: {material.stock} {material.unit}</CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0 pb-2 space-y-1">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Custo Unit.:</span>
+                                    <span>{material.cost ? formatCurrency(material.cost) : 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Nível Mínimo:</span>
+                                    <span>{material.lowStockThreshold}</span>
+                                </div>
+                            </CardContent>
+                            <CardFooter className="p-2 flex justify-end gap-2 bg-muted/20">
+                                <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(material)}>
+                                    <Edit className="h-4 w-4 mr-2" /> Editar
+                                </Button>
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => {
+                                    if (confirmAction) {
+                                        confirmAction(async () => {
+                                            await deleteRawMaterial(material.id);
+                                        }, "Apagar Matéria-Prima", `Tem a certeza que quer apagar "${material.name}"? Esta ação não pode ser desfeita.`);
+                                    }
+                                }}>
+                                    <Trash2 className="h-4 w-4 mr-2" /> Apagar
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    )) : (
+                        <div className="text-center p-8 text-muted-foreground border rounded-md">
+                            Nenhuma matéria-prima cadastrada.
+                        </div>
+                    )}
                 </div>
             </CardContent>
 

@@ -9,6 +9,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Calendar, User, CheckCircle, PackageCheck, MapPin, Trash2 } from "lucide-react";
 import { SaleActions } from "./columns";
 import { Button } from "../ui/button";
+import Link from "next/link";
 import { useState } from "react";
 
 interface SaleCardProps {
@@ -35,7 +36,15 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, vi
         <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 shadow-sm">
             <CardHeader className="p-1 sm:p-2">
                 <div className="flex justify-between items-start">
-                    <CardTitle className="text-xs font-bold truncate leading-tight">{sale.productName}</CardTitle>
+                    <CardTitle className="text-xs font-bold truncate leading-tight">
+                        <Link
+                            href={`/inventory?filter=${encodeURIComponent(sale.productName)}`}
+                            className="hover:underline hover:text-primary transition-colors cursor-pointer"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {sale.productName}
+                        </Link>
+                    </CardTitle>
                     {canEdit && (
                         <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={() => onDeleteSale(sale.id)}>
                             <Trash2 className="h-3 w-3" />
