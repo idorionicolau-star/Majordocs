@@ -33,13 +33,6 @@ interface ProductionCardProps {
 export function ProductionCard({ production, onTransfer, onDelete, onUpdate, viewMode = 'normal', canEdit, locationName }: ProductionCardProps) {
     const isCondensed = viewMode === 'condensed';
     const isTransferred = production.status === 'Transferido';
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-    const handleDelete = () => {
-        onDelete(production.id);
-        setShowDeleteConfirm(false);
-    };
-
     return (
         <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 relative shadow-sm">
             <CardHeader className="p-1 sm:p-2">
@@ -120,6 +113,5 @@ export function ProductionCard({ production, onTransfer, onDelete, onUpdate, vie
                 </div>
             )}
         </Card>
-        </>
     );
 }
