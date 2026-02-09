@@ -47,7 +47,7 @@ export default function OrdersPage() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { orders, companyId, loading: inventoryLoading, user, canEdit, addNotification, addProductionLog, deleteOrder, companyData } = inventoryContext || { orders: [], sales: [], companyId: null, loading: true, user: null, canEdit: () => false, addNotification: () => { }, addProductionLog: () => { }, deleteOrder: () => { }, companyData: null };
+  const { orders, companyId, loading: inventoryLoading, user, canEdit, addNotification, addProductionLog, deleteOrder, companyData, confirmAction } = inventoryContext || { orders: [], sales: [], companyId: null, loading: true, user: null, canEdit: () => false, addNotification: () => { }, addProductionLog: () => { }, deleteOrder: () => { }, companyData: null, confirmAction: () => { } };
 
   const canEditOrders = canEdit('orders');
 
@@ -406,10 +406,25 @@ export default function OrdersPage() {
   };
 
   const handleDeleteOrder = async (orderId: string) => {
-    try {
-      await deleteOrder(orderId);
-    } catch (error: any) {
-      // Error handled in context
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+
+    if (confirmAction) {
+      confirmAction(async () => {
+        try {
+          await deleteOrder(orderId);
+          toast({ title: 'Encomenda Apagada', description: `A encomenda de ${order.clientName} foi movida para a lixeira.` });
+        } catch (error: any) {
+          // Error handled in context mostly, but good to catch
+        }
+      }, "Apagar Encomenda", `Tem a certeza que deseja apagar a encomenda de "${order.clientName}" (${order.productName})? Esta ação moverá a encomenda para a lixeira e reporá o stock reservado.`);
+    } else {
+      // Fallback
+      if (window.confirm(`Tem a certeza que deseja apagar a encomenda de "${order.clientName}"?`)) {
+        try {
+          await deleteOrder(orderId);
+        } catch (e) { }
+      }
     }
   };
 

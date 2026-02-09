@@ -8,17 +8,7 @@ import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { AddProductionLogDialog } from "./add-production-log-dialog";
 import { differenceInDays, addDays } from 'date-fns';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface OrderCardProps {
@@ -92,37 +82,19 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
                             <span>{order.status}</span>
                         </div>
                         {canEdit && (
-                            <AlertDialog>
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
-                                                    <Trash2 className="h-4 w-4" />
-                                                    <span className="sr-only">Apagar Encomenda</span>
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>Apagar Encomenda</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            Esta ação irá mover a encomenda para a lixeira e repor o stock reservado.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => onDeleteOrder(order.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                            Apagar
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => onDeleteOrder(order.id)}>
+                                            <Trash2 className="h-4 w-4" />
+                                            <span className="sr-only">Apagar Encomenda</span>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Apagar Encomenda</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                         )}
                     </div>
                 </div>

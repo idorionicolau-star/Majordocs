@@ -16,17 +16,7 @@ import {
     Dialog,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+
 import { InventoryContext } from "@/context/inventory-context"
 import { cn } from "@/lib/utils"
 
@@ -225,37 +215,21 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
             </TooltipProvider>
 
             {canEdit && (
-                <AlertDialog>
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
-                                        <Trash2 className="h-4 w-4" />
-                                        <span className="sr-only">Apagar Venda</span>
-                                    </Button>
-                                </AlertDialogTrigger>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Apagar Venda</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Esta ação irá mover a venda para a lixeira e repor o stock do produto associado.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => options.onDeleteSale(sale.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                Apagar
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                    if (inventoryContext?.confirmAction) {
+                        inventoryContext.confirmAction(async () => {
+                            options.onDeleteSale(sale.id!);
+                        }, "Apagar Venda", `Tem a certeza que deseja apagar a venda ${sale.documentType} #${sale.guideNumber}? Esta ação moverá a venda para a lixeira e reporá o stock.`);
+                    } else {
+                        // Fallback if context missing (should not happen)
+                        if (window.confirm("Tem a certeza que deseja apagar esta venda?")) {
+                            options.onDeleteSale(sale.id!);
+                        }
+                    }
+                }}>
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Apagar Venda</span>
+                </Button>
             )}
         </div>
     )
