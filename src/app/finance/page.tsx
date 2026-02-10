@@ -242,10 +242,11 @@ export default function FinancePage() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <Input
                             placeholder="Pesquisar despesa..."
-                            className="pl-10 h-10 w-full"
+                            className="pl-10 sm:pl-10 h-10 w-full"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
+
                     </div>
                 </div>
 

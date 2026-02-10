@@ -147,10 +147,11 @@ export function RecycleBin() {
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Procurar itens apagados..."
-                            className="pl-8 bg-background"
+                            className="pl-9 sm:pl-9 bg-background"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
+
                     </div>
                 </div>
             </CardHeader>

@@ -163,10 +163,11 @@ export default function CustomersPage() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <Input
                             placeholder={searchPlaceholder}
-                            className="pl-10 h-12 text-lg bg-white dark:bg-slate-900 shadow-sm border-slate-200 dark:border-slate-800 focus-visible:ring-primary"
+                            className="pl-10 sm:pl-12 h-12 text-lg bg-white dark:bg-slate-900 shadow-sm border-slate-200 dark:border-slate-800 focus-visible:ring-primary"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
+
                     </div>
                 </div>
             </div>
