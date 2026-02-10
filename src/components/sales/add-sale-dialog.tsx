@@ -11,6 +11,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
+import {
+  DrawerClose,
+  DrawerFooter,
+} from "@/components/ui/drawer";
+
 import {
   Form,
   FormControl,
@@ -94,6 +100,370 @@ interface AddSaleDialogProps {
   onAddSale: (data: Omit<Sale, 'id' | 'guideNumber'>) => void;
 }
 
+interface AddSaleFormProps {
+  form: any;
+  onSubmit: (values: AddSaleFormValues) => void;
+  onOpenChange: (open: boolean) => void;
+  isMultiLocation: boolean;
+  locations: Location[];
+  productsInStock: CatalogProduct[];
+  catalogCategories: any[];
+  handleProductSelect: (name: string, product?: CatalogProduct) => void;
+  selectedProductInstance: any;
+  availableStock: number;
+  customers: any[];
+  watchedApplyVat: boolean;
+  watchedCustomerId: string;
+  subtotal: number;
+  discountAmount: number;
+  vatPercentage: number;
+  vatAmount: number;
+  totalValue: number;
+  isSubmitDisabled: boolean;
+}
+
+function AddSaleForm({
+  form,
+  onSubmit,
+  onOpenChange,
+  isMultiLocation,
+  locations,
+  productsInStock,
+  catalogCategories,
+  handleProductSelect,
+  selectedProductInstance,
+  availableStock,
+  customers,
+  watchedApplyVat,
+  subtotal,
+  discountAmount,
+  vatPercentage,
+  vatAmount,
+  totalValue,
+  isSubmitDisabled
+}: AddSaleFormProps) {
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4 pr-2">
+        <div className="space-y-4 rounded-lg border p-4">
+          <h3 className="font-semibold leading-none tracking-tight">Itens</h3>
+          {isMultiLocation && (
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Localização da Venda</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma localização" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {locations.map((location: Location) => (
+                        <SelectItem key={location.id} value={location.id}>
+                          {location.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+          <FormField
+            control={form.control}
+            name="productName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Produto</FormLabel>
+                <FormControl>
+                  <CatalogProductSelector
+                    products={productsInStock}
+                    categories={catalogCategories || []}
+                    selectedValue={field.value}
+                    onValueChange={handleProductSelect}
+                    placeholder="Pesquisar produto em estoque..."
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="quantity"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex justify-between items-baseline">
+                    <FormLabel>Quantidade</FormLabel>
+                    {selectedProductInstance && <p className="text-xs text-muted-foreground">Disponível: {availableStock}</p>}
+                  </div>
+                  <FormControl>
+                    <MathInput
+                      {...field}
+                      onValueChange={field.onChange}
+                      placeholder="0.0"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="unitPrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Preço Unitário</FormLabel>
+                  <FormControl>
+                    <MathInput
+                      {...field}
+                      onValueChange={field.onChange}
+                      placeholder="0.00"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4 rounded-lg border p-4">
+          <h3 className="font-semibold leading-none tracking-tight">Detalhes do Documento</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="customerId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cliente Registado</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || "new"}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um cliente" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="new">-- Novo / Não Registado --</SelectItem>
+                      {customers.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="clientName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome do Cliente (no documento)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Nome do cliente" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="documentType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Documento</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo de documento" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Factura Proforma">Factura Proforma</SelectItem>
+                      <SelectItem value="Guia de Remessa">Guia de Remessa</SelectItem>
+                      <SelectItem value="Factura">Factura</SelectItem>
+                      <SelectItem value="Recibo">Recibo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <FormField
+            control={form.control}
+            name="date"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Data da Venda</FormLabel>
+                <DatePicker
+                  date={field.value}
+                  setDate={field.onChange}
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <Accordion type="multiple" className="w-full space-y-4">
+          <AccordionItem value="financials" className="border rounded-lg">
+            <AccordionTrigger className="px-4 py-3 hover:no-underline">
+              <h3 className="font-semibold leading-none tracking-tight">Detalhes Financeiros (Opcional)</h3>
+            </AccordionTrigger>
+            <AccordionContent className="p-4 pt-0">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="discountType"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel>Tipo de Desconto</FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex items-center space-x-4 pt-1"
+                          >
+                            <FormItem className="flex items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="fixed" id="d-fixed" />
+                              </FormControl>
+                              <FormLabel htmlFor="d-fixed" className="font-normal">Valor Fixo</FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="percentage" id="d-percentage" />
+                              </FormControl>
+                              <FormLabel htmlFor="d-percentage" className="font-normal">%</FormLabel>
+                            </FormItem>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="discountValue"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Valor do Desconto</FormLabel>
+                        <FormControl>
+                          <MathInput
+                            {...field}
+                            onValueChange={field.onChange}
+                            placeholder="0.00"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="applyVat"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <div className="space-y-0.5">
+                        <FormLabel className="cursor-pointer">Aplicar IVA</FormLabel>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                {watchedApplyVat && (
+                  <FormField
+                    control={form.control}
+                    name="vatPercentage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>IVA (%)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="1" {...field} placeholder="17" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="notes" className="border rounded-lg">
+            <AccordionTrigger className="px-4 py-3 hover:no-underline">
+              <h3 className="font-semibold leading-none tracking-tight">Notas Adicionais (Opcional)</h3>
+            </AccordionTrigger>
+            <AccordionContent className="p-4 pt-0">
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Adicione notas, termos ou condições..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
+
+        <div className="rounded-lg bg-muted p-4 space-y-2 mt-4">
+          <div className='flex justify-between items-center text-sm'>
+            <span className='text-muted-foreground'>Subtotal</span>
+            <span className='font-medium'>{formatCurrency(subtotal)}</span>
+          </div>
+          {discountAmount > 0 && (
+            <div className='flex justify-between items-center text-sm'>
+              <span className='text-muted-foreground'>Desconto</span>
+              <span className='font-medium text-red-500'>- {formatCurrency(discountAmount)}</span>
+            </div>
+          )}
+          {watchedApplyVat && (
+            <div className='flex justify-between items-center text-sm'>
+              <span className='text-muted-foreground'>IVA ({vatPercentage}%)</span>
+              <span className='font-medium'>{formatCurrency(vatAmount)}</span>
+            </div>
+          )}
+          <Separator className='my-2 bg-border/50' />
+          <div className='flex justify-between items-center text-lg'>
+            <span className='font-bold'>Total</span>
+            <span className='font-bold'>{formatCurrency(totalValue)}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
+          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button type="submit" disabled={isSubmitDisabled}>Registrar Venda</Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
 export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogProps) {
   const inventoryContext = useContext(InventoryContext);
   const {
@@ -116,7 +486,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
       discountType: 'fixed',
       discountValue: 0,
       applyVat: false,
-      vatPercentage: 17, // Default VAT
+      vatPercentage: 17,
       documentType: 'Factura Proforma',
       clientName: '',
       customerId: '',
@@ -162,7 +532,6 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
   const watchedApplyVat = useWatch({ control: form.control, name: 'applyVat' });
   const watchedCustomerId = useWatch({ control: form.control, name: 'customerId' });
 
-  // Auto-fill client name when customer is selected
   useEffect(() => {
     if (watchedCustomerId && watchedCustomerId !== 'new') {
       const customer = customers.find(c => c.id === watchedCustomerId);
@@ -179,7 +548,7 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
     if (watchedDiscountType === 'percentage') {
       return subtotal * (value / 100);
     }
-    return value; // fixed
+    return value;
   }, [watchedDiscountType, watchedDiscountValue, subtotal]);
 
   const totalAfterDiscount = subtotal > discountAmount ? subtotal - discountAmount : 0;
@@ -197,7 +566,6 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
       : products;
 
     const inStock = productsForLocation.filter(p => (p.stock - p.reservedStock) > 0);
-
     const inStockNames = [...new Set(inStock.map(p => p.name))];
 
     return catalogProducts.filter(p => inStockNames.includes(p.name));
@@ -262,7 +630,6 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
 
     let finalCustomerId = values.customerId === 'new' ? undefined : values.customerId;
 
-    // Auto-save logic
     if (values.clientName && !finalCustomerId) {
       const normalizedName = values.clientName.trim();
       const existingCustomer = customers.find(c => c.name.toLowerCase() === normalizedName.toLowerCase());
@@ -275,7 +642,6 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
           if (newId) finalCustomerId = newId;
         } catch (error) {
           console.error("Failed to auto-create customer:", error);
-          // We continue without ID if creation fails, just saving the name string
         }
       }
     }
@@ -302,342 +668,42 @@ export function AddSaleDialog({ open, onOpenChange, onAddSale }: AddSaleDialogPr
     };
 
     onAddSale(newSale);
-
     onOpenChange(false);
   }
 
   const isSubmitDisabled = !form.formState.isValid || form.formState.isSubmitting;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Registrar Novo Documento de Venda</DialogTitle>
-          <DialogDescription>
-            Crie uma cotação, fatura ou guia. As vendas pagas reservam o stock automaticamente.
-          </DialogDescription>
-        </DialogHeader>
-        <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4 pr-2">
-              <div className="space-y-4 rounded-lg border p-4">
-                <h3 className="font-semibold leading-none tracking-tight">Itens</h3>
-                {isMultiLocation && (
-                  <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Localização da Venda</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione uma localização" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {locations.map((location: Location) => (
-                              <SelectItem key={location.id} value={location.id}>
-                                {location.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-                <FormField
-                  control={form.control}
-                  name="productName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Produto</FormLabel>
-                      <FormControl>
-                        <CatalogProductSelector
-                          products={productsInStock}
-                          categories={catalogCategories || []}
-                          selectedValue={field.value}
-                          onValueChange={handleProductSelect}
-                          placeholder="Pesquisar produto em estoque..."
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="quantity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex justify-between items-baseline">
-                          <FormLabel>Quantidade</FormLabel>
-                          {selectedProductInstance && <p className="text-xs text-muted-foreground">Disponível: {availableStock}</p>}
-                        </div>
-                        <FormControl>
-                          <MathInput
-                            {...field}
-                            onValueChange={field.onChange}
-                            placeholder="0.0"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="unitPrice"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Preço Unitário</FormLabel>
-                        <FormControl>
-                          <MathInput
-                            {...field}
-                            onValueChange={field.onChange}
-                            placeholder="0.00"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4 rounded-lg border p-4">
-                <h3 className="font-semibold leading-none tracking-tight">Detalhes do Documento</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="customerId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cliente Registado</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || "new"}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione um cliente" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="new">-- Novo / Não Registado --</SelectItem>
-                            {customers.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>
-                                {c.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="clientName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nome do Cliente (no documento)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nome do cliente" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="documentType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tipo de Documento</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione o tipo de documento" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Factura Proforma">Factura Proforma</SelectItem>
-                            <SelectItem value="Guia de Remessa">Guia de Remessa</SelectItem>
-                            <SelectItem value="Factura">Factura</SelectItem>
-                            <SelectItem value="Recibo">Recibo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Data da Venda</FormLabel>
-                      <DatePicker
-                        date={field.value}
-                        setDate={field.onChange}
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <Accordion type="multiple" className="w-full space-y-4">
-                <AccordionItem value="financials" className="border rounded-lg">
-                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                    <h3 className="font-semibold leading-none tracking-tight">Detalhes Financeiros (Opcional)</h3>
-                  </AccordionTrigger>
-                  <AccordionContent className="p-4 pt-0">
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="discountType"
-                          render={({ field }) => (
-                            <FormItem className="space-y-3">
-                              <FormLabel>Tipo de Desconto</FormLabel>
-                              <FormControl>
-                                <RadioGroup
-                                  onValueChange={field.onChange}
-                                  defaultValue={field.value}
-                                  className="flex items-center space-x-4 pt-1"
-                                >
-                                  <FormItem className="flex items-center space-x-2 space-y-0">
-                                    <FormControl>
-                                      <RadioGroupItem value="fixed" id="d-fixed" />
-                                    </FormControl>
-                                    <FormLabel htmlFor="d-fixed" className="font-normal">Valor Fixo</FormLabel>
-                                  </FormItem>
-                                  <FormItem className="flex items-center space-x-2 space-y-0">
-                                    <FormControl>
-                                      <RadioGroupItem value="percentage" id="d-percentage" />
-                                    </FormControl>
-                                    <FormLabel htmlFor="d-percentage" className="font-normal">%</FormLabel>
-                                  </FormItem>
-                                </RadioGroup>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="discountValue"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Valor do Desconto</FormLabel>
-                              <FormControl>
-                                <MathInput
-                                  {...field}
-                                  onValueChange={field.onChange}
-                                  placeholder="0.00"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <FormField
-                        control={form.control}
-                        name="applyVat"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <div className="space-y-0.5">
-                              <FormLabel className="cursor-pointer">Aplicar IVA</FormLabel>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      {watchedApplyVat && (
-                        <FormField
-                          control={form.control}
-                          name="vatPercentage"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>IVA (%)</FormLabel>
-                              <FormControl>
-                                <Input type="number" step="1" {...field} placeholder="17" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-                <AccordionItem value="notes" className="border rounded-lg">
-                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                    <h3 className="font-semibold leading-none tracking-tight">Notas Adicionais (Opcional)</h3>
-                  </AccordionTrigger>
-                  <AccordionContent className="p-4 pt-0">
-                    <FormField
-                      control={form.control}
-                      name="notes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Adicione notas, termos ou condições..."
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-
-
-              <div className="rounded-lg bg-muted p-4 space-y-2 mt-4">
-                <div className='flex justify-between items-center text-sm'>
-                  <span className='text-muted-foreground'>Subtotal</span>
-                  <span className='font-medium'>{formatCurrency(subtotal)}</span>
-                </div>
-                {discountAmount > 0 && (
-                  <div className='flex justify-between items-center text-sm'>
-                    <span className='text-muted-foreground'>Desconto</span>
-                    <span className='font-medium text-red-500'>- {formatCurrency(discountAmount)}</span>
-                  </div>
-                )}
-                {watchedApplyVat && (
-                  <div className='flex justify-between items-center text-sm'>
-                    <span className='text-muted-foreground'>IVA ({vatPercentage}%)</span>
-                    <span className='font-medium'>{formatCurrency(vatAmount)}</span>
-                  </div>
-                )}
-                <Separator className='my-2 bg-border/50' />
-                <div className='flex justify-between items-center text-lg'>
-                  <span className='font-bold'>Total</span>
-                  <span className='font-bold'>{formatCurrency(totalValue)}</span>
-                </div>
-              </div>
-
-              <DialogFooter className="pt-4">
-                <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                <Button type="submit" disabled={isSubmitDisabled}>Registrar Venda</Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Registrar Novo Documento de Venda"
+      description="Crie uma cotação, fatura ou guia. As vendas pagas reservam o stock automaticamente."
+    >
+      <div className="max-h-[85vh] overflow-y-auto pr-2">
+        <AddSaleForm
+          form={form}
+          onSubmit={onSubmit}
+          onOpenChange={onOpenChange}
+          isMultiLocation={isMultiLocation}
+          locations={locations}
+          productsInStock={productsInStock}
+          catalogCategories={catalogCategories}
+          handleProductSelect={handleProductSelect}
+          selectedProductInstance={selectedProductInstance}
+          availableStock={availableStock}
+          customers={customers}
+          watchedApplyVat={watchedApplyVat}
+          watchedCustomerId={watchedCustomerId || ""}
+          subtotal={subtotal}
+          discountAmount={discountAmount}
+          vatPercentage={vatPercentage}
+          vatAmount={vatAmount}
+          totalValue={totalValue}
+          isSubmitDisabled={isSubmitDisabled}
+        />
+      </div>
+    </ResponsiveDialog>
   );
 }
+

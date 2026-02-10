@@ -11,6 +11,18 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { useMediaQuery } from '@/hooks/use-media-query';
+
+import {
   Form,
   FormControl,
   FormField,
@@ -75,7 +87,7 @@ interface EditProductDialogProps {
   isMultiLocation: boolean;
 }
 
-function EditProductDialogContent({ product, onProductUpdate, setOpen, locations, isMultiLocation }: Omit<EditProductDialogProps, 'trigger'> & { setOpen: (open: boolean) => void }) {
+function EditProductForm({ product, onProductUpdate, setOpen, locations, isMultiLocation }: Omit<EditProductDialogProps, 'trigger'> & { setOpen: (open: boolean) => void }) {
   const { availableUnits } = useInventory();
   const form = useForm<EditProductFormValues>({
     resolver: zodResolver(formSchema),
@@ -100,173 +112,166 @@ function EditProductDialogContent({ product, onProductUpdate, setOpen, locations
   }
 
   return (
-    <DialogContent className="sm:max-w-xl">
-      <DialogHeader>
-        <DialogTitle>Editar Produto</DialogTitle>
-        <DialogDescription>
-          Atualize os detalhes do produto. Clique em salvar para aplicar as alterações.
-        </DialogDescription>
-      </DialogHeader>
-      <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome do Produto</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Grelha 30x30" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoria</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Grelhas" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            {isMultiLocation && (
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Localização</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma localização" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {locations.map((location: Location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nome do Produto</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ex: Grelha 30x30" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-            <FormField
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Preço Unitário (MT)</FormLabel>
+          />
+          <FormField
+            control={form.control}
+            name="category"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Categoria</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ex: Grelhas" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        {isMultiLocation && (
+          <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Localização</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <Input type="number" step="0.01" {...field} />
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma localização" />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="stock"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Estoque</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="any" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="unit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unidade</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {availableUnits.map((u: string) => (
-                          <SelectItem key={u} value={u}>{u}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="lowStockThreshold"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Alerta Baixo</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="criticalStockThreshold"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Alerta Crítico</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button type="submit">Salvar Alterações</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </ScrollArea>
-    </DialogContent>
+                  <SelectContent>
+                    {locations.map((location: Location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+        <FormField
+          control={form.control}
+          name="price"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Preço Unitário (MT)</FormLabel>
+              <FormControl>
+                <Input type="number" step="0.01" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="stock"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Estoque</FormLabel>
+                <FormControl>
+                  <Input type="number" step="any" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="unit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Unidade</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {availableUnits.map((u: string) => (
+                      <SelectItem key={u} value={u}>{u}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="lowStockThreshold"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Alerta Baixo</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="criticalStockThreshold"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Alerta Crítico</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
+          <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button type="submit">Salvar Alterações</Button>
+        </div>
+      </form>
+    </Form>
   );
 }
 
 
 
-const EditProductTrigger = ({ trigger }: { trigger: 'icon' | 'button' | 'card-button' }) => {
+
+const EditProductTrigger = ({ trigger, isDrawer }: { trigger: 'icon' | 'button' | 'card-button', isDrawer?: boolean }) => {
+  const Trigger = isDrawer ? DrawerTrigger : DialogTrigger;
+
   if (trigger === 'icon') {
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <DialogTrigger asChild>
+            <Trigger asChild>
               <Button variant="ghost" size="icon" className="p-3 h-auto w-auto text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all">
                 <Edit2 className="h-4 w-4" />
                 <span className="sr-only">Editar</span>
               </Button>
-            </DialogTrigger>
+            </Trigger>
           </TooltipTrigger>
           <TooltipContent>
             <p>Editar Produto</p>
@@ -280,11 +285,11 @@ const EditProductTrigger = ({ trigger }: { trigger: 'icon' | 'button' | 'card-bu
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <DialogTrigger asChild>
+            <Trigger asChild>
               <Button variant="outline" size="icon" className="flex-1 h-8 sm:h-9">
                 <Edit2 className="h-4 w-4" />
               </Button>
-            </DialogTrigger>
+            </Trigger>
           </TooltipTrigger>
           <TooltipContent><p>Editar Produto</p></TooltipContent>
         </Tooltip>
@@ -292,22 +297,66 @@ const EditProductTrigger = ({ trigger }: { trigger: 'icon' | 'button' | 'card-bu
     )
   }
   return (
-    <DialogTrigger asChild>
+    <Trigger asChild>
       <Button variant="outline" className="w-full">
         <Edit2 className="mr-2 h-4 w-4" />
         Editar
       </Button>
-    </DialogTrigger>
+    </Trigger>
   )
 }
 
+
 export function EditProductDialog({ product, onProductUpdate, trigger, locations, isMultiLocation }: EditProductDialogProps) {
   const [open, setOpen] = useState(false);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  if (isDesktop) {
+    return (
+      <Dialog open={open} onOpenChange={setOpen}>
+        <EditProductTrigger trigger={trigger} />
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Editar Produto</DialogTitle>
+            <DialogDescription>
+              Atualize os detalhes do produto. Clique em salvar para aplicar as alterações.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
+            <EditProductForm
+              product={product}
+              onProductUpdate={onProductUpdate}
+              setOpen={setOpen}
+              locations={locations}
+              isMultiLocation={isMultiLocation}
+            />
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <EditProductTrigger trigger={trigger} />
-      {open && <EditProductDialogContent product={product} onProductUpdate={onProductUpdate} setOpen={setOpen} locations={locations} isMultiLocation={isMultiLocation} />}
-    </Dialog>
+    <Drawer open={open} onOpenChange={setOpen}>
+      <EditProductTrigger trigger={trigger} isDrawer />
+      <DrawerContent>
+        <DrawerHeader className="text-left">
+          <DrawerTitle>Editar Produto</DrawerTitle>
+          <DrawerDescription>
+            Atualize os detalhes do produto.
+          </DrawerDescription>
+        </DrawerHeader>
+        <div className="px-4 pb-8 overflow-y-auto max-h-[85vh]">
+          <EditProductForm
+            product={product}
+            onProductUpdate={onProductUpdate}
+            setOpen={setOpen}
+            locations={locations}
+            isMultiLocation={isMultiLocation}
+          />
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 }
+

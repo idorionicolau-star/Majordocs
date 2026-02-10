@@ -211,4 +211,13 @@
   .dark .kpi-card--green {
     border-color: hsl(var(--chart-1) / 0.5);
   }
+
+  /* Improved Dialog/Drawer Mobile UX */
+  @media (max-width: 768px) {
+    .dialog-content {
+      max-height: 85dvh;
+      overflow-y: auto;
+      padding-bottom: 2rem;
+    }
+  }
 }

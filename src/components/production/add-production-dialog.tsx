@@ -9,6 +9,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
+
 import {
   Form,
   FormControl,
@@ -54,6 +56,125 @@ interface AddProductionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAddProduction: (data: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => void;
+}
+
+interface AddProductionFormProps {
+  form: any;
+  onSubmit: (values: AddProductionFormValues) => void;
+  onOpenChange: (open: boolean) => void;
+  catalogProducts: CatalogProduct[];
+  catalogCategories: any[];
+  handleProductSelect: (name: string, product?: CatalogProduct) => void;
+  availableUnits: string[];
+  isMultiLocation: boolean;
+  locations: Location[];
+}
+
+function AddProductionForm({
+  form,
+  onSubmit,
+  onOpenChange,
+  catalogProducts,
+  catalogCategories,
+  handleProductSelect,
+  availableUnits,
+  isMultiLocation,
+  locations,
+}: AddProductionFormProps) {
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 pr-2">
+        <div className="space-y-2">
+          <FormField
+            control={form.control}
+            name="productName"
+            render={({ field }) => (
+              <CatalogProductSelector
+                selectedValue={field.value}
+                onValueChange={handleProductSelect}
+                products={catalogProducts}
+                categories={catalogCategories}
+              />
+            )}
+          />
+          <FormMessage />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="quantity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Quantidade Produzida</FormLabel>
+                <FormControl>
+                  <MathInput
+                    {...field}
+                    onValueChange={field.onChange}
+                    placeholder="0"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="unit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Unidade</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {availableUnits.map((u: string) => (
+                      <SelectItem key={u} value={u}>{u}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        {isMultiLocation && (
+          <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Localização de Produção</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma localização" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {locations.map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
+          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button type="submit">Registrar</Button>
+        </div>
+      </form>
+    </Form>
+  );
 }
 
 export function AddProductionDialog({ open, onOpenChange, onAddProduction }: AddProductionDialogProps) {
@@ -104,7 +225,6 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
       return;
     }
 
-    // Save location preference
     if (values.location) {
       localStorage.setItem('majorstockx-last-product-location', values.location);
     }
@@ -123,107 +243,27 @@ export function AddProductionDialog({ open, onOpenChange, onAddProduction }: Add
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Registrar Produção</DialogTitle>
-          <DialogDescription>
-            Adicione uma nova produção ao sistema. O stock será atualizado automaticamente.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <div className="space-y-2">
-              <FormField
-                control={form.control}
-                name="productName"
-                render={({ field }) => (
-                  <CatalogProductSelector
-                    selectedValue={field.value}
-                    onValueChange={handleProductSelect}
-                    products={catalogProducts}
-                    categories={catalogCategories}
-                  />
-                )}
-              />
-              <FormMessage />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantidade Produzida</FormLabel>
-                    <FormControl>
-                      <MathInput
-                        {...field}
-                        onValueChange={field.onChange}
-                        placeholder="0"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="unit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unidade</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {availableUnits.map((u: string) => (
-                          <SelectItem key={u} value={u}>{u}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            {isMultiLocation && (
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Localização de Produção</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma localização" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button type="submit">Registrar</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Registrar Produção"
+      description="Adicione uma nova produção ao sistema. O stock será atualizado automaticamente."
+    >
+      <div className="max-h-[85vh] overflow-y-auto pr-2">
+        <AddProductionForm
+          form={form}
+          onSubmit={onSubmit}
+          onOpenChange={onOpenChange}
+          catalogProducts={catalogProducts}
+          catalogCategories={catalogCategories}
+          handleProductSelect={handleProductSelect}
+          availableUnits={availableUnits}
+          isMultiLocation={isMultiLocation}
+          locations={locations}
+        />
+      </div>
+    </ResponsiveDialog>
   );
 }
+
+

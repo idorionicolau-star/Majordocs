@@ -10,6 +10,9 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
+import { DrawerTrigger } from "@/components/ui/drawer";
+
 import {
   Form,
   FormControl,
@@ -82,128 +85,126 @@ function EditProductionDialogContent({ production, onUpdate, setOpen }: EditProd
   }
 
   return (
-    <DialogContent className="sm:max-w-md">
-      <DialogHeader>
-        <DialogTitle>Editar Registo de Produção</DialogTitle>
-        <DialogDescription>
-          Atualize os detalhes deste registo de produção.
-        </DialogDescription>
-      </DialogHeader>
-      <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
-            <FormField
-              control={form.control}
-              name="productName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Produto</FormLabel>
-                  <FormControl>
-                    <CatalogProductSelector
-                      products={catalogProducts || []}
-                      categories={catalogCategories || []}
-                      selectedValue={field.value}
-                      onValueChange={handleProductSelect}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantidade</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="any" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="unit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unidade</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="un">Unidade (un)</SelectItem>
-                        <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
-                        <SelectItem value="m">Metro Linear (m)</SelectItem>
-                        <SelectItem value="cj">Conjunto (cj)</SelectItem>
-                        <SelectItem value="outro">Outro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            {isMultiLocation && (
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Localização</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma localização" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {locations?.map((location: Location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
+        <FormField
+          control={form.control}
+          name="productName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Produto</FormLabel>
+              <FormControl>
+                <CatalogProductSelector
+                  products={catalogProducts || []}
+                  categories={catalogCategories || []}
+                  selectedValue={field.value}
+                  onValueChange={handleProductSelect}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="quantity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Quantidade</FormLabel>
+                <FormControl>
+                  <Input type="number" step="any" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button type="submit">Salvar Alterações</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </ScrollArea>
-    </DialogContent>
+          />
+          <FormField
+            control={form.control}
+            name="unit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Unidade</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="un">Unidade (un)</SelectItem>
+                    <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
+                    <SelectItem value="m">Metro Linear (m)</SelectItem>
+                    <SelectItem value="cj">Conjunto (cj)</SelectItem>
+                    <SelectItem value="outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        {isMultiLocation && (
+          <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Localização</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma localização" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {locations?.map((location: Location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
+          <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button type="submit">Salvar Alterações</Button>
+        </div>
+      </form>
+    </Form>
   );
 }
-
 
 export function EditProductionDialog({ production, onUpdate, trigger = 'icon' }: EditProductionDialogProps) {
   const [open, setOpen] = useState(false);
+
+  const triggerElement = trigger === 'icon' ? (
+    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+      <Edit className="h-3 w-3" />
+    </Button>
+  ) : (
+    <Button variant="outline">
+      <Edit className="mr-2 h-4 w-4" />
+      Editar
+    </Button>
+  );
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger === 'icon' ? (
-          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
-            <Edit className="h-3 w-3" />
-          </Button>
-        ) : (
-          <Button variant="outline">
-            <Edit className="mr-2 h-4 w-4" />
-            Editar
-          </Button>
-        )}
-      </DialogTrigger>
-      {open && <EditProductionDialogContent production={production} onUpdate={onUpdate} setOpen={setOpen} />}
-    </Dialog>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={setOpen}
+      title="Editar Registo de Produção"
+      description="Atualize os detalhes deste registo de produção."
+      trigger={triggerElement}
+    >
+      <div className="max-h-[85vh] overflow-y-auto pr-2">
+        <EditProductionDialogContent production={production} onUpdate={onUpdate} setOpen={setOpen} />
+      </div>
+    </ResponsiveDialog>
   );
 }
+

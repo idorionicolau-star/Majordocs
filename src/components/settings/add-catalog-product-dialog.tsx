@@ -12,6 +12,8 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
+
 import {
   Form,
   FormControl,
@@ -67,7 +69,136 @@ interface AddCatalogProductDialogProps {
   onAdd: (product: Omit<CatalogProduct, 'id'>) => void;
 }
 
-function AddCatalogProductDialogContent({ categories, onAdd, setOpen }: AddCatalogProductDialogProps & { setOpen: (open: boolean) => void }) {
+function AddCatalogProductForm({
+  categories,
+  onAdd,
+  setOpen,
+  form,
+  namePlaceholder,
+  pricePlaceholder
+}: AddCatalogProductDialogProps & { setOpen: (open: boolean) => void; form: any; namePlaceholder: string; pricePlaceholder: string }) {
+  function onSubmit(values: FormValues) {
+    onAdd(values);
+    setOpen(false);
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
+        <FormField
+          control={form.control}
+          name="category"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Categoria</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {categories.map(category => (
+                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nome do Produto</FormLabel>
+              <FormControl>
+                <Input placeholder={namePlaceholder} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="price"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Preço Padrão</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" placeholder={pricePlaceholder} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="unit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Unidade</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="un">Unidade (un)</SelectItem>
+                    <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
+                    <SelectItem value="m">Metro Linear (m)</SelectItem>
+                    <SelectItem value="cj">Conjunto (cj)</SelectItem>
+                    <SelectItem value="outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="lowStockThreshold"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Alerta Baixo</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="criticalStockThreshold"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Alerta Crítico</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
+          <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button type="submit">Adicionar ao Catálogo</Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+export function AddCatalogProductDialog({ categories, onAdd }: AddCatalogProductDialogProps) {
+  const [open, setOpen] = useState(false);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -80,162 +211,44 @@ function AddCatalogProductDialogContent({ categories, onAdd, setOpen }: AddCatal
     },
   });
 
-  function onSubmit(values: FormValues) {
-    onAdd(values);
-    setOpen(false);
-  }
-
   const namePlaceholder = useDynamicPlaceholder('product');
   const pricePlaceholder = useDynamicPlaceholder('money');
 
-
+  const trigger = (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button size="icon" className="rounded-full h-9 w-9">
+            <Plus className="h-5 w-5" />
+            <span className="sr-only">Adicionar Produto ao Catálogo</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Adicionar Produto ao Catálogo</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 
   return (
-    <DialogContent className="sm:max-w-md">
-      <DialogHeader>
-        <DialogTitle>Adicionar Produto ao Catálogo</DialogTitle>
-        <DialogDescription>
-          Crie um novo produto base que poderá ser usado no inventário.
-        </DialogDescription>
-      </DialogHeader>
-      <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Categoria</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma categoria" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories.map(category => (
-                        <SelectItem key={category} value={category}>{category}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do Produto</FormLabel>
-                  <FormControl>
-                    <Input placeholder={namePlaceholder} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preço Padrão</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder={pricePlaceholder} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="unit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unidade</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="un">Unidade (un)</SelectItem>
-                        <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
-                        <SelectItem value="m">Metro Linear (m)</SelectItem>
-                        <SelectItem value="cj">Conjunto (cj)</SelectItem>
-                        <SelectItem value="outro">Outro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="lowStockThreshold"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Alerta Baixo</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="criticalStockThreshold"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Alerta Crítico</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button type="submit">Adicionar ao Catálogo</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </ScrollArea>
-    </DialogContent>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={setOpen}
+      title="Adicionar Produto ao Catálogo"
+      description="Crie um novo produto base que poderá ser usado no inventário."
+      trigger={trigger}
+    >
+      <div className="max-h-[85vh] overflow-y-auto pr-2">
+        <AddCatalogProductForm
+          categories={categories}
+          onAdd={onAdd}
+          setOpen={setOpen}
+          form={form}
+          namePlaceholder={namePlaceholder}
+          pricePlaceholder={pricePlaceholder}
+        />
+      </div>
+    </ResponsiveDialog>
   );
 }
 
-
-export function AddCatalogProductDialog(props: AddCatalogProductDialogProps) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <Button size="icon" className="rounded-full h-9 w-9">
-                <Plus className="h-5 w-5" />
-                <span className="sr-only">Adicionar Produto ao Catálogo</span>
-              </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Adicionar Produto ao Catálogo</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      {open && <AddCatalogProductDialogContent {...props} setOpen={setOpen} />}
-    </Dialog>
-  )
-}

@@ -9,6 +9,8 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
+
 import {
   Form,
   FormControl,
@@ -143,211 +145,208 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
   }
 
   return (
-    <DialogContent className="sm:max-w-md">
-      <DialogHeader>
-        <DialogTitle>Editar {sale.documentType} #{sale.guideNumber}</DialogTitle>
-        <DialogDescription>
-          Ajuste os detalhes do documento. A edição não afeta o stock já movimentado.
-        </DialogDescription>
-      </DialogHeader>
-      <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="clientName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome do Cliente</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nome do cliente" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="documentType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo de Documento</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o tipo de documento" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Factura Proforma">Factura Proforma</SelectItem>
-                        <SelectItem value="Guia de Remessa">Guia de Remessa</SelectItem>
-                        <SelectItem value="Factura">Factura</SelectItem>
-                        <SelectItem value="Recibo">Recibo</SelectItem>
-                        <SelectItem value="Encomenda">Encomenda</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Data da Venda</FormLabel>
-                  <DatePicker
-                    date={field.value}
-                    setDate={field.onChange}
-                  />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="productName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Produto</FormLabel>
-                  <CatalogProductSelector
-                    products={productsInStock}
-                    categories={catalogCategories || []}
-                    selectedValue={field.value}
-                    onValueChange={handleProductSelect}
-                  />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantidade</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="any" min="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="unit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unidade</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="un">Unidade (un)</SelectItem>
-                        <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
-                        <SelectItem value="m">Metro Linear (m)</SelectItem>
-                        <SelectItem value="cj">Conjunto (cj)</SelectItem>
-                        <SelectItem value="outro">Outro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="unitPrice"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preço Unitário</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="amountPaid"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Valor Total Pago</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        {...field}
-                        disabled={!isFromOrder}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {isFromOrder
-                        ? "Atualize este campo para registar pagamentos adicionais do cliente."
-                        : "Este valor não pode ser editado para este tipo de documento."
-                      }
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notas</FormLabel>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="clientName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nome do Cliente</FormLabel>
+                <FormControl>
+                  <Input placeholder="Nome do cliente" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="documentType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo de Documento</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <Textarea
-                      placeholder="Adicione notas ou termos..."
-                      {...field}
-                    />
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo de documento" />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  <SelectContent>
+                    <SelectItem value="Factura Proforma">Factura Proforma</SelectItem>
+                    <SelectItem value="Guia de Remessa">Guia de Remessa</SelectItem>
+                    <SelectItem value="Factura">Factura</SelectItem>
+                    <SelectItem value="Recibo">Recibo</SelectItem>
+                    <SelectItem value="Encomenda">Encomenda</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-lg bg-muted p-4 text-right">
-                <p className="text-sm font-medium text-muted-foreground">Valor em Falta</p>
-                <p className={cn("text-2xl font-bold", missingAmount > 0.1 ? "text-red-500" : "text-green-500")}>
-                  {formatCurrency(Math.max(0, missingAmount))}
-                </p>
-              </div>
-              <div className="rounded-lg bg-muted p-4 text-right">
-                <p className="text-sm font-medium text-muted-foreground">Novo Valor Total</p>
-                <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
-              </div>
-            </div>
+        <FormField
+          control={form.control}
+          name="date"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Data da Venda</FormLabel>
+              <DatePicker
+                date={field.value}
+                setDate={field.onChange}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button type="submit">Salvar Alterações</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </ScrollArea>
-    </DialogContent>
+        <FormField
+          control={form.control}
+          name="productName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Produto</FormLabel>
+              <CatalogProductSelector
+                products={productsInStock}
+                categories={catalogCategories || []}
+                selectedValue={field.value}
+                onValueChange={handleProductSelect}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="quantity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Quantidade</FormLabel>
+                <FormControl>
+                  <Input type="number" step="any" min="0.01" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="unit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Unidade</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="un">Unidade (un)</SelectItem>
+                    <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
+                    <SelectItem value="m">Metro Linear (m)</SelectItem>
+                    <SelectItem value="cj">Conjunto (cj)</SelectItem>
+                    <SelectItem value="outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="unitPrice"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Preço Unitário</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="amountPaid"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Valor Total Pago</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    {...field}
+                    disabled={!isFromOrder}
+                  />
+                </FormControl>
+                <FormDescription>
+                  {isFromOrder
+                    ? "Atualize este campo para registar pagamentos adicionais do cliente."
+                    : "Este valor não pode ser editado para este tipo de documento."
+                  }
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <FormField
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Notas</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Adicione notas ou termos..."
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+          <div className="rounded-lg bg-muted p-4 text-right">
+            <p className="text-sm font-medium text-muted-foreground">Valor em Falta</p>
+            <p className={cn("text-2xl font-bold", missingAmount > 0.1 ? "text-red-500" : "text-green-500")}>
+              {formatCurrency(Math.max(0, missingAmount))}
+            </p>
+          </div>
+          <div className="rounded-lg bg-muted p-4 text-right">
+            <p className="text-sm font-medium text-muted-foreground">Novo Valor Total</p>
+            <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
+          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button type="submit">Salvar Alterações</Button>
+        </div>
+      </form>
+    </Form>
   );
 }
 
-
 export function EditSaleDialog(props: EditSaleDialogProps) {
   return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <EditSaleDialogContent {...props} />
-    </Dialog>
-  )
+    <ResponsiveDialog
+      open={props.open}
+      onOpenChange={props.onOpenChange}
+      title={`Editar ${props.sale.documentType} #${props.sale.guideNumber}`}
+      description="Ajuste os detalhes do documento. A edição não afeta o stock já movimentado."
+    >
+      <div className="max-h-[85vh] overflow-y-auto pr-2">
+        <EditSaleDialogContent {...props} />
+      </div>
+    </ResponsiveDialog>
+  );
 }
+
