@@ -292,11 +292,11 @@ export default function POSPage() {
                     amountPaid: cart.length === 1 ? cartTotal : item.subtotal,
                     soldBy: user.username,
                     status: 'Pago',
-                    location: item.location,
+                    location: item.location || '',
                     documentType: checkoutDocType,
-                    clientName: checkoutClientName || undefined,
-                    customerId: finalCustomerId,
-                    notes: checkoutNotes || undefined,
+                    clientName: checkoutClientName || '',
+                    customerId: finalCustomerId || '',
+                    notes: checkoutNotes || '',
                 };
 
                 await addSale(saleData);
@@ -387,7 +387,7 @@ export default function POSPage() {
                                     placeholder="Pesquisar produto..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10 h-12 bg-background/50"
+                                    className="pl-10 h-12 bg-background/50 text-foreground placeholder:text-muted-foreground"
                                 />
                             </div>
                             {isMultiLocation && (
@@ -520,7 +520,7 @@ export default function POSPage() {
                                                             type="number"
                                                             value={item.quantity}
                                                             onChange={(e) => updateCartQuantity(item.productName, Number(e.target.value) || 0)}
-                                                            className="w-14 h-7 text-center text-sm"
+                                                            className="w-14 h-7 text-center text-sm bg-background text-foreground"
                                                         />
                                                         <Button
                                                             variant="outline"
