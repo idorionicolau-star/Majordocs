@@ -14,6 +14,7 @@ import {
   BrainCircuit,
   Banknote,
   Book,
+  Zap,
 } from 'lucide-react';
 
 export const mainNavItems: NavItem[] = [
@@ -21,6 +22,7 @@ export const mainNavItems: NavItem[] = [
   { title: 'Diagnóstico', href: '/diagnostico', id: 'diagnostico', icon: BrainCircuit },
   { title: 'Inventário', href: '/inventory', id: 'inventory', icon: Box },
   { title: 'Histórico', href: '/inventory/history', id: 'inventory', isSubItem: true, icon: History },
+  { title: 'Venda Rápida', href: '/pos', id: 'sales', icon: Zap },
   { title: 'Vendas', href: '/sales', id: 'sales', icon: ShoppingCart },
   { title: 'Clientes', href: '/customers', id: 'customers', icon: Users },
   { title: 'Matéria-Prima', href: '/raw-materials', id: 'raw-materials', icon: Layers },

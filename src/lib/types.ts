@@ -144,6 +144,17 @@ export type Sale = {
   documentType: 'Guia de Remessa' | 'Factura' | 'Factura Proforma' | 'Recibo' | 'Encomenda';
   clientName?: string; // Legacy field, allow keep for history
   notes?: string;
+  transactionId?: string; // For grouping multi-item sales
+};
+
+export type CartItem = {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  unit?: string;
+  location?: string;
+  subtotal: number;
 };
 
 export type Production = {
@@ -314,6 +325,18 @@ export interface InventoryContextType {
   transferStock: (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => Promise<void>;
   updateCompany: (details: Partial<Company>) => Promise<void>;
   addSale: (newSaleData: Omit<Sale, 'id' | 'guideNumber'>, reserveStock?: boolean) => void;
+  addBulkSale: (
+    items: CartItem[],
+    saleData: {
+      customerId?: string;
+      clientName?: string;
+      documentType: Sale['documentType'];
+      notes?: string;
+      discount?: { type: 'fixed' | 'percentage'; value: number };
+      applyVat: boolean;
+      vatPercentage: number;
+    }
+  ) => Promise<void>;
   confirmSalePickup: (sale: Sale) => void;
   deleteSale: (saleId: string) => void;
   addProductionLog: (orderId: string, logData: { quantity: number; notes?: string; }) => void;
