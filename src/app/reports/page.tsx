@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { InventoryContext } from '@/context/inventory-context';
+import { useAuth, getFirebaseAuth } from '@/firebase/provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DatePicker } from '@/components/ui/date-picker';
 import {
@@ -88,6 +89,7 @@ export default function ReportsPage() {
   const [period, setPeriod] = useState<Period>('monthly');
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  const auth = useAuth();
   const inventoryContext = useContext(InventoryContext);
   const { sales, companyData, loading, user, clearSales } = inventoryContext || { sales: [], companyData: null, loading: true, user: null, clearSales: async () => { } };
   const isAdmin = user?.role === 'Admin';
@@ -192,10 +194,12 @@ export default function ReportsPage() {
     toast({ title: "A gerar PDF...", description: "O seu relatório está a ser preparado." });
 
     try {
+      const fbToken = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/generate-report', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${fbToken}`
         },
         body: JSON.stringify({
           sales: salesForPeriod,
@@ -269,10 +273,12 @@ export default function ReportsPage() {
     toast({ title: "A preparar para partilhar...", description: "O seu relatório está a ser preparado." });
 
     try {
+      const fbToken = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/generate-report', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${fbToken}`
         },
         body: JSON.stringify({
           sales: salesForPeriod,

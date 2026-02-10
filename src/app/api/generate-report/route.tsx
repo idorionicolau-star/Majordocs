@@ -1,15 +1,21 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { pdf } from '@react-pdf/renderer';
 import React from 'react';
 import { ReportPDF } from '@/components/reports/ReportPDF';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { format } from 'date-fns';
+import { verifyIdToken } from '@/lib/firebase-admin';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Verificação de Segurança
+    const decodedToken = await verifyIdToken(req);
+    if (!decodedToken) {
+      return NextResponse.json({ error: "Não autorizado. Token inválido ou ausente." }, { status: 401 });
+    }
+
     const data = await req.json();
 
     // 1. IA GEMINI 3 FLASH 🧠

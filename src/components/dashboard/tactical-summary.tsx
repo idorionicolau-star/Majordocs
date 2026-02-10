@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useContext, useCallback } from 'react';
+import { useAuth } from '@/firebase/provider';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,7 @@ const STORAGE_KEY = 'majorstockx-tactical-insights';
 export const TacticalSummary = () => {
   const [insights, setInsights] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const auth = useAuth();
   const { sales, products, dashboardStats, companyData } = useContext(InventoryContext) || {};
 
   const generateInsights = useCallback(async (forceRefresh = false) => {
@@ -45,9 +47,13 @@ export const TacticalSummary = () => {
     }
 
     try {
+      const fbToken = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/generate-insights', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${fbToken}`
+        },
         body: JSON.stringify({
           sales: sales?.slice(0, 100),
           products: products,

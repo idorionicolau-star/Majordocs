@@ -169,9 +169,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      const fbToken = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${fbToken}`
+        },
         body: JSON.stringify({ to: targetEmail, subject, ...payload }),
       });
 
@@ -346,9 +350,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       await batch.commit();
 
       try {
+        const fbToken = await auth.currentUser?.getIdToken();
         await fetch('/api/email', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${fbToken}`
+          },
           body: JSON.stringify({
             to: adminEmail,
             subject: '🎉 Bem-vindo ao MajorStockX!',
@@ -1144,7 +1152,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       throw new Error(`Produto "${freshSale.productName}" não encontrado para atualizar estoque.`);
     }
     const productDocRef = productQuerySnapshot.docs[0].ref;
-    const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
     await runTransaction(firestore, async (transaction) => {
       // 1. READS

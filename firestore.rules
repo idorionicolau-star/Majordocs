@@ -12,9 +12,9 @@ service cloud.firestore {
     }
 
     function isSuperAdmin() {
-      // O Super Admin tem acesso total, UID codificado para controlo máximo.
-      // SUBSTITUA "COLOQUE_O_SEU_UID_AQUI" PELO ID DO SEU UTILIZADOR ADMIN.
-      return request.auth.uid == "COLOQUE_O_SEU_UID_AQUI";
+      // O Super Admin tem acesso total. 
+      // Verifica o campo 'superAdmin' na coleção de mapeamento de utilizadores.
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserMapData(request.auth.uid).superAdmin == true;
     }
     
     function getUserMapData(userId) {

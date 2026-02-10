@@ -234,9 +234,13 @@ export function MajorAssistant({ variant = 'sheet', className }: { variant?: 'sh
                 }
             };
 
+            const fbToken = await context?.firebaseUser?.getIdToken();
             const response = await fetch('/api/assistant', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${fbToken}`
+                },
                 body: JSON.stringify({
                     messages: [...messages, userMsg],
                     context: globalContext,

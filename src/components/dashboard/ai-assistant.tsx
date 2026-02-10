@@ -25,14 +25,16 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     sales,
     products,
     dashboardStats,
-    stockMovements
+    stockMovements,
+    firebaseUser
   } = useContext(InventoryContext) || {
     chatHistory: [],
     setChatHistory: () => { },
     sales: [],
     products: [],
     stockMovements: [],
-    dashboardStats: {}
+    dashboardStats: {},
+    firebaseUser: null
   };
 
   const [query, setQuery] = useState('');
@@ -66,9 +68,13 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     setQuery('');
 
     try {
+      const fbToken = await firebaseUser?.getIdToken();
       const response = await fetch('/api/ai-search', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${fbToken}`
+        },
         body: JSON.stringify({
           query: currentQuery,
           history: messages,

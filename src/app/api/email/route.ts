@@ -4,14 +4,16 @@ export const dynamic = 'force-dynamic';
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import { formatCurrency } from '@/lib/utils';
+import { verifyIdToken } from '@/lib/firebase-admin';
 
 export async function POST(req: Request) {
-  const apiKey = process.env.RESEND_API_KEY;
-
-  if (!apiKey) {
-    console.warn("AVISO: A RESEND_API_KEY não está configurada no ficheiro .env. O envio de e-mails está desativado.");
-    return NextResponse.json({ error: "O serviço de e-mail não está configurado no servidor. Adicione a RESEND_API_KEY ao seu ficheiro .env para o ativar." }, { status: 500 });
+  // 1. Verificação de Segurança
+  const decodedToken = await verifyIdToken(req);
+  if (!decodedToken) {
+    return NextResponse.json({ error: "Não autorizado. Token inválido ou ausente." }, { status: 401 });
   }
+
+  const apiKey = process.env.RESEND_API_KEY;
 
   const resend = new Resend(apiKey);
 

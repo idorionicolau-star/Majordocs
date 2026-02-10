@@ -1,10 +1,17 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
+import { verifyIdToken } from "@/lib/firebase-admin";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(req: Request) {
     try {
+        // 1. Verificação de Segurança
+        const decodedToken = await verifyIdToken(req);
+        if (!decodedToken) {
+            return NextResponse.json({ error: "Não autorizado. Token inválido ou ausente." }, { status: 401 });
+        }
+
         const { messages, context, userId } = await req.json();
 
         const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
