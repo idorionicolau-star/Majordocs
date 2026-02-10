@@ -338,7 +338,10 @@ export interface InventoryContextType {
   deleteRawMaterial: (materialId: string) => Promise<void>;
   addRecipe: (recipe: Omit<Recipe, 'id'>) => Promise<void>;
   updateRecipe: (recipeId: string, data: Partial<Recipe>) => Promise<void>;
-  // deleteRecipe: (recipeId: string) => Promise<void>;
+  deleteRecipe: (recipeId: string) => Promise<void>;
+  clearSales: () => Promise<void>;
+  clearStockMovements: () => Promise<void>;
+  seedInitialCatalog: () => Promise<void>;
 
   mergeProducts: (targetProductId: string, sourceProductIds: string[]) => Promise<void>;
   restoreItem: (collectionName: string, id: string) => Promise<void>;

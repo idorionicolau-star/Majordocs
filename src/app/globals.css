@@ -214,10 +214,32 @@
 
   /* Improved Dialog/Drawer Mobile UX */
   @media (max-width: 768px) {
+    body.lock-scroll {
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
+
     .dialog-content {
       max-height: 85dvh;
       overflow-y: auto;
-      padding-bottom: 2rem;
+      padding-bottom: env(safe-area-inset-bottom, 2rem);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Prevenir distorção de viewport quando teclado abre */
+    html,
+    body {
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    main,
+    .main-content {
+      height: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
   }
 }

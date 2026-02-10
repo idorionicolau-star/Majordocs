@@ -1,6 +1,5 @@
 'use client';
 
-import * as Sentry from "@sentry/nextjs";
 import React, {
   createContext,
   useContext,
@@ -264,31 +263,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     return () => unsubscribeEmployee();
   }, [firebaseUser, companyId, firestore, logout]);
-
-  // Track user in Sentry when authentication changes
-  useEffect(() => {
-    if (firebaseUser && companyData) {
-      Sentry.setUser({
-        id: firebaseUser.uid,
-        email: firebaseUser.email || undefined,
-        username: firebaseUser.displayName || firebaseUser.email || undefined,
-      });
-
-      Sentry.setContext('company', {
-        companyId: companyData.id,
-        companyName: companyData.name,
-        businessType: companyData.businessType,
-      });
-
-      Sentry.setContext('employee', {
-        role: employeeData?.role,
-        permissions: employeeData?.permissions,
-      });
-    } else {
-      // Clear user context on logout
-      Sentry.setUser(null);
-    }
-  }, [firebaseUser, companyData, employeeData]);
 
 
   const login = async (email: string, pass: string): Promise<boolean> => {
@@ -1980,6 +1954,87 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     setConfirmationMessage(message);
   }, []);
 
+  const clearSales = useCallback(async () => {
+    if (!firestore || !companyId || !salesData) return;
+    toast({ title: 'A limpar histórico de vendas...' });
+    try {
+      const batch = writeBatch(firestore);
+      salesData.forEach(sale => {
+        batch.delete(doc(firestore, `companies/${companyId}/sales`, sale.id));
+      });
+      await batch.commit();
+      toast({ title: 'Vendas eliminadas com sucesso.' });
+    } catch (error) {
+      console.error("Error clearing sales:", error);
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível limpar as vendas.' });
+    }
+  }, [firestore, companyId, salesData, toast]);
+
+  const clearStockMovements = useCallback(async () => {
+    if (!firestore || !companyId || !stockMovementsData) return;
+    toast({ title: 'A limpar histórico de movimentos...' });
+    try {
+      const batch = writeBatch(firestore);
+      stockMovementsData.forEach(move => {
+        batch.delete(doc(firestore, `companies/${companyId}/stockMovements`, move.id!));
+      });
+      await batch.commit();
+      toast({ title: 'Movimentos eliminados com sucesso.' });
+    } catch (error) {
+      console.error("Error clearing stock movements:", error);
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível limpar os movimentos.' });
+    }
+  }, [firestore, companyId, stockMovementsData, toast]);
+
+  const deleteRecipe = useCallback(async (recipeId: string) => {
+    if (!firestore || !companyId) return;
+    try {
+      await deleteDoc(doc(firestore, `companies/${companyId}/recipes`, recipeId));
+      toast({ title: 'Receita eliminada' });
+    } catch (error) {
+      console.error("Error deleting recipe:", error);
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível eliminar a receita.' });
+    }
+  }, [firestore, companyId, toast]);
+
+  const seedInitialCatalog = useCallback(async () => {
+    if (!firestore || !companyId) return;
+    toast({ title: 'A inicializar catálogo...' });
+    try {
+      const batch = writeBatch(firestore);
+
+      // Categories
+      const categories = Object.keys(initialCatalog);
+      for (const catName of categories) {
+        const catRef = doc(collection(firestore, `companies/${companyId}/catalogCategories`));
+        batch.set(catRef, { name: catName });
+
+        // Products
+        const subTypes = Object.keys(initialCatalog[catName]);
+        for (const subType of subTypes) {
+          const products = initialCatalog[catName][subType];
+          for (const prodName of products) {
+            const prodRef = doc(collection(firestore, `companies/${companyId}/catalogProducts`));
+            batch.set(prodRef, {
+              name: `${prodName} ${subType}`,
+              category: catName,
+              price: 0,
+              unit: 'un',
+              lowStockThreshold: 10,
+              criticalStockThreshold: 5
+            });
+          }
+        }
+      }
+
+      await batch.commit();
+      toast({ title: 'Catálogo inicializado com sucesso.' });
+    } catch (error) {
+      console.error("Error seeding catalog:", error);
+      toast({ variant: 'destructive', title: 'Erro', description: 'Falha ao inicializar catálogo.' });
+    }
+  }, [firestore, companyId, toast]);
+
   const handleConfirm = async () => {
     if (confirmationAction) {
       await confirmationAction();
@@ -2025,7 +2080,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     deleteRawMaterial,
     addRecipe,
     updateRecipe,
-    // deleteRecipe,
+    deleteRecipe,
+    clearSales,
+    clearStockMovements,
+    seedInitialCatalog,
 
     availableUnits, addUnit, // removeUnit,
     availableCategories, addCategory, // removeCategory,
@@ -2051,6 +2109,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     updateRawMaterial,
     addRecipe,
     updateRecipe,
+    deleteRecipe,
+    clearSales,
+    clearStockMovements,
+    seedInitialCatalog,
     mergeProducts,
     restoreItem,
     exportCompanyData,

@@ -240,7 +240,8 @@ export default function OrdersPage() {
         productExists = productSnap.exists();
 
         if (productExists) {
-          productName = productSnap.data().name;
+          const data = productSnap.data();
+          productName = data?.name || pendingConclusionOrder.productName;
         }
 
         const newLog: ProductionLog = {
@@ -285,7 +286,7 @@ export default function OrdersPage() {
         });
       } else {
         toast({
-          variant: "warning",
+          variant: "destructive",
           title: "Produção Concluída (Sem Stock)",
           description: `A encomenda foi concluída, mas o produto associado não foi encontrado no stock para atualização.`,
         });

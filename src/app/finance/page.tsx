@@ -183,12 +183,15 @@ export default function FinancePage() {
                         }
                         fileName={`Relatorio_Financeiro_${format(new Date(), "MMM_yyyy")}.pdf`}
                     >
-                        {({ loading: pdfLoading }: any) => (
-                            <Button variant="outline" size="sm" className="w-full sm:w-auto" disabled={pdfLoading}>
-                                <Download className="w-4 h-4 mr-2" />
-                                {pdfLoading ? 'A preparar...' : 'Baixar PDF'}
-                            </Button>
-                        )}
+                        {(args: any) => {
+                            const { loading: pdfLoading } = args;
+                            return (
+                                <Button variant="outline" size="sm" className="w-full sm:w-auto" disabled={pdfLoading}>
+                                    <Download className="w-4 h-4 mr-2" />
+                                    {pdfLoading ? 'A preparar...' : 'Baixar PDF'}
+                                </Button>
+                            );
+                        }}
                     </PDFDownloadLink>
                 </div>
             </div>

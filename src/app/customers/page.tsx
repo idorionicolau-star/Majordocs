@@ -50,11 +50,11 @@ export default function CustomersPage() {
     const notesPlaceholder = useDynamicPlaceholder('generic');
     const searchPlaceholder = useDynamicPlaceholder('person');
 
+    const filteredCustomers = useFuse(customers, searchTerm, { keys: ['name', 'phone', 'email'] });
+
     if (!canView('customers')) {
         return <div className="p-8 text-center">Você não tem permissão para aceder a este módulo.</div>;
     }
-
-    const filteredCustomers = useFuse(customers, searchTerm, { keys: ['name', 'phone', 'email'] });
 
     const handleAddSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

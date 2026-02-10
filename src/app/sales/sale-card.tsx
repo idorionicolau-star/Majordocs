@@ -1,7 +1,7 @@
 "use client";
 
 import { Calendar, User, CheckCircle, PackageCheck, MapPin } from "lucide-react";
-import { SaleActions } from "./columns";
+import { SaleActions } from "@/components/sales/columns";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
@@ -17,12 +17,12 @@ interface SaleCardProps {
     locationName?: string;
 }
 
-export function SaleCard({ sale, onUpdateSale, onConfirmPickup, viewMode = 'normal', canEdit, locationName }: SaleCardProps) {
+export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, viewMode = 'normal', canEdit, locationName }: SaleCardProps) {
     const isCondensed = viewMode === 'condensed';
 
     const actionsProps = {
         row: { original: sale },
-        options: { onUpdateSale, onConfirmPickup, canEdit },
+        options: { onUpdateSale, onConfirmPickup, onDeleteSale, canEdit },
     };
 
     const isPartiallyPaid = sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue;

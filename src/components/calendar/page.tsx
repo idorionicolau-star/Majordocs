@@ -2,17 +2,17 @@
 "use client";
 
 import { useState } from 'react';
-import { 
-  format, 
-  addMonths, 
-  subMonths, 
-  startOfMonth, 
-  endOfMonth, 
-  startOfWeek, 
-  endOfWeek, 
-  isSameMonth, 
+import {
+  format,
+  addMonths,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  isSameMonth,
   isSameDay,
-  eachDayOfInterval 
+  eachDayOfInterval
 } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -26,9 +26,10 @@ interface CustomCalendarProps {
 }
 
 const statusConfig = {
-    'Pendente': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
-    'Em produção': 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
-    'Concluída': 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+  'Pendente': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
+  'Em produção': 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
+  'Concluída': 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+  'Entregue': 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
 };
 
 
@@ -64,7 +65,7 @@ export function CustomCalendar({ events = [] }: CustomCalendarProps) {
       opacity: 0,
     }),
   };
-  
+
 
   return (
     <div className="bg-background rounded-xl p-4">
@@ -89,7 +90,7 @@ export function CustomCalendar({ events = [] }: CustomCalendarProps) {
           </div>
         ))}
       </div>
-      
+
       <div className="relative overflow-hidden">
         <AnimatePresence initial={false} custom={direction}>
           <motion.div
@@ -104,36 +105,36 @@ export function CustomCalendar({ events = [] }: CustomCalendarProps) {
           >
             {days.map((day, idx) => {
               const dayEvents = events.filter(e => e.deliveryDate && isSameDay(new Date(e.deliveryDate), day));
-              
+
               return (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   className={cn(
-                    "min-h-[100px] bg-background p-2 flex flex-col", 
+                    "min-h-[100px] bg-background p-2 flex flex-col",
                     !isSameMonth(day, currentMonth) && 'bg-muted/50 text-muted-foreground'
                   )}
                 >
                   <span className={cn(
-                      "text-sm font-medium",
-                      isSameDay(day, new Date()) && "text-primary font-bold"
-                    )}
+                    "text-sm font-medium",
+                    isSameDay(day, new Date()) && "text-primary font-bold"
+                  )}
                   >
                     {format(day, 'd')}
                   </span>
-                  
+
                   <div className="mt-1 space-y-1 overflow-y-auto">
                     {dayEvents.slice(0, 2).map((event, i) => (
                       <div key={i} className={cn(
-                          "text-[10px] p-1 rounded truncate font-bold", 
-                          statusConfig[event.status] || 'bg-gray-100 text-gray-700'
-                        )}>
+                        "text-[10px] p-1 rounded truncate font-bold",
+                        statusConfig[event.status] || 'bg-gray-100 text-gray-700'
+                      )}>
                         {event.productName}
                       </div>
                     ))}
                     {dayEvents.length > 2 && (
-                        <div className="text-[10px] text-muted-foreground font-bold pt-1">
-                            + {dayEvents.length - 2} mais
-                        </div>
+                      <div className="text-[10px] text-muted-foreground font-bold pt-1">
+                        + {dayEvents.length - 2} mais
+                      </div>
                     )}
                   </div>
                 </div>
