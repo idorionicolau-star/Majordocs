@@ -18,6 +18,7 @@ import * as z from "zod";
 import type { Product } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { InventoryContext } from '@/context/inventory-context';
+import { InventoryContextType } from '@/lib/types';
 import { Textarea } from '../ui/textarea';
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 
@@ -38,7 +39,8 @@ interface AuditStockDialogProps {
 }
 
 function AuditStockForm({ product, setOpen }: Omit<AuditStockDialogProps, 'trigger'> & { setOpen: (open: boolean) => void }) {
-    const { auditStock } = useContext(InventoryContext) || {};
+    const context = useContext(InventoryContext) as InventoryContextType;
+    const { auditStock } = context;
     const form = useForm<AuditStockFormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {

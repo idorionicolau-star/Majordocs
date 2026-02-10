@@ -6,7 +6,7 @@ import type { Product, Location } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Truck } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Truck, PlusCircle } from "lucide-react";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
@@ -46,18 +46,19 @@ export default function InventoryPage() {
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
+  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const { toast } = useToast();
 
-  const { 
-    products, 
-    locations, 
-    isMultiLocation, 
-    addProduct, 
-    updateProduct, 
-    deleteProduct, 
+  const {
+    products,
+    locations,
+    isMultiLocation,
+    addProduct,
+    updateProduct,
+    deleteProduct,
     transferStock,
     loading: inventoryLoading
-  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => {}, updateProduct: () => {}, deleteProduct: () => {}, transferStock: () => {}, loading: true };
+  } = inventoryContext || { products: [], locations: [], isMultiLocation: false, addProduct: () => { }, updateProduct: () => { }, deleteProduct: () => { }, transferStock: () => { }, loading: true };
 
 
   useEffect(() => {
@@ -81,19 +82,19 @@ export default function InventoryPage() {
 
   const handleAddProduct = (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => {
     addProduct(newProductData);
-      toast({
-        title: "Produto adicionado",
-        description: `${newProductData.name} foi adicionado ao inventário com sucesso.`,
+    toast({
+      title: "Produto adicionado",
+      description: `${newProductData.name} foi adicionado ao inventário com sucesso.`,
     });
   };
-  
+
   const handleUpdateProduct = (updatedProduct: Product) => {
     if (updatedProduct.instanceId) {
-        updateProduct(updatedProduct.instanceId, updatedProduct);
-        toast({
-            title: "Produto Atualizado",
-            description: `O produto "${updatedProduct.name}" foi atualizado com sucesso.`,
-        });
+      updateProduct(updatedProduct.instanceId, updatedProduct);
+      toast({
+        title: "Produto Atualizado",
+        description: `O produto "${updatedProduct.name}" foi atualizado com sucesso.`,
+      });
     }
   };
 
@@ -116,8 +117,8 @@ export default function InventoryPage() {
   ) => {
     transferStock(productName, fromLocationId, toLocationId, quantity);
     toast({
-        title: "Transferência de Stock Iniciada",
-        description: `${quantity} unidades de "${productName}" a serem movidas para ${locations.find(l => l.id === toLocationId)?.name}.`,
+      title: "Transferência de Stock Iniciada",
+      description: `${quantity} unidades de "${productName}" a serem movidas para ${locations.find(l => l.id === toLocationId)?.name}.`,
     });
   };
 
@@ -225,7 +226,7 @@ export default function InventoryPage() {
         </style>
       `);
       printWindow.document.write('</head><body><div class="container">');
-      
+
       printWindow.document.write(`
         <div class="header">
           <h1>Contagem de Estoque</h1>
@@ -253,11 +254,11 @@ export default function InventoryPage() {
 
       printWindow.document.write('<div class="signature-line"><p>Assinatura do Responsável</p></div>');
       printWindow.document.write('<div class="footer"><p>MajorStockX &copy; ' + new Date().getFullYear() + '</p></div>');
-      
+
       printWindow.document.write('</div></body></html>');
       printWindow.document.close();
       printWindow.focus();
-      
+
       setTimeout(() => {
         printWindow.print();
         printWindow.close();
@@ -284,11 +285,11 @@ export default function InventoryPage() {
     if (categoryFilter.length > 0) {
       result = result.filter(p => categoryFilter.includes(p.category));
     }
-    
+
     return result;
   }, [products, selectedLocation, nameFilter, categoryFilter]);
-  
-    if (inventoryLoading) {
+
+  if (inventoryLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-12 w-1/3" />
@@ -322,198 +323,198 @@ export default function InventoryPage() {
       </AlertDialog>
 
       <div className="flex flex-col gap-6">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
-              <div>
-                  <h1 className="text-2xl md:text-3xl font-headline font-bold">Inventário</h1>
-                  <p className="text-muted-foreground">
-                      Gerencie os produtos do seu estoque.
-                  </p>
-              </div>
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-headline font-bold">Inventário</h1>
+            <p className="text-muted-foreground">
+              Gerencie os produtos do seu estoque.
+            </p>
           </div>
-          <div className="py-4 space-y-4">
-            <div className="flex flex-col sm:flex-row items-center gap-2">
-                <Input
-                  placeholder="Filtrar por nome..."
-                  value={nameFilter}
-                  onChange={(event) => setNameFilter(event.target.value)}
-                  className="w-full md:max-w-sm shadow-lg h-12 text-sm"
-                />
-                <div className="flex items-center gap-2">
-                    <TooltipProvider>
-                        {isMultiLocation && (
-                           <>
-                            <TransferStockDialog 
-                                products={products}
-                                locations={locations}
-                                onTransfer={handleTransferStock}
-                            />
-                            <DropdownMenu>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" size="icon" className="shadow-lg h-12 w-12 rounded-2xl">
-                                                <MapPin className="h-5 w-5" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Filtrar por Localização</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                                <DropdownMenuContent align="end">
-                                    <ScrollArea className="h-[200px]">
-                                    <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuCheckboxItem
-                                        checked={selectedLocation === 'all'}
-                                        onCheckedChange={() => setSelectedLocation('all')}
-                                    >
-                                        Todas as Localizações
-                                    </DropdownMenuCheckboxItem>
-                                    {locations.map(location => (
-                                    <DropdownMenuCheckboxItem
-                                        key={location.id}
-                                        checked={selectedLocation === location.id}
-                                        onCheckedChange={() => setSelectedLocation(location.id)}
-                                    >
-                                        {location.name}
-                                    </DropdownMenuCheckboxItem>
-                                    ))}
-                                    </ScrollArea>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                           </>
-                        )}
-                        <DropdownMenu>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="icon" className="shadow-lg relative h-12 w-12 rounded-2xl">
-                                        <ListFilter className="h-5 w-5" />
-                                        {categoryFilter.length > 0 && (
-                                            <span className="absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs px-1">
-                                                {categoryFilter.length > 9 ? '9+' : categoryFilter.length}
-                                            </span>
-                                        )}
-                                    </Button>
-                                </DropdownMenuTrigger>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Filtrar por Categoria</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          <DropdownMenuContent align="end">
-                            <ScrollArea className="h-48">
-                              {categories.map((category) => {
-                              return (
-                                  <DropdownMenuCheckboxItem
-                                  key={category}
-                                  className="capitalize"
-                                  checked={categoryFilter.includes(category)}
-                                  onCheckedChange={(value) => {
-                                      if (value) {
-                                        setCategoryFilter([...categoryFilter, category]);
-                                      } else {
-                                        setCategoryFilter(categoryFilter.filter(c => c !== category));
-                                      }
-                                  }}
-                                  >
-                                  {category}
-                                  </DropdownMenuCheckboxItem>
-                              )
-                              })}
-                            </ScrollArea>
-                          </DropdownMenuContent>
-                      </DropdownMenu>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="outline" size="icon" onClick={handlePrintCountForm} className="shadow-lg h-12 w-12 rounded-2xl">
-                                    <FileText className="h-5 w-5" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Imprimir Formulário de Contagem</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
+        </div>
+        <div className="py-4 space-y-4">
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <Input
+              placeholder="Filtrar por nome..."
+              value={nameFilter}
+              onChange={(event) => setNameFilter(event.target.value)}
+              className="w-full md:max-w-sm shadow-lg h-12 text-sm"
+            />
+            <div className="flex items-center gap-2">
+              <TooltipProvider>
+                {isMultiLocation && (
+                  <>
+                    <TransferStockDialog
+                      onTransfer={handleTransferStock}
+                    />
+                    <DropdownMenu>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon" className="shadow-lg h-12 w-12 rounded-2xl">
+                              <MapPin className="h-5 w-5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Filtrar por Localização</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <DropdownMenuContent align="end">
+                        <ScrollArea className="h-[200px]">
+                          <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuCheckboxItem
+                            checked={selectedLocation === 'all'}
+                            onCheckedChange={() => setSelectedLocation('all')}
+                          >
+                            Todas as Localizações
+                          </DropdownMenuCheckboxItem>
+                          {locations.map(location => (
+                            <DropdownMenuCheckboxItem
+                              key={location.id}
+                              checked={selectedLocation === location.id}
+                              onCheckedChange={() => setSelectedLocation(location.id)}
+                            >
+                              {location.name}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                        </ScrollArea>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                )}
+                <DropdownMenu>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon" className="shadow-lg relative h-12 w-12 rounded-2xl">
+                          <ListFilter className="h-5 w-5" />
+                          {categoryFilter.length > 0 && (
+                            <span className="absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs px-1">
+                              {categoryFilter.length > 9 ? '9+' : categoryFilter.length}
+                            </span>
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Filtrar por Categoria</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <DropdownMenuContent align="end">
+                    <ScrollArea className="h-48">
+                      {categories.map((category) => {
+                        return (
+                          <DropdownMenuCheckboxItem
+                            key={category}
+                            className="capitalize"
+                            checked={categoryFilter.includes(category)}
+                            onCheckedChange={(value) => {
+                              if (value) {
+                                setCategoryFilter([...categoryFilter, category]);
+                              } else {
+                                setCategoryFilter(categoryFilter.filter(c => c !== category));
+                              }
+                            }}
+                          >
+                            {category}
+                          </DropdownMenuCheckboxItem>
+                        )
+                      })}
+                    </ScrollArea>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={handlePrintCountForm} className="shadow-lg h-12 w-12 rounded-2xl">
+                      <FileText className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Imprimir Formulário de Contagem</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 border-t pt-4">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant={view === 'list' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('list')} className="h-12 w-12">
+                    <List className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Vista de Lista</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('grid')} className="h-12 w-12">
+                    <LayoutGrid className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Vista de Grelha</p></TooltipContent>
+              </Tooltip>
+              {view === 'grid' && (
+                <div className="hidden md:flex">
+                  <DropdownMenu>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="h-12 w-28 gap-2">
+                            <span>{gridCols} Colunas</span>
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Número de colunas</p></TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent>
+                      <DropdownMenuRadioGroup value={gridCols} onValueChange={(value) => handleSetGridCols(value as '3' | '4' | '5')}>
+                        <DropdownMenuRadioItem value="3">3 Colunas</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="4">4 Colunas</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="5">5 Colunas</DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-            </div>
-            
-            <div className="flex items-center justify-center gap-2 border-t pt-4">
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant={view === 'list' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('list')} className="h-12 w-12">
-                                <List className="h-5 w-5"/>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Vista de Lista</p></TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('grid')} className="h-12 w-12">
-                                <LayoutGrid className="h-5 w-5"/>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Vista de Grelha</p></TooltipContent>
-                    </Tooltip>
-                    {view === 'grid' && (
-                        <div className="hidden md:flex">
-                            <DropdownMenu>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" className="h-12 w-28 gap-2">
-                                                <span>{gridCols} Colunas</span>
-                                                <ChevronDown className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>Número de colunas</p></TooltipContent>
-                                </Tooltip>
-                                <DropdownMenuContent>
-                                    <DropdownMenuRadioGroup value={gridCols} onValueChange={(value) => handleSetGridCols(value as '3' | '4' | '5')}>
-                                        <DropdownMenuRadioItem value="3">3 Colunas</DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="4">4 Colunas</DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="5">5 Colunas</DropdownMenuRadioItem>
-                                    </DropdownMenuRadioGroup>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                    )}
-                </TooltipProvider>
-            </div>
+              )}
+            </TooltipProvider>
+          </div>
         </div>
 
         {view === 'list' ? (
-            <InventoryDataTable 
-              columns={columns({ 
-                onAttemptDelete: (product) => setProductToDelete(product),
-                onProductUpdate: handleUpdateProduct,
-                isMultiLocation: isMultiLocation,
-                locations: locations,
-              })} 
-              data={filteredProducts} 
-            />
+          <InventoryDataTable
+            columns={columns({
+              onAttemptDelete: (product) => setProductToDelete(product),
+              onProductUpdate: handleUpdateProduct,
+              isMultiLocation: isMultiLocation,
+              locations: locations,
+              canEdit: true,
+            })}
+            data={filteredProducts}
+          />
         ) : (
           filteredProducts.length > 0 ? (
             <div className={cn(
-                "grid gap-2 sm:gap-4",
-                gridCols === '3' && "grid-cols-3 md:grid-cols-3",
-                gridCols === '4' && "grid-cols-3 sm:grid-cols-4 md:grid-cols-4",
-                gridCols === '5' && "grid-cols-3 sm:grid-cols-4 md:grid-cols-5",
+              "grid gap-2 sm:gap-4",
+              gridCols === '3' && "grid-cols-3 md:grid-cols-3",
+              gridCols === '4' && "grid-cols-3 sm:grid-cols-4 md:grid-cols-4",
+              gridCols === '5' && "grid-cols-3 sm:grid-cols-4 md:grid-cols-5",
             )}>
-                {filteredProducts.map(product => (
-                    <ProductCard 
-                        key={product.instanceId}
-                        product={product}
-                        locations={locations}
-                        isMultiLocation={isMultiLocation}
-                        onProductUpdate={handleUpdateProduct}
-                        onAttemptDelete={setProductToDelete}
-                        viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
-                    />
-                ))}
+              {filteredProducts.map(product => (
+                <ProductCard
+                  key={product.instanceId}
+                  product={product}
+                  locations={locations}
+                  isMultiLocation={isMultiLocation}
+                  onProductUpdate={handleUpdateProduct}
+                  onAttemptDelete={setProductToDelete}
+                  canEdit={true}
+                  viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
+                />
+              ))}
             </div>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
@@ -523,12 +524,29 @@ export default function InventoryPage() {
           )
         )}
       </div>
-      <AddProductDialog 
+      <AddProductDialog
+        open={isAddProductOpen}
+        onOpenChange={setIsAddProductOpen}
         onAddProduct={handleAddProduct}
-        isMultiLocation={isMultiLocation}
-        locations={locations}
-        triggerType="fab"
       />
+
+      <Button
+        onClick={() => setIsAddProductOpen(true)}
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl z-50 md:hidden"
+        size="icon"
+      >
+        <PlusCircle className="h-6 w-6" />
+      </Button>
+
+      <div className="hidden md:block fixed bottom-8 right-8 z-50">
+        <Button
+          onClick={() => setIsAddProductOpen(true)}
+          className="h-14 px-6 rounded-2xl shadow-2xl gap-2 text-lg font-bold"
+        >
+          <PlusCircle className="h-6 w-6" />
+          Novo Produto
+        </Button>
+      </div>
     </>
   );
 }

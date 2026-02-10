@@ -252,6 +252,8 @@ export interface ModelInfo {
 export type ChatMessage = {
   role: 'user' | 'model';
   text: string;
+  toolCalls?: any[];
+  toolResponse?: any;
 };
 
 export interface InventoryContextType {

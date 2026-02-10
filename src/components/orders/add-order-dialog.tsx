@@ -404,7 +404,7 @@ export function AddOrderDialog({ open, onOpenChange, onAddOrder }: AddOrderDialo
     form.setValue('productName', productName, { shouldValidate: true });
     if (product) {
       form.setValue('productId', product.id);
-      form.setValue('unit', product.unit || 'un');
+      form.setValue('unit', (product.unit || 'un') as any);
       form.setValue('unitPrice', product.price);
     } else {
       form.setValue('productId', "");

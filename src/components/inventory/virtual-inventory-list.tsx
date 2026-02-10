@@ -80,11 +80,6 @@ export function VirtualInventoryList({
                             loadMore();
                         }
                     }}
-                    footer={() => loading ? (
-                        <div className="p-4 text-center text-sm text-muted-foreground w-full bg-background border-t">
-                            A carregar mais produtos...
-                        </div>
-                    ) : null}
                 />
             </CardContent>
         </Card>

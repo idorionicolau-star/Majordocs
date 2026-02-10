@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Sparkles, Bot, User, Send, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryContext } from '@/context/inventory-context';
+import { ChatMessage } from '@/lib/types';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import ReactMarkdown from 'react-markdown';
@@ -19,21 +20,22 @@ import { useToast } from '@/hooks/use-toast';
 
 
 export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
+  const inventoryContext = useContext(InventoryContext);
+
+  if (!inventoryContext) {
+    return <div>Carregando assistente...</div>;
+  }
+
   const {
     dashboardStats,
     stockMovements,
     firebaseUser,
-    companyId: contextCompanyId
-  } = useContext(InventoryContext) || {
-    chatHistory: [],
-    setChatHistory: () => { },
-    sales: [],
-    products: [],
-    stockMovements: [],
-    dashboardStats: {},
-    firebaseUser: null,
-    companyId: null
-  };
+    companyId: contextCompanyId,
+    chatHistory: messages,
+    setChatHistory: setMessages,
+    sales,
+    products
+  } = inventoryContext;
 
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +63,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     if (!currentQuery || !setMessages) return;
     setIsLoading(true);
 
-    const newMessages: { role: 'user' | 'model', text: string, toolCalls?: any[], toolResponse?: any }[] = [...messages, { role: 'user', text: currentQuery }];
+    const newMessages: ChatMessage[] = [...messages, { role: 'user', text: currentQuery }];
     setMessages(newMessages);
     setQuery('');
 

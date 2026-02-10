@@ -811,10 +811,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [productsCollectionRef, products, firestore, user, toast]);
 
-  const auditStock = useCallback(async (product: Product, physicalCount: number, reason: string) => {
-    if (!firestore || !companyId || !user || !product.id) return;
+  const auditStock = useCallback(async (productId: string, physicalCount: number, reason: string) => {
+    if (!firestore || !companyId || !user || !productId) return;
 
-    const productRef = doc(firestore, `companies/${companyId}/products`, product.id);
+    const product = products.find(p => p.id === productId);
+    if (!product) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Produto não encontrado para auditoria.' });
+      return;
+    }
+
+    const productRef = doc(firestore, `companies/${companyId}/products`, productId);
     const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
     const systemCountBefore = product.stock;
@@ -840,7 +846,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         transaction.update(productRef, { stock: physicalCount, lastUpdated: new Date().toISOString() });
 
         const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
-          productId: product.id!,
+          productId: productId,
           productName: product.name,
           type: 'ADJUSTMENT',
           quantity: realAdjustment,

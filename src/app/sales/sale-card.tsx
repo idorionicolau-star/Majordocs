@@ -22,7 +22,7 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, vi
 
     const actionsProps = {
         row: { original: sale },
-        options: { onUpdateSale, onConfirmPickup, onDeleteSale, canEdit },
+        options: { onUpdateSale, onConfirmPickup, onDeleteSale: onDeleteSale || (() => { }), canEdit },
     };
 
     const isPartiallyPaid = sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue;

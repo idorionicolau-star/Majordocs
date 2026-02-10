@@ -169,30 +169,30 @@ export default function FinancePage() {
                         Imprimir
                     </Button>
 
-                    <PDFDownloadLink
-                        document={
-                            <FinancialReportPDF
-                                companyName={companyData?.name || 'Minha Empresa'}
-                                period={format(new Date(), "MMMM yyyy", { locale: ptBR })}
-                                totalIncome={totalIncome}
-                                totalExpenses={totalExpenses}
-                                netProfit={netProfit}
-                                sales={currentMonthSales}
-                                expenses={currentMonthExpenses}
-                            />
-                        }
-                        fileName={`Relatorio_Financeiro_${format(new Date(), "MMM_yyyy")}.pdf`}
-                    >
-                        {(args: any) => {
-                            const { loading: pdfLoading } = args;
-                            return (
+                    <div className="w-full sm:w-auto">
+                        <PDFDownloadLink
+                            document={
+                                <FinancialReportPDF
+                                    companyName={companyData?.name || 'Minha Empresa'}
+                                    period={format(new Date(), "MMMM yyyy", { locale: ptBR })}
+                                    totalIncome={totalIncome}
+                                    totalExpenses={totalExpenses}
+                                    netProfit={netProfit}
+                                    sales={currentMonthSales}
+                                    expenses={currentMonthExpenses}
+                                />
+                            }
+                            fileName={`Relatorio_Financeiro_${format(new Date(), "MMM_yyyy")}.pdf`}
+                        >
+                            {/* @ts-ignore - Conflict between @react-pdf/renderer and React 18/19 types */}
+                            {({ loading: pdfLoading }) => (
                                 <Button variant="outline" size="sm" className="w-full sm:w-auto" disabled={pdfLoading}>
                                     <Download className="w-4 h-4 mr-2" />
                                     {pdfLoading ? 'A preparar...' : 'Baixar PDF'}
                                 </Button>
-                            );
-                        }}
-                    </PDFDownloadLink>
+                            )}
+                        </PDFDownloadLink>
+                    </div>
                 </div>
             </div>
 
