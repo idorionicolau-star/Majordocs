@@ -1280,16 +1280,21 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         }
 
         // 7. Create Production Record
-        const newProduction: Omit<Production, 'id'> = {
+        const newProduction: any = {
           date: new Date().toISOString().split('T')[0],
-          productName,
-          quantity,
+          productName: productName || 'Produto Desconhecido',
+          quantity: Number(quantity) || 0,
           unit: unit || 'un',
           registeredBy: user.username || 'Desconhecido',
           status: 'Concluído',
-          location: targetLocation,
-          ...(orderId && { orderId }) // Only include orderId if it exists (conditional spread)
+          location: targetLocation || 'Principal',
         };
+
+        // Explicitly include orderId ONLY if it has a valid string value
+        if (orderId && typeof orderId === 'string' && orderId.trim() !== '' && orderId !== 'undefined') {
+          newProduction.orderId = orderId;
+        }
+
         const productionsRef = collection(firestore, `companies/${companyId}/productions`);
         transaction.set(doc(productionsRef), newProduction);
 
