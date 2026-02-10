@@ -6,10 +6,10 @@ import type { Sale } from "@/lib/types";
 import { columns } from "@/components/sales/columns";
 import { SalesDataTable } from "@/components/sales/sales-data-table";
 import { VirtualSalesGrid } from "@/components/sales/virtual-sales-grid";
-import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
+
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronDown, Filter, MapPin, Plus } from "lucide-react";
+import { List, LayoutGrid, ChevronDown, Filter, MapPin } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,7 @@ export default function SalesPage() {
   const [dateFilter, setDateFilter] = useState<Date | undefined>();
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
-  const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
@@ -136,14 +136,11 @@ export default function SalesPage() {
   };
 
   useEffect(() => {
-    if (searchParams.get('action') === 'add' && canEditSales) {
-      setAddDialogOpen(true);
-    }
     const nameQuery = searchParams.get('nameFilter');
     if (nameQuery) setNameFilter(nameQuery);
     const statusQuery = searchParams.get('statusFilter');
     if (statusQuery) setStatusFilter(statusQuery);
-  }, [searchParams, canEditSales]);
+  }, [searchParams]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -164,22 +161,7 @@ export default function SalesPage() {
     localStorage.setItem('majorstockx-sales-grid-cols', cols);
   }
 
-  const handleAddSale = async (newSaleData: Omit<Sale, 'id' | 'guideNumber'>) => {
-    try {
-      if (!addSale) throw new Error("Função de venda não disponível.");
-      await addSale(newSaleData);
-      toast({
-        title: "Venda Registrada como 'Paga'",
-        description: `${newSaleData.quantity} unidades de ${newSaleData.productName} foram reservadas.`,
-      });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao Vender",
-        description: error.message || "Não foi possível registrar a venda.",
-      });
-    }
-  };
+
 
   const handleUpdateSale = (updatedSale: Sale) => {
     if (updatedSale.id && firestore && companyId) {
@@ -231,14 +213,8 @@ export default function SalesPage() {
       <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Vendas</h1>
-            <p className="text-muted-foreground">Gerencie as suas vendas e saídas de stock.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setAddDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Venda
-            </Button>
+            <h1 className="text-3xl font-bold tracking-tight">Histórico de Vendas</h1>
+            <p className="text-muted-foreground">Consulte o histórico de vendas e saídas de stock.</p>
           </div>
         </div>
 
@@ -425,23 +401,7 @@ export default function SalesPage() {
           </>
         )}
 
-        {canEditSales && (
-          <>
-            <AddSaleDialog
-              open={isAddDialogOpen}
-              onOpenChange={setAddDialogOpen}
-              onAddSale={handleAddSale}
-            />
-            <Button
-              onClick={() => setAddDialogOpen(true)}
-              className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
-              size="icon"
-            >
-              <Plus className="h-6 w-6" />
-              <span className="sr-only">Adicionar Venda</span>
-            </Button>
-          </>
-        )}
+
       </div>
     </>
   );
