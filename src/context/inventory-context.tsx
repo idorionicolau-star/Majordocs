@@ -1,6 +1,6 @@
 'use client';
 
-import * as Sentry from "@sentry/nextjs";
+
 import React, {
   createContext,
   useContext,
@@ -265,30 +265,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     return () => unsubscribeEmployee();
   }, [firebaseUser, companyId, firestore, logout]);
 
-  // Track user in Sentry when authentication changes
-  useEffect(() => {
-    if (firebaseUser && companyData) {
-      Sentry.setUser({
-        id: firebaseUser.uid,
-        email: firebaseUser.email || undefined,
-        username: firebaseUser.displayName || firebaseUser.email || undefined,
-      });
 
-      Sentry.setContext('company', {
-        companyId: companyData.id,
-        companyName: companyData.name,
-        businessType: companyData.businessType,
-      });
-
-      Sentry.setContext('employee', {
-        role: employeeData?.role,
-        permissions: employeeData?.permissions,
-      });
-    } else {
-      // Clear user context on logout
-      Sentry.setUser(null);
-    }
-  }, [firebaseUser, companyData, employeeData]);
 
 
   const login = async (email: string, pass: string): Promise<boolean> => {
