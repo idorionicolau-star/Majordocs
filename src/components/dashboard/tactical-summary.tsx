@@ -57,7 +57,8 @@ export const TacticalSummary = () => {
         body: JSON.stringify({
           sales: sales?.slice(0, 100),
           products: products,
-          stats: dashboardStats
+          stats: dashboardStats,
+          companyId: companyData?.id
         }),
       });
 

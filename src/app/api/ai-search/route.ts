@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI, Content } from "@google/generative-ai";
 import { differenceInDays } from 'date-fns';
 import { verifyIdToken } from '@/lib/firebase-admin';
+import { validateAIPrompt, validateCompanyId, checkRateLimit } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,7 +14,30 @@ export async function POST(req: NextRequest) {
     }
 
     const { query, contextData, history } = await req.json();
+    const companyId = contextData?.companyId;
+
+    // 2. Input Validation
+    try {
+      validateAIPrompt(query);
+      validateCompanyId(companyId);
+    } catch (validationError: any) {
+      return NextResponse.json({ error: validationError.message }, { status: 400 });
+    }
+
+    // 3. Rate Limiting (basic)
+    if (!checkRateLimit(decodedToken.uid, 30, 60000)) { // 30 requests per minute
+      return NextResponse.json({ error: "Demasiados pedidos. Tente novamente em breve." }, { status: 429 });
+    }
+
+    // 4. Tenant Isolation Check
+    if (!decodedToken.superAdmin && (!companyId || companyId !== (decodedToken as any).companyId)) {
+      return NextResponse.json({ error: "Acesso negado. Tentativa de acesso a dados de outra empresa." }, { status: 403 });
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "API Key não configurada" }, { status: 500 });
+    }
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "models/gemini-3-flash-preview" });

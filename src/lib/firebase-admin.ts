@@ -24,6 +24,18 @@ export async function verifyIdToken(req: Request) {
     try {
         const adminApp = initializeAdmin();
         const decodedToken = await adminApp.auth().verifyIdToken(token);
+
+        // Fetch companyId and superAdmin status from the users collection
+        const userDoc = await adminApp.firestore().doc(`users/${decodedToken.uid}`).get();
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            return {
+                ...decodedToken,
+                companyId: userData?.companyId || null,
+                superAdmin: userData?.superAdmin || false
+            };
+        }
+
         return decodedToken;
     } catch (error) {
         console.error('Error verifying Firebase ID token:', error);

@@ -17,6 +17,12 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await req.json();
+    const companyId = data.company?.id;
+
+    // 2. Tenant Isolation Check
+    if (!decodedToken.superAdmin && (!companyId || companyId !== (decodedToken as any).companyId)) {
+      return NextResponse.json({ error: "Acesso negado. Tentativa de acesso a dados de outra empresa." }, { status: 403 });
+    }
 
     // 1. IA GEMINI 3 FLASH 🧠
     let aiSummaryText = "Análise automática não disponível.";

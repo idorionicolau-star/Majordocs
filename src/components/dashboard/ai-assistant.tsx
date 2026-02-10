@@ -20,13 +20,10 @@ import { useToast } from '@/hooks/use-toast';
 
 export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
   const {
-    chatHistory: messages,
-    setChatHistory: setMessages,
-    sales,
-    products,
     dashboardStats,
     stockMovements,
-    firebaseUser
+    firebaseUser,
+    companyId: contextCompanyId
   } = useContext(InventoryContext) || {
     chatHistory: [],
     setChatHistory: () => { },
@@ -34,7 +31,8 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     products: [],
     stockMovements: [],
     dashboardStats: {},
-    firebaseUser: null
+    firebaseUser: null,
+    companyId: null
   };
 
   const [query, setQuery] = useState('');
@@ -83,6 +81,7 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
             recentSales: sales?.slice(0, 10),
             inventoryProducts: products,
             stockMovements: stockMovements,
+            companyId: contextCompanyId,
           }
         }),
       });

@@ -1,6 +1,7 @@
 "use client";
 
-import DOMPurify from 'dompurify';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import { useState, useEffect, useRef, useContext } from "react";
 import {
@@ -118,10 +119,11 @@ const ChatInterface = ({ messages, input, setInput, handleSend, isLoading, scrol
                             {msg.role === 'user' ? (
                                 msg.content
                             ) : (
-                                <div
-                                    className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>ol]:list-decimal [&>ol]:pl-4 [&>ul]:list-disc [&>ul]:pl-4"
-                                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.content) }}
-                                />
+                                <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>ol]:list-decimal [&>ol]:pl-4 [&>ul]:list-disc [&>ul]:pl-4">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                        {msg.content}
+                                    </ReactMarkdown>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -244,7 +246,8 @@ export function MajorAssistant({ variant = 'sheet', className }: { variant?: 'sh
                 body: JSON.stringify({
                     messages: [...messages, userMsg],
                     context: globalContext,
-                    userId: context?.firebaseUser?.uid
+                    userId: context?.firebaseUser?.uid,
+                    companyId: context?.companyId
                 })
             });
 

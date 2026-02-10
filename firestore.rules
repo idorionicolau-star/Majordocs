@@ -91,8 +91,13 @@ service cloud.firestore {
     match /users/{userId} {
       // Um utilizador só pode ler o seu próprio mapa. Admins não podem ler mapas de outros.
       allow read: if request.auth.uid == userId || isSuperAdmin();
-      // A criação (onboarding) e atualização só podem ser feitas pelo próprio utilizador.
-      allow write: if request.auth.uid == userId;
+      // A criação (onboarding) só pode ser feita pelo próprio utilizador.
+      allow create: if request.auth.uid == userId;
+      // Atualização: CRÍTICO - Prevenir mudança de companyId ou superAdmin (privilege escalation)
+      allow update: if request.auth.uid == userId && 
+        request.resource.data.companyId == resource.data.companyId &&
+        (!request.resource.data.keys().hasAny(['superAdmin']) || request.resource.data.superAdmin == resource.data.get('superAdmin', false));
+      allow delete: if false; // Nunca permitir eliminação de user maps
     }
 
 
@@ -110,7 +115,19 @@ service cloud.firestore {
         // Um funcionário pode ler os seus próprios dados.
         allow get: if request.auth.uid == employeeId || can('users', 'read');
         allow list: if can('users', 'read');
-        allow create, update, delete: if can('users', 'write');
+        // A criação é permitida se o utilizador tiver permissão de escrita OU se for o fundador a registar a empresa (onboarding).
+        allow create: if can('users', 'write') || (
+          request.auth.uid == employeeId && 
+          request.resource.data.role == 'Admin' &&
+          getAfter(/databases/$(database)/documents/companies/$(companyId)).data.ownerId == request.auth.uid
+        );
+        // Atualização: Prevenir auto-promoção (privilege escalation)
+        allow update: if can('users', 'write') && (
+          // Admin pode atualizar, mas não pode mudar role ou companyId de forma arbitrária
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.companyId == resource.data.companyId
+        );
+        allow delete: if can('users', 'write');
       }
       
       match /catalogProducts/{productId} {

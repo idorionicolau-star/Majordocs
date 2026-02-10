@@ -11,6 +11,13 @@ export async function POST(req: NextRequest) {
     }
 
     const { contextData } = await req.json();
+    const companyId = contextData?.company?.id;
+
+    // 2. Tenant Isolation Check
+    if (!decodedToken.superAdmin && (!companyId || companyId !== (decodedToken as any).companyId)) {
+      return NextResponse.json({ error: "Acesso negado. Tentativa de acesso a dados de outra empresa." }, { status: 403 });
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {

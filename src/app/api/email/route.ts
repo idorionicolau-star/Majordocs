@@ -17,10 +17,15 @@ export async function POST(req: Request) {
 
   const resend = new Resend(apiKey);
 
-  try {
-    const body = await req.json();
-    const { to, subject, type } = body;
+  const body = await req.json();
+  const { to, subject, type, companyId } = body;
 
+  // 1.5 Tenant Isolation Check
+  if (!decodedToken.superAdmin && (!companyId || companyId !== (decodedToken as any).companyId)) {
+    return NextResponse.json({ error: "Acesso negado. Tentativa de envio de e-mail por outra empresa." }, { status: 403 });
+  }
+
+  try {
     let htmlContent = '';
 
     const headerHtml = `

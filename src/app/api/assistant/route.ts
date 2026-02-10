@@ -2,8 +2,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 import { verifyIdToken } from "@/lib/firebase-admin";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-
 export async function POST(req: Request) {
     try {
         // 1. Verificação de Segurança
@@ -12,7 +10,18 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Não autorizado. Token inválido ou ausente." }, { status: 401 });
         }
 
-        const { messages, context, userId } = await req.json();
+        const { messages, context, userId, companyId } = await req.json();
+
+        // 2. Tenant Isolation Check
+        if (!decodedToken.superAdmin && (!companyId || companyId !== (decodedToken as any).companyId)) {
+            return NextResponse.json({ error: "Acesso negado. Tentativa de acesso a dados de outra empresa." }, { status: 403 });
+        }
+
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            return NextResponse.json({ error: "API Key não configurada" }, { status: 500 });
+        }
+        const genAI = new GoogleGenerativeAI(apiKey);
 
         const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
