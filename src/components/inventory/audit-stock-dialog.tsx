@@ -58,7 +58,7 @@ function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProp
 
   function onSubmit(values: AuditStockFormValues) {
     if (!auditStock) return;
-    auditStock(product, values.physicalCount, values.reason);
+    if (product.id) auditStock(product.id, values.physicalCount, values.reason);
     setOpen(false);
   }
 

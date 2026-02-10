@@ -240,7 +240,7 @@ export default function OrdersPage() {
         productExists = productSnap.exists();
 
         if (productExists) {
-          productName = productSnap.data().name;
+          productName = productSnap.data()?.name || productName;
         }
 
         const newLog: ProductionLog = {
@@ -285,7 +285,7 @@ export default function OrdersPage() {
         });
       } else {
         toast({
-          variant: "warning",
+          variant: "destructive",
           title: "Produção Concluída (Sem Stock)",
           description: `A encomenda foi concluída, mas o produto associado não foi encontrado no stock para atualização.`,
         });
@@ -517,14 +517,22 @@ export default function OrdersPage() {
               data={filteredOrders}
               totalCount={filteredOrders.length}
               components={{
-                List: forwardRef((props, ref) => (
-                  <div
-                    {...props}
-                    ref={ref}
-                    className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-20"
-                  />
-                )),
-                Item: forwardRef((props, ref) => <div {...props} ref={ref} className="h-full" />)
+                List: (() => {
+                  const List = forwardRef<HTMLDivElement>((props, ref) => (
+                    <div
+                      {...props}
+                      ref={ref}
+                      className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-20"
+                    />
+                  ));
+                  List.displayName = 'OrdersVirtuosoList';
+                  return List;
+                })(),
+                Item: (() => {
+                  const Item = forwardRef<HTMLDivElement>((props, ref) => <div {...props} ref={ref} className="h-full" />);
+                  Item.displayName = 'OrdersVirtuosoItem';
+                  return Item;
+                })()
               }}
               itemContent={(index, order) => (
                 <OrderCard

@@ -408,13 +408,27 @@ export default function ProductionPage() {
               data={filteredProductions}
               totalCount={filteredProductions.length}
               components={{
-                List: forwardRef((props, ref) => <div {...props} ref={ref} className={cn(
-                  "grid gap-2 sm:gap-4 pb-20",
-                  gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
-                  gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
-                  gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
-                )} />),
-                Item: forwardRef((props, ref) => <div {...props} ref={ref} className="h-full" />)
+                List: (() => {
+                  const List = forwardRef<HTMLDivElement>((props, ref) => (
+                    <div
+                      {...props}
+                      ref={ref}
+                      className={cn(
+                        "grid gap-2 sm:gap-4 pb-20",
+                        gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
+                        gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
+                        gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
+                      )}
+                    />
+                  ));
+                  List.displayName = 'ProductionVirtuosoList';
+                  return List;
+                })(),
+                Item: (() => {
+                  const Item = forwardRef<HTMLDivElement>((props, ref) => <div {...props} ref={ref} className="h-full" />);
+                  Item.displayName = 'ProductionVirtuosoItem';
+                  return Item;
+                })()
               }}
               itemContent={(index, production) => (
                 <ProductionCard

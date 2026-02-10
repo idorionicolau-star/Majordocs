@@ -67,7 +67,7 @@ function EditProductionDialogContent({ production, onUpdate, setOpen }: EditProd
     defaultValues: {
       productName: production.productName,
       quantity: production.quantity,
-      unit: production.unit || 'un',
+      unit: (production.unit || 'un') as any,
       location: production.location || '',
     },
   });
@@ -75,18 +75,18 @@ function EditProductionDialogContent({ production, onUpdate, setOpen }: EditProd
   const handleProductSelect = (productName: string, productData?: Omit<CatalogProductInfo, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>) => {
     form.setValue('productName', productName);
     if (productData) {
-      form.setValue('unit', productData.unit || 'un');
+      form.setValue('unit', (productData.unit || 'un') as any);
     }
   };
 
   function onSubmit(values: EditProductionFormValues) {
-    onUpdate(production.id, values);
+    onUpdate(production.id, values as any);
     setOpen(false);
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
+      <form onSubmit={(form.handleSubmit as any)(onSubmit)} className="grid gap-4 py-4 pr-2">
         <FormField
           control={form.control}
           name="productName"
