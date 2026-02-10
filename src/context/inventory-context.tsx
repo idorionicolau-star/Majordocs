@@ -616,94 +616,69 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       const processAdd = async () => {
         try {
+          // 1. Move Robust Check and Query OUTSIDE the transaction
+          let existingProductId: string | null = null;
+
+          if (productsData) {
+            const normalizedNewName = normalizeString(name);
+            const targetLoc = location || "";
+
+            const match = productsData.find(p =>
+              normalizeString(p.name) === normalizedNewName &&
+              (p.location === targetLoc || (!p.location && !targetLoc))
+            );
+
+            if (match) {
+              existingProductId = match.id || null;
+            }
+          }
+
+          if (!existingProductId) {
+            const q = query(productsCollectionRef, where("name", "==", name), where("location", "==", location || ""));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+              existingProductId = querySnapshot.docs[0].id;
+            }
+          }
+
+          let finalProductId: string | null = null;
+
           await runTransaction(firestore, async (transaction) => {
-            // NEW ROBUST CHECK: Check client-side data for normalized match first
-            // This catches "Cafe" vs "Café" which Firestore's exact match misses
-            let existingProductId: string | null = null;
-
-            if (productsData) {
-              const normalizedNewName = normalizeString(name);
-              const targetLoc = location || "";
-
-              const match = productsData.find(p =>
-                normalizeString(p.name) === normalizedNewName &&
-                (p.location === targetLoc || (!p.location && !targetLoc))
-              );
-
-              if (match) {
-                existingProductId = match.id || null;
-                console.log(`[Robust Check] Found existing product for "${name}" -> "${match.name}" (ID: ${match.id})`);
-              }
-            }
-
-            // If we found a match in our loaded data, we use THAT id. 
-            // Otherwise, we fall back to the query (which might still find exact matches if data wasn't loaded yet)
-
-            let querySnapshot;
-            if (existingProductId) {
-              // We intentionally skip the query or just use it as fallback? 
-              // Best to just get the doc directly if we know the ID.
-              // But to keep logic flow similar, let's just use the ID.
-            } else {
-              const q = query(productsCollectionRef, where("name", "==", name), where("location", "==", location || ""));
-              querySnapshot = await getDocs(q);
-            }
-
-            let productId: string;
+            // 2. READ FIRST
+            const docRef = existingProductId ? doc(productsCollectionRef as CollectionReference, existingProductId) : doc(productsCollectionRef as CollectionReference);
+            const existingDocSnap = await transaction.get(docRef);
             const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
-            if (existingProductId || (querySnapshot && !querySnapshot.empty)) {
-              if (existingProductId) {
-                productId = existingProductId;
-              } else {
-                productId = querySnapshot!.docs[0].id; // We know it's not empty here
-              }
-
-              const docRef = doc(productsCollectionRef as CollectionReference, productId);
-              const existingDocSnap = await transaction.get(docRef); // Read inside transaction for safety
-
-              if (existingDocSnap.exists()) {
-                const existingData = existingDocSnap.data();
-                const oldStock = existingData.stock || 0;
-                transaction.update(docRef, { stock: oldStock + newStock, lastUpdated: new Date().toISOString() });
-              } else {
-                // Should not happen if ID was valid, but handle gracefully?
-                // treating as new
-                const newProduct: Omit<Product, 'id' | 'instanceId' | 'sourceIds'> = {
-                  ...newProductData,
-                  lastUpdated: new Date().toISOString(),
-                  reservedStock: 0,
-                };
-                const newDocRef = doc(productsCollectionRef as CollectionReference);
-                transaction.set(newDocRef, newProduct);
-                productId = newDocRef.id;
-              }
-
+            // 3. APPLY LOGIC AND WRITE LAST
+            if (existingDocSnap.exists()) {
+              finalProductId = docRef.id;
+              const existingData = existingDocSnap.data() as Product;
+              const oldStock = existingData.stock || 0;
+              transaction.update(docRef, { stock: oldStock + newStock, lastUpdated: new Date().toISOString() });
             } else {
               const newProduct: Omit<Product, 'id' | 'instanceId' | 'sourceIds'> = {
                 ...newProductData,
                 lastUpdated: new Date().toISOString(),
                 reservedStock: 0,
               };
-              const newDocRef = doc(productsCollectionRef);
-              transaction.set(newDocRef, newProduct);
-              productId = newDocRef.id;
+              transaction.set(docRef, newProduct);
+              finalProductId = docRef.id;
             }
 
             const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
-              productId: productId,
-              productName: name, // We store the name AS ENTERED or AS EXISTING? Usually As Entered for log fidelity, or Existing for consistency?
-              // Let's keep "name" (as entered) for the movement log so we know what they typed.
+              productId: finalProductId!,
+              productName: name,
               type: 'IN',
               quantity: newStock,
               toLocationId: location,
-              reason: (existingProductId || (querySnapshot && !querySnapshot.empty)) ? `Entrada de novo lote (Match)` : `Criação de novo produto`,
+              reason: existingDocSnap.exists() ? `Entrada de novo lote (Match)` : `Criação de novo produto`,
               userId: user.id,
               userName: user.username,
             };
             const movementDocRef = doc(movementsRef as CollectionReference);
             transaction.set(movementDocRef, { ...movement, timestamp: serverTimestamp() });
           });
+
 
           addNotification({
             type: 'production',
@@ -845,35 +820,44 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     try {
       await runTransaction(firestore, async (transaction) => {
-        // 1. Update the product's stock
+        // 1. READ FIRST
+        const pSnap = await transaction.get(productRef);
+        if (!pSnap.exists()) {
+          throw new Error("Produto não encontrado na base de dados para auditoria.");
+        }
+        const freshData = pSnap.data() as Product;
+        const currentSystemStock = freshData.stock || 0;
+        const realAdjustment = physicalCount - currentSystemStock;
+
+        // 2. WRITE LAST
         transaction.update(productRef, { stock: physicalCount, lastUpdated: new Date().toISOString() });
 
-        // 2. Create a stock movement record for the audit adjustment
         const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
           productId: product.id!,
           productName: product.name,
           type: 'ADJUSTMENT',
-          quantity: adjustment,
-          toLocationId: product.location, // An adjustment happens AT a location
+          quantity: realAdjustment,
+          toLocationId: product.location,
           reason: reason,
           userId: user.id,
           userName: user.username,
           isAudit: true,
-          systemCountBefore: systemCountBefore,
+          systemCountBefore: currentSystemStock,
           physicalCount: physicalCount,
         };
         transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+
+        // Use fresh data for post-transaction logic
+        checkStockAndNotify({ ...freshData, stock: physicalCount });
       });
 
-      toast({ title: 'Auditoria Concluída', description: `O stock de ${product.name} foi ajustado em ${adjustment > 0 ? '+' : ''}${adjustment}.` });
-
-      // Post-transaction notification
-      checkStockAndNotify({ ...product, stock: physicalCount });
+      toast({ title: 'Auditoria Concluída', description: `O stock de ${product.name} foi ajustado.` });
 
     } catch (error) {
       console.error('Audit transaction failed: ', error);
-      toast({ variant: 'destructive', title: 'Erro na Auditoria', description: 'Não foi possível guardar o ajuste de stock.' });
+      toast({ variant: 'destructive', title: 'Erro na Auditoria', description: (error as Error).message });
     }
+
   }, [firestore, companyId, user, toast, checkStockAndNotify]);
 
   const transferStock = useCallback(async (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => {
@@ -897,18 +881,40 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
         const fromDocRef = doc(productsRef, fromProduct.id!);
-        const newFromStock = fromProduct.stock - quantity;
+        const toDocRef = toProduct?.id ? doc(productsRef, toProduct.id) : doc(productsRef);
+
+        // 1. READ ALL FIRST
+        const fromSnap = await transaction.get(fromDocRef);
+        const toSnap = toProduct?.id ? await transaction.get(toDocRef) : null;
+
+        if (!fromSnap.exists()) {
+          throw new Error("Produto de origem não encontrado na base de dados.");
+        }
+
+        const freshFromData = fromSnap.data() as Product;
+        const freshToData = toSnap?.exists() ? toSnap.data() as Product : null;
+
+        // 2. VALIDATE AND CALCULATE
+        if ((freshFromData.stock || 0) < quantity) {
+          throw new Error(`Stock insuficiente em ${fromLocationId}. Disponível: ${freshFromData.stock}`);
+        }
+
+        const newFromStock = freshFromData.stock - quantity;
+
+        // 3. WRITE ALL LAST
         transaction.update(fromDocRef, { stock: newFromStock, lastUpdated: new Date().toISOString() });
 
-        checkStockAndNotify({ ...fromProduct, stock: newFromStock });
-
-        if (toProduct && toProduct.id) {
-          const toDocRef = doc(productsRef, toProduct.id);
-          transaction.update(toDocRef, { stock: toProduct.stock + quantity, lastUpdated: new Date().toISOString() });
+        if (freshToData) {
+          transaction.update(toDocRef, { stock: (freshToData.stock || 0) + quantity, lastUpdated: new Date().toISOString() });
         } else {
-          const { id, instanceId, ...restOfProduct } = fromProduct;
-          const newDocRef = doc(productsRef);
-          transaction.set(newDocRef, { ...restOfProduct, location: toLocationId, stock: quantity, reservedStock: 0, lastUpdated: new Date().toISOString() });
+          const { id, instanceId, stock, reservedStock, location: _, lastUpdated: __, ...restOfProduct } = freshFromData;
+          transaction.set(toDocRef, {
+            ...restOfProduct,
+            location: toLocationId,
+            stock: quantity,
+            reservedStock: 0,
+            lastUpdated: new Date().toISOString()
+          });
         }
 
         const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
@@ -923,7 +929,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           userName: user.username,
         };
         transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+
+        // Side effect post-transaction logic
+        checkStockAndNotify({ ...freshFromData, stock: newFromStock });
       });
+
 
       toast({ title: 'Transferência Concluída' });
     } catch (error) {
@@ -944,85 +954,67 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
-    if (existingInstance && existingInstance.id) {
-      const docRef = doc(firestore, `companies/${companyId}/products`, existingInstance.id);
-      const batch = writeBatch(firestore);
-      const newStock = existingInstance.stock + quantity;
-      batch.update(docRef, { stock: newStock, lastUpdated: new Date().toISOString() });
+    try {
+      await runTransaction(firestore, async (transaction) => {
+        let docRef: DocumentReference;
+        let freshData: Product | null = null;
+        const productsRef = collection(firestore, `companies/${companyId}/products`);
 
-      checkStockAndNotify({ ...existingInstance, stock: newStock });
-
-      const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
-        productId: existingInstance.id,
-        productName: productName,
-        type: 'IN',
-        quantity: quantity,
-        toLocationId: targetLocation,
-        reason: `Produção de Lote: ${quantity} unidades`,
-        userId: user.id,
-        userName: user.username,
-      };
-      batch.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
-      await batch.commit();
-
-    } else {
-      let productDataToUse: Partial<Product> = {};
-
-      if (catalogProduct) {
-        const { id, ...rest } = catalogProduct;
-        productDataToUse = rest;
-      } else {
-        // Fallback: Try to find ANY existing instance of this product to use as blueprint
-        const blueprint = products.find(p => p.name === productName);
-        if (blueprint) {
-          const { id, instanceId, stock, reservedStock, location, lastUpdated, ...rest } = blueprint;
-          productDataToUse = rest;
+        if (existingInstance && existingInstance.id) {
+          docRef = doc(productsRef, existingInstance.id);
+          const pSnap = await transaction.get(docRef);
+          if (pSnap.exists()) {
+            freshData = pSnap.data() as Product;
+          }
         } else {
-          // Last resort: Defaults. This allows "On Demand" products to be transferred even if not in catalog yet
-          // (Though they SHOULD be in catalog if using Quick Create correctly, but this is a safety net)
-          productDataToUse = {
-            name: productName,
-            category: 'Geral',
-            price: 0,
-            unit: 'un',
-            lowStockThreshold: 5,
-            criticalStockThreshold: 2
-          };
+          docRef = doc(productsRef);
         }
-      }
 
-      const productsRef = collection(firestore, `companies/${companyId}/products`);
+        if (freshData) {
+          const newStock = (freshData.stock || 0) + quantity;
+          transaction.update(docRef, { stock: newStock, lastUpdated: new Date().toISOString() });
+          checkStockAndNotify({ ...freshData, stock: newStock });
+        } else {
+          let productDataToUse: any = {};
+          if (catalogProduct) {
+            const { id, ...rest } = catalogProduct;
+            productDataToUse = rest;
+          } else {
+            const blueprint = products.find(p => p.name === productName);
+            if (blueprint) {
+              const { id, instanceId, stock, reservedStock, location, lastUpdated, ...rest } = blueprint;
+              productDataToUse = rest;
+            } else {
+              productDataToUse = { name: productName, category: 'Geral', price: 0, unit: 'un', lowStockThreshold: 5, criticalStockThreshold: 2 };
+            }
+          }
 
-      const batch = writeBatch(firestore);
-      const newProductRef = doc(productsRef);
+          transaction.set(docRef, {
+            ...productDataToUse,
+            stock: quantity,
+            reservedStock: 0,
+            location: targetLocation,
+            lastUpdated: new Date().toISOString()
+          });
+        }
 
-      const newProductData = {
-        ...productDataToUse,
-        stock: quantity,
-        reservedStock: 0,
-        location: targetLocation,
-        lastUpdated: new Date().toISOString()
-      };
-
-      batch.set(newProductRef, newProductData);
-
-      // Notify and Link if it was a catalog match (or just created)
-      // checkStockAndNotify expects a Product with ID.
-      checkStockAndNotify({ ...newProductData, id: newProductRef.id } as Product);
-
-      const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
-        productId: newProductRef.id,
-        productName: productName,
-        type: 'IN',
-        quantity: quantity,
-        toLocationId: targetLocation,
-        reason: `Produção de Lote: ${quantity} unidades`,
-        userId: user.id,
-        userName: user.username,
-      };
-      batch.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
-      await batch.commit();
+        const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+          productId: docRef.id,
+          productName,
+          type: 'IN',
+          quantity,
+          toLocationId: targetLocation,
+          reason: freshData ? `Produção de Lote: ${quantity} unidades` : `Início de Produção: ${quantity} unidades`,
+          userId: user.id,
+          userName: user.username,
+        };
+        transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+      });
+    } catch (e: any) {
+      console.error("Error updating product stock:", e);
+      toast({ variant: 'destructive', title: 'Erro ao Atualizar Stock', description: e.message });
     }
+
 
     addNotification({
       type: 'production',
@@ -1147,14 +1139,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     );
     const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
-    await runTransaction(firestore, async (transaction) => {
-      const productSnapshot = await getDocs(productQuery);
-      if (productSnapshot.empty) {
-        throw new Error(`Produto "${freshSale.productName}" não encontrado para atualizar estoque.`);
-      }
-      const productDoc = productSnapshot.docs[0];
-      const productData = productDoc.data() as Product;
+    const productQuerySnapshot = await getDocs(productQuery);
+    if (productQuerySnapshot.empty) {
+      throw new Error(`Produto "${freshSale.productName}" não encontrado para atualizar estoque.`);
+    }
+    const productDocRef = productQuerySnapshot.docs[0].ref;
+    const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
+    await runTransaction(firestore, async (transaction) => {
+      // 1. READS
+      const pSnap = await transaction.get(productDocRef);
+      if (!pSnap.exists()) {
+        throw new Error(`Produto "${freshSale.productName}" não encontrado na base de dados.`);
+      }
+      const productData = pSnap.data() as Product;
+
+      // 2. CALCULATIONS
       const newStock = productData.stock - freshSale.quantity;
       let newReservedStock = productData.reservedStock - freshSale.quantity;
 
@@ -1167,13 +1167,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         throw new Error("Erro Crítico: Stock insuficiente para realizar o levantamento."); // Physical stock MUST be sufficient
       }
 
-      transaction.update(productDoc.ref, { stock: newStock, reservedStock: newReservedStock, lastUpdated: new Date().toISOString() });
+      // 3. WRITES
+      transaction.update(productDocRef, { stock: newStock, reservedStock: newReservedStock, lastUpdated: new Date().toISOString() });
       transaction.update(saleRef, { status: 'Levantado' });
 
+      // Side effect post-transaction logic
       checkStockAndNotify({ ...productData, stock: newStock });
 
       const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
-        productId: productDoc.id,
+        productId: productDocRef.id,
         productName: freshSale.productName,
         type: 'OUT',
         quantity: -freshSale.quantity, // Negative for stock out
@@ -1184,6 +1186,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       };
       transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
     });
+
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user, checkStockAndNotify, toast]);
 
   const addProduction = useCallback(async (prodData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
@@ -1192,59 +1195,66 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const { productName, quantity, location, orderId, unit } = prodData;
     const targetLocation = location || (isMultiLocation && locations.length > 0 ? locations[0].id : 'Principal');
 
+    // 1. Move product lookup OUTSIDE the transaction because transactions don't support queries
+    const productsRef = collection(firestore, `companies/${companyId}/products`);
+    const q = query(productsRef, where("name", "==", productName), where("location", "==", targetLocation));
+    const productQuerySnapshot = await getDocs(q);
+    const existingProductId = !productQuerySnapshot.empty ? productQuerySnapshot.docs[0].id : null;
+
     try {
       await runTransaction(firestore, async (transaction) => {
-        // 1. Check for Recipe and Deduct Raw Materials
-        if (recipesData) {
-          const recipe = recipesData.find(r => r.productName === productName);
-          if (recipe) {
-            for (const ingredient of recipe.ingredients) {
-              const materialRef = doc(firestore, `companies/${companyId}/rawMaterials`, ingredient.rawMaterialId);
-              const materialDoc = await transaction.get(materialRef);
+        // --- ALL READS MUST COME FIRST ---
 
-              if (!materialDoc.exists()) {
-                throw new Error(`Matéria-prima não encontrada (ID: ${ingredient.rawMaterialId}) para a receita de ${productName}.`);
-              }
+        // 2. Prepare Product Reference and Read
+        const productDocRef = existingProductId ? doc(productsRef, existingProductId) : doc(productsRef);
+        const pDoc = await transaction.get(productDocRef);
 
-              const materialData = materialDoc.data() as RawMaterial;
-              const requiredQty = ingredient.quantity * quantity;
-              const newMatStock = (materialData.stock || 0) - requiredQty;
+        // 3. Check for Recipe and Read all Raw Materials
+        const recipe = recipesData?.find(r => r.productName === productName);
+        const ingredientDocs: { ref: DocumentReference, data: RawMaterial, requiredQty: number }[] = [];
 
-              if (newMatStock < 0) {
-                throw new Error(`Stock insuficiente de ${materialData.name}. Necessário: ${requiredQty}, Disponível: ${materialData.stock}.`);
-              }
+        if (recipe) {
+          for (const ingredient of recipe.ingredients) {
+            const materialRef = doc(firestore, `companies/${companyId}/rawMaterials`, ingredient.rawMaterialId);
+            const materialDoc = await transaction.get(materialRef);
 
-              transaction.update(materialRef, { stock: newMatStock });
+            if (!materialDoc.exists()) {
+              throw new Error(`Matéria-prima não encontrada (ID: ${ingredient.rawMaterialId}) para a receita de ${productName}.`);
             }
+
+            ingredientDocs.push({
+              ref: materialRef,
+              data: materialDoc.data() as RawMaterial,
+              requiredQty: ingredient.quantity * quantity
+            });
           }
         }
 
-        // 2. Update/Create Product Stock
-        const productsRef = collection(firestore, `companies/${companyId}/products`);
-        let productDocRef: DocumentReference;
+        // --- ALL VALIDATION AND CALCULATIONS ---
 
-        // Query Firestore directly to find the product ID, ensuring we aren't relying on potentially stale context state
-        const q = query(productsRef, where("name", "==", productName), where("location", "==", targetLocation));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-          // Product exists in DB
-          productDocRef = querySnapshot.docs[0].ref;
-          const pDoc = await transaction.get(productDocRef);
-
-          if (pDoc.exists()) {
-            const pData = pDoc.data() as Product;
-            const currentStock = pData.stock || 0;
-            transaction.update(productDocRef, {
-              stock: currentStock + quantity,
-              lastUpdated: new Date().toISOString()
-            });
+        // 4. Validate Raw Material Stock
+        for (const ingDoc of ingredientDocs) {
+          if ((ingDoc.data.stock || 0) < ingDoc.requiredQty) {
+            throw new Error(`Stock insuficiente de ${ingDoc.data.name}. Necessário: ${ingDoc.requiredQty}, Disponível: ${ingDoc.data.stock}.`);
           }
-        } else {
-          // New Product Instance logic (from Catalog or scratch)
-          const catalogProduct = catalogProductsData?.find(p => p.name === productName);
+        }
 
-          productDocRef = doc(productsRef); // New ID
+        // --- ALL WRITES MUST COME LAST ---
+
+        // 5. Update Raw Materials
+        for (const ingDoc of ingredientDocs) {
+          transaction.update(ingDoc.ref, { stock: ingDoc.data.stock - ingDoc.requiredQty });
+        }
+
+        // 6. Update/Create Product Stock
+        if (pDoc.exists()) {
+          const pData = pDoc.data() as Product;
+          transaction.update(productDocRef, {
+            stock: (pData.stock || 0) + quantity,
+            lastUpdated: new Date().toISOString()
+          });
+        } else {
+          const catalogProduct = catalogProductsData?.find(p => p.name === productName);
           const newProductData = {
             name: productName,
             category: catalogProduct?.category || 'Geral',
@@ -1260,7 +1270,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           transaction.set(productDocRef, newProductData);
         }
 
-        // 3. Create Production Record
+        // 7. Create Production Record
         const newProduction: Omit<Production, 'id'> = {
           date: new Date().toISOString().split('T')[0],
           productName,
@@ -1274,10 +1284,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         const productionsRef = collection(firestore, `companies/${companyId}/productions`);
         transaction.set(doc(productionsRef), newProduction);
 
-        // 4. Create Stock Movement Log
+        // 8. Create Stock Movement Log
         const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
         const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
-          productId: productDocRef.id, // We have the ref from above
+          productId: productDocRef.id,
           productName,
           type: 'IN',
           quantity,
@@ -1289,6 +1299,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
 
       }); // End Transaction
+
 
       addNotification({
         type: 'production',
@@ -1592,48 +1603,65 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const saleDoc = salesSnap.docs[0];
 
       await runTransaction(firestore, async (transaction) => {
-        // 2. Get Order
+        // --- READS ---
+
+        // 1. Get Order
         const orderRef = doc(firestore, `companies/${companyId}/orders`, orderId);
         const orderSnap = await transaction.get(orderRef);
         if (!orderSnap.exists()) throw new Error("Encomenda não encontrada.");
         const orderData = orderSnap.data() as Order;
 
-        // 3. Update Sale
+        // 2. Get Sale (if exists)
+        let freshSaleData: Sale | null = null;
+        let saleRef: DocumentReference | null = null;
         if (saleDoc) {
-          const saleRef = doc(firestore, `companies/${companyId}/sales`, saleDoc.id);
-          const currentSale = saleDoc.data() as Sale;
-          const newAmountPaid = (currentSale.amountPaid || 0) + finalPayment;
+          saleRef = doc(firestore, `companies/${companyId}/sales`, saleDoc.id);
+          const freshSaleSnap = await transaction.get(saleRef);
+          if (freshSaleSnap.exists()) {
+            freshSaleData = freshSaleSnap.data() as Sale;
+          }
+        }
 
+        // 3. Get Product (if exists)
+        let freshProductData: Product | null = null;
+        let productRef: DocumentReference | null = null;
+        if (orderData.productId) {
+          productRef = doc(firestore, `companies/${companyId}/products`, orderData.productId);
+          const productSnap = await transaction.get(productRef);
+          if (productSnap.exists()) {
+            freshProductData = productSnap.data() as Product;
+          }
+        }
+
+        // --- WRITES ---
+
+        // 4. Update Sale
+        if (saleRef && freshSaleData) {
+          const newAmountPaid = (freshSaleData.amountPaid || 0) + finalPayment;
           transaction.update(saleRef, {
             amountPaid: newAmountPaid,
             status: 'Levantado',
-            paymentStatus: newAmountPaid >= currentSale.totalValue ? 'Pago' : 'Parcial'
+            paymentStatus: newAmountPaid >= freshSaleData.totalValue ? 'Pago' : 'Parcial'
           });
         }
 
-        // 4. Update Order Status
+        // 5. Update Order Status
         transaction.update(orderRef, { status: 'Entregue' });
 
-        // 5. Deduct Stock from Inventory
-        if (orderData.productId) {
-          const productRef = doc(firestore, `companies/${companyId}/products`, orderData.productId);
-          const productSnap = await transaction.get(productRef);
-          if (productSnap.exists()) {
-            const productData = productSnap.data() as Product;
-            const newStock = (productData.stock || 0) - orderData.quantity;
+        // 6. Deduct Stock from Inventory
+        if (productRef && freshProductData) {
+          const newStock = (freshProductData.stock || 0) - orderData.quantity;
+          let newReserved = (freshProductData.reservedStock || 0) - orderData.quantity;
+          if (newReserved < 0) newReserved = 0;
 
-            // Also deduct from Reserved Stock since it's now being picked up
-            let newReserved = (productData.reservedStock || 0) - orderData.quantity;
-            if (newReserved < 0) newReserved = 0; // Prevent negative
-
-            transaction.update(productRef, {
-              stock: newStock,
-              reservedStock: newReserved,
-              lastUpdated: new Date().toISOString()
-            });
-          }
+          transaction.update(productRef, {
+            stock: newStock,
+            reservedStock: newReserved,
+            lastUpdated: new Date().toISOString()
+          });
         }
       });
+
 
       toast({ title: 'Encomenda Finalizada', description: 'Stock atualizado e venda registada.' });
 
