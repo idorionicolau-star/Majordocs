@@ -1288,7 +1288,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           registeredBy: user.username || 'Desconhecido',
           status: 'Concluído',
           location: targetLocation,
-          orderId
+          ...(orderId && { orderId }) // Only include orderId if it exists (conditional spread)
         };
         const productionsRef = collection(firestore, `companies/${companyId}/productions`);
         transaction.set(doc(productionsRef), newProduction);
