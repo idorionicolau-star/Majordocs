@@ -518,9 +518,19 @@ export default function POSPage() {
                                                         </Button>
                                                         <Input
                                                             type="number"
-                                                            value={item.quantity}
-                                                            onChange={(e) => updateCartQuantity(item.productName, Number(e.target.value) || 0)}
-                                                            className="w-14 h-7 text-center text-sm bg-background text-foreground"
+                                                            min={1}
+                                                            defaultValue={item.quantity}
+                                                            key={`${item.productName}-${item.quantity}`}
+                                                            onBlur={(e) => {
+                                                                const val = Number(e.target.value);
+                                                                updateCartQuantity(item.productName, val > 0 ? val : 1);
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    (e.target as HTMLInputElement).blur();
+                                                                }
+                                                            }}
+                                                            className="w-16 h-7 text-center text-sm bg-background text-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                         />
                                                         <Button
                                                             variant="outline"
