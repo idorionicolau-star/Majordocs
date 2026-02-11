@@ -5,4 +5,5 @@ export const firebaseConfig = {
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   measurementId: "",
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY,
 };

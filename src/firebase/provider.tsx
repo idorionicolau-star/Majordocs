@@ -4,36 +4,38 @@ import React, { DependencyList, createContext, useContext, ReactNode, useMemo } 
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
 import { Firestore, getFirestore, initializeFirestore, persistentLocalCache } from 'firebase/firestore';
 import { Auth, getAuth } from 'firebase/auth';
+import { Messaging, getMessaging, isSupported } from 'firebase/messaging';
 import { firebaseConfig } from '@/firebase/config';
 
 // --- Start of logic moved from index.ts ---
 let firebaseApp: FirebaseApp;
 let firestore: Firestore;
+let messaging: Messaging | null = null;
 
 function getFirebaseServices() {
   if (!firebaseApp) {
     if (!getApps().length) {
-        firebaseApp = initializeApp(firebaseConfig);
+      firebaseApp = initializeApp(firebaseConfig);
     } else {
       firebaseApp = getApp();
     }
   }
-  
+
   if (!firestore) {
     if (typeof window !== "undefined") {
-        try {
-          firestore = initializeFirestore(firebaseApp, {
-            localCache: persistentLocalCache({})
-          });
-        } catch (err: any) {
-          if (err.code == 'failed-precondition') {
-              console.warn("Persistência do Firestore falhou: múltiplas abas abertas. Usando modo em memória.");
-          } else if (err.code == 'unimplemented') {
-              console.warn("Este browser não suporta persistência offline do Firestore.");
-          }
-          // Fallback to in-memory persistence if offline setup fails
-          firestore = getFirestore(firebaseApp);
+      try {
+        firestore = initializeFirestore(firebaseApp, {
+          localCache: persistentLocalCache({})
+        });
+      } catch (err: any) {
+        if (err.code == 'failed-precondition') {
+          console.warn("Persistência do Firestore falhou: múltiplas abas abertas. Usando modo em memória.");
+        } else if (err.code == 'unimplemented') {
+          console.warn("Este browser não suporta persistência offline do Firestore.");
         }
+        // Fallback to in-memory persistence if offline setup fails
+        firestore = getFirestore(firebaseApp);
+      }
     } else {
       // For server-side rendering, use in-memory instance
       firestore = getFirestore(firebaseApp);
@@ -43,7 +45,7 @@ function getFirebaseServices() {
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
-    firestore: firestore
+    firestore: firestore,
   };
 }
 
@@ -74,6 +76,7 @@ export interface FirebaseContextState {
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
   auth: Auth | null;
+  messaging: Messaging | null;
 }
 
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
@@ -81,14 +84,38 @@ export const FirebaseContext = createContext<FirebaseContextState | undefined>(u
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({
   children
 }) => {
+  const [services, setServices] = React.useState<{
+    firebaseApp: FirebaseApp | null;
+    firestore: Firestore | null;
+    auth: Auth | null;
+    messaging: Messaging | null;
+  }>(() => {
+    const s = initializeFirebase();
+    return {
+      ...s,
+      messaging: null
+    };
+  });
 
-  const services = useMemo(() => initializeFirebase(), []);
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && services.firebaseApp) {
+      isSupported().then(supported => {
+        if (supported) {
+          const m = getMessaging(services.firebaseApp!);
+          setServices(prev => ({ ...prev, messaging: m }));
+        }
+      }).catch(err => {
+        console.warn("Firebase Messaging initialization failed:", err);
+      });
+    }
+  }, [services.firebaseApp]);
 
   const contextValue = useMemo((): FirebaseContextState => {
     return {
       firebaseApp: services.firebaseApp,
       firestore: services.firestore,
       auth: services.auth,
+      messaging: services.messaging,
     };
   }, [services]);
 
@@ -99,7 +126,7 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({
   );
 };
 
-export const useFirebase = (): { firebaseApp: FirebaseApp, firestore: Firestore, auth: Auth } => {
+export const useFirebase = (): FirebaseContextState => {
   const context = useContext(FirebaseContext);
 
   if (context === undefined) {
@@ -110,35 +137,36 @@ export const useFirebase = (): { firebaseApp: FirebaseApp, firestore: Firestore,
     throw new Error('Firebase core services not available. Check FirebaseProvider setup.');
   }
 
-  return {
-    firebaseApp: context.firebaseApp,
-    firestore: context.firestore,
-    auth: context.auth,
-  };
+  return context;
 };
 
 export const useAuth = (): Auth => {
   const { auth } = useFirebase();
-  return auth;
+  return auth!;
 };
 
 export const useFirestore = (): Firestore => {
   const { firestore } = useFirebase();
-  return firestore;
+  return firestore!;
 };
 
 export const useFirebaseApp = (): FirebaseApp => {
   const { firebaseApp } = useFirebase();
-  return firebaseApp;
+  return firebaseApp!;
 };
 
-type MemoFirebase <T> = T & {__memo?: boolean};
+export const useMessaging = (): Messaging | null => {
+  const { messaging } = useFirebase();
+  return messaging;
+};
+
+type MemoFirebase<T> = T & { __memo?: boolean };
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
   const memoized = useMemo(factory, deps);
-  
-  if(typeof memoized !== 'object' || memoized === null) return memoized;
+
+  if (typeof memoized !== 'object' || memoized === null) return memoized;
   (memoized as MemoFirebase<T>).__memo = true;
-  
+
   return memoized;
 }

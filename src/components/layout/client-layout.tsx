@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 const CommandMenu = dynamic(() => import('@/components/command-menu').then(mod => mod.CommandMenu), { ssr: false });
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { MobileNav } from './mobile-nav';
+import { useNotifications } from '@/hooks/use-notifications';
 
 import { LoadingBar } from './loading-bar';
 
@@ -35,6 +36,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   const [openCommandMenu, setOpenCommandMenu] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
+  // Initialize notifications
+  useNotifications();
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {

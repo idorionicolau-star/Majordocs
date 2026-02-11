@@ -15,7 +15,7 @@ import { OrderCard } from "@/components/orders/order-card";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFirestore } from '@/firebase/provider';
-import { collection, doc, updateDoc, arrayUnion, runTransaction, increment } from "firebase/firestore";
+import { collection, doc, updateDoc, arrayUnion, runTransaction, increment, query, where, limit, getDoc, getDocs } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -229,14 +229,39 @@ export default function OrdersPage() {
     try {
       const missingQty = pendingConclusionOrder.quantity - pendingConclusionOrder.quantityProduced;
       const orderRef = doc(firestore, `companies/${companyId}/orders`, pendingConclusionOrder.id);
-      const productRef = doc(firestore, `companies/${companyId}/products`, pendingConclusionOrder.productId);
+
+      // Resolve Product Reference Logic
+      let productRef = doc(firestore, `companies/${companyId}/products`, pendingConclusionOrder.productId);
+      let productName = pendingConclusionOrder.productName;
+      let targetProductRef = productRef;
+
+      // Pre-flight check: Try to resolve correct product reference if ID lookup fails
+      try {
+        const productSnap = await getDoc(productRef);
+        if (!productSnap.exists()) {
+          // If not found by ID (e.g. productId is the name), try to find by name property
+          const productsQuery = query(
+            collection(firestore, `companies/${companyId}/products`),
+            where('name', '==', pendingConclusionOrder.productName),
+            limit(1)
+          );
+          const querySnap = await getDocs(productsQuery);
+          if (!querySnap.empty) {
+            const bestMatch = querySnap.docs[0];
+            targetProductRef = bestMatch.ref;
+          }
+        }
+      } catch (err) {
+        console.warn("Pre-transaction product lookup failed, proceeding with original ref", err);
+      }
+
       const productionsRef = collection(firestore, `companies/${companyId}/productions`);
 
       let productExists = false;
-      let productName = pendingConclusionOrder.productName;
 
       await runTransaction(firestore, async (transaction) => {
-        const productSnap = await transaction.get(productRef);
+        // Use targetProductRef which is either the original ID or the one found by name
+        const productSnap = await transaction.get(targetProductRef);
         productExists = productSnap.exists();
 
         if (productExists) {
@@ -272,7 +297,7 @@ export default function OrdersPage() {
         });
 
         if (productExists) {
-          transaction.update(productRef, {
+          transaction.update(targetProductRef, {
             stock: increment(missingQty)
           });
         }
