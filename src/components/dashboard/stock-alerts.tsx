@@ -40,35 +40,19 @@ export function StockAlerts({ className }: { className?: string }) {
         if (criticalStockProducts.length === 0) return;
 
         setIsDownloading(true);
+        if (!companyData) {
+            toast({ variant: "destructive", title: "Erro", description: "Dados da empresa não encontrados." });
+            setIsDownloading(false);
+            return;
+        }
+
         try {
-            const { pdf } = await import('@react-pdf/renderer');
-            // Dynamically import to avoid server-side issues with PDF generation
-            const { CriticalStockPDF } = await import('@/components/inventory/CriticalStockPDF');
-
-            const doc = <CriticalStockPDF
-                products={criticalStockProducts}
-                company={companyData || null}
-            />;
-
-            const blob = await pdf(doc).toBlob();
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `Stock_Critico_Dashboard_${new Date().toISOString().split('T')[0]}.pdf`;
-            link.click();
-            URL.revokeObjectURL(url);
-
-            toast({
-                title: "Download Concluído",
-                description: "O relatório de stock crítico foi gerado a partir do dashboard.",
-            });
+            const { generateCriticalStockPDF } = await import('@/lib/pdf-generator');
+            await generateCriticalStockPDF(criticalStockProducts, companyData);
+            toast({ title: "Relatório gerado", description: "Relatório de stock crítico gerado com sucesso!" });
         } catch (error) {
             console.error("Erro ao gerar PDF:", error);
-            toast({
-                title: "Erro no Download",
-                description: "Não foi possível gerar o relatório de stock crítico.",
-                variant: "destructive"
-            });
+            toast({ variant: "destructive", title: "Erro", description: "Erro ao gerar o relatório PDF." });
         } finally {
             setIsDownloading(false);
         }
