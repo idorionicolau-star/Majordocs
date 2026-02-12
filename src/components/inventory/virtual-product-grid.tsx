@@ -88,7 +88,7 @@ export function VirtualProductGrid({
             itemContent={(index: number, product: Product) => (
                 <div style={{ height: '100%' }}>
                     <ProductCard
-                        key={product.instanceId || product.id}
+                        key={product.id || product.instanceId || product.name}
                         product={product}
                         onProductUpdate={onProductUpdate}
                         onAttemptDelete={onAttemptDelete}

@@ -44,6 +44,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { isSameDay } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { formatCurrency, normalizeString } from "@/lib/utils";
+import { generateInventoryReportPDF } from "@/lib/pdf-generator";
 import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
 import { forwardRef } from 'react';
 
@@ -493,12 +494,16 @@ export default function InventoryPage() {
   };
 
   const handleDownloadPdfReport = () => {
+    const locationName = selectedLocation === 'all' || !isMultiLocation
+      ? 'Geral'
+      : locations.find(l => l.id === selectedLocation)?.name || 'Desconhecida';
+
+    generateInventoryReportPDF(filteredProducts, companyData || null, locationName);
+
     toast({
-      title: "Como Guardar o Relatório em PDF",
-      description: "Na janela de impressão que vai abrir, por favor mude o destino para 'Guardar como PDF' para descarregar o ficheiro.",
-      duration: 8000,
+      title: "PDF Gerado",
+      description: "O relatório de inventário foi descarregado.",
     });
-    handlePrintReport();
   };
 
   if (inventoryLoading) {

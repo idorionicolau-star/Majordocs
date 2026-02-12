@@ -76,3 +76,64 @@ export const generateSalePDF = (sale: Sale, company: Company | null) => {
     // Save
     doc.save(`${sale.documentType}_${sale.guideNumber}.pdf`);
 };
+
+export const generateInventoryReportPDF = (products: any[], company: Company | null, locationName: string = 'Geral') => {
+    const doc = new jsPDF();
+    const reportTitle = locationName === 'Geral' ? 'Relatório de Inventário Geral' : `Relatório de Inventário: ${locationName}`;
+
+    // Header
+    doc.setFontSize(20);
+    doc.text(company?.name || 'MajorStockX', 14, 22);
+
+    doc.setFontSize(14);
+    doc.setTextColor(52, 152, 219); // Blue
+    doc.text(reportTitle, 14, 32);
+
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 40);
+
+    // Table
+    const tableColumn = ["Produto", "Categoria", "Stock", "Preço Unit.", "Valor Stock"];
+    const tableRows: any[] = [];
+
+    let totalValue = 0;
+
+    products.forEach(product => {
+        const availableStock = product.stock - (product.reservedStock || 0);
+        const stockValue = availableStock * product.price;
+        totalValue += stockValue;
+
+        const row = [
+            product.name,
+            product.category,
+            `${availableStock} ${product.unit || 'un.'}`,
+            formatCurrency(product.price),
+            formatCurrency(stockValue)
+        ];
+        tableRows.push(row);
+    });
+
+    autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 45,
+        theme: 'striped',
+        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+        styles: { fontSize: 9, cellPadding: 2 },
+    });
+
+    // Totals
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Valor Total do Inventário: ${formatCurrency(totalValue)}`, 14, finalY);
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(`MajorStockX - ${new Date().getFullYear()}`, 105, 290, { align: 'center' });
+
+    doc.save(`Inventario_${new Date().toISOString().split('T')[0]}.pdf`);
+};
