@@ -49,6 +49,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import { ScrollArea } from '../ui/scroll-area';
 import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
 import { useInventory } from "@/context/inventory-context";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useStorage } from "@/firebase/provider";
+import { Loader2, Image as ImageIcon, X } from "lucide-react";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -89,6 +92,11 @@ interface EditProductDialogProps {
 
 function EditProductForm({ product, onProductUpdate, setOpen, locations, isMultiLocation }: Omit<EditProductDialogProps, 'trigger'> & { setOpen: (open: boolean) => void }) {
   const { availableUnits } = useInventory();
+  const storage = useStorage();
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(product.imageUrl || null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const form = useForm<EditProductFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -103,17 +111,91 @@ function EditProductForm({ product, onProductUpdate, setOpen, locations, isMulti
     },
   });
 
-  function onSubmit(values: EditProductFormValues) {
+  async function onSubmit(values: EditProductFormValues) {
+    setIsSubmitting(true);
+    let imageUrl = product.imageUrl;
+
+    if (imageFile) {
+      try {
+        const storageRef = ref(storage, `product-images/${Date.now()}_${imageFile.name}`);
+        const snapshot = await uploadBytes(storageRef, imageFile);
+        imageUrl = await getDownloadURL(snapshot.ref);
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        // We proceed even if image upload fails, but could show a toast here
+      }
+    } else if (previewUrl === null && product.imageUrl) {
+      // Image was removed
+      imageUrl = undefined;
+    }
+
+
     onProductUpdate({
       ...product,
       ...values,
+      imageUrl,
     });
+    setIsSubmitting(false);
     setOpen(false);
   }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
+
+        {/* Image Upload Section */}
+        <div className="flex flex-col gap-3 mb-4">
+          <FormLabel>Imagem do Produto</FormLabel>
+          <div className="flex items-start gap-4">
+            <div className="relative h-24 w-24 rounded-lg border overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
+              {previewUrl ? (
+                <>
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="h-8 w-8 rounded-full"
+                      onClick={() => {
+                        setImageFile(null);
+                        setPreviewUrl(null);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="h-full w-full flex items-center justify-center text-slate-400">
+                  <ImageIcon className="h-8 w-8" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 space-y-2">
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    const file = e.target.files[0];
+                    setImageFile(file);
+                    setPreviewUrl(URL.createObjectURL(file));
+                  }
+                }}
+                className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+              />
+              <p className="text-xs text-muted-foreground">
+                Adicione ou altere a imagem do produto. (JPG, PNG)
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -248,7 +330,11 @@ function EditProductForm({ product, onProductUpdate, setOpen, locations, isMulti
         </div>
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
           <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button type="submit">Salvar Alterações</Button>
+          <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Salvar Alterações
+          </Button>
         </div>
       </form>
     </Form>

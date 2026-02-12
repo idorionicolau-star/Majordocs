@@ -431,25 +431,36 @@ export default function POSPage() {
                                     key={product.name}
                                     onClick={() => addToCart(product)}
                                     className={`
-                    relative group text-left p-4 rounded-xl border-2 transition-all duration-200
-                    hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]
+                    relative group text-left rounded-xl border-2 transition-all duration-200 overflow-hidden
+                    hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex flex-col
                     ${inCart
                                             ? 'border-primary bg-primary/5 shadow-md'
                                             : 'border-border/50 bg-card hover:border-primary/50'
                                         }
                   `}
                                 >
-                                    {inCart && (
-                                        <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg">
-                                            {inCart.quantity}
+                                    {product.imageUrl && (
+                                        <div className="w-full h-32 overflow-hidden bg-slate-100 dark:bg-slate-800">
+                                            <img
+                                                src={product.imageUrl}
+                                                alt={product.name}
+                                                className="w-full h-full object-cover"
+                                            />
                                         </div>
                                     )}
-                                    <div className="space-y-2">
-                                        <p className="font-semibold text-sm leading-tight line-clamp-2">{product.name}</p>
-                                        <Badge variant="secondary" className="text-[10px]">{product.category}</Badge>
-                                        <div className="flex justify-between items-end">
-                                            <span className="text-lg font-bold text-primary">{formatCurrency(product.price)}</span>
-                                            <span className="text-xs text-muted-foreground">{product.availableStock} {product.unit || 'un'}</span>
+                                    <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                                        {inCart && (
+                                            <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg">
+                                                {inCart.quantity}
+                                            </div>
+                                        )}
+                                        <div className="space-y-2">
+                                            <p className="font-semibold text-sm leading-tight line-clamp-2">{product.name}</p>
+                                            <Badge variant="secondary" className="text-[10px]">{product.category}</Badge>
+                                            <div className="flex justify-between items-end">
+                                                <span className="text-lg font-bold text-primary">{formatCurrency(product.price)}</span>
+                                                <span className="text-xs text-muted-foreground">{product.availableStock} {product.unit || 'un'}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </button>

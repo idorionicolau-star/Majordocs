@@ -50,6 +50,15 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
 
     return (
         <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 shadow-sm">
+            {product.imageUrl && (
+                <div className="w-full h-32 mb-2 overflow-hidden rounded-md bg-slate-100 dark:bg-slate-800 shrink-0">
+                    <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+            )}
             <CardHeader className="p-1 sm:p-2">
                 <CardTitle className="text-xs font-bold truncate leading-tight">{product.name}</CardTitle>
                 <div className={cn("mt-1", isCondensed && "hidden")}>

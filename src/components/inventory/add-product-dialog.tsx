@@ -45,7 +45,9 @@ import { calculateSimilarity } from '@/lib/utils';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { ScrollArea } from '../ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, AlertTriangle } from 'lucide-react';
+import { PlusCircle, AlertTriangle, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useStorage } from '@/firebase/provider';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -93,6 +95,8 @@ interface AddProductFormProps {
   isMultiLocation: boolean;
   locations: Location[];
   availableUnits: string[];
+  imageFile: File | null;
+  setImageFile: (file: File | null) => void;
 }
 
 function AddProductForm({
@@ -112,7 +116,9 @@ function AddProductForm({
   handleAddCategory,
   isMultiLocation,
   locations,
-  availableUnits
+  availableUnits,
+  imageFile,
+  setImageFile
 }: AddProductFormProps) {
   const { products } = useContext(InventoryContext) || { products: [] };
 
@@ -166,6 +172,52 @@ function AddProductForm({
                     onValueChange={handleProductSelect}
                   />
                 </FormControl>
+
+                <FormItem className="mt-4">
+                  <FormLabel>Imagem do Produto</FormLabel>
+                  <FormControl>
+                    <div className="flex items-center gap-4">
+                      {imageFile ? (
+                        <div className="relative h-20 w-20 rounded-md overflow-hidden border">
+                          <img
+                            src={URL.createObjectURL(imageFile)}
+                            alt="Preview"
+                            className="h-full w-full object-cover"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-0 right-0 h-5 w-5 rounded-bl-sm"
+                            onClick={() => setImageFile(null)}
+                          >
+                            <span className="sr-only">Remover</span>
+                            <span className="text-xs">×</span>
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="h-20 w-20 rounded-md border border-dashed flex items-center justify-center bg-muted/50 text-muted-foreground">
+                          <ImageIcon className="h-8 w-8 opacity-50" />
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              setImageFile(e.target.files[0]);
+                            }
+                          }}
+                          className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                        />
+                        <FormDescription>
+                          Selecione uma imagem para o produto (opcional).
+                        </FormDescription>
+                      </div>
+                    </div>
+                  </FormControl>
+                </FormItem>
 
                 {similarProduct && (
                   <div className="mt-2 text-sm p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md flex gap-3 items-start animate-in fade-in slide-in-from-top-2 duration-300">
@@ -389,7 +441,10 @@ function AddProductForm({
         </div>
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button type="submit">Adicionar Produto</Button>
+          <Button type="submit" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Adicionar Produto
+          </Button>
         </div>
       </form>
     </Form>
@@ -404,6 +459,8 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [similarProduct, setSimilarProduct] = useState<{ name: string; match: number } | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const storage = useStorage();
 
   const form = useForm<AddProductFormValues>({
     resolver: zodResolver(formSchema),
@@ -437,6 +494,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
         criticalStockThreshold: 5,
         location: finalLocation,
       });
+      setImageFile(null);
     }
   }, [open, locations, form]);
 
@@ -454,7 +512,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       }
     } else {
       setIsCatalogProductSelected(false);
-      form.setValue('price', undefined);
+      form.setValue('price', 0);
       form.setValue('category', '', { shouldValidate: true });
     }
   };
@@ -521,6 +579,22 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       localStorage.setItem('majorstockx-last-product-location', values.location);
     }
 
+    let imageUrl = undefined;
+    if (imageFile) {
+      try {
+        const storageRef = ref(storage, `product-images/${Date.now()}_${imageFile.name}`);
+        const snapshot = await uploadBytes(storageRef, imageFile);
+        imageUrl = await getDownloadURL(snapshot.ref);
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao fazer upload da imagem',
+          description: 'O produto será criado sem imagem.'
+        });
+      }
+    }
+
     const newProduct: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'> = {
       name: values.name,
       category: values.category,
@@ -530,6 +604,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       lowStockThreshold: values.lowStockThreshold,
       criticalStockThreshold: values.criticalStockThreshold,
       location: values.location || (locations.length > 0 ? locations[0].id : 'Principal'),
+      imageUrl: imageUrl,
     };
     onAddProduct(newProduct);
     onOpenChange(false);
@@ -561,6 +636,8 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
           isMultiLocation={isMultiLocation}
           locations={locations}
           availableUnits={availableUnits}
+          imageFile={imageFile}
+          setImageFile={setImageFile}
         />
       </div>
     </ResponsiveDialog>

@@ -76,6 +76,7 @@ export type Product = {
   unit?: string;
   deletedAt?: string;
   deletedBy?: string;
+  imageUrl?: string;
 };
 
 

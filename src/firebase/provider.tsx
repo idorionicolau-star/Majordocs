@@ -7,9 +7,12 @@ import { Auth, getAuth } from 'firebase/auth';
 import { Messaging, getMessaging, isSupported } from 'firebase/messaging';
 import { firebaseConfig } from '@/firebase/config';
 
+import { getStorage, FirebaseStorage } from 'firebase/storage';
+
 // --- Start of logic moved from index.ts ---
 let firebaseApp: FirebaseApp;
 let firestore: Firestore;
+let storage: FirebaseStorage;
 let messaging: Messaging | null = null;
 
 function getFirebaseServices() {
@@ -42,10 +45,15 @@ function getFirebaseServices() {
     }
   }
 
+  if (!storage) {
+    storage = getStorage(firebaseApp);
+  }
+
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
     firestore: firestore,
+    storage: storage,
   };
 }
 
@@ -57,6 +65,10 @@ export function getFirestoreInstance(): Firestore {
   return getFirebaseServices().firestore;
 }
 
+export function getStorageInstance(): FirebaseStorage {
+  return getFirebaseServices().storage;
+}
+
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
   return getFirebaseServices();
@@ -66,7 +78,8 @@ export function getSdks(firebaseApp: FirebaseApp) {
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
+    firestore: getFirestore(firebaseApp),
+    storage: getStorage(firebaseApp),
   };
 }
 // --- End of logic moved from index.ts ---
@@ -77,6 +90,7 @@ export interface FirebaseContextState {
   firestore: Firestore | null;
   auth: Auth | null;
   messaging: Messaging | null;
+  storage: FirebaseStorage | null;
 }
 
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
@@ -89,6 +103,7 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({
     firestore: Firestore | null;
     auth: Auth | null;
     messaging: Messaging | null;
+    storage: FirebaseStorage | null;
   }>(() => {
     const s = initializeFirebase();
     return {
@@ -116,6 +131,7 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({
       firestore: services.firestore,
       auth: services.auth,
       messaging: services.messaging,
+      storage: services.storage,
     };
   }, [services]);
 
@@ -133,7 +149,7 @@ export const useFirebase = (): FirebaseContextState => {
     throw new Error('useFirebase must be used within a FirebaseProvider.');
   }
 
-  if (!context.firebaseApp || !context.firestore || !context.auth) {
+  if (!context.firebaseApp || !context.firestore || !context.auth || !context.storage) {
     throw new Error('Firebase core services not available. Check FirebaseProvider setup.');
   }
 
@@ -148,6 +164,11 @@ export const useAuth = (): Auth => {
 export const useFirestore = (): Firestore => {
   const { firestore } = useFirebase();
   return firestore!;
+};
+
+export const useStorage = (): FirebaseStorage => {
+  const { storage } = useFirebase();
+  return storage!;
 };
 
 export const useFirebaseApp = (): FirebaseApp => {
