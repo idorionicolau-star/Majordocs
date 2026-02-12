@@ -434,7 +434,7 @@ export default function POSPage() {
                             const inCart = cart.find(item => item.productName === product.name);
                             return (
                                 <button
-                                    key={product.name}
+                                    key={product.id || product.name}
                                     onClick={() => addToCart(product)}
                                     className={`
                     relative group text-left rounded-xl border-2 transition-all duration-200 overflow-hidden

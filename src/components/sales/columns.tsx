@@ -21,8 +21,7 @@ import { InventoryContext } from "@/context/inventory-context"
 import { cn } from "@/lib/utils"
 
 
-import { pdf } from '@react-pdf/renderer';
-import { SalePDF } from "./SalePDF";
+import { generateSalePDF } from "@/lib/pdf-generator";
 
 interface ColumnsOptions {
     onUpdateSale: (sale: Sale) => void;
@@ -77,14 +76,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
     };
 
     const handleDownload = async () => {
-        const doc = <SalePDF sale={sale} company={companyData || null} />;
-        const blob = await pdf(doc).toBlob();
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${sale.documentType}_${sale.guideNumber}.pdf`;
-        link.click();
-        URL.revokeObjectURL(url);
+        generateSalePDF(sale, companyData || null);
     };
 
     const handlePrint = () => {
