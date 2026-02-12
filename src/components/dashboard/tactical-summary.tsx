@@ -10,8 +10,6 @@ import { InventoryContext } from '@/context/inventory-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { isToday } from 'date-fns';
-import { pdf } from '@react-pdf/renderer';
-import { InsightsPDF } from './InsightsPDF';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -100,14 +98,12 @@ export const TacticalSummary = () => {
   const handleDownloadPDF = async () => {
     if (!insights) return;
 
-    const doc = <InsightsPDF insights={insights} companyName={companyData?.name || 'MajorStockX'} date={new Date()} />;
-    const blob = await pdf(doc).toBlob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Insights_MajorStockX_${new Date().toISOString().split('T')[0]}.pdf`;
-    link.click();
-    URL.revokeObjectURL(url);
+    try {
+      const { generateInsightsPDF } = await import('@/lib/pdf-generator');
+      generateInsightsPDF(insights, companyData?.name || 'MajorStockX', new Date());
+    } catch (error) {
+      console.error("Erro ao gerar PDF de insights:", error);
+    }
   };
 
   const handlePrint = () => {

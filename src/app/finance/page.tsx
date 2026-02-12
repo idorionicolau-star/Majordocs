@@ -34,19 +34,13 @@ import { formatCurrency, normalizeString } from '@/lib/utils';
 import { Search, Plus, TrendingUp, TrendingDown, DollarSign, Calendar, Trash2, Printer, Download } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import dynamic from 'next/dynamic';
 import { printFinancialReport } from '@/lib/report-utils';
-
-// Dynamically import PDFDownloadLink to avoid SSR issues with @react-pdf/renderer
-const PDFDownloadLink = dynamic(
-    () => import('@react-pdf/renderer').then((mod) => mod.PDFDownloadLink),
-    { ssr: false, loading: () => <Button variant="outline" disabled><Download className="w-4 h-4 mr-2" /> A carregar...</Button> }
-);
-import { FinancialReportPDF } from '@/components/finance/financial-report-pdf';
+import { useToast } from '@/hooks/use-toast';
 
 export default function FinancePage() {
     const { canView, sales, companyData, confirmAction } = useInventory();
     const { expenses, addExpense, deleteExpense, loading } = useFinance();
+    const { toast } = useToast();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [isAddOpen, setIsAddOpen] = useState(false);
@@ -169,27 +163,32 @@ export default function FinancePage() {
                         Imprimir
                     </Button>
 
-                    <PDFDownloadLink
-                        document={
-                            <FinancialReportPDF
-                                companyName={companyData?.name || 'Minha Empresa'}
-                                period={format(new Date(), "MMMM yyyy", { locale: ptBR })}
-                                totalIncome={totalIncome}
-                                totalExpenses={totalExpenses}
-                                netProfit={netProfit}
-                                sales={currentMonthSales}
-                                expenses={currentMonthExpenses}
-                            />
-                        }
-                        fileName={`Relatorio_Financeiro_${format(new Date(), "MMM_yyyy")}.pdf`}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full sm:w-auto"
+                        onClick={async () => {
+                            try {
+                                const { generateFinancialReportPDF } = await import('@/lib/pdf-generator');
+                                generateFinancialReportPDF(
+                                    companyData?.name || 'Minha Empresa',
+                                    format(new Date(), "MMMM yyyy", { locale: ptBR }),
+                                    totalIncome,
+                                    totalExpenses,
+                                    netProfit,
+                                    currentMonthSales,
+                                    currentMonthExpenses
+                                );
+                                toast({ title: "Relatório gerado", description: "Relatório financeiro gerado com sucesso!" });
+                            } catch (error) {
+                                console.error("Erro ao gerar PDF:", error);
+                                toast({ variant: "destructive", title: "Erro", description: "Erro ao gerar o relatório PDF." });
+                            }
+                        }}
                     >
-                        {({ loading: pdfLoading }: any) => (
-                            <Button variant="outline" size="sm" className="w-full sm:w-auto" disabled={pdfLoading}>
-                                <Download className="w-4 h-4 mr-2" />
-                                {pdfLoading ? 'A preparar...' : 'Baixar PDF'}
-                            </Button>
-                        )}
-                    </PDFDownloadLink>
+                        <Download className="w-4 h-4 mr-2" />
+                        Baixar PDF
+                    </Button>
                 </div>
             </div>
 

@@ -358,3 +358,164 @@ export const generateFinancialReportPDF = (companyName: string, period: string, 
 
     doc.save(`Relatorio_Financeiro_${period.replace(/ /g, '_')}.pdf`);
 };
+
+export const generateReportPDF = (sales: any[], summary: any, company: Company | null, date: Date, aiSummary: string, period: string, returnBlob: boolean = false) => {
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(59, 130, 246); // Blue-500
+    doc.text('Relatório de Vendas', 195, 22, { align: 'right' });
+
+    doc.setFontSize(16);
+    doc.setTextColor(30, 41, 59); // Slate-800
+    doc.text(company?.name || 'MajorStockX', 14, 22);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Gerado em: ${date.toLocaleDateString('pt-BR')}`, 14, 30);
+    doc.text(`Período: ${period}`, 14, 35);
+
+    // AI Summary Box
+    if (aiSummary) {
+        doc.setFillColor(241, 245, 249); // Slate-100
+        doc.setDrawColor(59, 130, 246); // Blue-500
+        doc.rect(14, 45, 180, 25, 'F');
+        doc.setLineWidth(1);
+        doc.line(14, 45, 14, 70); // Left border
+
+        doc.setFontSize(9);
+        doc.setTextColor(71, 85, 105); // Slate-600
+        doc.setFont("helvetica", "italic");
+
+        const splitText = doc.splitTextToSize(aiSummary, 170);
+        doc.text(splitText, 18, 52);
+    }
+
+    // Summary Cards Section
+    let startY = aiSummary ? 80 : 50;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42); // Slate-900
+    doc.text("Resumo do Período", 14, startY);
+
+    startY += 10;
+
+    // Draw simplified summary cards (just text for now to keep it clean)
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text("TOTAL VENDAS", 14, startY);
+    doc.text("VALOR TOTAL", 60, startY);
+    doc.text("TICKET MÉDIO", 110, startY);
+
+    startY += 6;
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text(summary.totalSales.toString(), 14, startY);
+    doc.text(formatCurrency(summary.totalValue), 60, startY);
+    doc.text(formatCurrency(summary.averageTicket), 110, startY);
+
+    // Sales Table
+    const headers = [["Data", "Produto", "Qtd.", "Preço Unit.", "Total", "Vendedor"]];
+    const data = sales.map(s => [
+        new Date(s.date).toLocaleDateString('pt-BR'),
+        s.productName,
+        s.quantity,
+        formatCurrency(s.unitPrice),
+        formatCurrency(s.totalValue),
+        s.sellerName || 'N/A'
+    ]);
+
+    autoTable(doc, {
+        head: headers,
+        body: data,
+        startY: startY + 15,
+        theme: 'striped',
+        headStyles: { fillColor: [248, 250, 252], textColor: [71, 85, 105] }, // Slate-50, Slate-600
+        styles: { fontSize: 9, cellPadding: 3, textColor: [51, 65, 85] },
+        alternateRowStyles: { fillColor: [255, 255, 255] }
+    });
+
+    doc.save(`Relatorio_Vendas_${period}_${new Date().toISOString().split('T')[0]}.pdf`);
+};
+
+export const generateInsightsPDF = (insights: string, companyName: string, date: Date) => {
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(15, 23, 42); // Slate-900
+    doc.text('Relatório de Insights Operacionais', 14, 20);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100); // Gray
+    doc.text(`${companyName} • ${date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}`, 14, 26);
+
+    doc.setDrawColor(226, 232, 240); // Slate-200
+    doc.line(14, 32, 196, 32);
+
+    let y = 40;
+    const pageWidth = 170; // Width available for text
+    const lineHeight = 6;
+
+    const lines = insights.split('\n');
+
+    doc.setFontSize(10);
+    doc.setTextColor(51, 65, 85); // Slate-700
+
+    lines.forEach(line => {
+        if (y > 280) {
+            doc.addPage();
+            y = 20;
+        }
+
+        const cleanLine = line.trim();
+        if (!cleanLine) {
+            y += lineHeight;
+            return;
+        }
+
+        const isBullet = cleanLine.startsWith('- ') || cleanLine.startsWith('* ');
+        const textContent = isBullet ? cleanLine.substring(2) : cleanLine;
+
+        let finalContent = textContent;
+        let isBold = false;
+
+        // Simple bold parser: **text**
+        if (textContent.startsWith('**') && textContent.endsWith('**')) {
+            finalContent = textContent.replace(/\*\*/g, '');
+            isBold = true;
+        }
+
+        if (isBold) doc.setFont("helvetica", "bold");
+        else doc.setFont("helvetica", "normal");
+
+        if (isBullet) {
+            doc.text('•', 14, y);
+            const splitText = doc.splitTextToSize(finalContent, pageWidth - 5);
+            doc.text(splitText, 20, y);
+            y += splitText.length * lineHeight;
+        } else {
+            const splitText = doc.splitTextToSize(finalContent, pageWidth);
+            doc.text(splitText, 14, y);
+            y += splitText.length * lineHeight;
+        }
+
+        // Reset font
+        doc.setFont("helvetica", "normal");
+        y += 2; // Extra spacing between paragraphs
+    });
+
+    // Footer
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184); // Slate-400
+        doc.text(`${companyName} © MajorStockX - Página ${i} de ${pageCount}`, 105, 290, { align: 'center' });
+    }
+
+    doc.save(`Insights_MajorStockX_${date.toISOString().split('T')[0]}.pdf`);
+};

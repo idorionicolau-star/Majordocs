@@ -195,6 +195,7 @@ export default function ReportsPage() {
 
     try {
       const fbToken = await auth.currentUser?.getIdToken();
+      // Fetches AI summary from API (PDF generation is now client-side)
       const response = await fetch('/api/generate-report', {
         method: 'POST',
         headers: {
@@ -210,30 +211,14 @@ export default function ReportsPage() {
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.details || errorData.error || 'Falha ao gerar o PDF no servidor.');
+      let aiSummary = "";
+      if (response.ok) {
+        const data = await response.json();
+        aiSummary = data.aiSummary;
       }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-
-      const contentDisposition = response.headers.get('content-disposition');
-      let fileName = 'relatorio.pdf';
-      if (contentDisposition) {
-        const fileNameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
-        if (fileNameMatch && fileNameMatch.length > 1) {
-          fileName = fileNameMatch[1];
-        }
-      }
-      a.download = fileName;
-
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      const { generateReportPDF } = await import('@/lib/pdf-generator');
+      generateReportPDF(salesForPeriod, reportSummary, companyData, selectedDate, aiSummary, getPeriodDescription());
 
       toast({ title: "Sucesso!", description: "O seu relatório em PDF foi descarregado." });
 
@@ -289,12 +274,16 @@ export default function ReportsPage() {
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.details || errorData.error || 'Falha ao gerar o PDF no servidor.');
+      let aiSummary = "";
+      if (response.ok) {
+        const data = await response.json();
+        aiSummary = data.aiSummary;
       }
 
-      const blob = await response.blob();
+      const { generateReportPDF } = await import('@/lib/pdf-generator');
+      // Generate blob for sharing
+      const blob = generateReportPDF(salesForPeriod, reportSummary, companyData, selectedDate, aiSummary, getPeriodDescription(), true) as Blob;
+
       const fileName = `relatorio-vendas-${format(selectedDate, 'MM-yyyy')}.pdf`;
       const file = new File([blob], fileName, { type: 'application/pdf' });
 
