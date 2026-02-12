@@ -5,10 +5,10 @@ const nextConfig = {
     // Isso vai ignorar o erro da biblioteca Resend e permitir que o build termine
     ignoreBuildErrors: true,
   },
-  eslint: {
-    // Opcional: ignora erros de linting também, se estiverem travando o build
-    ignoreDuringBuilds: true,
-  },
+  // eslint: {
+  //   ignoreDuringBuilds: true,
+  // },
+  turbopack: {},
 };
 
 import withPWA from 'next-pwa';

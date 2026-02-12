@@ -4,7 +4,7 @@ import React, { useState, useContext, useMemo, useCallback, useEffect } from 're
 import { InventoryContext } from '@/context/inventory-context';
 import { useCRM } from '@/context/crm-context';
 import type { CartItem, Product, Sale, Location } from '@/lib/types';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, normalizeString } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
@@ -159,15 +159,22 @@ export default function POSPage() {
         let result = availableProducts;
 
         if (searchQuery) {
-            const query = searchQuery.toLowerCase();
+            const query = normalizeString(searchQuery);
             result = result.filter(p =>
-                p.name.toLowerCase().includes(query) ||
-                p.category?.toLowerCase().includes(query)
+                normalizeString(p.name).includes(query) ||
+                (p.category && normalizeString(p.category).includes(query))
             );
         }
 
-        if (selectedCategory !== 'all') {
-            result = result.filter(p => p.category === selectedCategory);
+
+        if (selectedCategory && selectedCategory !== 'all') {
+            const normalizedCategory = normalizeString(selectedCategory);
+            console.log(`Filtering by category: ${selectedCategory} (${normalizedCategory})`);
+
+            result = result.filter(p => {
+                if (!p.category) return false;
+                return normalizeString(p.category) === normalizedCategory;
+            });
         }
 
         return result;
@@ -413,7 +420,7 @@ export default function POSPage() {
                                     variant={selectedCategory === cat ? 'default' : 'outline'}
                                     size="sm"
                                     className="whitespace-nowrap rounded-full"
-                                    onClick={() => setSelectedCategory(cat)}
+                                    onClick={() => setSelectedCategory(selectedCategory === cat ? 'all' : cat)}
                                 >
                                     {cat === 'all' ? 'Todos' : cat}
                                 </Button>
