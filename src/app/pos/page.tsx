@@ -382,7 +382,7 @@ export default function POSPage() {
                     <Card className="glass-panel border-none p-4">
                         <div className="flex flex-col sm:flex-row gap-3">
                             <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                                 <Input
                                     placeholder="Pesquisar produto..."
                                     value={searchQuery}
@@ -465,7 +465,7 @@ export default function POSPage() {
 
                 {/* RIGHT: Cart */}
                 <div className="space-y-4">
-                    <Card className="sticky top-4 border-2 border-primary/20 shadow-xl">
+                    <Card className="sticky top-20 border-2 border-primary/20 shadow-xl z-20">
                         <CardHeader className="pb-3">
                             <div className="flex items-center justify-between">
                                 <CardTitle className="flex items-center gap-2 text-lg">
