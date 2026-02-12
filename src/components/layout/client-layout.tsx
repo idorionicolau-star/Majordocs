@@ -62,12 +62,25 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
     const isAuthenticated = !!authContext?.firebaseUser;
 
+    // Save current path if authenticated and not on auth pages
+    if (isAuthenticated && !isAuthPage && pathname) {
+      localStorage.setItem('majorstockx-last-path', pathname + (window.location.search || ''));
+    }
+
     if (isAuthenticated && isAuthPage) {
       router.replace('/dashboard');
     }
 
     if (!isAuthenticated && !isAuthPage) {
       router.replace('/login');
+    }
+
+    // Restore last path on mount if on dashboard
+    if (isAuthenticated && pathname === '/dashboard') {
+      const lastPath = localStorage.getItem('majorstockx-last-path');
+      if (lastPath && lastPath !== '/dashboard' && !lastPath.includes('/login') && !lastPath.includes('/register')) {
+        router.replace(lastPath);
+      }
     }
 
   }, [authContext?.loading, authContext?.firebaseUser, pathname, router, isAuthPage]);
