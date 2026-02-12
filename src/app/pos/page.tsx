@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
     Select,
     SelectContent,
@@ -103,6 +104,7 @@ export default function POSPage() {
     const [checkoutVatPercentage, setCheckoutVatPercentage] = useState(17);
     const [checkoutDiscountType, setCheckoutDiscountType] = useState<'fixed' | 'percentage'>('fixed');
     const [checkoutDiscountValue, setCheckoutDiscountValue] = useState(0);
+    const [checkoutDate, setCheckoutDate] = useState<Date>(new Date());
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Load cart from localStorage on mount
@@ -279,7 +281,7 @@ export default function POSPage() {
             // Create individual sales for each cart item, all linked by the same guide number
             for (const item of cart) {
                 const saleData: Omit<Sale, 'id' | 'guideNumber'> = {
-                    date: new Date().toISOString(),
+                    date: checkoutDate.toISOString(),
                     productId: item.productId,
                     productName: item.productName,
                     quantity: item.quantity,
@@ -322,6 +324,7 @@ export default function POSPage() {
     };
 
     const resetCheckoutForm = () => {
+        setCheckoutDate(new Date());
         setCheckoutClientName('');
         setCheckoutCustomerId('new');
         setCheckoutDocType('Factura Proforma');
@@ -625,6 +628,10 @@ export default function POSPage() {
 
                             {/* Customer */}
                             <div className="space-y-3">
+                                <div className="space-y-2">
+                                    <Label>Data da Venda</Label>
+                                    <DatePicker date={checkoutDate} setDate={(d) => d && setCheckoutDate(d)} />
+                                </div>
                                 <div className="space-y-2">
                                     <Label>Cliente Registado</Label>
                                     <Select value={checkoutCustomerId} onValueChange={setCheckoutCustomerId}>
