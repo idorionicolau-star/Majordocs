@@ -390,7 +390,7 @@ export default function POSPage() {
                                     placeholder="Pesquisar produto..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-12 h-12 bg-background/50 text-foreground placeholder:text-muted-foreground"
+                                    className="pl-14 h-12 bg-background/50 text-foreground placeholder:text-muted-foreground"
                                 />
                             </div>
                             {isMultiLocation && (
