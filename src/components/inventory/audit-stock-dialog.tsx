@@ -56,9 +56,13 @@ function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProp
     },
   });
 
-  function onSubmit(values: AuditStockFormValues) {
-    if (!auditStock) return;
-    if (product.id) auditStock(product.id, values.physicalCount, values.reason);
+  async function onSubmit(values: AuditStockFormValues) {
+    console.log("AuditStockDialog onSubmit triggered", values);
+    if (!auditStock) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Erro interno: Função de auditoria não encontrada.' });
+      return;
+    }
+    await auditStock(product, values.physicalCount, values.reason);
     setOpen(false);
   }
 
@@ -84,7 +88,7 @@ function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProp
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+        <form onSubmit={form.handleSubmit(onSubmit, (errors) => console.error("Form errors:", errors))} className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4 rounded-lg border p-4">
             <div className="text-center">
               <p className="text-sm font-medium text-muted-foreground">Stock no Sistema</p>

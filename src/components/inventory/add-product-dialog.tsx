@@ -579,7 +579,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       localStorage.setItem('majorstockx-last-product-location', values.location);
     }
 
-    let imageUrl = undefined;
+    let imageUrl: string | null = null;
     if (imageFile) {
       try {
         const storageRef = ref(storage, `product-images/${Date.now()}_${imageFile.name}`);
@@ -604,7 +604,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       lowStockThreshold: values.lowStockThreshold,
       criticalStockThreshold: values.criticalStockThreshold,
       location: values.location || (locations.length > 0 ? locations[0].id : 'Principal'),
-      imageUrl: imageUrl,
+      imageUrl: imageUrl as any,
     };
     onAddProduct(newProduct);
     onOpenChange(false);

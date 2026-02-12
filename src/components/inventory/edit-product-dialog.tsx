@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MathInput } from "@/components/ui/math-input";
 
 import { Edit2 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -126,7 +127,7 @@ function EditProductForm({ product, onProductUpdate, setOpen, locations, isMulti
       }
     } else if (previewUrl === null && product.imageUrl) {
       // Image was removed
-      imageUrl = undefined;
+      imageUrl = null as any;
     }
 
 
@@ -257,7 +258,11 @@ function EditProductForm({ product, onProductUpdate, setOpen, locations, isMulti
             <FormItem>
               <FormLabel>Preço Unitário (MT)</FormLabel>
               <FormControl>
-                <Input type="number" step="0.01" {...field} />
+                <MathInput
+                  {...field}
+                  onValueChange={field.onChange}
+                  ref={field.ref}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -271,7 +276,11 @@ function EditProductForm({ product, onProductUpdate, setOpen, locations, isMulti
               <FormItem>
                 <FormLabel>Estoque</FormLabel>
                 <FormControl>
-                  <Input type="number" step="any" {...field} />
+                  <MathInput
+                    {...field}
+                    onValueChange={field.onChange}
+                    ref={field.ref}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -308,7 +317,11 @@ function EditProductForm({ product, onProductUpdate, setOpen, locations, isMulti
               <FormItem>
                 <FormLabel>Alerta Baixo</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <MathInput
+                    {...field}
+                    onValueChange={field.onChange}
+                    ref={field.ref}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -321,7 +334,11 @@ function EditProductForm({ product, onProductUpdate, setOpen, locations, isMulti
               <FormItem>
                 <FormLabel>Alerta Crítico</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <MathInput
+                    {...field}
+                    onValueChange={field.onChange}
+                    ref={field.ref}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

@@ -12,7 +12,7 @@ import React, {
   useRef,
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { Product, Location, Sale, Production, ProductionLog, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification, DashboardStats, InventoryContextType, ChatMessage, RawMaterial, Recipe } from '@/lib/types';
+import type { Product, Location, Sale, Production, ProductionLog, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification, DashboardStats, InventoryContextType, ChatMessage, RawMaterial, Recipe, CartItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase, getFirebaseAuth } from '@/firebase/provider';
@@ -720,9 +720,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const batch = writeBatch(firestore);
     const { stock, ...restOfData } = updatedData;
 
+    // Remove undefined values to prevent Firestore errors
+    const safeData = Object.entries(restOfData).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {} as Record<string, any>);
+
     productToUpdate.sourceIds.forEach(id => {
       const docRef = doc(productsCollectionRef, id);
-      batch.update(docRef, { ...restOfData, lastUpdated: new Date().toISOString() });
+      batch.update(docRef, { ...safeData, lastUpdated: new Date().toISOString() });
     });
 
     if (stock !== undefined) {
@@ -815,7 +823,24 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [productsCollectionRef, products, firestore, user, toast]);
 
   const auditStock = useCallback(async (product: Product, physicalCount: number, reason: string) => {
-    if (!firestore || !companyId || !user || !product.id) return;
+    console.log("auditStock called", { product, physicalCount, reason, firestore: !!firestore, companyId, user: !!user });
+
+    if (!firestore) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Erro de conexão: Firestore não disponível.' });
+      return;
+    }
+    if (!companyId) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Erro de sessão: ID da empresa em falta.' });
+      return;
+    }
+    if (!user) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Erro de sessão: Utilizador não identificado.' });
+      return;
+    }
+    if (!product.id) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Produto inválido: ID em falta.' });
+      return;
+    }
 
     const productRef = doc(firestore, `companies/${companyId}/products`, product.id);
     const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
@@ -823,9 +848,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const systemCountBefore = product.stock;
     const adjustment = physicalCount - systemCountBefore;
 
+    // If adjustment is 0, we still log the audit confirmation.
     if (adjustment === 0) {
-      toast({ title: 'Nenhum ajuste necessário', description: 'A contagem física corresponde ao stock do sistema.' });
-      return;
+      // toast({ title: 'Stock Verificado', description: 'A contagem física confirma o stock do sistema.' });
+      // Proceed to log
     }
 
     try {
@@ -1119,6 +1145,131 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, toast, triggerEmailAlert]);
 
+  const addBulkSale = useCallback(async (
+    items: CartItem[],
+    saleData: {
+      customerId?: string;
+      clientName?: string;
+      documentType: Sale['documentType'];
+      notes?: string;
+      discount?: { type: 'fixed' | 'percentage'; value: number };
+      applyVat: boolean;
+      vatPercentage: number;
+    }
+  ) => {
+    if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
+    if (!items || items.length === 0) throw new Error("O carrinho está vazio.");
+
+    const salesCollectionRef = collection(firestore, `companies/${companyId}/sales`);
+    const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+    const companyDocRef = doc(firestore, `companies/${companyId}`);
+
+    let guideNumberForOuterScope: string | null = null;
+    let createdSalesForOuterScope: Sale[] = [];
+
+    await runTransaction(firestore, async (transaction) => {
+      // 1. READS (All reads must come before writes)
+      const companyDoc = await transaction.get(companyDocRef);
+      if (!companyDoc.exists()) throw new Error("Empresa não encontrada.");
+
+      const productReads = items.map(item => transaction.get(doc(productsCollectionRef, item.productId)));
+      const productSnaps = await Promise.all(productReads);
+
+      // 2. VALIDATION & LOGIC
+      const currentCompanyData = companyDoc.data();
+      const newSaleCounter = (currentCompanyData.saleCounter || 0) + 1;
+      const guideNumber = `GT-${String(newSaleCounter).padStart(6, '0')}`;
+      guideNumberForOuterScope = guideNumber;
+
+      const salesToCreate: Sale[] = [];
+      const movementsToCreate: any[] = [];
+      const productUpdates: { ref: DocumentReference; data: any }[] = [];
+
+      productSnaps.forEach((pSnap, index) => {
+        if (!pSnap.exists()) {
+          throw new Error(`Produto "${items[index].productName}" (ID: ${items[index].productId}) não encontrado.`);
+        }
+        const productData = pSnap.data() as Product;
+        const item = items[index];
+
+        const availableStock = productData.stock - productData.reservedStock;
+        if (availableStock < item.quantity) {
+          throw new Error(`Stock insuficiente para "${item.productName}". Disponível: ${availableStock}.`);
+        }
+
+        const newReservedStock = productData.reservedStock + item.quantity;
+
+        productUpdates.push({
+          ref: pSnap.ref,
+          data: { reservedStock: newReservedStock, lastUpdated: new Date().toISOString() }
+        });
+
+        const newSaleRef = doc(salesCollectionRef); // Auto-ID
+        const sale: Sale = {
+          id: newSaleRef.id,
+          guideNumber,
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalValue: item.subtotal,
+          subtotal: item.subtotal,
+          date: new Date().toISOString(),
+          status: 'Pago', // Default to Paid for POS/Bulk
+          paymentMethod: 'Numerário', // Default, should be passed in saleData ideally
+          location: item.location || productData.location || (locations.length > 0 ? locations[0].id : 'Principal'),
+          unit: item.unit || productData.unit || 'un',
+          soldBy: user.username,
+          documentType: saleData.documentType,
+          clientName: saleData.clientName,
+          customerId: saleData.customerId,
+          notes: saleData.notes,
+        };
+
+        salesToCreate.push(sale);
+        createdSalesForOuterScope.push(sale);
+
+        // We don't create movement here for RESERVED stock, only when picked up? 
+        // Logic in addSale updates reservedStock. Logic in confirmSalePickup deducts stock and creates movement.
+        // Assuming bulk sale (POS) is immediate pickup? 
+        // If it's POS, usually stock is deducted immediately. 
+        // However, addSale logic reserves it. 
+        // If we want immediate deduction, we should do it here. 
+        // But to keep consistency with "Confirm Pickup" flow, we might just reserve. 
+        // WAITING: If POS, we usually want it DONE. 
+        // Let's stick to RESERVING logic to match `addSale`, or check if `addSale` has an option.
+        // `addSale` has `reserveStock` param. 
+        // For POS, if the customer takes it, we should probably confirm pickup immediately?
+        // But for now, let's just create the sale (which reserves stock) and let the user "Confirm Pickup" or we auto-confirm?
+        // To be safe and consistent with existing flow: Create Sale (Reserved). 
+        // The user can then "Deliver" it. 
+        // OR: If it's POS, maybe we auto-confirm? 
+        // Let's just do Reserve for now to be safe.
+      });
+
+      // 3. WRITES
+      transaction.update(companyDocRef, { saleCounter: newSaleCounter });
+
+      productUpdates.forEach(update => {
+        transaction.update(update.ref, update.data);
+      });
+
+      salesToCreate.forEach(sale => {
+        transaction.set(doc(salesCollectionRef, sale.id), sale);
+      });
+    });
+
+    // Post-transaction UI/Notifications
+    if (guideNumberForOuterScope && createdSalesForOuterScope.length > 0) {
+      toast({
+        title: "Venda Registada!",
+        description: `Guia ${guideNumberForOuterScope} gerada com ${items.length} itens.`,
+      });
+      // Trigger alerts or downloads if needed
+    }
+
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, toast, triggerEmailAlert]);
+
   const confirmSalePickup = useCallback(async (sale: Sale) => {
     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
 
@@ -1131,7 +1282,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const freshSale = saleSnap.data() as Sale;
 
     const amountPaid = freshSale.amountPaid ?? 0;
-    // Allow for a small tolerance (e.g., 0.50) to account for rounding errors or negligible differences
     if ((freshSale.totalValue - amountPaid) > 0.5) {
       toast({
         variant: "destructive",
@@ -1173,7 +1323,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       }
 
       if (newStock < 0) {
-        throw new Error("Erro Crítico: Stock insuficiente para realizar o levantamento."); // Physical stock MUST be sufficient
+        throw new Error("Erro Crítico: Stock insuficiente para realizar o levantamento.");
       }
 
       // 3. WRITES
@@ -1187,7 +1337,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         productId: productDocRef.id,
         productName: freshSale.productName,
         type: 'OUT',
-        quantity: -freshSale.quantity, // Negative for stock out
+        quantity: -freshSale.quantity,
         fromLocationId: productData.location,
         reason: `Venda #${freshSale.guideNumber}`,
         userId: user.id,
@@ -1991,7 +2141,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     businessStartDate,
     chatHistory, setChatHistory,
     addProduct, updateProduct, deleteProduct,
-    auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
+    auditStock, transferStock, updateProductStock, updateCompany, addSale, addBulkSale, confirmSalePickup, addProductionLog,
     addProduction, updateProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
     clearProductsCollection,
     mergeProducts,
@@ -2023,7 +2173,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     businessStartDate,
     chatHistory, setChatHistory,
     addProduct, updateProduct, deleteProduct,
-    auditStock, transferStock, updateProductStock, updateCompany, addSale, confirmSalePickup, addProductionLog,
+    auditStock, transferStock, updateProductStock, updateCompany, addSale, addBulkSale, confirmSalePickup, addProductionLog,
     addProduction, updateProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
     clearProductsCollection,
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,

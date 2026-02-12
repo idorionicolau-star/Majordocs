@@ -146,6 +146,7 @@ export type Sale = {
   clientName?: string; // Legacy field, allow keep for history
   notes?: string;
   transactionId?: string; // For grouping multi-item sales
+  paymentMethod?: string;
 };
 
 export type CartItem = {
