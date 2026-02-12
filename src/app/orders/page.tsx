@@ -408,193 +408,176 @@ export default function OrdersPage() {
   };
 
   const handleDownloadPdfReport = async () => {
-    const { pdf } = await import('@react-pdf/renderer');
-    const { OrdersPDF } = await import('@/components/orders/OrdersPDF');
-
-    const doc = <OrdersPDF
-      orders={filteredOrders}
-      company={companyData || null}
-    />;
-
-    const blob = await pdf(doc).toBlob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Relatorio_Encomendas_${new Date().toISOString().split('T')[0]}.pdf`;
-    link.click();
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: "Download Concluído",
-      description: "O relatório de encomendas foi descarregado.",
-    });
-  };
-
-  const handleDeleteOrder = async (orderId: string) => {
-    const order = orders.find(o => o.id === orderId);
-    if (!order) return;
-
-    if (confirmAction) {
-      confirmAction(async () => {
-        try {
-          await deleteOrder(orderId);
-          toast({ title: 'Encomenda Apagada', description: `A encomenda de ${order.clientName} foi movida para a lixeira.` });
-        } catch (error: any) {
-          // Error handled in context mostly, but good to catch
-        }
-      }, "Apagar Encomenda", `Tem a certeza que deseja apagar a encomenda de "${order.clientName}" (${order.productName})? Esta ação moverá a encomenda para a lixeira e reporá o stock reservado.`);
-    } else {
-      // Fallback
-      if (window.confirm(`Tem a certeza que deseja apagar a encomenda de "${order.clientName}"?`)) {
-        try {
-          await deleteOrder(orderId);
-        } catch (e) { }
-      }
+    try {
+      const { generateOrdersPDF } = await import('@/lib/pdf-generator');
+      generateOrdersPDF(filteredOrders, companyData);
+      toast({
+        title: "Relatório gerado",
+        description: "Relatório de encomendas gerado com sucesso!",
+      });
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao gerar o relatório PDF.",
+        variant: "destructive",
+      });
+    } catch (error: any) {
+      // Error handled in context mostly, but good to catch
     }
-  };
-
-  if (inventoryLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-12 w-1/3" />
-        <Skeleton className="h-8 w-1/4" />
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      </div>
-    );
+  }, "Apagar Encomenda", `Tem a certeza que deseja apagar a encomenda de "${order.clientName}" (${order.productName})? Esta ação moverá a encomenda para a lixeira e reporá o stock reservado.`);
+} else {
+  // Fallback
+  if (window.confirm(`Tem a certeza que deseja apagar a encomenda de "${order.clientName}"?`)) {
+    try {
+      await deleteOrder(orderId);
+    } catch (e) { }
   }
+}
+    };
 
+if (inventoryLoading) {
   return (
-    <>
-      <AlertDialog open={showAutoProductionConfirm} onOpenChange={setShowAutoProductionConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Produção Incompleta</AlertDialogTitle>
-            <AlertDialogDescription>
-              A encomenda de **{pendingConclusionOrder?.productName}** tem apenas **{pendingConclusionOrder?.quantityProduced}** de **{pendingConclusionOrder?.quantity}** unidades produzidas.
-              <br /><br />
-              Deseja registar automaticamente a produção das **{pendingConclusionOrder && (pendingConclusionOrder.quantity - pendingConclusionOrder.quantityProduced)}** unidades restantes e adicionar ao stock?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => { setShowAutoProductionConfirm(false); setPendingConclusionOrder(null); }}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmAutoProduction} className="bg-emerald-600 hover:bg-emerald-700">
-              Sim, Produzir e Finalizar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <div className="flex flex-col gap-6 pb-20">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-headline font-bold">Encomendas de Produção</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={handleDownloadPdfReport} variant="outline" className="h-12">
-              <Download className="mr-2 h-4 w-4" />
-              Baixar PDF
-            </Button>
-            <Button onClick={handlePrintReport} variant="outline" className="h-12">
-              <Printer className="mr-2 h-4 w-4" />
-              Imprimir
-            </Button>
-          </div>
-        </div>
-
-        <Card className="glass-panel p-4 mb-6 border-none">
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row items-center gap-2">
-              <Input
-                placeholder="Filtrar por produto ou cliente..."
-                value={nameFilter}
-                onChange={(event) => setNameFilter(event.target.value)}
-                className="w-full md:max-w-sm shadow-lg h-12 text-sm bg-background/50"
-              />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="shadow-lg h-12 w-full sm:w-auto bg-background/50">
-                    <Filter className="mr-2 h-4 w-4" />
-                    {statusFilter === 'all' ? 'Todos os Status' : statusFilter}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Filtrar por Status</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuCheckboxItem checked={statusFilter === 'all'} onCheckedChange={() => setStatusFilter('all')}>Todos</DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={statusFilter === 'Pendente'} onCheckedChange={() => setStatusFilter('Pendente')}>Pendentes</DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={statusFilter === 'Em produção'} onCheckedChange={() => setStatusFilter('Em produção')}>Em produção</DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={statusFilter === 'Concluída'} onCheckedChange={() => setStatusFilter('Concluída')}>Concluídas</DropdownMenuCheckboxItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </Card>
-
-        <div>
-          {filteredOrders.length > 0 ? (
-            <VirtuosoGrid
-              useWindowScroll
-              increaseViewportBy={500}
-              data={filteredOrders}
-              totalCount={filteredOrders.length}
-              components={{
-                List: (() => {
-                  const List = forwardRef<HTMLDivElement>((props, ref) => (
-                    <div
-                      {...props}
-                      ref={ref}
-                      className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-20"
-                    />
-                  ));
-                  List.displayName = 'OrdersVirtuosoList';
-                  return List;
-                })(),
-                Item: (() => {
-                  const Item = forwardRef<HTMLDivElement>((props, ref) => <div {...props} ref={ref} className="h-full" />);
-                  Item.displayName = 'OrdersVirtuosoItem';
-                  return Item;
-                })()
-              }}
-              itemContent={(index, order) => (
-                <OrderCard
-                  key={order.id}
-                  order={order}
-                  onUpdateStatus={handleUpdateOrderStatus}
-                  onAddProductionLog={addProductionLog}
-                  onDeleteOrder={handleDeleteOrder}
-                  canEdit={canEditOrders}
-                />
-              )}
-            />
-          ) : (
-            <div className="text-center text-muted-foreground py-10">
-              <p>Nenhuma encomenda encontrada com os filtros atuais.</p>
-            </div>
-          )}
-        </div>
-
+    <div className="space-y-4">
+      <Skeleton className="h-12 w-1/3" />
+      <Skeleton className="h-8 w-1/4" />
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
       </div>
-      {canEditOrders && (
-        <>
-          <AddOrderDialog
-            open={isAddDialogOpen}
-            onOpenChange={setAddDialogOpen}
-            onAddOrder={handleAddOrder}
-          />
-          <Button
-            onClick={() => setAddDialogOpen(true)}
-            className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
-            size="icon"
-          >
-            <Plus className="h-6 w-6" />
-            <span className="sr-only">Adicionar Encomenda</span>
-          </Button>
-        </>
-      )}
-    </>
+    </div>
   );
 }
+
+return (
+  <>
+    <AlertDialog open={showAutoProductionConfirm} onOpenChange={setShowAutoProductionConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Produção Incompleta</AlertDialogTitle>
+          <AlertDialogDescription>
+            A encomenda de **{pendingConclusionOrder?.productName}** tem apenas **{pendingConclusionOrder?.quantityProduced}** de **{pendingConclusionOrder?.quantity}** unidades produzidas.
+            <br /><br />
+            Deseja registar automaticamente a produção das **{pendingConclusionOrder && (pendingConclusionOrder.quantity - pendingConclusionOrder.quantityProduced)}** unidades restantes e adicionar ao stock?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => { setShowAutoProductionConfirm(false); setPendingConclusionOrder(null); }}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmAutoProduction} className="bg-emerald-600 hover:bg-emerald-700">
+            Sim, Produzir e Finalizar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <div className="flex flex-col gap-6 pb-20">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-headline font-bold">Encomendas de Produção</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleDownloadPdfReport} variant="outline" className="h-12">
+            <Download className="mr-2 h-4 w-4" />
+            Baixar PDF
+          </Button>
+          <Button onClick={handlePrintReport} variant="outline" className="h-12">
+            <Printer className="mr-2 h-4 w-4" />
+            Imprimir
+          </Button>
+        </div>
+      </div>
+
+      <Card className="glass-panel p-4 mb-6 border-none">
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <Input
+              placeholder="Filtrar por produto ou cliente..."
+              value={nameFilter}
+              onChange={(event) => setNameFilter(event.target.value)}
+              className="w-full md:max-w-sm shadow-lg h-12 text-sm bg-background/50"
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="shadow-lg h-12 w-full sm:w-auto bg-background/50">
+                  <Filter className="mr-2 h-4 w-4" />
+                  {statusFilter === 'all' ? 'Todos os Status' : statusFilter}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Filtrar por Status</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem checked={statusFilter === 'all'} onCheckedChange={() => setStatusFilter('all')}>Todos</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={statusFilter === 'Pendente'} onCheckedChange={() => setStatusFilter('Pendente')}>Pendentes</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={statusFilter === 'Em produção'} onCheckedChange={() => setStatusFilter('Em produção')}>Em produção</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={statusFilter === 'Concluída'} onCheckedChange={() => setStatusFilter('Concluída')}>Concluídas</DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </Card>
+
+      <div>
+        {filteredOrders.length > 0 ? (
+          <VirtuosoGrid
+            useWindowScroll
+            increaseViewportBy={500}
+            data={filteredOrders}
+            totalCount={filteredOrders.length}
+            components={{
+              List: (() => {
+                const List = forwardRef<HTMLDivElement>((props, ref) => (
+                  <div
+                    {...props}
+                    ref={ref}
+                    className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-20"
+                  />
+                ));
+                List.displayName = 'OrdersVirtuosoList';
+                return List;
+              })(),
+              Item: (() => {
+                const Item = forwardRef<HTMLDivElement>((props, ref) => <div {...props} ref={ref} className="h-full" />);
+                Item.displayName = 'OrdersVirtuosoItem';
+                return Item;
+              })()
+            }}
+            itemContent={(index, order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                onUpdateStatus={handleUpdateOrderStatus}
+                onAddProductionLog={addProductionLog}
+                onDeleteOrder={handleDeleteOrder}
+                canEdit={canEditOrders}
+              />
+            )}
+          />
+        ) : (
+          <div className="text-center text-muted-foreground py-10">
+            <p>Nenhuma encomenda encontrada com os filtros atuais.</p>
+          </div>
+        )}
+      </div>
+
+    </div>
+    {canEditOrders && (
+      <>
+        <AddOrderDialog
+          open={isAddDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          onAddOrder={handleAddOrder}
+        />
+        <Button
+          onClick={() => setAddDialogOpen(true)}
+          className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
+          size="icon"
+        >
+          <Plus className="h-6 w-6" />
+          <span className="sr-only">Adicionar Encomenda</span>
+        </Button>
+      </>
+    )}
+  </>
+);
+  }

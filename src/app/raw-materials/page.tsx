@@ -160,17 +160,14 @@ const RawMaterialsManager = () => {
     };
 
     const handleDownload = async () => {
-        const { pdf } = await import('@react-pdf/renderer');
-        const { RawMaterialsPDF } = await import('@/components/raw-materials/RawMaterialsPDF');
-
-        const doc = <RawMaterialsPDF type="materials" data={rawMaterials || []} company={companyData || null} />;
-        const blob = await pdf(doc).toBlob();
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Materias_Primas_${new Date().toISOString().split('T')[0]}.pdf`;
-        link.click();
-        URL.revokeObjectURL(url);
+        try {
+            const { generateRawMaterialsPDF } = await import('@/lib/pdf-generator');
+            generateRawMaterialsPDF('materials', rawMaterials || [], companyData);
+            toast({ title: "Relatório gerado", description: "Relatório de insumos gerado com sucesso!" });
+        } catch (error) {
+            console.error("Erro ao gerar PDF:", error);
+            toast({ variant: "destructive", title: "Erro", description: "Erro ao gerar o relatório PDF." });
+        }
     };
 
     if (loading) return <Skeleton className="h-64 w-full" />;
@@ -376,17 +373,14 @@ const RecipesManager = () => {
     };
 
     const handleDownload = async () => {
-        const { pdf } = await import('@react-pdf/renderer');
-        const { RawMaterialsPDF } = await import('@/components/raw-materials/RawMaterialsPDF');
-
-        const doc = <RawMaterialsPDF type="recipes" data={recipes || []} company={companyData || null} />;
-        const blob = await pdf(doc).toBlob();
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Receitas_${new Date().toISOString().split('T')[0]}.pdf`;
-        link.click();
-        URL.revokeObjectURL(url);
+        try {
+            const { generateRawMaterialsPDF } = await import('@/lib/pdf-generator');
+            generateRawMaterialsPDF('recipes', recipes || [], companyData);
+            toast({ title: "Relatório gerado", description: "Relatório de receitas gerado com sucesso!" });
+        } catch (error) {
+            console.error("Erro ao gerar PDF:", error);
+            toast({ variant: "destructive", title: "Erro", description: "Erro ao gerar o relatório PDF." });
+        }
     };
 
     if (loading) return <Skeleton className="h-64 w-full" />;
@@ -583,17 +577,14 @@ const CostsManager = () => {
     };
 
     const handleDownload = async () => {
-        const { pdf } = await import('@react-pdf/renderer');
-        const { RawMaterialsPDF } = await import('@/components/raw-materials/RawMaterialsPDF');
-
-        const doc = <RawMaterialsPDF type="costs" data={recipeCosts || []} company={companyData || null} />;
-        const blob = await pdf(doc).toBlob();
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Custos_Producao_${new Date().toISOString().split('T')[0]}.pdf`;
-        link.click();
-        URL.revokeObjectURL(url);
+        try {
+            const { generateRawMaterialsPDF } = await import('@/lib/pdf-generator');
+            generateRawMaterialsPDF('costs', recipeCosts || [], companyData);
+            toast({ title: "Relatório gerado", description: "Relatório de custos gerado com sucesso!" });
+        } catch (error) {
+            console.error("Erro ao gerar PDF:", error);
+            toast({ variant: "destructive", title: "Erro", description: "Erro ao gerar o relatório PDF." });
+        }
     };
 
     if (loading) return <Skeleton className="h-64 w-full" />;

@@ -137,3 +137,224 @@ export const generateInventoryReportPDF = (products: any[], company: Company | n
 
     doc.save(`Inventario_${new Date().toISOString().split('T')[0]}.pdf`);
 };
+
+export const generateOrdersPDF = (orders: any[], company: Company | null) => {
+    const doc = new jsPDF();
+    const headers = [["Produto", "Cliente", "Data Entrega", "Qtd.", "Valor Total", "Status"]];
+    const data = orders.map(order => [
+        order.productName,
+        order.clientName || 'N/A',
+        order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString('pt-BR') : 'N/A',
+        `${order.quantity} ${order.unit}`,
+        order.totalValue ? formatCurrency(order.totalValue) : 'N/A',
+        order.status
+    ]);
+
+    doc.setFontSize(20);
+    doc.text(company?.name || 'MajorStockX', 14, 22);
+    doc.setFontSize(10);
+    doc.text("Relatório de Encomendas", 14, 30);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 35);
+
+    autoTable(doc, {
+        head: headers,
+        body: data,
+        startY: 40,
+        theme: 'striped',
+        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+        styles: { fontSize: 8, cellPadding: 2 },
+    });
+
+    doc.save(`Encomendas_${new Date().toISOString().split('T')[0]}.pdf`);
+};
+
+export const generateProductionPDF = (productions: any[], company: Company | null, locationMap: any[]) => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const headers = [["Data", "Produto", "Qtd.", "Und.", "Localização", "Registado por", "Status"]];
+    const data = productions.map(prod => [
+        new Date(prod.date).toLocaleDateString('pt-BR'),
+        prod.productName,
+        prod.quantity,
+        prod.unit || 'un.',
+        locationMap.find(l => l.id === prod.location)?.name || 'N/A',
+        prod.registeredBy,
+        prod.status
+    ]);
+
+    doc.setFontSize(20);
+    doc.text(company?.name || 'MajorStockX', 14, 22);
+    doc.setFontSize(10);
+    doc.text("Relatório de Produção", 14, 30);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 35);
+
+    autoTable(doc, {
+        head: headers,
+        body: data,
+        startY: 40,
+        theme: 'striped',
+        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+        styles: { fontSize: 9, cellPadding: 2 },
+    });
+
+    doc.save(`Producao_${new Date().toISOString().split('T')[0]}.pdf`);
+};
+
+export const generateRawMaterialsPDF = (type: 'materials' | 'recipes' | 'costs', data: any[], company: Company | null) => {
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.text(company?.name || 'MajorStockX', 14, 22);
+    doc.setFontSize(10);
+
+    let title = "";
+    if (type === 'materials') title = "Relatório de Matérias-Primas";
+    if (type === 'recipes') title = "Relatório de Receitas";
+    if (type === 'costs') title = "Relatório de Custos de Produção";
+
+    doc.text(title, 14, 30);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 35);
+
+    if (type === 'materials') {
+        const headers = [["Nome", "Stock", "Custo Unit.", "Unidade", "Nível Mín."]];
+        const rows = data.map((m: any) => [
+            m.name,
+            m.stock,
+            m.cost ? formatCurrency(m.cost) : 'N/A',
+            m.unit,
+            m.lowStockThreshold
+        ]);
+        autoTable(doc, { head: headers, body: rows, startY: 40, theme: 'striped', headStyles: { fillColor: [41, 128, 185], textColor: 255 }, styles: { fontSize: 9 } });
+    } else if (type === 'recipes') {
+        let currentY = 40;
+        data.forEach((r: any) => {
+            if (currentY > 250) { doc.addPage(); currentY = 20; }
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "bold");
+            doc.text(r.productName, 14, currentY);
+            currentY += 5;
+
+            const ingHeaders = [["Ingrediente", "Quantidade"]];
+            const ingRows = r.ingredients.map((ing: any) => [
+                ing.rawMaterialName,
+                ing.quantity
+            ]);
+
+            autoTable(doc, {
+                head: ingHeaders,
+                body: ingRows,
+                startY: currentY,
+                theme: 'plain',
+                styles: { fontSize: 9 },
+                margin: { left: 14 }
+            });
+            currentY = (doc as any).lastAutoTable.finalY + 10;
+        });
+    } else if (type === 'costs') {
+        const headers = [["Produto Final", "Custo de Produção / Unidade"]];
+        const rows = data.map((r: any) => [
+            r.productName,
+            r.isCalculable ? formatCurrency(r.totalCost) : 'Não calculado'
+        ]);
+        autoTable(doc, { head: headers, body: rows, startY: 40, theme: 'striped', headStyles: { fillColor: [41, 128, 185], textColor: 255 }, styles: { fontSize: 9 } });
+    }
+
+    doc.save(`${title.replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+};
+
+export const generateCriticalStockPDF = (products: any[], company: Company | null) => {
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.setTextColor(231, 76, 60); // Red
+    doc.text("ALERTA DE STOCK CRÍTICO", 14, 22);
+
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text(company?.name || 'MajorStockX', 14, 30);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 38);
+    doc.text(`${products.length} itens necessitam de reposição`, 14, 46);
+
+    const headers = [["Produto", "Categoria", "Stock Atual", "Mínimo", "Preço Unit.", "Status"]];
+    const rows = products.map(p => {
+        const available = p.stock - (p.reservedStock || 0);
+        return [
+            p.name,
+            p.category,
+            `${available} ${p.unit || 'un'}`,
+            p.criticalStockThreshold,
+            formatCurrency(p.price),
+            available <= 0 ? 'ESGOTADO' : 'CRÍTICO'
+        ];
+    });
+
+    autoTable(doc, {
+        head: headers,
+        body: rows,
+        startY: 55,
+        theme: 'striped',
+        headStyles: { fillColor: [231, 76, 60], textColor: 255 },
+        styles: { fontSize: 10, cellPadding: 3 },
+    });
+
+    doc.save(`Stock_Critico_${new Date().toISOString().split('T')[0]}.pdf`);
+};
+
+export const generateFinancialReportPDF = (companyName: string, period: string, totalIncome: number, totalExpenses: number, netProfit: number, sales: any[], expenses: any[]) => {
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(20);
+    doc.text('Relatório Financeiro', 14, 22);
+    doc.setFontSize(12);
+    doc.text(`${companyName} • ${period}`, 14, 30);
+
+    // Summary
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, 40, 180, 25, 'F');
+
+    doc.setFontSize(10);
+    doc.text('Entradas', 20, 50);
+    doc.text('Saídas', 80, 50);
+    doc.text('Lucro Líquido', 140, 50);
+
+    doc.setFontSize(14);
+    doc.setTextColor(22, 163, 74); // Green
+    doc.text(formatCurrency(totalIncome), 20, 60);
+
+    doc.setTextColor(220, 38, 38); // Red
+    doc.text(formatCurrency(totalExpenses), 80, 60);
+
+    if (netProfit >= 0) {
+        doc.setTextColor(37, 99, 235); // Blue
+    } else {
+        doc.setTextColor(220, 38, 38); // Red
+    }
+    doc.text(formatCurrency(netProfit), 140, 60);
+
+    doc.setTextColor(0); // Reset color
+
+    // Expenses Table
+    doc.setFontSize(14);
+    doc.text('Despesas do Período', 14, 80);
+
+    const expHeaders = [["Data", "Descrição", "Categoria", "Valor"]];
+    const expRows = expenses.map(e => [
+        new Date(e.date).toLocaleDateString('pt-BR'),
+        e.description,
+        e.category,
+        formatCurrency(e.amount)
+    ]);
+
+    autoTable(doc, {
+        head: expHeaders,
+        body: expRows,
+        startY: 85,
+        theme: 'striped',
+        headStyles: { fillColor: [71, 85, 105], textColor: 255 },
+        styles: { fontSize: 9 }
+    });
+
+    // Sales Summary (Optional, maybe just list total)
+    // doc.text('Vendas do Período', 14, (doc as any).lastAutoTable.finalY + 15);
+    // ... logic for sales table if needed ...
+
+    doc.save(`Relatorio_Financeiro_${period.replace(/ /g, '_')}.pdf`);
+};

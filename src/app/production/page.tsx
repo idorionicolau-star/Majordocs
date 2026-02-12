@@ -229,27 +229,21 @@ export default function ProductionPage() {
   };
 
   const handleDownloadPdfReport = async () => {
-    const { pdf } = await import('@react-pdf/renderer');
-    const { ProductionPDF } = await import('@/components/production/ProductionPDF');
-
-    const doc = <ProductionPDF
-      productions={filteredProductions}
-      company={companyData || null}
-      locations={locations}
-    />;
-
-    const blob = await pdf(doc).toBlob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Relatorio_Producao_${new Date().toISOString().split('T')[0]}.pdf`;
-    link.click();
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: "Download Concluído",
-      description: "O relatório de produção foi descarregado.",
-    });
+    try {
+      const { generateProductionPDF } = await import('@/lib/pdf-generator');
+      generateProductionPDF(filteredProductions, companyData, locations);
+      toast({
+        title: "Relatório gerado",
+        description: "Relatório de produção gerado com sucesso!",
+      });
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao gerar o relatório PDF.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (inventoryLoading) {
