@@ -445,13 +445,17 @@ export default function POSPage() {
                                         }
                   `}
                                 >
-                                    {product.imageUrl && (
+                                    {product.imageUrl ? (
                                         <div className="w-full h-32 overflow-hidden bg-slate-100 dark:bg-slate-800 rounded-t-xl">
                                             <img
                                                 src={product.imageUrl}
                                                 alt={product.name}
                                                 className="w-full h-full object-cover"
                                             />
+                                        </div>
+                                    ) : (
+                                        <div className="w-full h-32 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-t-xl text-slate-300 dark:text-slate-600">
+                                            <Package className="h-12 w-12" />
                                         </div>
                                     )}
                                     <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">

@@ -50,13 +50,17 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
 
     return (
         <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 shadow-sm">
-            {product.imageUrl && (
+            {product.imageUrl ? (
                 <div className="w-full h-32 mb-2 overflow-hidden rounded-md bg-slate-100 dark:bg-slate-800 shrink-0">
                     <img
                         src={product.imageUrl}
                         alt={product.name}
                         className="w-full h-full object-cover"
                     />
+                </div>
+            ) : (
+                <div className="w-full h-32 mb-2 flex items-center justify-center rounded-md bg-slate-100 dark:bg-slate-800 shrink-0 text-slate-300 dark:text-slate-600">
+                    <PackageCheck className="h-10 w-10 opacity-50" />
                 </div>
             )}
             <CardHeader className="p-1 sm:p-2">

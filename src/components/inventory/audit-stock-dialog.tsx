@@ -29,6 +29,7 @@ import type { Product } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { InventoryContext } from '@/context/inventory-context';
 import { Textarea } from '../ui/textarea';
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   physicalCount: z.preprocess((val) => {
