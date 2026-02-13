@@ -50,15 +50,30 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
         toast({ title: 'A enviar recibo...', description: `Para: ${customer.email}` });
 
         try {
+            // Get auth token for the API
+            const { getAuth } = await import('firebase/auth');
+            const auth = getAuth();
+            const token = await auth.currentUser?.getIdToken();
+
+            if (!token) {
+                toast({ variant: 'destructive', title: 'Erro', description: 'Sessão expirada. Faça login novamente.' });
+                return;
+            }
+
             const response = await fetch('/api/email', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     type: 'RECEIPT',
                     to: customer.email,
+                    subject: `Recibo de Venda - ${sale.guideNumber}`,
+                    companyId: companyData?.id,
                     customerName: customer.name,
                     guideNumber: sale.guideNumber,
-                    items: [{ productName: sale.productName, quantity: sale.quantity, subtotal: sale.totalValue }], // Simplified for single item sale
+                    items: [{ productName: sale.productName, quantity: sale.quantity, subtotal: sale.totalValue }],
                     totalValue: sale.totalValue,
                     date: sale.date,
                     companyName: companyData?.name || 'Major Group'
@@ -68,10 +83,11 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
             if (response.ok) {
                 toast({ title: 'Recibo Enviado', description: 'O cliente receberá o email em breve.' });
             } else {
-                throw new Error('Falha ao enviar email');
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `Erro ${response.status}`);
             }
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível enviar o recibo.' });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Erro', description: `Não foi possível enviar o recibo: ${error.message || error}` });
         }
     };
 
