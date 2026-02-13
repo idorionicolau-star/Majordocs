@@ -456,7 +456,7 @@ export default function POSPage() {
                                     )}
                                     <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
                                         {inCart && (
-                                            <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg">
+                                            <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full min-w-[24px] h-6 px-1 flex items-center justify-center text-xs font-bold shadow-lg z-10">
                                                 {inCart.quantity}
                                             </div>
                                         )}
