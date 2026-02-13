@@ -664,7 +664,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
               finalProductId = docRef.id;
               const existingData = existingDocSnap.data() as Product;
               const oldStock = existingData.stock || 0;
-              transaction.update(docRef, { stock: oldStock + newStock, lastUpdated: new Date().toISOString() });
+              const updateData: Record<string, any> = { stock: oldStock + newStock, lastUpdated: new Date().toISOString() };
+              // Preserve imageUrl if provided with the new product data
+              if (newProductData.imageUrl) {
+                updateData.imageUrl = newProductData.imageUrl;
+              }
+              transaction.update(docRef, updateData);
             } else {
               const newProduct: Omit<Product, 'id' | 'instanceId' | 'sourceIds'> = {
                 ...newProductData,
@@ -706,7 +711,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         }
       };
 
-      processAdd();
+      return processAdd();
     },
     [productsCollectionRef, firestore, user, companyId, addNotification, toast]
   );
