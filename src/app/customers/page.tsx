@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useInventory } from '@/context/inventory-context';
 import { useCRM } from '@/context/crm-context';
 import { Button } from '@/components/ui/button';
@@ -95,6 +95,23 @@ export default function CustomersPage() {
     const getCustomerHistory = (customerId: string) => {
         return sales.filter(s => s.customerId === customerId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     };
+
+    // Compute customer stats from actual sales data
+    const customerStats = useMemo(() => {
+        const stats: Record<string, { totalPurchases: number; lastVisit: string | null }> = {};
+        for (const sale of sales) {
+            if (!sale.customerId) continue;
+            if (!stats[sale.customerId]) {
+                stats[sale.customerId] = { totalPurchases: 0, lastVisit: null };
+            }
+            stats[sale.customerId].totalPurchases += sale.totalValue || 0;
+            const saleDate = sale.date;
+            if (!stats[sale.customerId].lastVisit || saleDate > stats[sale.customerId].lastVisit!) {
+                stats[sale.customerId].lastVisit = saleDate;
+            }
+        }
+        return stats;
+    }, [sales]);
 
     return (
         <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
@@ -214,13 +231,13 @@ export default function CustomersPage() {
                                     </TableCell>
                                     <TableCell>
                                         <span className="font-bold text-slate-900 dark:text-white font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
-                                            {formatCurrency(customer.totalPurchases || 0, { compact: true })}
+                                            {formatCurrency(customerStats[customer.id]?.totalPurchases || 0, { compact: true })}
                                         </span>
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-1 text-slate-500 text-sm">
                                             <Calendar className="w-3 h-3" />
-                                            {customer.lastVisit ? format(new Date(customer.lastVisit), "d MMM yyyy", { locale: ptBR }) : '-'}
+                                            {(customerStats[customer.id]?.lastVisit || customer.lastVisit) ? format(new Date(customerStats[customer.id]?.lastVisit || customer.lastVisit), "d MMM yyyy", { locale: ptBR }) : '-'}
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right">
@@ -261,14 +278,14 @@ export default function CustomersPage() {
                                         </div>
                                     </div>
                                     <div className="bg-primary/10 text-primary px-2 py-1 rounded text-sm font-bold font-mono">
-                                        {formatCurrency(customer.totalPurchases || 0, { compact: true })}
+                                        {formatCurrency(customerStats[customer.id]?.totalPurchases || 0, { compact: true })}
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 mb-4 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg">
                                     <div className="flex items-center gap-1.5">
                                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                                        <span>Última visita: {customer.lastVisit ? format(new Date(customer.lastVisit), "d/MM/yy") : '-'}</span>
+                                        <span>Última visita: {(customerStats[customer.id]?.lastVisit || customer.lastVisit) ? format(new Date(customerStats[customer.id]?.lastVisit || customer.lastVisit), "d/MM/yy") : '-'}</span>
                                     </div>
                                     <div className="flex items-center gap-1.5">
                                         <Mail className="w-3.5 h-3.5 text-slate-400" />
@@ -335,7 +352,7 @@ export default function CustomersPage() {
                         <div className="grid grid-cols-3 gap-4">
                             <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg text-center">
                                 <p className="text-xs text-slate-500 uppercase font-bold">Total Gasto</p>
-                                <p className="text-lg font-bold text-primary">{formatCurrency(viewingCustomer?.totalPurchases || 0)}</p>
+                                <p className="text-lg font-bold text-primary">{formatCurrency(customerStats[viewingCustomer?.id]?.totalPurchases || 0)}</p>
                             </div>
                             <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg text-center">
                                 <p className="text-xs text-slate-500 uppercase font-bold">Vendas</p>
