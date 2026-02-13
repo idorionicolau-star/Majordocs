@@ -591,7 +591,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
         toast({
           variant: 'destructive',
           title: 'Erro ao fazer upload da imagem',
-          description: 'O produto será criado sem imagem.'
+          description: `${(error as any)?.message || error}. O produto será criado sem imagem.`
         });
         // Proceed without image
       }

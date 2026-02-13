@@ -315,8 +315,8 @@ export interface InventoryContextType {
       Product,
       'id' | 'lastUpdated' | 'instanceId' | 'reservedStock' | 'sourceIds'
     >
-  ) => void;
-  updateProduct: (instanceId: string, updatedData: Partial<Product>) => void;
+  ) => Promise<void>;
+  updateProduct: (instanceId: string, updatedData: Partial<Product>) => Promise<void>;
   deleteProduct: (instanceId: string) => void;
   updateProductStock: (
     productName: string,

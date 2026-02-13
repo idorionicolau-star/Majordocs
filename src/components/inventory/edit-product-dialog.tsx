@@ -130,7 +130,7 @@ function EditProductForm({ product, onProductUpdate, setOpen, locations, isMulti
           toast({
             variant: "destructive",
             title: "Erro no upload da imagem",
-            description: "Não foi possível enviar a imagem. O produto será salvo sem as alterações de imagem.",
+            description: `Não foi possível enviar a imagem: ${error?.message || error}. O produto será salvo sem as alterações de imagem.`,
           });
           // Continue without updating image if upload fails, or revert to old image?
           // If upload fails, we probably shouldn't set imageUrl to new one (which we don't, it stays as default or whatever)
@@ -159,7 +159,7 @@ function EditProductForm({ product, onProductUpdate, setOpen, locations, isMulti
       toast({
         variant: "destructive",
         title: "Erro ao Salvar",
-        description: "Ocorreu um erro ao tentar atualizar o produto. Tente novamente.",
+        description: `Ocorreu um erro ao tentar atualizar o produto: ${(error as any)?.message || error}. Tente novamente.`,
       });
     } finally {
       setIsSubmitting(false);
@@ -373,7 +373,7 @@ function EditProductForm({ product, onProductUpdate, setOpen, locations, isMulti
         </div>
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
           <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Salvar Alterações
