@@ -34,18 +34,11 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
-  // Prevent dialog from closing when interacting with toast notifications
-  const handleInteractOutside = React.useCallback((e: Event) => {
-    const target = e.target as HTMLElement;
-    // Check if the interaction is with a toast element (Radix toast uses role="status" or data-radix-toast-*)
-    if (
-      target?.closest('[data-radix-toast-viewport]') ||
-      target?.closest('[data-state][data-swipe-direction]') ||
-      target?.closest('[role="status"]') ||
-      target?.getAttribute('data-radix-toast-announce-exclude') !== null
-    ) {
-      e.preventDefault();
-    }
+  // Prevent dialog from closing when focus moves outside (e.g., toast notifications
+  // appearing or disappearing cause focus shifts that Radix interprets as "leave dialog").
+  // Dialogs should only close via: X button, overlay click, or Escape key.
+  const preventFocusOutside = React.useCallback((e: Event) => {
+    e.preventDefault();
   }, []);
 
   return (
@@ -57,8 +50,7 @@ const DialogContent = React.forwardRef<
           "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-2xl dialog-content",
           className
         )}
-        onInteractOutside={handleInteractOutside}
-        onPointerDownOutside={handleInteractOutside}
+        onFocusOutside={preventFocusOutside}
         {...props}
       >
         {children}

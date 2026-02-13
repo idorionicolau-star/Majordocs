@@ -57,17 +57,9 @@ const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
 >(({ side = "right", className, children, ...props }, ref) => {
-  // Prevent sheet from closing when interacting with toast notifications
-  const handleInteractOutside = React.useCallback((e: Event) => {
-    const target = e.target as HTMLElement;
-    if (
-      target?.closest('[data-radix-toast-viewport]') ||
-      target?.closest('[data-state][data-swipe-direction]') ||
-      target?.closest('[role="status"]') ||
-      target?.getAttribute('data-radix-toast-announce-exclude') !== null
-    ) {
-      e.preventDefault();
-    }
+  // Prevent sheet from closing when focus moves outside (e.g., toast notifications)
+  const preventFocusOutside = React.useCallback((e: Event) => {
+    e.preventDefault();
   }, []);
 
   return (
@@ -76,8 +68,7 @@ const SheetContent = React.forwardRef<
       <SheetPrimitive.Content
         ref={ref}
         className={cn(sheetVariants({ side }), className)}
-        onInteractOutside={handleInteractOutside}
-        onPointerDownOutside={handleInteractOutside}
+        onFocusOutside={preventFocusOutside}
         {...props}
       >
         {children}
