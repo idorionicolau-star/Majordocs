@@ -437,7 +437,7 @@ export default function POSPage() {
                                     key={product.id || product.name}
                                     onClick={() => addToCart(product)}
                                     className={`
-                    relative group text-left rounded-xl border-2 transition-all duration-200 overflow-hidden
+                    relative group text-left rounded-xl border-2 transition-all duration-200
                     hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex flex-col
                     ${inCart
                                             ? 'border-primary bg-primary/5 shadow-md'
@@ -446,7 +446,7 @@ export default function POSPage() {
                   `}
                                 >
                                     {product.imageUrl && (
-                                        <div className="w-full h-32 overflow-hidden bg-slate-100 dark:bg-slate-800">
+                                        <div className="w-full h-32 overflow-hidden bg-slate-100 dark:bg-slate-800 rounded-t-xl">
                                             <img
                                                 src={product.imageUrl}
                                                 alt={product.name}
@@ -456,7 +456,7 @@ export default function POSPage() {
                                     )}
                                     <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
                                         {inCart && (
-                                            <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full min-w-[24px] h-6 px-1 flex items-center justify-center text-xs font-bold shadow-lg z-10">
+                                            <div className="absolute -top-3 -right-3 bg-primary text-primary-foreground rounded-full min-w-[24px] h-6 px-1 flex items-center justify-center text-xs font-bold shadow-lg z-10 ring-2 ring-background">
                                                 {inCart.quantity}
                                             </div>
                                         )}
