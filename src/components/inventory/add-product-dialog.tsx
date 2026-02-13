@@ -535,123 +535,124 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       toast({
         title: 'Categoria adicionada',
         description: `"${newCategoryName}" foi adicionada e selecionada.`,
-      }
+      });
+    }
   };
 
 
-    async function onSubmit(values: AddProductFormValues) {
-      if (isMultiLocation && !values.location) {
-        form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
+  async function onSubmit(values: AddProductFormValues) {
+    if (isMultiLocation && !values.location) {
+      form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
+      return;
+    }
+
+    if (!isCatalogProductSelected) {
+      if (!values.category.trim()) {
+        form.setError("category", { type: "manual", message: "A categoria é obrigatória para novos produtos." });
         return;
       }
-
-      if (!isCatalogProductSelected) {
-        if (!values.category.trim()) {
-          form.setError("category", { type: "manual", message: "A categoria é obrigatória para novos produtos." });
-          return;
-        }
-        try {
-          if (addCatalogCategory) await addCatalogCategory(values.category);
-
-          if (addCatalogProduct) {
-            await addCatalogProduct({
-              name: values.name,
-              category: values.category,
-              price: values.price,
-              unit: values.unit,
-              lowStockThreshold: values.lowStockThreshold,
-              criticalStockThreshold: values.criticalStockThreshold,
-            });
-          }
-
-          toast({
-            title: "Produto de Catálogo Criado",
-            description: `${values.name} foi adicionado ao catálogo.`,
-          });
-
-        } catch (error: any) {
-          toast({ variant: 'destructive', title: 'Erro ao Criar no Catálogo', description: error.message });
-          return;
-        }
-      }
-
-      if (values.location) {
-        localStorage.setItem('majorstockx-last-product-location', values.location);
-      }
-
-      let imageUrl: string | null = null;
-      if (imageFile) {
-        try {
-          const storageRef = ref(storage, `product-images/${Date.now()}_${imageFile.name}`);
-          const snapshot = await uploadBytes(storageRef, imageFile);
-          imageUrl = await getDownloadURL(snapshot.ref);
-        } catch (error) {
-          console.error("Error uploading image:", error);
-          toast({
-            variant: 'destructive',
-            title: 'Erro ao fazer upload da imagem',
-            description: 'O produto será criado sem imagem.'
-          });
-          // Proceed without image
-        }
-      }
-
-      const newProduct: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'> = {
-        name: values.name,
-        category: values.category,
-        stock: values.stock,
-        price: values.price,
-        lowStockThreshold: values.lowStockThreshold,
-        criticalStockThreshold: values.criticalStockThreshold,
-        location: values.location,
-        unit: values.unit,
-        imageUrl: imageUrl as any,
-      };
-
       try {
-        await onAddProduct(newProduct);
-        toast({
-          title: "Produto Adicionado",
-          description: `${values.name} foi adicionado ao inventário.`,
-        });
-        onOpenChange(false);
-      } catch (error: any) {
-        console.error("Error adding product:", error);
-      });
-    }
-  }
+        if (addCatalogCategory) await addCatalogCategory(values.category);
 
-  return (
-    <ResponsiveDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Adicionar Novo Produto"
-      description="Selecione um produto do catálogo ou digite um novo nome para criar."
-    >
-      <div className="max-h-[85vh] overflow-y-auto pr-2">
-        <AddProductForm
-          form={form}
-          onSubmit={onSubmit}
-          onOpenChange={onOpenChange}
-          catalogProducts={catalogProducts}
-          catalogCategories={catalogCategories}
-          handleProductSelect={handleProductSelect}
-          similarProduct={similarProduct}
-          setSimilarProduct={setSimilarProduct}
-          isCatalogProductSelected={isCatalogProductSelected}
-          showAddCategoryDialog={showAddCategoryDialog}
-          setShowAddCategoryDialog={setShowAddCategoryDialog}
-          newCategoryName={newCategoryName}
-          setNewCategoryName={setNewCategoryName}
-          handleAddCategory={handleAddCategory}
-          isMultiLocation={isMultiLocation}
-          locations={locations}
-          availableUnits={availableUnits}
-          imageFile={imageFile}
-          setImageFile={setImageFile}
-        />
-      </div>
-    </ResponsiveDialog>
-  );
+        if (addCatalogProduct) {
+          await addCatalogProduct({
+            name: values.name,
+            category: values.category,
+            price: values.price,
+            unit: values.unit,
+            lowStockThreshold: values.lowStockThreshold,
+            criticalStockThreshold: values.criticalStockThreshold,
+          });
+        }
+
+        toast({
+          title: "Produto de Catálogo Criado",
+          description: `${values.name} foi adicionado ao catálogo.`,
+        });
+
+      } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Erro ao Criar no Catálogo', description: error.message });
+        return;
+      }
+    }
+
+    if (values.location) {
+      localStorage.setItem('majorstockx-last-product-location', values.location);
+    }
+
+    let imageUrl: string | null = null;
+    if (imageFile) {
+      try {
+        const storageRef = ref(storage, `product-images/${Date.now()}_${imageFile.name}`);
+        const snapshot = await uploadBytes(storageRef, imageFile);
+        imageUrl = await getDownloadURL(snapshot.ref);
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao fazer upload da imagem',
+          description: 'O produto será criado sem imagem.'
+        });
+        // Proceed without image
+      }
+    }
+
+    const newProduct: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'> = {
+      name: values.name,
+      category: values.category,
+      stock: values.stock,
+      price: values.price,
+      lowStockThreshold: values.lowStockThreshold,
+      criticalStockThreshold: values.criticalStockThreshold,
+      location: values.location,
+      unit: values.unit,
+      imageUrl: imageUrl as any,
+    };
+
+    try {
+      await onAddProduct(newProduct);
+      toast({
+        title: "Produto Adicionado",
+        description: `${values.name} foi adicionado ao inventário.`,
+      });
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error("Error adding product:", error);
+    });
+  }
+}
+
+return (
+  <ResponsiveDialog
+    open={open}
+    onOpenChange={onOpenChange}
+    title="Adicionar Novo Produto"
+    description="Selecione um produto do catálogo ou digite um novo nome para criar."
+  >
+    <div className="max-h-[85vh] overflow-y-auto pr-2">
+      <AddProductForm
+        form={form}
+        onSubmit={onSubmit}
+        onOpenChange={onOpenChange}
+        catalogProducts={catalogProducts}
+        catalogCategories={catalogCategories}
+        handleProductSelect={handleProductSelect}
+        similarProduct={similarProduct}
+        setSimilarProduct={setSimilarProduct}
+        isCatalogProductSelected={isCatalogProductSelected}
+        showAddCategoryDialog={showAddCategoryDialog}
+        setShowAddCategoryDialog={setShowAddCategoryDialog}
+        newCategoryName={newCategoryName}
+        setNewCategoryName={setNewCategoryName}
+        handleAddCategory={handleAddCategory}
+        isMultiLocation={isMultiLocation}
+        locations={locations}
+        availableUnits={availableUnits}
+        imageFile={imageFile}
+        setImageFile={setImageFile}
+      />
+    </div>
+  </ResponsiveDialog>
+);
 }
 
