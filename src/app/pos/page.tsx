@@ -147,11 +147,15 @@ export default function POSPage() {
 
         return catalogProducts
             .filter(cp => inStockMap.has(cp.name))
-            .map(cp => ({
-                ...cp,
-                stockInstance: inStockMap.get(cp.name)!,
-                availableStock: (inStockMap.get(cp.name)!.stock || 0) - (inStockMap.get(cp.name)!.reservedStock || 0),
-            }));
+            .map(cp => {
+                const inventoryProduct = inStockMap.get(cp.name)!;
+                return {
+                    ...cp,
+                    imageUrl: cp.imageUrl || inventoryProduct.imageUrl,
+                    stockInstance: inventoryProduct,
+                    availableStock: (inventoryProduct.stock || 0) - (inventoryProduct.reservedStock || 0),
+                };
+            });
     }, [products, catalogProducts, selectedLocation, isMultiLocation]);
 
     // Filtered products based on search and category
