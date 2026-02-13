@@ -618,7 +618,7 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       onOpenChange(false);
     } catch (error: any) {
       console.error("Error adding product:", error);
-    });
+    }
   }
 }
 
