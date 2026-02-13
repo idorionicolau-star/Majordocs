@@ -620,39 +620,38 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
       console.error("Error adding product:", error);
     }
   }
-}
 
-return (
-  <ResponsiveDialog
-    open={open}
-    onOpenChange={onOpenChange}
-    title="Adicionar Novo Produto"
-    description="Selecione um produto do catálogo ou digite um novo nome para criar."
-  >
-    <div className="max-h-[85vh] overflow-y-auto pr-2">
-      <AddProductForm
-        form={form}
-        onSubmit={onSubmit}
-        onOpenChange={onOpenChange}
-        catalogProducts={catalogProducts}
-        catalogCategories={catalogCategories}
-        handleProductSelect={handleProductSelect}
-        similarProduct={similarProduct}
-        setSimilarProduct={setSimilarProduct}
-        isCatalogProductSelected={isCatalogProductSelected}
-        showAddCategoryDialog={showAddCategoryDialog}
-        setShowAddCategoryDialog={setShowAddCategoryDialog}
-        newCategoryName={newCategoryName}
-        setNewCategoryName={setNewCategoryName}
-        handleAddCategory={handleAddCategory}
-        isMultiLocation={isMultiLocation}
-        locations={locations}
-        availableUnits={availableUnits}
-        imageFile={imageFile}
-        setImageFile={setImageFile}
-      />
-    </div>
-  </ResponsiveDialog>
-);
+  return (
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Adicionar Novo Produto"
+      description="Selecione um produto do catálogo ou digite um novo nome para criar."
+    >
+      <div className="max-h-[85vh] overflow-y-auto pr-2">
+        <AddProductForm
+          form={form}
+          onSubmit={onSubmit}
+          onOpenChange={onOpenChange}
+          catalogProducts={catalogProducts}
+          catalogCategories={catalogCategories}
+          handleProductSelect={handleProductSelect}
+          similarProduct={similarProduct}
+          setSimilarProduct={setSimilarProduct}
+          isCatalogProductSelected={isCatalogProductSelected}
+          showAddCategoryDialog={showAddCategoryDialog}
+          setShowAddCategoryDialog={setShowAddCategoryDialog}
+          newCategoryName={newCategoryName}
+          setNewCategoryName={setNewCategoryName}
+          handleAddCategory={handleAddCategory}
+          isMultiLocation={isMultiLocation}
+          locations={locations}
+          availableUnits={availableUnits}
+          imageFile={imageFile}
+          setImageFile={setImageFile}
+        />
+      </div>
+    </ResponsiveDialog>
+  );
 }
 
