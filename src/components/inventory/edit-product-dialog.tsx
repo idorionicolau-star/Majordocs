@@ -40,6 +40,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MathInput } from "@/components/ui/math-input";
+import { useToast } from "@/hooks/use-toast";
 
 import { Edit2 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -112,32 +113,57 @@ function EditProductForm({ product, onProductUpdate, setOpen, locations, isMulti
     },
   });
 
+  const { toast } = useToast();
+
   async function onSubmit(values: EditProductFormValues) {
     setIsSubmitting(true);
     let imageUrl = product.imageUrl;
 
-    if (imageFile) {
-      try {
-        const storageRef = ref(storage, `product-images/${Date.now()}_${imageFile.name}`);
-        const snapshot = await uploadBytes(storageRef, imageFile);
-        imageUrl = await getDownloadURL(snapshot.ref);
-      } catch (error) {
-        console.error("Error uploading image:", error);
-        // We proceed even if image upload fails, but could show a toast here
+    try {
+      if (imageFile) {
+        try {
+          const storageRef = ref(storage, `product-images/${Date.now()}_${imageFile.name}`);
+          const snapshot = await uploadBytes(storageRef, imageFile);
+          imageUrl = await getDownloadURL(snapshot.ref);
+        } catch (error: any) {
+          console.error("Error uploading image:", error);
+          toast({
+            variant: "destructive",
+            title: "Erro no upload da imagem",
+            description: "Não foi possível enviar a imagem. O produto será salvo sem as alterações de imagem.",
+          });
+          // Continue without updating image if upload fails, or revert to old image?
+          // If upload fails, we probably shouldn't set imageUrl to new one (which we don't, it stays as default or whatever)
+          // Actually, if upload fails, we should keep the OLD imageUrl. 
+          // `imageUrl` var is initialized to `product.imageUrl`, so it is safe.
+        }
+      } else if (previewUrl === null && product.imageUrl) {
+        // Image was removed
+        imageUrl = null as any;
       }
-    } else if (previewUrl === null && product.imageUrl) {
-      // Image was removed
-      imageUrl = null as any;
+
+      // Ensure we await the update function if it returns a promise
+      await onProductUpdate({
+        ...product,
+        ...values,
+        imageUrl,
+      });
+
+      toast({
+        title: "Produto Atualizado",
+        description: "As alterações foram salvas com sucesso.",
+      });
+      setOpen(false);
+    } catch (error) {
+      console.error("Error updating product:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao Salvar",
+        description: "Ocorreu um erro ao tentar atualizar o produto. Tente novamente.",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-
-
-    onProductUpdate({
-      ...product,
-      ...values,
-      imageUrl,
-    });
-    setIsSubmitting(false);
-    setOpen(false);
   }
 
   return (

@@ -593,55 +593,66 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
           title: 'Erro ao fazer upload da imagem',
           description: 'O produto será criado sem imagem.'
         });
+        // Proceed without image
       }
     }
 
     const newProduct: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'> = {
       name: values.name,
       category: values.category,
-      price: values.price,
       stock: values.stock,
-      unit: values.unit,
+      price: values.price,
       lowStockThreshold: values.lowStockThreshold,
       criticalStockThreshold: values.criticalStockThreshold,
-      location: values.location || (locations.length > 0 ? locations[0].id : 'Principal'),
+      location: values.location,
+      unit: values.unit,
       imageUrl: imageUrl as any,
     };
-    onAddProduct(newProduct);
-    onOpenChange(false);
-  }
 
-  return (
-    <ResponsiveDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Adicionar Novo Produto"
-      description="Selecione um produto do catálogo ou digite um novo nome para criar."
-    >
-      <div className="max-h-[85vh] overflow-y-auto pr-2">
-        <AddProductForm
-          form={form}
-          onSubmit={onSubmit}
-          onOpenChange={onOpenChange}
-          catalogProducts={catalogProducts}
-          catalogCategories={catalogCategories}
-          handleProductSelect={handleProductSelect}
-          similarProduct={similarProduct}
-          setSimilarProduct={setSimilarProduct}
-          isCatalogProductSelected={isCatalogProductSelected}
-          showAddCategoryDialog={showAddCategoryDialog}
-          setShowAddCategoryDialog={setShowAddCategoryDialog}
-          newCategoryName={newCategoryName}
-          setNewCategoryName={setNewCategoryName}
-          handleAddCategory={handleAddCategory}
-          isMultiLocation={isMultiLocation}
-          locations={locations}
-          availableUnits={availableUnits}
-          imageFile={imageFile}
-          setImageFile={setImageFile}
-        />
-      </div>
-    </ResponsiveDialog>
-  );
+    try {
+      await onAddProduct(newProduct);
+      toast({
+        title: "Produto Adicionado",
+        description: `${values.name} foi adicionado ao inventário.`,
+      });
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error("Error adding product:", error);
+    });
+  }
+}
+
+return (
+  <ResponsiveDialog
+    open={open}
+    onOpenChange={onOpenChange}
+    title="Adicionar Novo Produto"
+    description="Selecione um produto do catálogo ou digite um novo nome para criar."
+  >
+    <div className="max-h-[85vh] overflow-y-auto pr-2">
+      <AddProductForm
+        form={form}
+        onSubmit={onSubmit}
+        onOpenChange={onOpenChange}
+        catalogProducts={catalogProducts}
+        catalogCategories={catalogCategories}
+        handleProductSelect={handleProductSelect}
+        similarProduct={similarProduct}
+        setSimilarProduct={setSimilarProduct}
+        isCatalogProductSelected={isCatalogProductSelected}
+        showAddCategoryDialog={showAddCategoryDialog}
+        setShowAddCategoryDialog={setShowAddCategoryDialog}
+        newCategoryName={newCategoryName}
+        setNewCategoryName={setNewCategoryName}
+        handleAddCategory={handleAddCategory}
+        isMultiLocation={isMultiLocation}
+        locations={locations}
+        availableUnits={availableUnits}
+        imageFile={imageFile}
+        setImageFile={setImageFile}
+      />
+    </div>
+  </ResponsiveDialog>
+);
 }
 
