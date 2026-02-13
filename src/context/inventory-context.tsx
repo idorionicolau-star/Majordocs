@@ -1819,7 +1819,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
         // 6. Deduct Stock from Inventory
         if (productRef && freshProductData) {
-          const newStock = (freshProductData.stock || 0) - orderData.quantity;
+          const currentStock = freshProductData.stock || 0;
+          if (currentStock < orderData.quantity) {
+            throw new Error(`Stock insuficiente para finalizar a encomenda. Stock actual: ${currentStock}, Necessário: ${orderData.quantity}. Verifique se o produto foi vendido por engano.`);
+          }
+          const newStock = currentStock - orderData.quantity;
           let newReserved = (freshProductData.reservedStock || 0) - orderData.quantity;
           if (newReserved < 0) newReserved = 0;
 

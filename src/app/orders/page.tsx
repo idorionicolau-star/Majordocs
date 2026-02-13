@@ -297,8 +297,11 @@ export default function OrdersPage() {
         });
 
         if (productExists) {
+          // Increment both stock AND reservedStock so the produced items 
+          // remain reserved for this order and can't be sold via regular sales
           transaction.update(targetProductRef, {
-            stock: increment(missingQty)
+            stock: increment(missingQty),
+            reservedStock: increment(missingQty)
           });
         }
       });
