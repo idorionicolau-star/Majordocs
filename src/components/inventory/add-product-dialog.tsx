@@ -121,6 +121,7 @@ function AddProductForm({
   setImageFile
 }: AddProductFormProps) {
   const { products } = useContext(InventoryContext) || { products: [] };
+  const storage = useStorage();
 
   return (
     <Form {...form}>
