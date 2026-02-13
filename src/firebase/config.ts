@@ -6,4 +6,5 @@ export const firebaseConfig = {
   measurementId: "",
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "atrevamoneytracker.appspot.com",
 };
