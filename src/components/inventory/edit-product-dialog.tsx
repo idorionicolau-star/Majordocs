@@ -203,7 +203,7 @@ function EditProductForm({ product, onProductUpdate, setOpen, locations, isMulti
                 </div>
               )}
             </div>
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-2 flex flex-col justify-center">
               <Input
                 type="file"
                 accept="image/*"
