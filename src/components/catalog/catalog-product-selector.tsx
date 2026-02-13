@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { Product } from '@/lib/types';
 import { Button } from "@/components/ui/button";
-import { Check, PlusCircle, ChevronsUpDown, Search } from "lucide-react";
+import { Check, PlusCircle, ChevronsUpDown, Search, PackageCheck } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -94,7 +94,15 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
             <div className="flex items-center gap-2 truncate">
               <Search className="h-4 w-4 shrink-0 opacity-50" />
               {selectedValue ? (
-                <span className="truncate">{selectedValue}</span>
+                <div className="flex items-center gap-2 truncate">
+                  {(() => {
+                    const selectedProduct = products.find(p => p.name === selectedValue);
+                    return selectedProduct?.imageUrl ? (
+                      <img src={selectedProduct.imageUrl} alt="" className="h-5 w-5 rounded object-cover shrink-0" />
+                    ) : null;
+                  })()}
+                  <span className="truncate">{selectedValue}</span>
+                </div>
               ) : (
                 <span className="text-muted-foreground">{placeholder}</span>
               )}
@@ -169,7 +177,16 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
                           selectedValue === product.name ? "opacity-100" : "opacity-0"
                         )}
                       />
-                      {product.name}
+                      <div className="flex items-center gap-2">
+                        {product.imageUrl ? (
+                          <img src={product.imageUrl} alt="" className="h-6 w-6 rounded object-cover shrink-0" />
+                        ) : (
+                          <div className="h-6 w-6 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                            <PackageCheck className="h-3 w-3 opacity-40" />
+                          </div>
+                        )}
+                        {product.name}
+                      </div>
                     </CommandItem>
                   ))}
                 </CommandGroup>
