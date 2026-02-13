@@ -501,7 +501,7 @@ const ProductionFromRecipe = () => {
     const productionQty = form.watch('quantity');
     const selectedRecipe = recipes.find(r => r.id === selectedRecipeId);
 
-    // Calculate consumption preview
+    // Calculate consumption preview with waste detection
     const consumptionPreview = useMemo(() => {
         if (!selectedRecipe || !productionQty || productionQty <= 0) return [];
         return selectedRecipe.ingredients.map(ing => {
@@ -510,6 +510,17 @@ const ProductionFromRecipe = () => {
             const requiredQty = yieldPer
                 ? Math.ceil(productionQty / yieldPer) * ing.quantity
                 : ing.quantity * productionQty;
+
+            // Waste calculation (only for yield-based ingredients)
+            let wastePercent = 0;
+            let totalCapacity = productionQty;
+            if (yieldPer) {
+                const batches = Math.ceil(productionQty / yieldPer);
+                totalCapacity = batches * yieldPer; // max products from these batches
+                const waste = totalCapacity - productionQty;
+                wastePercent = totalCapacity > 0 ? (waste / totalCapacity) * 100 : 0;
+            }
+
             return {
                 name: ing.rawMaterialName,
                 unit: mat?.unit || 'un',
@@ -517,9 +528,30 @@ const ProductionFromRecipe = () => {
                 available: mat?.stock || 0,
                 sufficient: (mat?.stock || 0) >= requiredQty,
                 yieldInfo: yieldPer ? `${ing.quantity} ${mat?.unit || 'un'} → ${yieldPer} un` : null,
+                wastePercent,
+                totalCapacity,
             };
         });
     }, [selectedRecipe, productionQty, rawMaterials]);
+
+    // Find the optimal quantity that minimizes waste across all yield ingredients
+    const optimizedQty = useMemo(() => {
+        if (!selectedRecipe || !productionQty || productionQty <= 0) return null;
+        const yieldIngredients = selectedRecipe.ingredients.filter(
+            ing => ing.yieldPerUnit && ing.yieldPerUnit > 0
+        );
+        if (yieldIngredients.length === 0) return null;
+
+        // Find the smallest yield-based capacity that is >= productionQty
+        // This is the LCM-like optimal that avoids waste on at least the most wasteful ingredient
+        const maxWasteIng = consumptionPreview.reduce((max, c) =>
+            c.wastePercent > max.wastePercent ? c : max, consumptionPreview[0]);
+
+        if (maxWasteIng.wastePercent <= 10) return null; // waste is acceptable
+        return maxWasteIng.totalCapacity;
+    }, [selectedRecipe, productionQty, consumptionPreview]);
+
+    const hasHighWaste = consumptionPreview.some(c => c.wastePercent > 30);
 
     const onSubmit = async (values: ProductionFormValues) => {
         try {
@@ -569,9 +601,16 @@ const ProductionFromRecipe = () => {
                                 <p className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Consumo de Matéria-Prima</p>
                                 {consumptionPreview.map((c, i) => (
                                     <div key={i} className={`flex items-center justify-between text-sm p-2 rounded ${c.sufficient ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
-                                        <div>
-                                            <span className="font-semibold">{c.name}</span>
-                                            {c.yieldInfo && <span className="text-xs text-muted-foreground ml-2">({c.yieldInfo})</span>}
+                                        <div className="flex flex-col">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-semibold">{c.name}</span>
+                                                {c.yieldInfo && <span className="text-xs text-muted-foreground">({c.yieldInfo})</span>}
+                                            </div>
+                                            {c.wastePercent > 10 && (
+                                                <span className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-0.5">
+                                                    ⚠ {Math.round(c.wastePercent)}% desperdício ({c.totalCapacity - productionQty} un de capacidade não usada)
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="text-right">
                                             <span className={`font-bold font-mono ${c.sufficient ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
@@ -587,6 +626,22 @@ const ProductionFromRecipe = () => {
                                     <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-xs font-semibold mt-1">
                                         <AlertTriangle className="h-3.5 w-3.5" />
                                         Matéria-prima insuficiente para esta quantidade.
+                                    </div>
+                                )}
+                                {hasHighWaste && optimizedQty && optimizedQty !== productionQty && (
+                                    <div className="flex flex-col gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 mt-1">
+                                        <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+                                            💡 Estás a abrir material novo para produzir poucas unidades extra. A capacidade restante será desperdiçada.
+                                        </p>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full text-xs h-7 border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/40 font-semibold"
+                                            onClick={() => form.setValue('quantity', optimizedQty)}
+                                        >
+                                            Otimizar para {optimizedQty} unidades (sem desperdício)
+                                        </Button>
                                     </div>
                                 )}
                             </div>
