@@ -215,19 +215,10 @@ export function AddCatalogProductDialog({ categories, onAdd }: AddCatalogProduct
   const pricePlaceholder = useDynamicPlaceholder('money');
 
   const trigger = (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button size="icon" className="rounded-full h-9 w-9">
-            <Plus className="h-5 w-5" />
-            <span className="sr-only">Adicionar Produto ao Catálogo</span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Adicionar Produto ao Catálogo</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Button size="icon" className="rounded-full h-9 w-9" title="Adicionar Produto ao Catálogo">
+      <Plus className="h-5 w-5" />
+      <span className="sr-only">Adicionar Produto ao Catálogo</span>
+    </Button>
   );
 
   return (
