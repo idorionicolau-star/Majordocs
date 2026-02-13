@@ -48,6 +48,7 @@ interface AuditStockDialogProps {
 
 function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProps, 'trigger'> & { setOpen: (open: boolean) => void }) {
   const { auditStock } = useContext(InventoryContext) || {};
+  const { toast } = useToast();
   const form = useForm<AuditStockFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
