@@ -129,17 +129,17 @@ export default function InventoryPage() {
     localStorage.setItem('majorstockx-inventory-grid-cols', cols);
   }
 
-  const handleAddProduct = (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => {
-    addProduct(newProductData);
+  const handleAddProduct = async (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => {
+    await addProduct(newProductData);
     toast({
       title: "Produto adicionado",
       description: `${newProductData.name} foi adicionado ao inventário com sucesso.`,
     });
   };
 
-  const handleUpdateProduct = (updatedProduct: Product) => {
+  const handleUpdateProduct = async (updatedProduct: Product) => {
     if (updatedProduct.instanceId) {
-      updateProduct(updatedProduct.instanceId, updatedProduct);
+      await updateProduct(updatedProduct.instanceId, updatedProduct);
       toast({
         title: "Produto Atualizado",
         description: `O produto "${updatedProduct.name}" foi atualizado com sucesso.`,
