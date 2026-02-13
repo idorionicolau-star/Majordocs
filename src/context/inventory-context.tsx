@@ -1386,10 +1386,20 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
               throw new Error(`Matéria-prima não encontrada (ID: ${ingredient.rawMaterialId}) para a receita de ${productName}.`);
             }
 
+            // Yield-based calculation: if yieldPerUnit is set, use ceil rounding (never half-units)
+            // e.g., 1 bag (qty=1) produces 75 products (yieldPerUnit=75)
+            // To produce 150: ceil(150/75) * 1 = 2 bags
+            // To produce 76:  ceil(76/75) * 1  = 2 bags (rounds up)
+            // Backward compatibility: if no yieldPerUnit, use old linear calculation
+            const yieldPer = ingredient.yieldPerUnit && ingredient.yieldPerUnit > 0 ? ingredient.yieldPerUnit : null;
+            const requiredQty = yieldPer
+              ? Math.ceil(quantity / yieldPer) * ingredient.quantity
+              : ingredient.quantity * quantity;
+
             ingredientDocs.push({
               ref: materialRef,
               data: materialDoc.data() as RawMaterial,
-              requiredQty: ingredient.quantity * quantity
+              requiredQty: requiredQty
             });
           }
         }

@@ -93,6 +93,7 @@ export type RecipeIngredient = {
   rawMaterialId: string;
   rawMaterialName: string;
   quantity: number;
+  yieldPerUnit?: number; // How many finished products 1 unit of this material produces (e.g., 1 bag → 75 grelhas)
 };
 
 export type Recipe = {

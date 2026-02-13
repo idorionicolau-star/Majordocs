@@ -86,10 +86,15 @@ const recipeIngredientSchema = z.object({
     rawMaterialId: z.string(),
     rawMaterialName: z.string(),
     quantity: z.preprocess((val) => {
-        if (val === undefined || val === "" || val === null) return 0;
+        if (val === undefined || val === "" || val === null) return 1;
         const num = Number(val);
-        return isNaN(num) ? 0 : num;
-    }, z.number().min(0.01, "A quantidade deve ser positiva.")),
+        return isNaN(num) ? 1 : num;
+    }, z.number().min(1, "Min 1 unidade.")),
+    yieldPerUnit: z.preprocess((val) => {
+        if (val === undefined || val === "" || val === null) return 1;
+        const num = Number(val);
+        return isNaN(num) ? 1 : num;
+    }, z.number().min(1, "Deve produzir pelo menos 1.")),
 });
 const recipeSchema = z.object({
     productName: z.string().nonempty("Selecione um produto final."),
@@ -333,7 +338,7 @@ const RecipesManager = () => {
         const ingredients = form.getValues('ingredients');
         const firstMaterial = rawMaterials[0];
         if (firstMaterial) {
-            form.setValue('ingredients', [...ingredients, { rawMaterialId: firstMaterial.id, rawMaterialName: firstMaterial.name, quantity: 1 }]);
+            form.setValue('ingredients', [...ingredients, { rawMaterialId: firstMaterial.id, rawMaterialName: firstMaterial.name, quantity: 1, yieldPerUnit: 1 }]);
         }
     };
 
@@ -403,12 +408,20 @@ const RecipesManager = () => {
                         <Card key={recipe.id} className="flex flex-col">
                             <CardHeader><CardTitle>{recipe.productName}</CardTitle></CardHeader>
                             <CardContent className="flex-grow">
-                                <ul>
-                                    {recipe.ingredients.map((ing, index) => (
-                                        <li key={index} className="text-sm">
-                                            {ing.quantity} {rawMaterials.find(rm => rm.id === ing.rawMaterialId)?.unit || ''} de {ing.rawMaterialName}
-                                        </li>
-                                    ))}
+                                <ul className="space-y-1.5">
+                                    {recipe.ingredients.map((ing, index) => {
+                                        const mat = rawMaterials.find(rm => rm.id === ing.rawMaterialId);
+                                        const unit = mat?.unit || 'un';
+                                        return (
+                                            <li key={index} className="text-sm bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg">
+                                                {ing.yieldPerUnit && ing.yieldPerUnit > 1 ? (
+                                                    <><strong>{ing.quantity} {unit}</strong> de {ing.rawMaterialName} <span className="text-primary font-semibold">→ {ing.yieldPerUnit} un</span></>
+                                                ) : (
+                                                    <><strong>{ing.quantity} {unit}</strong> de {ing.rawMaterialName} <span className="text-muted-foreground">por unidade</span></>
+                                                )}
+                                            </li>
+                                        );
+                                    })}
                                 </ul>
                             </CardContent>
                             <CardFooter>
@@ -431,22 +444,38 @@ const RecipesManager = () => {
                                 )} />
                                 <div>
                                     <Label>Ingredientes</Label>
-                                    {form.watch('ingredients').map((ing, index) => (
-                                        <div key={index} className="flex items-center gap-2 mt-2">
-                                            <FormField control={form.control} name={`ingredients.${index}.rawMaterialId`} render={({ field }) => (
-                                                <FormItem className="flex-1"><Select onValueChange={(value) => {
-                                                    const material = rawMaterials.find(rm => rm.id === value);
-                                                    field.onChange(value);
-                                                    form.setValue(`ingredients.${index}.rawMaterialName`, material?.name || '');
-                                                }} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>
-                                                        {rawMaterials.map(rm => <SelectItem key={rm.id} value={rm.id}>{rm.name}</SelectItem>)}
-                                                    </SelectContent></Select></FormItem>
-                                            )} />
-                                            <FormField control={form.control} name={`ingredients.${index}.quantity`} render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" {...field} className="w-24" /></FormControl></FormItem>
-                                            )} />
-                                        </div>
-                                    ))}
+                                    {form.watch('ingredients').map((ing, index) => {
+                                        const selectedMat = rawMaterials.find(rm => rm.id === ing.rawMaterialId);
+                                        const matUnit = selectedMat?.unit || 'un';
+                                        return (
+                                            <div key={index} className="flex flex-col gap-2 mt-3 p-3 border rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                                                <div className="flex items-center gap-2">
+                                                    <FormField control={form.control} name={`ingredients.${index}.rawMaterialId`} render={({ field }) => (
+                                                        <FormItem className="flex-1"><Select onValueChange={(value) => {
+                                                            const material = rawMaterials.find(rm => rm.id === value);
+                                                            field.onChange(value);
+                                                            form.setValue(`ingredients.${index}.rawMaterialName`, material?.name || '');
+                                                        }} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>
+                                                                {rawMaterials.map(rm => <SelectItem key={rm.id} value={rm.id}>{rm.name}</SelectItem>)}
+                                                            </SelectContent></Select></FormItem>
+                                                    )} />
+                                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700" onClick={() => removeIngredient(index)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <FormField control={form.control} name={`ingredients.${index}.quantity`} render={({ field }) => (
+                                                        <FormItem className="flex-shrink-0"><FormControl><Input type="number" min={1} {...field} className="w-16 h-8 text-center font-bold" /></FormControl></FormItem>
+                                                    )} />
+                                                    <span className="text-muted-foreground whitespace-nowrap">{matUnit} produz →</span>
+                                                    <FormField control={form.control} name={`ingredients.${index}.yieldPerUnit`} render={({ field }) => (
+                                                        <FormItem className="flex-shrink-0"><FormControl><Input type="number" min={1} {...field} className="w-20 h-8 text-center font-bold text-primary" /></FormControl></FormItem>
+                                                    )} />
+                                                    <span className="text-muted-foreground whitespace-nowrap">unidades do produto</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                     <Button type="button" variant="outline" size="sm" onClick={addIngredient} className="mt-2">Adicionar Ingrediente</Button>
                                 </div>
                                 <DialogFooter><Button type="submit">Salvar Receita</Button></DialogFooter>
@@ -461,12 +490,36 @@ const RecipesManager = () => {
 
 // Production From Recipe Component
 const ProductionFromRecipe = () => {
-    const { recipes, addProduction, loading } = useContext(InventoryContext)!;
+    const { recipes, rawMaterials, addProduction, loading } = useContext(InventoryContext)!;
     const { toast } = useToast();
     const form = useForm<ProductionFormValues>({
         resolver: zodResolver(productionSchema),
         defaultValues: { recipeId: '', quantity: 1 },
     });
+
+    const selectedRecipeId = form.watch('recipeId');
+    const productionQty = form.watch('quantity');
+    const selectedRecipe = recipes.find(r => r.id === selectedRecipeId);
+
+    // Calculate consumption preview
+    const consumptionPreview = useMemo(() => {
+        if (!selectedRecipe || !productionQty || productionQty <= 0) return [];
+        return selectedRecipe.ingredients.map(ing => {
+            const mat = rawMaterials.find(rm => rm.id === ing.rawMaterialId);
+            const yieldPer = ing.yieldPerUnit && ing.yieldPerUnit > 0 ? ing.yieldPerUnit : null;
+            const requiredQty = yieldPer
+                ? Math.ceil(productionQty / yieldPer) * ing.quantity
+                : ing.quantity * productionQty;
+            return {
+                name: ing.rawMaterialName,
+                unit: mat?.unit || 'un',
+                required: requiredQty,
+                available: mat?.stock || 0,
+                sufficient: (mat?.stock || 0) >= requiredQty,
+                yieldInfo: yieldPer ? `${ing.quantity} ${mat?.unit || 'un'} → ${yieldPer} un` : null,
+            };
+        });
+    }, [selectedRecipe, productionQty, rawMaterials]);
 
     const onSubmit = async (values: ProductionFormValues) => {
         try {
@@ -475,30 +528,22 @@ const ProductionFromRecipe = () => {
                 toast({ variant: 'destructive', title: 'Erro', description: 'Receita não encontrada.' });
                 return;
             }
-            // We need to pass unit. Ideally we get it from product catalog, but addProduction handles catalog lookup if we don't pass unit? 
-            // addProduction signature: (prodData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>)
-            // It expects unit. 
-            // In the previous addProduction implementation, I set unit default to 'un' if not provided or found in catalog?
-            // "unit: catalogProduct?.unit || 'un'" in addProduction. So we can pass 'un' or let it handle it?
-            // Wait, addProduction takes "unit". If I don't pass it, it might be undefined.
-            // My updated addProduction: "const { productName, quantity, location, orderId, unit } = prodData;"
-            // "unit: unit || catalogProduct?.unit || 'un',"
-            // So if I pass undefined, it tries to find it. Good.
 
             await addProduction({
                 productName: recipe.productName,
                 quantity: values.quantity,
-                // unit: recipe.productUnit? No recipe doesn't store unit usually, product does.
             });
 
             toast({ title: 'Sucesso', description: 'Produção registada.' });
             form.reset();
         } catch (error: any) {
-            // Error is already toasted in context, but we ensure form reset or not?
+            // Error is already toasted in context
         }
     };
 
     if (loading) return <Skeleton className="h-64 w-full" />;
+
+    const hasInsufficientMaterial = consumptionPreview.some(c => !c.sufficient);
 
     return (
         <Card>
@@ -515,9 +560,39 @@ const ProductionFromRecipe = () => {
                             </SelectContent></Select><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name="quantity" render={({ field }) => (
-                            <FormItem><FormLabel>Quantidade a Produzir</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Quantidade a Produzir</FormLabel><FormControl><Input type="number" min={1} {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                        <Button type="submit" disabled={form.formState.isSubmitting} className="w-full border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))] hover:shadow-[2px_2px_0px_hsl(var(--foreground))] active:shadow-[1px_1px_0px_hsl(var(--foreground))] transition-all">Registrar Produção</Button>
+
+                        {/* Consumption Preview */}
+                        {consumptionPreview.length > 0 && (
+                            <div className="rounded-lg border p-3 space-y-2 bg-slate-50 dark:bg-slate-800/50">
+                                <p className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Consumo de Matéria-Prima</p>
+                                {consumptionPreview.map((c, i) => (
+                                    <div key={i} className={`flex items-center justify-between text-sm p-2 rounded ${c.sufficient ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
+                                        <div>
+                                            <span className="font-semibold">{c.name}</span>
+                                            {c.yieldInfo && <span className="text-xs text-muted-foreground ml-2">({c.yieldInfo})</span>}
+                                        </div>
+                                        <div className="text-right">
+                                            <span className={`font-bold font-mono ${c.sufficient ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                {c.required} {c.unit}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground ml-1">
+                                                / {c.available} disp.
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                                {hasInsufficientMaterial && (
+                                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-xs font-semibold mt-1">
+                                        <AlertTriangle className="h-3.5 w-3.5" />
+                                        Matéria-prima insuficiente para esta quantidade.
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        <Button type="submit" disabled={form.formState.isSubmitting || hasInsufficientMaterial} className="w-full border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))] hover:shadow-[2px_2px_0px_hsl(var(--foreground))] active:shadow-[1px_1px_0px_hsl(var(--foreground))] transition-all">Registrar Produção</Button>
                     </form>
                 </Form>
             </CardContent>
