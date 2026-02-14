@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   const resend = new Resend(apiKey);
 
   const body = await req.json();
-  const { to, subject, type, companyId, logoUrl } = body;
+  const { to, subject, type, companyId, logoUrl, companyName } = body;
 
   // 1.5 Tenant Isolation Check
   if (!decodedToken.superAdmin && (!companyId || companyId !== (decodedToken as any).companyId)) {
@@ -28,15 +28,14 @@ export async function POST(req: Request) {
   try {
     let htmlContent = '';
 
-    const headerHtml = logoUrl
-      ? `
+    const displayName = companyName || 'MajorStockX';
+    const logoHtml = logoUrl
+      ? `<img src="${logoUrl}" alt="${displayName}" style="max-height: 48px; max-width: 180px; object-fit: contain; margin-bottom: 8px;" /><br/>`
+      : '';
+    const headerHtml = `
         <div style="background-color: #0f172a; padding: 24px; text-align: center;">
-          <img src="${logoUrl}" alt="Logo da Empresa" style="max-height: 60px; max-width: 200px; object-fit: contain;" />
-        </div>
-      `
-      : `
-        <div style="background-color: #0f172a; padding: 24px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 20px; font-weight: bold;">Notificação do MajorStockX</h1>
+          ${logoHtml}
+          <h1 style="color: white; margin: 0; font-size: 20px; font-weight: bold;">${displayName}</h1>
         </div>
       `;
     const footerHtml = `

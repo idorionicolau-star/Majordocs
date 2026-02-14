@@ -175,7 +175,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${fbToken}`
         },
-        body: JSON.stringify({ to: targetEmail, subject, companyId, logoUrl: companyData?.logoUrl, ...payload }),
+        body: JSON.stringify({ to: targetEmail, subject, companyId, logoUrl: companyData?.logoUrl, companyName: companyData?.name, ...payload }),
       });
 
       if (!response.ok) {

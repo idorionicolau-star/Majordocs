@@ -71,6 +71,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
                     to: customer.email,
                     subject: `Recibo de Venda - ${sale.guideNumber}`,
                     companyId: companyData?.id,
+                    logoUrl: companyData?.logoUrl,
                     customerName: customer.name,
                     guideNumber: sale.guideNumber,
                     items: [{ productName: sale.productName, quantity: sale.quantity, subtotal: sale.totalValue }],
