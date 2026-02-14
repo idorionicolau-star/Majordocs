@@ -7,9 +7,9 @@ import { useSearchParams } from "next/navigation";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { StockMovement } from "@/lib/types";
-import { useFirestore, useMemoFirebase } from '@/firebase/provider';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy, Timestamp } from "firebase/firestore";
+import { useFirestore } from '@/firebase/provider';
+import { useFirestorePagination } from '@/hooks/use-firestore-pagination';
+import { collection, query, orderBy, Timestamp, where, QueryConstraint, limit } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { startOfDay, endOfDay, isWithinInterval, format } from 'date-fns';
@@ -44,12 +44,39 @@ export default function InventoryHistoryPage() {
   const [searchFilter, setSearchFilter] = useState(productNameFromQuery || "");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
-  const stockMovementsCollectionRef = useMemoFirebase(() => {
+  const stockMovementsCollectionRef = useMemo(() => {
     if (!firestore || !companyId) return null;
     return collection(firestore, `companies/${companyId}/stockMovements`);
   }, [firestore, companyId]);
 
-  const { data: movements, isLoading: movementsLoading } = useCollection<StockMovement>(stockMovementsCollectionRef);
+  // Use pagination hook with high limit to mimic "infinite list" but safely
+  // We can add server-side sorting here if needed, but for now we keep client-side sort logic
+  // to minimize changes, BUT we must fetch a reasonable amount to sort.
+  // actually, for correct sorting we should sort in Firestore.
+  // The current logic sorts by timestamp desc.
+
+  const queryConstraints = useMemo(() => {
+    const constraints: QueryConstraint[] = [];
+    if (selectedDate) {
+      // Note: Firestore filtering by date range AND other fields might require composite indexes.
+      // Keeping it client-side for now implies we need to fetch MOST/ALL data if possible,
+      // OR we move to server-side filtering.
+      // User complained about "loop", likely due to mutation or crash.
+      // Let's stick to cleaning up the existing logic first + mutation fix,
+      // BUT using pagination to prevent 10k items crash.
+      // We'll fetch ordered by timestamp desc to get latest first.
+      constraints.push(orderBy('timestamp', 'desc'));
+    } else {
+      constraints.push(orderBy('timestamp', 'desc'));
+    }
+    return constraints;
+  }, [selectedDate]);
+
+  const { data: movements, loading: movementsLoading, loadMore, hasMore } = useFirestorePagination<StockMovement>(
+    stockMovementsCollectionRef as any,
+    2000,
+    queryConstraints
+  );
 
   const locationMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -80,8 +107,8 @@ export default function InventoryHistoryPage() {
       );
     }
 
-    // Sort client-side
-    return result.sort((a, b) => {
+    // Sort client-side (Create a copy using toSorted or spread to avoid mutation!)
+    return [...result].sort((a, b) => { // Fix: spread to create copy before sort
       const dateA = a.timestamp ? (a.timestamp as Timestamp).toMillis() : 0;
       const dateB = b.timestamp ? (b.timestamp as Timestamp).toMillis() : 0;
       return dateB - dateA;
@@ -258,13 +285,24 @@ export default function InventoryHistoryPage() {
               <MovementCard key={movement.id} movement={movement} locationMap={locationMap} />
             ))
           ) : (
-            <div className="col-span-full">
-              <Card className="text-center py-12 text-muted-foreground">
-                Nenhum movimento encontrado com os filtros atuais.
-              </Card>
-            </div>
+            !movementsLoading && (
+              <div className="col-span-full">
+                <Card className="text-center py-12 text-muted-foreground">
+                  Nenhum movimento encontrado com os filtros atuais.
+                </Card>
+              </div>
+            )
           )}
         </div>
+
+        {/* Load More Button if needed */}
+        {hasMore && (
+          <div className="flex justify-center mt-8">
+            <Button variant="outline" onClick={loadMore} disabled={movementsLoading}>
+              {movementsLoading ? "A carregar..." : "Carregar Mais Histórico"}
+            </Button>
+          </div>
+        )}
 
         {isAdmin && (
           <Card className="mt-8">
