@@ -52,7 +52,7 @@ export interface InternalQuery extends Query<DocumentData> {
  * @returns {UseCollectionResult<T>} Object with data, isLoading, error.
  */
 export function useCollection<T = any>(
-    memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
+  memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & { __memo?: boolean }) | null | undefined,
 ): UseCollectionResult<T> {
   type ResultItemType = WithId<T>;
   type StateDataType = ResultItemType[] | null;
@@ -73,6 +73,7 @@ export function useCollection<T = any>(
     setError(null);
 
     // Directly use memoizedTargetRefOrQuery as it's assumed to be the final query
+    let isInitialLoad = true;
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
@@ -82,7 +83,10 @@ export function useCollection<T = any>(
         }
         setData(results);
         setError(null);
-        setIsLoading(false);
+        if (isInitialLoad) {
+          setIsLoading(false);
+          isInitialLoad = false;
+        }
       },
       (error: FirestoreError) => {
         // This logic extracts the path from either a ref or a query
@@ -107,7 +111,7 @@ export function useCollection<T = any>(
 
     return () => unsubscribe();
   }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
-  if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
+  if (memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
   }
   return { data, isLoading, error };

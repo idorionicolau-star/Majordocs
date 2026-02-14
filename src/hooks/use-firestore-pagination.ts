@@ -59,8 +59,10 @@ export function useFirestorePagination<T = DocumentData>(
             console.error("Error fetching data:", err);
             setError(err);
         } finally {
-            setLoading(false);
-            isFetchingRef.current = false;
+            if (isFetchingRef.current) {
+                setLoading(false);
+                isFetchingRef.current = false;
+            }
         }
     }, [baseQuery, pageSize, JSON.stringify(constraints)]); // Ensure constraints changes trigger reload
 
