@@ -103,8 +103,10 @@ export default function SalesPage() {
   );
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(2000); // "Infinite" scroll as requested
 
+  // Removed resize listener that was resetting itemsPerPage
+  /*
   useEffect(() => {
     const handleResize = () => {
       setItemsPerPage(window.innerWidth >= 768 ? 60 : 10);
@@ -113,6 +115,7 @@ export default function SalesPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+  */
 
   useEffect(() => {
     setCurrentPage(1);
@@ -392,7 +395,7 @@ export default function SalesPage() {
                       onClick={handleNextPage}
                       disabled={currentPage >= totalPages && !hasMore}
                     >
-                      Próximo
+                      {currentPage >= totalPages && hasMore ? "Carregar Mais" : "Próximo"}
                     </Button>
                   </div>
                 </div>
