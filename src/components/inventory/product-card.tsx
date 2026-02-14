@@ -59,8 +59,9 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                     />
                 </div>
             ) : (
-                <div className="w-full h-32 mb-2 flex items-center justify-center rounded-md bg-slate-100 dark:bg-slate-800 shrink-0 text-slate-300 dark:text-slate-600">
-                    <PackageCheck className="h-10 w-10 opacity-50" />
+                <div className="w-full h-32 mb-2 flex flex-col items-center justify-center rounded-md bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700/80 shrink-0">
+                    <PackageCheck className="h-8 w-8 text-slate-400 dark:text-slate-500" />
+                    <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-wider">Sem Foto</span>
                 </div>
             )}
             <CardHeader className="p-1 sm:p-2">

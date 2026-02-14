@@ -206,6 +206,7 @@ export const PrimaryKPIs = () => {
             trend: kpiData.capitalGrowth,
             trendLabel: `vs ult. ${period === 'daily' ? '24h' : period === 'weekly' ? '7d' : '30d'}`,
             colorClass: "kpi-card--blue",
+            invertTrend: true, // Aumento de capital imobilizado = mau (dinheiro preso em stock)
         },
         {
             title: `TICKET MÉDIO (${periodLabels[period].toUpperCase()})`,
@@ -241,9 +242,11 @@ export const PrimaryKPIs = () => {
                     const isPositive = (card.trend || 0) >= 0;
                     const TrendIcon = card.trend === null || card.trend === 0 ? Minus : (isPositive ? TrendingUp : TrendingDown);
 
+                    // For invertTrend cards (like Capital Imobilizado), positive = bad (red), negative = good (green)
+                    const isGood = card.invertTrend ? !isPositive : isPositive;
                     const trendColor = card.trend === null || card.trend === 0
                         ? "text-slate-400"
-                        : isPositive ? "text-[var(--card-color)]" : "text-rose-500 dark:text-rose-400";
+                        : isGood ? "text-[var(--card-color)]" : "text-rose-500 dark:text-rose-400";
 
                     const trendText = card.trend === null || !isFinite(card.trend) ? "--" : `${isPositive ? '+' : ''}${card.trend?.toFixed(1)}%`;
 

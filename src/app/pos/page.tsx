@@ -458,8 +458,9 @@ export default function POSPage() {
                                             />
                                         </div>
                                     ) : (
-                                        <div className="w-full h-32 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-t-xl text-slate-300 dark:text-slate-600">
-                                            <Package className="h-12 w-12" />
+                                        <div className="w-full h-32 flex flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700/80 rounded-t-xl">
+                                            <Package className="h-10 w-10 text-slate-400 dark:text-slate-500" />
+                                            <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-wider">Sem Foto</span>
                                         </div>
                                     )}
                                     <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
@@ -513,10 +514,12 @@ export default function POSPage() {
                         <Separator />
                         <CardContent className="p-0">
                             {cart.length === 0 ? (
-                                <div className="p-8 text-center text-muted-foreground">
-                                    <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                                    <p className="font-medium">Carrinho vazio</p>
-                                    <p className="text-sm">Toque num produto para adicionar.</p>
+                                <div className="p-10 text-center text-muted-foreground">
+                                    <div className="mx-auto mb-4 w-20 h-20 rounded-full bg-primary/5 dark:bg-primary/10 flex items-center justify-center animate-pulse">
+                                        <ShoppingCart className="h-10 w-10 text-primary/40" />
+                                    </div>
+                                    <p className="text-base font-semibold text-foreground/70">Carrinho vazio</p>
+                                    <p className="text-sm mt-1">Toque num produto à esquerda para começar.</p>
                                 </div>
                             ) : (
                                 <ScrollArea className="max-h-[400px]">
