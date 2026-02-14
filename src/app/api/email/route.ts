@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   const resend = new Resend(apiKey);
 
   const body = await req.json();
-  const { to, subject, type, companyId } = body;
+  const { to, subject, type, companyId, logoUrl } = body;
 
   // 1.5 Tenant Isolation Check
   if (!decodedToken.superAdmin && (!companyId || companyId !== (decodedToken as any).companyId)) {
@@ -28,11 +28,17 @@ export async function POST(req: Request) {
   try {
     let htmlContent = '';
 
-    const headerHtml = `
+    const headerHtml = logoUrl
+      ? `
+        <div style="background-color: #0f172a; padding: 24px; text-align: center;">
+          <img src="${logoUrl}" alt="Logo da Empresa" style="max-height: 60px; max-width: 200px; object-fit: contain;" />
+        </div>
+      `
+      : `
         <div style="background-color: #0f172a; padding: 24px; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 20px; font-weight: bold;">Notificação do MajorStockX</h1>
         </div>
-    `;
+      `;
     const footerHtml = `
         <div style="background-color: #f1f5f9; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8;">
           &copy; ${new Date().getFullYear()} MajorStockX

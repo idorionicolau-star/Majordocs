@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Code, RefreshCw, Trash2, ShieldCheck } from "lucide-react";
+import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Code, RefreshCw, Trash2, ShieldCheck, ImagePlus, X } from "lucide-react";
 
 import { LocationsManager } from "@/components/settings/locations-manager";
 import { AdminMergeTool } from "@/components/admin/admin-merge-tool";
@@ -146,6 +146,7 @@ export default function SettingsPage() {
     phone: '',
     address: '',
     taxId: '',
+    logoUrl: '' as string,
     businessType: 'manufacturer' as 'manufacturer' | 'reseller',
     notificationSettings: {
       email: '',
@@ -196,6 +197,7 @@ export default function SettingsPage() {
         phone: companyData.phone || '',
         address: companyData.address || '',
         taxId: companyData.taxId || '',
+        logoUrl: companyData.logoUrl || '',
         businessType: companyData.businessType || 'manufacturer',
         notificationSettings: {
           email: companyData.notificationSettings?.email || '',
@@ -392,6 +394,59 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleCompanyUpdate} className="space-y-6">
+                      {/* Logo Upload Section */}
+                      <div className="flex flex-col items-center gap-4 pb-6 border-b">
+                        <Label className="text-base font-semibold">Logotipo da Empresa</Label>
+                        {companyDetails.logoUrl ? (
+                          <div className="relative group">
+                            <img
+                              src={companyDetails.logoUrl}
+                              alt="Logotipo da Empresa"
+                              className="h-24 max-w-[200px] object-contain rounded-lg border bg-white p-2"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setCompanyDetails(prev => ({ ...prev, logoUrl: '' }))}
+                              className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="h-24 w-48 rounded-lg border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-1 text-muted-foreground">
+                            <ImagePlus className="h-8 w-8" />
+                            <span className="text-xs">Sem logotipo</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="logo-upload" className="cursor-pointer">
+                            <Button type="button" variant="outline" size="sm" asChild>
+                              <span>
+                                <ImagePlus className="mr-2 h-4 w-4" />
+                                {companyDetails.logoUrl ? 'Alterar' : 'Carregar Logotipo'}
+                              </span>
+                            </Button>
+                          </Label>
+                          <input
+                            id="logo-upload"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setCompanyDetails(prev => ({ ...prev, logoUrl: reader.result as string }));
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">PNG ou JPG, max. 200x60px recomendado. Aparecerá nos e-mails de notificação.</p>
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="name">Nome da Empresa</Label>
