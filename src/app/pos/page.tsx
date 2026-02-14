@@ -496,7 +496,7 @@ export default function POSPage() {
                 </div>
 
                 {/* RIGHT: Cart (Desktop) */}
-                <div className="hidden lg:block space-y-4">
+                <div className="hidden lg:block h-[calc(100vh-120px)] sticky top-24">
                     <PosCart
                         cart={cart}
                         cartSubtotal={cartSubtotal}
