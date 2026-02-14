@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useContext, useMemo } from 'react';
+import { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useForm, useWatch } from "react-hook-form";
@@ -35,10 +40,12 @@ import * as z from "zod";
 import type { Product, Sale } from '@/lib/types';
 import { formatCurrency, cn } from '@/lib/utils';
 import { InventoryContext } from '@/context/inventory-context';
+import { useCRM } from '@/context/crm-context';
 import { CatalogProductSelector } from '../catalog/catalog-product-selector';
 import { ScrollArea } from '../ui/scroll-area';
 import { Textarea } from '../ui/textarea';
 import { DatePicker } from '../ui/date-picker';
+import { Check, ChevronsUpDown, UserPlus } from 'lucide-react';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -62,6 +69,7 @@ const formSchema = z.object({
   }, z.number().min(0, "O valor pago não pode ser negativo.").optional()),
   documentType: z.enum(['Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo', 'Encomenda']),
   clientName: z.string().optional(),
+  customerId: z.string().optional(),
   notes: z.string().optional(),
   date: z.date(),
 });
@@ -78,6 +86,10 @@ interface EditSaleDialogProps {
 function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditSaleDialogProps) {
   const inventoryContext = useContext(InventoryContext);
   const { products, catalogProducts, catalogCategories, isMultiLocation } = inventoryContext || { products: [], catalogProducts: [], catalogCategories: [], isMultiLocation: false };
+  const { customers, addCustomer } = useCRM();
+
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [customerPopoverOpen, setCustomerPopoverOpen] = useState(false);
 
   const form = useForm<EditSaleFormValues>({
     resolver: zodResolver(formSchema),
@@ -89,10 +101,42 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
       unit: sale.unit || 'un',
       documentType: sale.documentType,
       clientName: sale.clientName || '',
+      customerId: sale.customerId || '',
       notes: sale.notes || '',
       date: new Date(sale.date),
     },
   });
+
+  const filteredCustomers = useMemo(() => {
+    if (!customerSearch.trim()) return customers;
+    const search = customerSearch.toLowerCase();
+    return customers.filter(c => c.name.toLowerCase().includes(search));
+  }, [customers, customerSearch]);
+
+  const exactMatch = useMemo(() => {
+    return customers.some(c => c.name.toLowerCase() === customerSearch.trim().toLowerCase());
+  }, [customers, customerSearch]);
+
+  const handleSelectCustomer = (customer: { id: string; name: string }) => {
+    form.setValue('clientName', customer.name);
+    form.setValue('customerId', customer.id);
+    setCustomerSearch('');
+    setCustomerPopoverOpen(false);
+  };
+
+  const handleCreateCustomer = async () => {
+    const name = customerSearch.trim();
+    if (!name) return;
+    try {
+      const newId = await addCustomer({ name });
+      if (newId) {
+        form.setValue('clientName', name);
+        form.setValue('customerId', newId);
+      }
+      setCustomerSearch('');
+      setCustomerPopoverOpen(false);
+    } catch { }
+  };
 
   const productsInStock = useMemo(() => {
     if (!products || !catalogProducts) return [];
@@ -101,7 +145,6 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
       ? products.filter(p => p.location === sale.location)
       : products;
 
-    // Allow the current product to be in the list even if out of stock, so user can edit other fields.
     const inStockOrCurrent = productsForLocation.filter(p =>
       ((p.stock - p.reservedStock) > 0) || (p.name === sale.productName)
     );
@@ -135,9 +178,8 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
       ...sale,
       ...values,
       date: values.date.toISOString(),
-      // Recalculate totals
       subtotal: total,
-      totalValue: total, // Note: Simplified, doesn't re-apply discount/VAT logic from add dialog
+      totalValue: total,
       amountPaid: values.amountPaid ?? 0,
       status: (values.amountPaid ?? 0) >= total ? 'Pago' : sale.status,
     });
@@ -152,11 +194,69 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
             control={form.control}
             name="clientName"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Nome do Cliente</FormLabel>
-                <FormControl>
-                  <Input placeholder="Nome do cliente" {...field} />
-                </FormControl>
+              <FormItem className="flex flex-col">
+                <FormLabel>Cliente</FormLabel>
+                <Popover open={customerPopoverOpen} onOpenChange={setCustomerPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                          "w-full justify-between font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value || "Selecionar cliente..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <div className="p-2 border-b">
+                      <Input
+                        placeholder="Pesquisar ou criar cliente..."
+                        value={customerSearch}
+                        onChange={(e) => setCustomerSearch(e.target.value)}
+                        className="h-8"
+                        autoFocus
+                      />
+                    </div>
+                    <ScrollArea className="max-h-48">
+                      <div className="p-1">
+                        {filteredCustomers.length === 0 && !customerSearch.trim() && (
+                          <p className="text-sm text-muted-foreground p-2 text-center">Nenhum cliente registado.</p>
+                        )}
+                        {filteredCustomers.map((customer) => (
+                          <button
+                            key={customer.id}
+                            type="button"
+                            className={cn(
+                              "flex items-center w-full gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent",
+                              field.value === customer.name && "bg-accent"
+                            )}
+                            onClick={() => handleSelectCustomer(customer)}
+                          >
+                            <Check className={cn("h-4 w-4", field.value === customer.name ? "opacity-100" : "opacity-0")} />
+                            <span>{customer.name}</span>
+                            {customer.phone && <span className="ml-auto text-xs text-muted-foreground">{customer.phone}</span>}
+                          </button>
+                        ))}
+                        {customerSearch.trim() && !exactMatch && (
+                          <button
+                            type="button"
+                            className="flex items-center w-full gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent text-primary font-medium border-t mt-1 pt-2"
+                            onClick={handleCreateCustomer}
+                          >
+                            <UserPlus className="h-4 w-4" />
+                            <span>Criar &quot;{customerSearch.trim()}&quot;</span>
+                          </button>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </PopoverContent>
+                </Popover>
                 <FormMessage />
               </FormItem>
             )}

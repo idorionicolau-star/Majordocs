@@ -55,6 +55,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     setIsMobileNavOpen(false);
   }, []);
 
+  // Track the path from URL on first load (before any redirects happen)
+  const initialPathRef = React.useRef<string | null>(pathname);
+  const hasRestoredRef = React.useRef(false);
+
   React.useEffect(() => {
     if (authContext?.loading) {
       return;
@@ -75,10 +79,18 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       router.replace('/login');
     }
 
-    // Restore last path on mount if on dashboard
-    if (isAuthenticated && pathname === '/dashboard') {
+    // Restore last path on mount (only once) — handles the case where
+    // root page.tsx redirects to /dashboard after a refresh
+    if (isAuthenticated && !hasRestoredRef.current) {
+      hasRestoredRef.current = true;
       const lastPath = localStorage.getItem('majorstockx-last-path');
-      if (lastPath && lastPath !== '/dashboard' && !lastPath.includes('/login') && !lastPath.includes('/register')) {
+      if (
+        lastPath &&
+        lastPath !== pathname &&
+        lastPath !== '/dashboard' &&
+        !lastPath.includes('/login') &&
+        !lastPath.includes('/register')
+      ) {
         router.replace(lastPath);
       }
     }
