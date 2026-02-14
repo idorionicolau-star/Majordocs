@@ -20,8 +20,7 @@ import { useFirestore } from '@/firebase/provider';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Card } from "@/components/ui/card";
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
-import { collection, where, orderBy, QueryConstraint } from "firebase/firestore";
+// Removed useFirestorePagination and firestore query imports
 
 export default function SalesPage() {
   const searchParams = useSearchParams();
@@ -38,6 +37,7 @@ export default function SalesPage() {
 
   const {
     loading: inventoryLoading,
+    sales: contextSales,
     addSale,
     confirmSalePickup,
     deleteSale,
@@ -49,6 +49,7 @@ export default function SalesPage() {
     isMultiLocation,
   } = inventoryContext || {
     loading: true,
+    sales: [],
     addSale: async () => { },
     confirmSalePickup: () => { },
     deleteSale: () => { },
@@ -63,105 +64,56 @@ export default function SalesPage() {
   const canEditSales = canEdit('sales');
   const canViewSales = canView('sales');
 
-  // --- Firestore Pagination Query Construction ---
-  const salesQuery = useMemo(() => {
-    if (!firestore || !companyId) return null;
-    return collection(firestore, `companies/${companyId}/sales`);
-  }, [firestore, companyId]);
+  // --- Client-Side Filtering & Sorting (Mimicking InventoryPage) ---
+  const filteredSales = useMemo(() => {
+    if (!contextSales) return [];
+    let result = [...contextSales];
 
-  const queryConstraints = useMemo(() => {
-    const constraints: QueryConstraint[] = [];
-
+    // 1. Status Filter
     if (statusFilter !== 'all') {
-      constraints.push(where('status', '==', statusFilter));
+      result = result.filter(s => s.status === statusFilter);
     }
 
+    // 2. Location Filter
     if (isMultiLocation && locationFilter !== 'all') {
-      constraints.push(where('location', '==', locationFilter));
+      result = result.filter(s => s.location === locationFilter);
     }
 
+    // 3. Name/Search Filter
     if (nameFilter) {
-      constraints.push(where('productName', '>=', nameFilter));
-      constraints.push(where('productName', '<=', nameFilter + '\uf8ff'));
-    } else {
-      constraints.push(orderBy('date', 'desc'));
+      const lowerName = nameFilter.toLowerCase();
+      result = result.filter(s =>
+        (s.productName && s.productName.toLowerCase().includes(lowerName)) ||
+        (s.clientName && s.clientName.toLowerCase().includes(lowerName)) ||
+        (s.guideNumber && s.guideNumber.toString().includes(lowerName))
+      );
     }
 
-    return constraints;
-  }, [statusFilter, locationFilter, isMultiLocation, nameFilter]);
-
-  const {
-    data: sales,
-    loading: salesLoading,
-    loadMore,
-    hasMore,
-    updateItem
-  } = useFirestorePagination<Sale>(
-    salesQuery as any,
-    5000, // Force 5000 items from Firestore
-    salesQuery ? queryConstraints : []
-  );
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5000); // 5000 items per page (infinite)
-
-  useEffect(() => {
-    // Debug toast to confirm update
-    toast({
-      title: "Lista Infinita Ativa",
-      description: "A carregar até 5000 vendas...",
-      duration: 3000,
-    });
-  }, []);
-
-  // Removed resize listener that was resetting itemsPerPage
-  /*
-  useEffect(() => {
-    const handleResize = () => {
-      setItemsPerPage(window.innerWidth >= 768 ? 60 : 10);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  */
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [nameFilter, statusFilter, dateFilter, locationFilter]);
-
-  const totalPages = Math.ceil(sales.filter(s => !s.deletedAt).length / itemsPerPage);
-  const paginatedSales = sales.filter(s => !s.deletedAt).slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(p => p + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (hasMore) {
-      loadMore();
+    // 4. Date Filter
+    if (dateFilter) {
+      const start = new Date(dateFilter);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(dateFilter);
+      end.setHours(23, 59, 59, 999);
+      result = result.filter(s => {
+        const d = new Date(s.date);
+        return d >= start && d <= end;
+      });
     }
-  };
 
-  const handlePreviousPage = () => {
-    setCurrentPage(p => Math.max(1, p - 1));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+    // 5. Exclude Deleted
+    result = result.filter(s => !s.deletedAt);
 
-  useEffect(() => {
-    const nameQuery = searchParams.get('nameFilter');
-    if (nameQuery) setNameFilter(nameQuery);
-    const statusQuery = searchParams.get('statusFilter');
-    if (statusQuery) setStatusFilter(statusQuery);
-  }, [searchParams]);
+    // 6. Sort by Date Descending
+    result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedView = localStorage.getItem('majorstockx-sales-view') as 'list' | 'grid';
-      const savedGridCols = localStorage.getItem('majorstockx-sales-grid-cols') as '3' | '4' | '5';
-      if (savedView) setView(savedView);
-      if (savedGridCols) setGridCols(savedGridCols);
-    }
-  }, []);
+    return result;
+  }, [contextSales, statusFilter, locationFilter, nameFilter, dateFilter, isMultiLocation]);
+
+  // Use filteredSales for display. No more manual pagination.
+  const sales = filteredSales;
+  const salesLoading = inventoryLoading; // Use inventory loading state
+
 
   const handleSetView = (newView: 'list' | 'grid') => {
     setView(newView);
@@ -173,13 +125,10 @@ export default function SalesPage() {
     localStorage.setItem('majorstockx-sales-grid-cols', cols);
   }
 
-
-
   const handleUpdateSale = (updatedSale: Sale) => {
     if (updatedSale.id && firestore && companyId) {
       const saleDocRef = doc(firestore, `companies/${companyId}/sales`, updatedSale.id);
       updateDoc(saleDocRef, updatedSale as any);
-      updateItem(updatedSale.id, updatedSale);
       toast({
         title: "Venda Atualizada",
         description: `A venda #${updatedSale.guideNumber} foi atualizada com sucesso.`,
@@ -191,9 +140,6 @@ export default function SalesPage() {
     try {
       if (!confirmSalePickup) throw new Error("Função de levantamento não disponível.");
       await confirmSalePickup(sale);
-      if (sale.id) {
-        updateItem(sale.id, { status: 'Levantado' });
-      }
       toast({
         title: "Material Levantado",
         description: `O stock foi atualizado para a venda #${sale.guideNumber}.`,
@@ -210,7 +156,6 @@ export default function SalesPage() {
   const handleDeleteSale = async (saleId: string) => {
     try {
       await deleteSale(saleId);
-      updateItem(saleId, { deletedAt: new Date().toISOString() } as any);
     } catch (error: any) {
       // Error handled in context
     }
@@ -363,11 +308,12 @@ export default function SalesPage() {
                     onDeleteSale: handleDeleteSale,
                     canEdit: canEditSales
                   })}
-                  data={paginatedSales}
+                  data={sales}
+                  useVirtualization={true}
                 />
               ) : (
                 <VirtualSalesGrid
-                  sales={paginatedSales}
+                  sales={sales}
                   onUpdateSale={handleUpdateSale}
                   onConfirmPickup={handleConfirmPickup}
                   onDeleteSale={handleDeleteSale}
@@ -386,26 +332,7 @@ export default function SalesPage() {
               {sales.length > 0 && (
                 <div className="flex items-center justify-between py-4">
                   <div className="flex-1 text-sm text-muted-foreground">
-                    Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, sales.length)} de {sales.length} vendas
-                    {hasMore && " (carregado)"}
-                  </div>
-                  <div className="space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handlePreviousPage}
-                      disabled={currentPage === 1}
-                    >
-                      Anterior
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleNextPage}
-                      disabled={currentPage >= totalPages && !hasMore}
-                    >
-                      {currentPage >= totalPages && hasMore ? "Carregar Mais" : "Próximo"}
-                    </Button>
+                    Total de {sales.length} vendas encontradas.
                   </div>
                 </div>
               )}

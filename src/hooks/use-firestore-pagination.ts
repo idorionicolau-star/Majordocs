@@ -44,8 +44,14 @@ export function useFirestorePagination<T = DocumentData>(
 
         try {
             // Apply constraints and limit
+            console.log("useFirestorePagination: Fetching with pageSize:", pageSize);
             const firstQuery = query(baseQuery, ...constraints, limit(pageSize));
             const snapshot = await getDocs(firstQuery);
+            console.log("useFirestorePagination: Fetched docs count:", snapshot.docs.length);
+
+            if (snapshot.docs.length < pageSize) {
+                console.log("useFirestorePagination: Less docs than pageSize. Has more? False.");
+            }
 
             const newItems = snapshot.docs.map(doc => ({
                 ...(doc.data() as T),

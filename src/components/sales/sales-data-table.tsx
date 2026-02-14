@@ -23,14 +23,18 @@ import type { Sale } from "@/lib/types"
 import { Card, CardContent } from "../ui/card"
 import { formatCurrency } from "@/lib/utils"
 
+import { Virtuoso } from 'react-virtuoso';
+
 interface DataTableProps<TData extends Sale, TValue> {
     columns: ColumnDef<TData, TValue>[];
     data: TData[];
+    useVirtualization?: boolean;
 }
 
 export function SalesDataTable<TData extends Sale, TValue>({
     columns,
     data,
+    useVirtualization = false,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [isClient, setIsClient] = React.useState(false)
@@ -80,91 +84,163 @@ export function SalesDataTable<TData extends Sale, TValue>({
                             ))}
                         </TableHeader>
                         <TableBody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                            {table.getRowModel().rows?.length ? (
-                                table.getRowModel().rows.map((row) => (
-                                    <TableRow
-                                        key={row.id}
-                                        data-state={row.getIsSelected() && "selected"}
-                                        className="dark:border-slate-800/50 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-all group"
-                                    >
-                                        {row.getVisibleCells().map((cell) => (
-                                            <TableCell key={cell.id} className="px-4 sm:px-8 py-4">
-                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                ))
+                            {useVirtualization ? (
+                                <tr className="p-0 border-0">
+                                    <td colSpan={columns.length} className="p-0 border-0">
+                                        <Virtuoso
+                                            useWindowScroll
+                                            increaseViewportBy={500}
+                                            data={table.getRowModel().rows}
+                                            totalCount={table.getRowModel().rows.length}
+                                            itemContent={(index, row) => (
+                                                <div className="flex w-full border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-all group">
+                                                    {row.getVisibleCells().map((cell) => (
+                                                        <div
+                                                            key={cell.id}
+                                                            className="px-4 sm:px-8 py-4 flex-shrink-0"
+                                                            style={{ width: cell.column.getSize() }}
+                                                        >
+                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        />
+                                    </td>
+                                </tr>
                             ) : (
-                                <TableRow>
-                                    <TableCell colSpan={columns.length} className="h-24 text-center">
-                                        Nenhum resultado.
-                                    </TableCell>
-                                </TableRow>
+                                table.getRowModel().rows?.length ? (
+                                    table.getRowModel().rows.map((row) => (
+                                        <TableRow
+                                            key={row.id}
+                                            data-state={row.getIsSelected() && "selected"}
+                                            className="dark:border-slate-800/50 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-all group"
+                                        >
+                                            {row.getVisibleCells().map((cell) => (
+                                                <TableCell key={cell.id} className="px-4 sm:px-8 py-4">
+                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                </TableCell>
+                                            ))}
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={columns.length} className="h-24 text-center">
+                                            Nenhum resultado.
+                                        </TableCell>
+                                    </TableRow>
+                                )
                             )}
                         </TableBody>
                     </Table>
                 </div>
 
                 {/* Mobile List View */}
-                <div className="md:hidden flex flex-col gap-4">
-                    {table.getRowModel().rows?.length ? (
-                        table.getRowModel().rows.map((row) => (
-                            <div key={row.id} className="bg-card rounded-xl p-4 border shadow-sm space-y-3">
-                                <div className="flex items-start justify-between">
-                                    <div>
-                                        {/* 
-                            Index 0: Guide Number/Date or Product Name (depending on columns definition)
-                            Index 1: Product Name or Guide
-                            We need to check Sales columns definition to be sure.
-                            Usually: Product, Guide, Client, Price, Status, Actions.
-                        */}
-                                        <div className="mb-1">
-                                            {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
+                <div className="md:hidden">
+                    {useVirtualization ? (
+                        <Virtuoso
+                            useWindowScroll
+                            data={table.getRowModel().rows}
+                            totalCount={table.getRowModel().rows.length}
+                            itemContent={(index, row) => (
+                                <div className="pb-4">
+                                    <div key={row.id} className="bg-card rounded-xl p-4 border shadow-sm space-y-3">
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <div className="mb-1">
+                                                    {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    {flexRender(row.getVisibleCells()[1].column.columnDef.cell, row.getVisibleCells()[1].getContext())}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                {flexRender(row.getVisibleCells()[row.getVisibleCells().length - 1].column.columnDef.cell, row.getVisibleCells()[row.getVisibleCells().length - 1].getContext())}
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            {flexRender(row.getVisibleCells()[1].column.columnDef.cell, row.getVisibleCells()[1].getContext())}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        {/* Actions cell (last) */}
-                                        {flexRender(row.getVisibleCells()[row.getVisibleCells().length - 1].column.columnDef.cell, row.getVisibleCells()[row.getVisibleCells().length - 1].getContext())}
-                                    </div>
-                                </div>
 
-                                <div className="grid grid-cols-3 gap-2 py-3 border-t border-b border-dashed">
-                                    <div className="flex flex-col items-center justify-center p-2 bg-muted/30 rounded-lg">
-                                        <span className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Valor</span>
-                                        {/* We need to find the specific columns. Let's assume Price is mapped to 'price' or 'total' */}
-                                        {row.getVisibleCells().find(c => c.column.id === 'totalPrice') ? (
-                                            flexRender(row.getVisibleCells().find(c => c.column.id === 'totalPrice')!.column.columnDef.cell, row.getVisibleCells().find(c => c.column.id === 'totalPrice')!.getContext())
-                                        ) : (
-                                            <span className="text-sm font-bold">N/A</span>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col items-center justify-center p-2 bg-muted/30 rounded-lg">
-                                        <span className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Cliente</span>
-                                        {/* Client column */}
-                                        {row.getVisibleCells().find(c => c.column.id === 'clientName') ? (
-                                            flexRender(row.getVisibleCells().find(c => c.column.id === 'clientName')!.column.columnDef.cell, row.getVisibleCells().find(c => c.column.id === 'clientName')!.getContext())
-                                        ) : (
-                                            <span className="text-sm font-bold">-</span>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col items-center justify-center p-2 bg-muted/30 rounded-lg">
-                                        <span className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Status</span>
-                                        {/* Status column */}
-                                        {row.getVisibleCells().find(c => c.column.id === 'status') ? (
-                                            flexRender(row.getVisibleCells().find(c => c.column.id === 'status')!.column.columnDef.cell, row.getVisibleCells().find(c => c.column.id === 'status')!.getContext())
-                                        ) : (
-                                            <span className="text-sm font-bold">-</span>
-                                        )}
+                                        <div className="grid grid-cols-3 gap-2 py-3 border-t border-b border-dashed">
+                                            <div className="flex flex-col items-center justify-center p-2 bg-muted/30 rounded-lg">
+                                                <span className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Valor</span>
+                                                {row.getVisibleCells().find(c => c.column.id === 'totalPrice') ? (
+                                                    flexRender(row.getVisibleCells().find(c => c.column.id === 'totalPrice')!.column.columnDef.cell, row.getVisibleCells().find(c => c.column.id === 'totalPrice')!.getContext())
+                                                ) : (
+                                                    <span className="text-sm font-bold">N/A</span>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col items-center justify-center p-2 bg-muted/30 rounded-lg">
+                                                <span className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Cliente</span>
+                                                {row.getVisibleCells().find(c => c.column.id === 'clientName') ? (
+                                                    flexRender(row.getVisibleCells().find(c => c.column.id === 'clientName')!.column.columnDef.cell, row.getVisibleCells().find(c => c.column.id === 'clientName')!.getContext())
+                                                ) : (
+                                                    <span className="text-sm font-bold">-</span>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col items-center justify-center p-2 bg-muted/30 rounded-lg">
+                                                <span className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Status</span>
+                                                {row.getVisibleCells().find(c => c.column.id === 'status') ? (
+                                                    flexRender(row.getVisibleCells().find(c => c.column.id === 'status')!.column.columnDef.cell, row.getVisibleCells().find(c => c.column.id === 'status')!.getContext())
+                                                ) : (
+                                                    <span className="text-sm font-bold">-</span>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))
+                            )}
+                        />
                     ) : (
-                        <div className="text-center py-8 text-muted-foreground bg-card rounded-xl border">
-                            Nenhum resultado.
+                        <div className="flex flex-col gap-4">
+                            {table.getRowModel().rows?.length ? (
+                                table.getRowModel().rows.map((row) => (
+                                    <div key={row.id} className="bg-card rounded-xl p-4 border shadow-sm space-y-3">
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <div className="mb-1">
+                                                    {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    {flexRender(row.getVisibleCells()[1].column.columnDef.cell, row.getVisibleCells()[1].getContext())}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                {flexRender(row.getVisibleCells()[row.getVisibleCells().length - 1].column.columnDef.cell, row.getVisibleCells()[row.getVisibleCells().length - 1].getContext())}
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-2 py-3 border-t border-b border-dashed">
+                                            <div className="flex flex-col items-center justify-center p-2 bg-muted/30 rounded-lg">
+                                                <span className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Valor</span>
+                                                {row.getVisibleCells().find(c => c.column.id === 'totalPrice') ? (
+                                                    flexRender(row.getVisibleCells().find(c => c.column.id === 'totalPrice')!.column.columnDef.cell, row.getVisibleCells().find(c => c.column.id === 'totalPrice')!.getContext())
+                                                ) : (
+                                                    <span className="text-sm font-bold">N/A</span>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col items-center justify-center p-2 bg-muted/30 rounded-lg">
+                                                <span className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Cliente</span>
+                                                {row.getVisibleCells().find(c => c.column.id === 'clientName') ? (
+                                                    flexRender(row.getVisibleCells().find(c => c.column.id === 'clientName')!.column.columnDef.cell, row.getVisibleCells().find(c => c.column.id === 'clientName')!.getContext())
+                                                ) : (
+                                                    <span className="text-sm font-bold">-</span>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col items-center justify-center p-2 bg-muted/30 rounded-lg">
+                                                <span className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Status</span>
+                                                {row.getVisibleCells().find(c => c.column.id === 'status') ? (
+                                                    flexRender(row.getVisibleCells().find(c => c.column.id === 'status')!.column.columnDef.cell, row.getVisibleCells().find(c => c.column.id === 'status')!.getContext())
+                                                ) : (
+                                                    <span className="text-sm font-bold">-</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-8 text-muted-foreground bg-card rounded-xl border">
+                                    Nenhum resultado.
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
