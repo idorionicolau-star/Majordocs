@@ -1674,15 +1674,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     toast({ title: 'A recalcular stock reservado...', description: 'Isto pode demorar um momento.' });
 
     try {
-      // 1. Fetch all 'Paid' sales directly from Firestore
+      // 1. Fetch all 'Paid' and 'Pending' sales directly from Firestore
       const salesRef = collection(firestore, `companies/${companyId}/sales`);
-      const q = query(salesRef, where("status", "==", "Pago"));
-      const paidSalesSnapshot = await getDocs(q);
-      const paidSales = paidSalesSnapshot.docs.map(doc => doc.data() as Sale);
+      // We use "in" query to get both Paid and Pending
+      const q = query(salesRef, where("status", "in", ["Pago", "Pendente"]));
+      const salesSnapshot = await getDocs(q);
+      const sales = salesSnapshot.docs.map(doc => doc.data() as Sale);
 
       // 2. Calculate the correct reserved stock for each product instance (name + location)
       const correctReservedMap = new Map<string, number>(); // Key: 'productName|locationId'
-      paidSales.forEach(sale => {
+      sales.forEach(sale => {
+        // Exclude deleted sales
+        if (sale.deletedAt) return;
+
+        // Exclude Proformas (usually don't reserve stock)
+        if (sale.documentType === 'Factura Proforma') return;
+
         // Use an empty string for undefined location to ensure consistency
         const locationKey = sale.location || '';
         const key = `${sale.productName}|${locationKey}`;
