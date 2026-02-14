@@ -15,7 +15,8 @@ import { OrderCard } from "@/components/orders/order-card";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFirestore } from '@/firebase/provider';
-import { collection, doc, updateDoc, arrayUnion, runTransaction, increment, query, where, limit, getDoc, getDocs } from "firebase/firestore";
+import { collection, doc, updateDoc, arrayUnion, runTransaction, increment, query, where, limit, getDoc, getDocs, serverTimestamp } from "firebase/firestore";
+import type { Order, Sale, ProductionLog, StockMovement } from "@/lib/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -297,12 +298,33 @@ export default function OrdersPage() {
         });
 
         if (productExists) {
-          // Increment both stock AND reservedStock so the produced items 
-          // remain reserved for this order and can't be sold via regular sales
+          // Increment stock (physical) but NOT reservedStock. 
+          // Rationale: The Order creation already reserved the stock (ReservedStock += X).
+          // Now we are just fulfilling that reservation physically (Stock += X).
+          // The reservation will only be cleared (deducted) when the item is picked up (Stock -= X, Reserved -= X).
           transaction.update(targetProductRef, {
             stock: increment(missingQty),
-            reservedStock: increment(missingQty)
+            lastUpdated: new Date().toISOString()
           });
+
+          // Create Stock Movement for Production Entry (IN)
+          const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+          const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+            productId: targetProductRef.id,
+            productName: productName,
+            type: 'IN',
+            quantity: missingQty,
+            toLocationId: pendingConclusionOrder.location,
+            reason: `Produção Automática: Encomenda #${pendingConclusionOrder.id.slice(0, 8)}`,
+            userId: user.id,
+            userName: user.username,
+          };
+          // We use serverTimestamp in the actual writing, but TS expects 'any' or specific type.
+          // In runTransaction we usually set it directly. 
+          // Importing serverTimestamp from firebase/firestore is needed if not available.
+          // It seems available in imports.
+          const movementRef = doc(movementsRef);
+          transaction.set(movementRef, { ...movement, timestamp: serverTimestamp() });
         }
       });
 
