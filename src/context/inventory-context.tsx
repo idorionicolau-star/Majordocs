@@ -1286,6 +1286,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
     const freshSale = saleSnap.data() as Sale;
 
+    if (freshSale.status === 'Levantado') {
+      toast({
+        title: "Já Levantado",
+        description: "Esta venda já foi marcada como levantada. O stock não foi alterado.",
+      });
+      return;
+    }
+
     const amountPaid = freshSale.amountPaid ?? 0;
     if ((freshSale.totalValue - amountPaid) > 0.5) {
       toast({

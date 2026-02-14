@@ -181,7 +181,9 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
       subtotal: total,
       totalValue: total,
       amountPaid: values.amountPaid ?? 0,
-      status: (values.amountPaid ?? 0) >= total ? 'Pago' : sale.status,
+      status: sale.status === 'Levantado'
+        ? 'Levantado'
+        : ((values.amountPaid ?? 0) >= total ? 'Pago' : 'Pendente'),
     });
     onOpenChange(false);
   }
