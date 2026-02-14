@@ -98,12 +98,21 @@ export default function SalesPage() {
     updateItem
   } = useFirestorePagination<Sale>(
     salesQuery as any,
-    500,
+    5000, // Force 5000 items from Firestore
     salesQuery ? queryConstraints : []
   );
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(2000); // "Infinite" scroll as requested
+  const [itemsPerPage, setItemsPerPage] = useState(5000); // 5000 items per page (infinite)
+
+  useEffect(() => {
+    // Debug toast to confirm update
+    toast({
+      title: "Lista Infinita Ativa",
+      description: "A carregar até 5000 vendas...",
+      duration: 3000,
+    });
+  }, []);
 
   // Removed resize listener that was resetting itemsPerPage
   /*
