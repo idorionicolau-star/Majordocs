@@ -12,7 +12,6 @@ const CommandMenu = dynamic(() => import('@/components/command-menu').then(mod =
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { MobileNav } from './mobile-nav';
 import { useNotifications } from '@/hooks/use-notifications';
-import { useSwipeNavigation } from '@/hooks/use-swipe-navigation';
 
 import { LoadingBar } from './loading-bar';
 
