@@ -47,7 +47,7 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 dark:bg-slate-950 sm:px-6 border-slate-200/60 dark:border-slate-800/60">
 
       {/* Hamburger menu for mobile, hidden on desktop */}
-      <div className="flex items-center gap-3 md:hidden">
+      <div className="flex items-center gap-3 hidden">
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon">
             <Menu className="h-6 w-6" />
