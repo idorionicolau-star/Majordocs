@@ -100,9 +100,9 @@ export function TopSales({ className }: { className?: string }) {
   return (
     <Card className={cn("glass-panel border-slate-200/50 dark:border-slate-800/50 shadow-none lg:col-span-1 h-full flex flex-col", className)}>
       <CardHeader className="flex flex-col gap-3 pb-2">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-foreground font-medium tracking-wide">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+          <div className="text-center sm:text-left w-full sm:w-auto">
+            <CardTitle className="flex items-center justify-center sm:justify-start gap-2 text-foreground font-medium tracking-wide">
               Líderes de Vendas
             </CardTitle>
             <CardDescription className="text-muted-foreground mt-1">
