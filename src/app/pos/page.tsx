@@ -517,7 +517,7 @@ export default function POSPage() {
             <div className="lg:hidden">
                 <Drawer>
                     <DrawerTrigger asChild>
-                        <div className="fixed bottom-0 left-0 w-full bg-background border-t p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50 flex items-center justify-between cursor-pointer active:bg-muted/50 transition-colors">
+                        <div className="fixed bottom-16 md:bottom-0 left-0 w-full bg-background border-t p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 flex items-center justify-between cursor-pointer active:bg-muted/50 transition-colors">
                             <div className="flex items-center gap-3">
                                 <div className="bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-sm font-bold shadow-sm">
                                     {cart.length}
