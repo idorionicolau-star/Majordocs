@@ -46,8 +46,21 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 dark:bg-slate-950 sm:px-6 border-slate-200/60 dark:border-slate-800/60">
 
-      {/* Hamburger menu for mobile, hidden on desktop */}
-      <div className="flex items-center gap-3 hidden">
+      {/* Theme Toggle for mobile (Left side) */}
+      <div className="flex items-center gap-3 md:hidden">
+        {isMounted ? (
+          <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-8 w-8">
+            <Sun className="h-[1rem] w-[1rem] rotate-0 scale-100 transition-all ease-overshoot duration-500 dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-[1rem] w-[1rem] rotate-90 scale-0 transition-all ease-overshoot duration-500 dark:rotate-0 dark:scale-100" />
+            <span className="sr-only">Toggle theme</span>
+          </Button>
+        ) : (
+          <Button variant="ghost" size="icon" disabled />
+        )}
+      </div>
+
+      {/* Hamburger menu -> replaced by Theme Toggle */}
+      <div className="hidden">
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon">
             <Menu className="h-6 w-6" />
@@ -81,15 +94,18 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
         <div className="hidden md:block">
           <ConnectionStatus />
         </div>
-        {isMounted ? (
-          <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-8 w-8 md:h-10 md:w-10">
-            <Sun className="h-[1rem] w-[1rem] md:h-[1.2rem] md:w-[1.2rem] rotate-0 scale-100 transition-all ease-overshoot duration-500 dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-[1rem] w-[1rem] md:h-[1.2rem] md:w-[1.2rem] rotate-90 scale-0 transition-all ease-overshoot duration-500 dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
-          </Button>
-        ) : (
-          <Button variant="ghost" size="icon" disabled />
-        )}
+        {/* Desktop Theme Toggle (hidden on mobile) */}
+        <div className="hidden md:flex">
+          {isMounted ? (
+            <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-10 w-10">
+              <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all ease-overshoot duration-500 dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all ease-overshoot duration-500 dark:rotate-0 dark:scale-100" />
+              <span className="sr-only">Toggle theme</span>
+            </Button>
+          ) : (
+            <Button variant="ghost" size="icon" disabled />
+          )}
+        </div>
         <NotificationsDropdown />
         <UserNav />
       </div>
