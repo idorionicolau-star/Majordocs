@@ -121,23 +121,35 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  <div className="p-4 sm:p-6 md:p-8 main-content overflow-y-auto h-[calc(100vh-64px)]">
-    <Suspense fallback={
-      <div className="flex h-full w-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-      </div>
-    }>
-      {children}
-    </Suspense>
-  </div>
-            </main >
-          </div >
-    <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
-        </div >
-    <SheetContent side="left" className="p-0 glass-panel border-r border-white/10">
-      <MobileNav onLinkClick={() => setIsMobileNavOpen(false)} />
-    </SheetContent>
-      </Sheet >
+  return (
+    <>
+      <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
+        <Suspense fallback={null}>
+          <LoadingBar />
+          <NavigationObserver onNavigate={handleNavigationTransition} />
+        </Suspense>
+        <div className="flex min-h-screen w-full bg-transparent">
+          <Sidebar />
+          <div className="flex flex-col flex-1 min-h-screen transition-[margin,width] duration-300 ease-in-out md:ml-64 overflow-hidden">
+            <Header onSearchClick={() => setOpenCommandMenu(true)} />
+            <main className="flex-1 relative">
+              <div className="p-4 sm:p-6 md:p-8 main-content overflow-y-auto h-[calc(100vh-64px)]">
+                <Suspense fallback={
+                  <div className="flex h-full w-full items-center justify-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                  </div>
+                }>
+                  {children}
+                </Suspense>
+              </div>
+            </main>
+          </div>
+          <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
+        </div>
+        <SheetContent side="left" className="p-0 glass-panel border-r border-white/10">
+          <MobileNav onLinkClick={() => setIsMobileNavOpen(false)} />
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
