@@ -77,7 +77,7 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
       </div>
 
       {/* Right side icons */}
-      <div className="flex items-center gap-1 md:gap-4">
+      <div className="flex items-center gap-1 md:gap-4 ml-auto">
         <div className="hidden md:block">
           <ConnectionStatus />
         </div>
