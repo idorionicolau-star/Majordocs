@@ -57,14 +57,14 @@ export function ResponsiveDialog({
     }
 
     return (
-        <Drawer open={open} onOpenChange={onOpenChange}>
+        <Drawer open={open} onOpenChange={onOpenChange} repositionInputs>
             {trigger && <DrawerTrigger asChild>{trigger}</DrawerTrigger>}
             <DrawerContent>
                 <DrawerHeader className="text-left">
                     {title && <DrawerTitle>{title}</DrawerTitle>}
                     {description && <DrawerDescription>{description}</DrawerDescription>}
                 </DrawerHeader>
-                <div className="px-4 pb-8">
+                <div className="px-4 pb-8 overflow-y-auto">
                     {children}
                 </div>
             </DrawerContent>

@@ -40,6 +40,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   // Initialize notifications
   useNotifications();
 
+  // Initialize Swipe Navigation (Safe Mode)
+  useSwipeNavigation();
+
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -126,16 +129,18 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         </Suspense>
         <div className="flex min-h-screen w-full bg-transparent">
           <Sidebar />
-          <div className="flex flex-col flex-1 min-h-screen transition-[margin,width] duration-300 ease-in-out md:ml-64">
+          <div className="flex flex-col flex-1 min-h-screen transition-[margin,width] duration-300 ease-in-out md:ml-64 overflow-hidden">
             <Header onSearchClick={() => setOpenCommandMenu(true)} />
-            <main className="flex-1 p-4 sm:p-6 md:p-8 main-content">
-              <Suspense fallback={
-                <div className="flex h-full w-full items-center justify-center">
-                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-                </div>
-              }>
-                {children}
-              </Suspense>
+            <main className="flex-1 relative">
+              <div className="p-4 sm:p-6 md:p-8 main-content overflow-y-auto h-[calc(100vh-64px)]">
+                <Suspense fallback={
+                  <div className="flex h-full w-full items-center justify-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                  </div>
+                }>
+                  {children}
+                </Suspense>
+              </div>
             </main>
           </div>
           <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
