@@ -40,9 +40,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   // Initialize notifications
   useNotifications();
 
-  // Initialize Swipe Navigation (Safe Mode)
-  useSwipeNavigation();
-
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
