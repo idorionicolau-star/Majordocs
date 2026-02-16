@@ -53,21 +53,21 @@ import { PosCart } from '@/components/pos/pos-cart';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
-const CART_STORAGE_KEY = 'majorstockx-pos-cart';
+const CART_STORAGE_PREFIX = 'majorstockx-pos-cart-';
 
-function loadCartFromStorage(): CartItem[] {
-    if (typeof window === 'undefined') return [];
+function loadCartFromStorage(companyId: string | null): CartItem[] {
+    if (typeof window === 'undefined' || !companyId) return [];
     try {
-        const saved = localStorage.getItem(CART_STORAGE_KEY);
+        const saved = localStorage.getItem(`${CART_STORAGE_PREFIX}${companyId}`);
         return saved ? JSON.parse(saved) : [];
     } catch {
         return [];
     }
 }
 
-function saveCartToStorage(cart: CartItem[]) {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+function saveCartToStorage(cart: CartItem[], companyId: string | null) {
+    if (typeof window === 'undefined' || !companyId) return;
+    localStorage.setItem(`${CART_STORAGE_PREFIX}${companyId}`, JSON.stringify(cart));
 }
 
 export default function POSPage() {
@@ -110,10 +110,18 @@ export default function POSPage() {
     const [checkoutDate, setCheckoutDate] = useState<Date>(new Date());
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Load cart from localStorage on mount
+    const [cartCompanyId, setCartCompanyId] = useState<string | null>(null);
+
+    // Load cart from localStorage when companyId changes safely
     useEffect(() => {
-        setCart(loadCartFromStorage());
-    }, []);
+        if (companyId && companyId !== cartCompanyId) {
+            setCart(loadCartFromStorage(companyId));
+            setCartCompanyId(companyId);
+        } else if (!companyId) {
+            setCart([]);
+            setCartCompanyId(null);
+        }
+    }, [companyId, cartCompanyId]);
 
     // Set default location
     useEffect(() => {
@@ -123,10 +131,12 @@ export default function POSPage() {
         }
     }, [isMultiLocation, locations, selectedLocation]);
 
-    // Save cart to localStorage on change
+    // Save cart to localStorage on change, ONLY for the correct company
     useEffect(() => {
-        saveCartToStorage(cart);
-    }, [cart]);
+        if (companyId && cartCompanyId === companyId) {
+            saveCartToStorage(cart, companyId);
+        }
+    }, [cart, companyId, cartCompanyId]);
 
     // Auto-set client name when customer is selected
     useEffect(() => {
@@ -267,8 +277,10 @@ export default function POSPage() {
 
     const clearCart = useCallback(() => {
         setCart([]);
-        localStorage.removeItem(CART_STORAGE_KEY);
-    }, []);
+        if (companyId) {
+            localStorage.removeItem(`${CART_STORAGE_PREFIX}${companyId}`);
+        }
+    }, [companyId]);
 
     // Checkout
     const handleCheckout = async () => {
