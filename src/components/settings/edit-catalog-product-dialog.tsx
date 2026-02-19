@@ -44,7 +44,7 @@ const formSchema = z.object({
     const num = Number(val);
     return isNaN(num) ? 0 : num;
   }, z.number().min(0, { message: "O preço não pode ser negativo." })),
-  unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
+  unit: z.string().optional(),
   lowStockThreshold: z.preprocess((val) => {
     if (val === undefined || val === "" || val === null) return 0;
     const num = Number(val);
@@ -60,22 +60,22 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface EditCatalogProductDialogProps {
-  product: Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
+  product: Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'> & { id?: string };
   categories: string[];
-  onUpdate: (product: Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>) => void;
+  units: string[];
+  onUpdate: (productId: string, data: Partial<Product>) => void;
 }
 
-function EditCatalogProductDialogContent({ product, categories, onUpdate, setOpen }: EditCatalogProductDialogProps & { setOpen: (open: boolean) => void; }) {
+function EditCatalogProductDialogContent({ product, categories, units, onUpdate, setOpen }: EditCatalogProductDialogProps & { setOpen: (open: boolean) => void; }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { ...product, unit: product.unit || 'un' },
   });
 
   function onSubmit(values: FormValues) {
-    onUpdate({
-      ...product,
-      ...values,
-    });
+    if (product.id) {
+      onUpdate(product.id, values);
+    }
     setOpen(false);
   }
 
@@ -152,11 +152,11 @@ function EditCatalogProductDialogContent({ product, categories, onUpdate, setOpe
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="un">Unidade (un)</SelectItem>
-                        <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
-                        <SelectItem value="m">Metro Linear (m)</SelectItem>
-                        <SelectItem value="cj">Conjunto (cj)</SelectItem>
-                        <SelectItem value="outro">Outro</SelectItem>
+                        {units.length > 0 ? units.map(u => (
+                          <SelectItem key={u} value={u}>{u}</SelectItem>
+                        )) : (
+                          <SelectItem value="un">un</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />

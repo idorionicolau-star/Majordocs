@@ -356,6 +356,7 @@ export function CatalogManager() {
               <div className="flex items-center gap-2">
                 <AddCatalogProductDialog
                   categories={categories?.map(c => c.name) || []}
+                  units={inventoryContext?.availableUnits || []}
                   onAdd={handleAddProduct}
                 />
               </div>
@@ -400,6 +401,7 @@ export function CatalogManager() {
                         <EditCatalogProductDialog
                           product={product}
                           categories={categories?.map(c => c.name) || []}
+                          units={inventoryContext?.availableUnits || []}
                           onUpdate={handleUpdateProduct}
                         />
                       </TableCell>

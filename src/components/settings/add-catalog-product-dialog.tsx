@@ -48,7 +48,7 @@ const formSchema = z.object({
     const num = Number(val);
     return isNaN(num) ? 0 : num;
   }, z.number().min(0, { message: "O preço não pode ser negativo." })),
-  unit: z.enum(['un', 'm²', 'm', 'cj', 'outro']).optional(),
+  unit: z.string().optional(),
   lowStockThreshold: z.preprocess((val) => {
     if (val === undefined || val === "" || val === null) return 0;
     const num = Number(val);
@@ -66,11 +66,13 @@ type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | '
 
 interface AddCatalogProductDialogProps {
   categories: string[];
+  units: string[];
   onAdd: (product: Omit<CatalogProduct, 'id'>) => void;
 }
 
 function AddCatalogProductForm({
   categories,
+  units,
   onAdd,
   setOpen,
   form,
@@ -147,11 +149,11 @@ function AddCatalogProductForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="un">Unidade (un)</SelectItem>
-                    <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
-                    <SelectItem value="m">Metro Linear (m)</SelectItem>
-                    <SelectItem value="cj">Conjunto (cj)</SelectItem>
-                    <SelectItem value="outro">Outro</SelectItem>
+                    {units.length > 0 ? units.map(u => (
+                      <SelectItem key={u} value={u}>{u}</SelectItem>
+                    )) : (
+                      <SelectItem value="un">un</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -196,7 +198,7 @@ function AddCatalogProductForm({
   );
 }
 
-export function AddCatalogProductDialog({ categories, onAdd }: AddCatalogProductDialogProps) {
+export function AddCatalogProductDialog({ categories, units, onAdd }: AddCatalogProductDialogProps) {
   const [open, setOpen] = useState(false);
 
   const form = useForm<FormValues>({
@@ -232,6 +234,7 @@ export function AddCatalogProductDialog({ categories, onAdd }: AddCatalogProduct
       <div className="max-h-[85vh] overflow-y-auto pr-2">
         <AddCatalogProductForm
           categories={categories}
+          units={units}
           onAdd={onAdd}
           setOpen={setOpen}
           form={form}

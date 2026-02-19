@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Code, RefreshCw, Trash2, ShieldCheck, ImagePlus, X } from "lucide-react";
+import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Code, RefreshCw, Trash2, ShieldCheck, ImagePlus, X, Tag } from "lucide-react";
 
 import { LocationsManager } from "@/components/settings/locations-manager";
 import { AdminMergeTool } from "@/components/admin/admin-merge-tool";
@@ -183,6 +183,7 @@ export default function SettingsPage() {
     { value: 'appearance', label: 'Aparência', icon: Palette, permission: true },
     { value: 'company', label: 'Empresa', icon: Building, permission: hasPermission('settings') },
     { value: 'locations', label: 'Localizações', icon: MapPin, permission: hasPermission('settings') },
+    { value: 'classification', label: 'Categorias & Unidades', icon: Tag, permission: hasPermission('settings') },
     // Catalog moved to sidebar
     { value: 'security', label: 'Segurança & Dados', icon: ShieldCheck, permission: hasPermission('settings') },
     { value: 'advanced', label: 'Avançado', icon: Code, permission: hasPermission('settings') }
@@ -536,6 +537,10 @@ export default function SettingsPage() {
                     <LocationsManager />
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="classification">
+                <UnitsCategoriesManager />
               </TabsContent>
 
 
