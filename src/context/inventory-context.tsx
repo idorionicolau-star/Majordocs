@@ -620,7 +620,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const addProduct = useCallback(
     (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock' | 'sourceIds'>) => {
-      if (!productsCollectionRef || !firestore || !user || !companyId) return;
+      if (!productsCollectionRef || !firestore || !user || !companyId) return Promise.resolve();
 
       const { name, location, stock: newStock } = newProductData;
 
@@ -1988,8 +1988,42 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [firestore, companyId, toast]);
 
+  const editUnit = useCallback(async (oldUnit: string, newUnit: string) => {
+    if (!firestore || !companyId || !oldUnit || !newUnit) return;
+    try {
+      const batch = writeBatch(firestore);
+
+      const currentValidUnits = companyData?.validUnits || [];
+      const updatedValidUnits = Array.from(new Set(currentValidUnits.filter(u => u !== oldUnit).concat(newUnit)));
+      const companyRef = doc(firestore, 'companies', companyId);
+      batch.update(companyRef, { validUnits: updatedValidUnits });
+
+      const productsToUpdate = productsData?.filter(p => p.unit === oldUnit) || [];
+      productsToUpdate.forEach(p => {
+        if (p.id) {
+          const docRef = doc(firestore, `companies/${companyId}/products`, p.id);
+          batch.update(docRef, { unit: newUnit, lastUpdated: new Date().toISOString() });
+        }
+      });
+
+      const rawMaterialsToUpdate = rawMaterialsData?.filter(r => r.unit === oldUnit) || [];
+      rawMaterialsToUpdate.forEach(r => {
+        if (r.id) {
+          const docRef = doc(firestore, `companies/${companyId}/rawMaterials`, r.id);
+          batch.update(docRef, { unit: newUnit });
+        }
+      });
+
+      await batch.commit();
+      toast({ title: 'Unidade Editada', description: `A unidade "${oldUnit}" passou a "${newUnit}".` });
+    } catch (error) {
+      console.error("Error editing unit:", error);
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao editar a unidade." });
+    }
+  }, [firestore, companyId, toast, companyData, productsData, rawMaterialsData]);
+
   const removeUnit = useCallback(async (unit: string) => {
-    if (!firestore || !companyId) return;
+    if (!firestore || !companyId || !unit) return;
     try {
       const companyRef = doc(firestore, 'companies', companyId);
       await updateDoc(companyRef, {
@@ -2026,8 +2060,42 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [firestore, companyId, toast]);
 
+  const editCategory = useCallback(async (oldCategory: string, newCategory: string) => {
+    if (!firestore || !companyId || !oldCategory || !newCategory) return;
+    try {
+      const batch = writeBatch(firestore);
+
+      const currentValidCategories = companyData?.validCategories || [];
+      const updatedValidCategories = Array.from(new Set(currentValidCategories.filter(c => c !== oldCategory).concat(newCategory)));
+      const companyRef = doc(firestore, 'companies', companyId);
+      batch.update(companyRef, { validCategories: updatedValidCategories });
+
+      const catalogProductsToUpdate = catalogProductsData?.filter(p => p.category === oldCategory) || [];
+      catalogProductsToUpdate.forEach(p => {
+        if (p.id) {
+          const docRef = doc(firestore, `companies/${companyId}/catalogProducts`, p.id);
+          batch.update(docRef, { category: newCategory });
+        }
+      });
+
+      const productsToUpdate = productsData?.filter(p => p.category === oldCategory) || [];
+      productsToUpdate.forEach(p => {
+        if (p.id) {
+          const docRef = doc(firestore, `companies/${companyId}/products`, p.id);
+          batch.update(docRef, { category: newCategory, lastUpdated: new Date().toISOString() });
+        }
+      });
+
+      await batch.commit();
+      toast({ title: 'Categoria Editada', description: `A categoria "${oldCategory}" passou a "${newCategory}".` });
+    } catch (error) {
+      console.error("Error editing category:", error);
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao editar a categoria." });
+    }
+  }, [firestore, companyId, toast, companyData, productsData, catalogProductsData]);
+
   const removeCategory = useCallback(async (category: string) => {
-    if (!firestore || !companyId) return;
+    if (!firestore || !companyId || !category) return;
     try {
       const companyRef = doc(firestore, 'companies', companyId);
       await updateDoc(companyRef, {
@@ -2193,8 +2261,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     updateRecipe,
     // deleteRecipe,
 
-    availableUnits, addUnit, // removeUnit,
-    availableCategories, addCategory, // removeCategory,
+    availableUnits, addUnit, editUnit, removeUnit,
+    availableCategories, addCategory, editCategory, removeCategory,
 
     confirmAction,
   }), [

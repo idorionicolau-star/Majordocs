@@ -4,20 +4,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Tag, Ruler } from "lucide-react";
+import { Plus, Tag, Ruler, Pencil, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export function UnitsCategoriesManager() {
     const {
-        availableUnits, addUnit,
-        availableCategories, addCategory,
+        availableUnits, addUnit, editUnit, removeUnit,
+        availableCategories, addCategory, editCategory, removeCategory,
         canEdit
     } = useInventory();
 
     const { toast } = useToast();
     const [newUnit, setNewUnit] = useState("");
     const [newCategory, setNewCategory] = useState("");
+
+    const [editingUnit, setEditingUnit] = useState<{ oldUnit: string, newUnit: string } | null>(null);
+    const [editingCategory, setEditingCategory] = useState<{ oldCategory: string, newCategory: string } | null>(null);
 
     const handleAddUnit = async () => {
         if (!newUnit.trim()) return;
@@ -37,6 +41,40 @@ export function UnitsCategoriesManager() {
         }
         await addCategory(newCategory.trim());
         setNewCategory("");
+    };
+
+    const handleEditUnit = async () => {
+        if (!editingUnit || !editingUnit.newUnit.trim()) {
+            setEditingUnit(null);
+            return;
+        }
+        if (editingUnit.oldUnit === editingUnit.newUnit.trim()) {
+            setEditingUnit(null);
+            return;
+        }
+        if (availableUnits.includes(editingUnit.newUnit.trim()) && editingUnit.newUnit.trim() !== editingUnit.oldUnit) {
+            toast({ variant: "destructive", title: "Erro", description: "Esta unidade já existe." });
+            return;
+        }
+        await editUnit(editingUnit.oldUnit, editingUnit.newUnit.trim());
+        setEditingUnit(null);
+    };
+
+    const handleEditCategory = async () => {
+        if (!editingCategory || !editingCategory.newCategory.trim()) {
+            setEditingCategory(null);
+            return;
+        }
+        if (editingCategory.oldCategory === editingCategory.newCategory.trim()) {
+            setEditingCategory(null);
+            return;
+        }
+        if (availableCategories.includes(editingCategory.newCategory.trim()) && editingCategory.newCategory.trim() !== editingCategory.oldCategory) {
+            toast({ variant: "destructive", title: "Erro", description: "Esta categoria já existe." });
+            return;
+        }
+        await editCategory(editingCategory.oldCategory, editingCategory.newCategory.trim());
+        setEditingCategory(null);
     };
 
     if (!canEdit('settings')) {
@@ -73,9 +111,17 @@ export function UnitsCategoriesManager() {
 
                     <div className="flex flex-wrap gap-2">
                         {availableUnits.map((unit) => (
-                            <Badge key={unit} variant="secondary" className="px-3 py-1 text-sm flex items-center gap-2">
-                                {unit}
-                            </Badge>
+                            <div key={unit} className="group flex items-center gap-1.5 px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm font-medium">
+                                <span>{unit}</span>
+                                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => setEditingUnit({ oldUnit: unit, newUnit: unit })} className="p-1 hover:text-primary transition-colors">
+                                        <Pencil className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button onClick={() => removeUnit(unit)} className="p-1 text-slate-400 hover:text-red-500 transition-colors">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
                         ))}
                         {availableUnits.length === 0 && (
                             <span className="text-sm text-slate-500 italic">Nenhuma unidade cadastrada.</span>
@@ -112,9 +158,17 @@ export function UnitsCategoriesManager() {
 
                     <div className="flex flex-wrap gap-2">
                         {availableCategories.map((cat) => (
-                            <Badge key={cat} variant="outline" className="px-3 py-1 text-sm flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800">
-                                {cat}
-                            </Badge>
+                            <div key={cat} className="group flex items-center gap-1.5 px-3 py-1 border border-border bg-background text-foreground rounded-full text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                <span>{cat}</span>
+                                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => setEditingCategory({ oldCategory: cat, newCategory: cat })} className="p-1 hover:text-primary transition-colors">
+                                        <Pencil className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button onClick={() => removeCategory(cat)} className="p-1 text-slate-400 hover:text-red-500 transition-colors">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
                         ))}
                         {availableCategories.length === 0 && (
                             <span className="text-sm text-slate-500 italic">Nenhuma categoria cadastrada.</span>
@@ -122,6 +176,46 @@ export function UnitsCategoriesManager() {
                     </div>
                 </CardContent>
             </Card>
+            {/* Edit Dialogs */}
+            <Dialog open={!!editingUnit} onOpenChange={(open) => !open && setEditingUnit(null)}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Editar Unidade</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Input
+                            value={editingUnit?.newUnit || ""}
+                            onChange={(e) => setEditingUnit(prev => prev ? { ...prev, newUnit: e.target.value } : null)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleEditUnit()}
+                            placeholder="Nome da unidade"
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditingUnit(null)}>Cancelar</Button>
+                        <Button onClick={handleEditUnit}>Guardar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={!!editingCategory} onOpenChange={(open) => !open && setEditingCategory(null)}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Editar Categoria</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Input
+                            value={editingCategory?.newCategory || ""}
+                            onChange={(e) => setEditingCategory(prev => prev ? { ...prev, newCategory: e.target.value } : null)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleEditCategory()}
+                            placeholder="Nome da categoria"
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditingCategory(null)}>Cancelar</Button>
+                        <Button onClick={handleEditCategory}>Guardar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

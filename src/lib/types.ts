@@ -375,11 +375,13 @@ export interface InventoryContextType {
   // Settings / Metadata
   availableUnits: string[];
   addUnit: (unit: string) => Promise<void>;
-  // removeUnit: (unit: string) => Promise<void>;
+  editUnit: (oldUnit: string, newUnit: string) => Promise<void>;
+  removeUnit: (unit: string) => Promise<void>;
 
   availableCategories: string[];
   addCategory: (category: string) => Promise<void>;
-  // removeCategory: (category: string) => Promise<void>;
+  editCategory: (oldCategory: string, newCategory: string) => Promise<void>;
+  removeCategory: (category: string) => Promise<void>;
   confirmAction: (action: () => Promise<void>, title?: string, message?: string) => void;
 }
 
