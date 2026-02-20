@@ -149,9 +149,12 @@ export default function SettingsPage() {
     logoUrl: '' as string,
     businessType: 'manufacturer' as 'manufacturer' | 'reseller',
     notificationSettings: {
-      email: '',
-      onSale: false,
-      onCriticalStock: false,
+      emails: [] as {
+        email: string;
+        onSale: boolean;
+        onCriticalStock: boolean;
+        onEndOfDayReport: boolean;
+      }[]
     }
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -201,9 +204,14 @@ export default function SettingsPage() {
         logoUrl: companyData.logoUrl || '',
         businessType: companyData.businessType || 'manufacturer',
         notificationSettings: {
-          email: companyData.notificationSettings?.email || '',
-          onSale: companyData.notificationSettings?.onSale || false,
-          onCriticalStock: companyData.notificationSettings?.onCriticalStock || false,
+          emails: companyData.notificationSettings?.emails || (
+            companyData.notificationSettings?.email ? [{
+              email: companyData.notificationSettings.email,
+              onSale: companyData.notificationSettings.onSale || false,
+              onCriticalStock: companyData.notificationSettings.onCriticalStock || false,
+              onEndOfDayReport: false
+            }] : []
+          )
         }
       });
     }
@@ -254,27 +262,48 @@ export default function SettingsPage() {
 
   const handleDetailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    if (id === 'notificationSettings.email') {
-      setCompanyDetails(prev => ({
+    setCompanyDetails(prev => ({ ...prev, [id]: value }));
+  }
+
+  const handleEmailSettingsChange = (index: number, field: string, value: any) => {
+    setCompanyDetails(prev => {
+      const newEmails = [...(prev.notificationSettings.emails || [])];
+      newEmails[index] = { ...newEmails[index], [field]: value };
+      return {
         ...prev,
         notificationSettings: {
           ...prev.notificationSettings,
-          email: value,
+          emails: newEmails
         }
-      }));
-    } else {
-      setCompanyDetails(prev => ({ ...prev, [id]: value }));
-    }
-  }
+      };
+    });
+  };
 
-  const handleSwitchChange = (id: 'onSale' | 'onCriticalStock', checked: boolean) => {
+  const addEmailSetting = () => {
     setCompanyDetails(prev => ({
       ...prev,
       notificationSettings: {
         ...prev.notificationSettings,
-        [id]: checked,
+        emails: [
+          ...(prev.notificationSettings.emails || []),
+          { email: '', onSale: false, onCriticalStock: false, onEndOfDayReport: false }
+        ]
       }
     }));
+  };
+
+  const removeEmailSetting = (index: number) => {
+    setCompanyDetails(prev => {
+      const newEmails = [...(prev.notificationSettings.emails || [])];
+      newEmails.splice(index, 1);
+      return {
+        ...prev,
+        notificationSettings: {
+          ...prev.notificationSettings,
+          emails: newEmails
+        }
+      };
+    });
   };
 
   const handleClearProducts = async () => {
@@ -484,38 +513,73 @@ export default function SettingsPage() {
                       </div>
 
                       <div className="space-y-4 pt-6 border-t">
-                        <Label className="flex items-center gap-2 font-semibold text-base">
-                          <Mail className="h-5 w-5 text-primary" />
-                          Notificações por E-mail
-                        </Label>
-                        <div className="grid gap-4 rounded-2xl border p-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="notificationSettings.email">E-mail de Destino</Label>
-                            <p className="text-sm text-muted-foreground">
-                              O e-mail para receber todos os alertas ativados.
-                            </p>
-                            <Input id="notificationSettings.email" type="email" value={companyDetails.notificationSettings.email} onChange={handleDetailChange} placeholder="ex: gerente@suaempresa.com" />
-                          </div>
-                          <div className="space-y-3 pt-4">
-                            <h4 className="font-medium text-sm">Ativar alertas para:</h4>
-                            <div className="flex items-center justify-between rounded-md border p-3 bg-background/50">
-                              <Label htmlFor="onCriticalStock" className="cursor-pointer">Stock Crítico</Label>
-                              <Switch
-                                id="onCriticalStock"
-                                checked={companyDetails.notificationSettings.onCriticalStock}
-                                onCheckedChange={(checked) => handleSwitchChange('onCriticalStock', checked)}
-                              />
-                            </div>
-                            <div className="flex items-center justify-between rounded-md border p-3 bg-background/50">
-                              <Label htmlFor="onSale" className="cursor-pointer">Novas Vendas</Label>
-                              <Switch
-                                id="onSale"
-                                checked={companyDetails.notificationSettings.onSale}
-                                onCheckedChange={(checked) => handleSwitchChange('onSale', checked)}
-                              />
-                            </div>
-                          </div>
+                        <div className="flex items-center justify-between">
+                          <Label className="flex items-center gap-2 font-semibold text-base">
+                            <Mail className="h-5 w-5 text-primary" />
+                            Notificações por E-mail
+                          </Label>
+                          <Button type="button" variant="outline" size="sm" onClick={addEmailSetting}>
+                            + Adicionar E-mail
+                          </Button>
                         </div>
+
+                        {(!companyDetails.notificationSettings.emails || companyDetails.notificationSettings.emails.length === 0) ? (
+                          <div className="text-sm text-muted-foreground bg-muted p-4 rounded-lg text-center">
+                            Nenhum e-mail de notificação configurado.
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {companyDetails.notificationSettings.emails.map((emailConfig, index) => (
+                              <div key={index} className="grid gap-4 rounded-2xl border p-4 relative bg-card">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-2 right-2 text-destructive hover:bg-destructive/10"
+                                  onClick={() => removeEmailSetting(index)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+
+                                <div className="space-y-2 pr-10">
+                                  <Label>E-mail {index + 1}</Label>
+                                  <Input
+                                    type="email"
+                                    value={emailConfig.email}
+                                    onChange={(e) => handleEmailSettingsChange(index, 'email', e.target.value)}
+                                    placeholder="ex: gerente@suaempresa.com"
+                                  />
+                                </div>
+                                <div className="space-y-3 pt-2">
+                                  <h4 className="font-medium text-sm text-muted-foreground">Alertas Ativos:</h4>
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div className="flex items-center justify-between space-x-2 rounded-md border p-3 bg-background/50 cursor-pointer" onClick={() => handleEmailSettingsChange(index, 'onCriticalStock', !emailConfig.onCriticalStock)}>
+                                      <Label className="cursor-pointer text-sm">Stock Crítico</Label>
+                                      <Switch
+                                        checked={emailConfig.onCriticalStock}
+                                        onCheckedChange={(checked) => handleEmailSettingsChange(index, 'onCriticalStock', checked)}
+                                      />
+                                    </div>
+                                    <div className="flex items-center justify-between space-x-2 rounded-md border p-3 bg-background/50 cursor-pointer" onClick={() => handleEmailSettingsChange(index, 'onSale', !emailConfig.onSale)}>
+                                      <Label className="cursor-pointer text-sm">Novas Vendas</Label>
+                                      <Switch
+                                        checked={emailConfig.onSale}
+                                        onCheckedChange={(checked) => handleEmailSettingsChange(index, 'onSale', checked)}
+                                      />
+                                    </div>
+                                    <div className="flex items-center justify-between space-x-2 rounded-md border p-3 bg-background/50 cursor-pointer" onClick={() => handleEmailSettingsChange(index, 'onEndOfDayReport', !emailConfig.onEndOfDayReport)}>
+                                      <Label className="cursor-pointer text-sm">Relatório Fecho do Dia</Label>
+                                      <Switch
+                                        checked={emailConfig.onEndOfDayReport}
+                                        onCheckedChange={(checked) => handleEmailSettingsChange(index, 'onEndOfDayReport', checked)}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex justify-end">

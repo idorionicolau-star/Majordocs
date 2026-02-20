@@ -12,7 +12,7 @@ import React, {
   useRef,
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { Product, Location, Sale, Production, ProductionLog, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification, DashboardStats, InventoryContextType, ChatMessage, RawMaterial, Recipe, CartItem } from '@/lib/types';
+import type { Product, Location, Sale, Production, ProductionLog, Order, Company, Employee, ModulePermission, PermissionLevel, StockMovement, AppNotification, DashboardStats, InventoryContextType, ChatMessage, RawMaterial, Recipe, CartItem, NotificationEmail } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase, getFirebaseAuth } from '@/firebase/provider';
@@ -135,63 +135,92 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const triggerEmailAlert = useCallback(async (payload: any) => {
     const settings = companyData?.notificationSettings;
-    const targetEmail = settings?.email;
 
-    if (!targetEmail || targetEmail.trim() === '') {
+    // Normalize emails list, handling both new format and legacy format
+    const targetEmails: NotificationEmail[] = [];
+    if (settings?.emails && Array.isArray(settings.emails)) {
+      targetEmails.push(...settings.emails);
+    } else if (settings?.email) {
+      // Fallback for legacy single-email settings
+      targetEmails.push({
+        email: settings.email,
+        onSale: settings.onSale || false,
+        onCriticalStock: settings.onCriticalStock || false,
+        onEndOfDayReport: false,
+      });
+    }
+
+    if (targetEmails.length === 0) {
       console.warn("E-mail de notificação não configurado. Alerta não enviado.");
       return;
     }
 
-    let shouldSend = false;
+    let isCriticalEvent = payload.type === 'CRITICAL';
+    let isSaleEvent = payload.type === 'SALE';
+
     let subject = '';
+    let notificationHref = '';
+    let notificationType: 'stock' | 'sale' | 'production' | 'order' = 'stock';
 
-    if (payload.type === 'CRITICAL' && settings.onCriticalStock) {
-      shouldSend = true;
+    if (isCriticalEvent) {
       subject = `🚨 ALERTA: ${payload.productName} com stock baixo!`;
+      notificationHref = '/inventory';
+      notificationType = 'stock';
       addNotification({
-        type: 'stock',
+        type: notificationType,
         message: `Stock crítico para ${payload.productName}! Quantidade: ${payload.quantity}`,
-        href: '/inventory',
+        href: notificationHref,
       });
-    } else if (payload.type === 'SALE' && settings.onSale) {
-      shouldSend = true;
+    } else if (isSaleEvent) {
       subject = `✅ Nova Venda: ${payload.productName}`;
+      notificationHref = '/sales';
+      notificationType = 'sale';
       addNotification({
-        type: 'sale',
+        type: notificationType,
         message: `Nova venda de ${payload.productName} registada.`,
-        href: '/sales',
+        href: notificationHref,
       });
-    }
-
-    if (!shouldSend) {
-      return;
     }
 
     try {
       const fbToken = await auth.currentUser?.getIdToken();
-      const response = await fetch('/api/email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${fbToken}`
-        },
-        body: JSON.stringify({ to: targetEmail, subject, companyId, logoUrl: companyData?.logoUrl, companyName: companyData?.name, ...payload }),
+
+      // Loop over relevant emails and send those that qualify
+      const promises = targetEmails.map(async (target) => {
+        let shouldSend = false;
+        if (isCriticalEvent && target.onCriticalStock) shouldSend = true;
+        if (isSaleEvent && target.onSale) shouldSend = true;
+
+        if (!shouldSend || !target.email || target.email.trim() === '') {
+          return;
+        }
+
+        const response = await fetch('/api/email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${fbToken}`
+          },
+          body: JSON.stringify({ to: target.email, subject, companyId, logoUrl: companyData?.logoUrl, companyName: companyData?.name, ...payload }),
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.json();
+          throw new Error(`Email failed for ${target.email}: ${errorBody.error || 'Erro desconhecido da API'}`);
+        }
       });
 
-      if (!response.ok) {
-        const errorBody = await response.json();
-        throw new Error(errorBody.error || 'Erro desconhecido da API');
-      }
+      await Promise.allSettled(promises);
     } catch (error: any) {
-      console.warn("Falha ao enviar e-mail de notificação:", error.message);
+      console.warn("Falha ao enviar e-mails de notificação:", error.message);
       toast({
         variant: "destructive",
-        title: "Falha na Notificação por E-mail",
-        description: error.message,
+        title: "Aviso de Notificação por E-mail",
+        description: "Nem todos os alertas de e-mail foram enviados com sucesso.",
         duration: 8000,
       });
     }
-  }, [companyData, addNotification, toast]);
+  }, [companyData, addNotification, toast, auth]);
 
   const logout = useCallback(async () => {
     try {
@@ -543,10 +572,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
 
     const chartData = monthInterval.map(monthStart => {
-      const monthSales = salesData.filter(s => {
+      const monthSales = salesData?.filter(s => {
+        if (s.documentType === 'Factura Proforma') return false;
         const saleDate = new Date(s.date);
         return saleDate.getFullYear() === monthStart.getFullYear() && saleDate.getMonth() === monthStart.getMonth();
-      }).reduce((sum, s) => sum + s.totalValue, 0);
+      }).reduce((sum, s) => sum + (s.amountPaid ?? s.totalValue), 0) || 0;
 
       const monthName = format(monthStart, 'MMM', { locale: pt });
       return {
@@ -564,6 +594,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const currentYear = currentDate.getFullYear();
 
     const monthlySales = salesData?.filter(sale => {
+      if (sale.documentType === 'Factura Proforma') return false;
       const saleDate = new Date(sale.date);
       return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
     }) || [];
@@ -596,15 +627,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const availableStock = product.stock - (product.reservedStock || 0);
 
     const isCritical = availableStock <= (product.criticalStockThreshold || 0);
-    if (!isCritical || !settings?.onCriticalStock) {
+
+    // If not critical, we stop
+    if (!isCritical) {
       return;
     }
 
-    if (!settings.email || settings.email.trim() === '') {
+    // Handle legacy settings and new multi-email configuration
+    let hasCriticalEmailConfigured = false;
+
+    if (settings?.emails && Array.isArray(settings.emails)) {
+      hasCriticalEmailConfigured = settings.emails.some(e => e.onCriticalStock && e.email.trim() !== '');
+    } else if (settings?.email && settings.onCriticalStock) {
+      hasCriticalEmailConfigured = settings.email.trim() !== '';
+    }
+
+    if (!hasCriticalEmailConfigured) {
       toast({
         variant: "destructive",
         title: "E-mail de Notificação em Falta",
-        description: `O produto ${product.name} está com stock crítico, mas não há um e-mail de notificação configurado nos Ajustes.`,
+        description: `O produto ${product.name} está com stock crítico, mas não há um e-mail configurado para alertas críticos nos Ajustes.`,
       });
       return;
     }
@@ -1094,9 +1136,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     let guideNumberForOuterScope: string | null = null;
 
+    const isProforma = newSaleData.documentType === 'Factura Proforma';
+    const shouldReserveStock = reserveStock && !isProforma;
+    const finalStatus = isProforma ? 'Pendente' : newSaleData.status;
+
     // This is a read outside the transaction to get the document reference.
-    const productSnapshot = reserveStock ? await getDocs(productQuery) : null;
-    if (reserveStock && productSnapshot && productSnapshot.empty) {
+    const productSnapshot = shouldReserveStock ? await getDocs(productQuery) : null;
+    if (shouldReserveStock && productSnapshot && productSnapshot.empty) {
       throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque para a localização selecionada.`);
     }
     const productDocRef = productSnapshot ? productSnapshot.docs[0].ref : null;
@@ -1112,7 +1158,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const guideNumber = `GT-${String(newSaleCounter).padStart(6, '0')}`;
       guideNumberForOuterScope = guideNumber;
 
-      if (reserveStock && productDocRef) {
+      if (shouldReserveStock && productDocRef) {
         const productDoc = await transaction.get(productDocRef);
         if (!productDoc.exists()) {
           throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque.`);
@@ -1129,7 +1175,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       }
 
       transaction.update(companyDocRef, { saleCounter: newSaleCounter });
-      transaction.set(newSaleRef, { ...newSaleData, guideNumber });
+      transaction.set(newSaleRef, { ...newSaleData, status: finalStatus, guideNumber });
     });
 
     if (guideNumberForOuterScope) {
@@ -1197,17 +1243,20 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         const productData = pSnap.data() as Product;
         const item = items[index];
 
-        const availableStock = productData.stock - productData.reservedStock;
-        if (availableStock < item.quantity) {
-          throw new Error(`Stock insuficiente para "${item.productName}". Disponível: ${availableStock}.`);
+        const isProforma = saleData.documentType === 'Factura Proforma';
+
+        if (!isProforma) {
+          const availableStock = productData.stock - productData.reservedStock;
+          if (availableStock < item.quantity) {
+            throw new Error(`Stock insuficiente para "${item.productName}". Disponível: ${availableStock}.`);
+          }
+
+          const newReservedStock = productData.reservedStock + item.quantity;
+          productUpdates.push({
+            ref: pSnap.ref,
+            data: { reservedStock: newReservedStock, lastUpdated: new Date().toISOString() }
+          });
         }
-
-        const newReservedStock = productData.reservedStock + item.quantity;
-
-        productUpdates.push({
-          ref: pSnap.ref,
-          data: { reservedStock: newReservedStock, lastUpdated: new Date().toISOString() }
-        });
 
         const newSaleRef = doc(salesCollectionRef); // Auto-ID
         const sale: Sale = {
@@ -1220,7 +1269,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           totalValue: item.subtotal,
           subtotal: item.subtotal,
           date: new Date().toISOString(),
-          status: 'Pago', // Default to Paid for POS/Bulk
+          status: saleData.documentType === 'Factura Proforma' ? 'Pendente' : 'Pago', // Default to Paid for POS/Bulk, unless Proforma
           paymentMethod: 'Numerário', // Default, should be passed in saleData ideally
           location: item.location || productData.location || (locations.length > 0 ? locations[0].id : 'Principal'),
           unit: item.unit || productData.unit || 'un',

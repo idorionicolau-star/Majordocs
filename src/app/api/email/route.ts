@@ -146,6 +146,35 @@ export async function POST(req: Request) {
             </div>
             ${footerHtml}
         `;
+    } else if (type === 'END_OF_DAY_REPORT') {
+      const {
+        totalSales,
+        salesValue,
+        criticalItemsCount,
+        date
+      } = body;
+      const color = '#f59e0b'; // Amber
+      const accentColor = '#fffbeb';
+
+      htmlContent = `
+            ${headerHtml}
+            <div style="padding: 24px;">
+              <h2 style="color: ${color}; font-size: 22px; margin-top: 0;">
+                📊 Relatório de Fecho do Dia
+              </h2>
+              <p>Olá,</p>
+              <p>Aqui está o resumo das atividades da sua empresa no dia <strong>${date}</strong>:</p>
+              
+              <div style="background-color: ${accentColor}; border: 1px solid ${color}; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 4px 0; font-size: 16px;"><strong>Vendas Realizadas:</strong> ${totalSales}</p>
+                <p style="margin: 4px 0; font-size: 16px;"><strong>Valor Total de Vendas:</strong> <span style="font-weight: bold; color: #15803d;">${formatCurrency(salesValue)}</span></p>
+                <p style="margin: 4px 0; font-size: 16px;"><strong>Produtos em Stock Crítico:</strong> <span style="font-weight: bold; color: #b91c1c;">${criticalItemsCount}</span></p>
+              </div>
+
+              <p style="font-size: 14px; color: #64748b;">Aceda ao seu painel para ver mais detalhes.</p>
+            </div>
+            ${footerHtml}
+        `;
     } else {
       return NextResponse.json({ error: 'Tipo de e-mail inválido.' }, { status: 400 });
     }

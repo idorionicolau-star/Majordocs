@@ -32,10 +32,21 @@ export type Employee = {
   profilePictureUrl?: string; // URL for the profile picture
 };
 
-export type NotificationSettings = {
+export type NotificationEmail = {
   email: string;
   onSale: boolean;
   onCriticalStock: boolean;
+  onEndOfDayReport: boolean;
+};
+
+export type NotificationSettings = {
+  // Legacy fields for backward compatibility, optional now
+  email?: string;
+  onSale?: boolean;
+  onCriticalStock?: boolean;
+
+  // New multi-email structure
+  emails?: NotificationEmail[];
 };
 
 export type Company = {
@@ -143,7 +154,7 @@ export type Sale = {
   guideNumber: string;
   location?: string;
   customerId?: string; // Link to Customer
-  status: 'Pago' | 'Levantado';
+  status: 'Pago' | 'Levantado' | 'Pendente';
   documentType: 'Guia de Remessa' | 'Factura' | 'Factura Proforma' | 'Recibo' | 'Encomenda';
   clientName?: string; // Legacy field, allow keep for history
   notes?: string;
