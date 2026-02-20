@@ -54,7 +54,7 @@ export async function GET(req: Request) {
                         const sale = saleDoc.data();
                         if (sale.documentType !== 'Factura Proforma') {
                             totalSalesCount++;
-                            totalSalesValue += (sale.amountPaid ?? sale.totalValue || 0);
+                            totalSalesValue += (sale.amountPaid ?? (sale.totalValue || 0));
                         }
                     });
 
