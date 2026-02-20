@@ -267,12 +267,14 @@ export default function SettingsPage() {
 
   const handleEmailSettingsChange = (index: number, field: string, value: any) => {
     setCompanyDetails(prev => {
-      const newEmails = [...(prev.notificationSettings.emails || [])];
-      newEmails[index] = { ...newEmails[index], [field]: value };
+      const newEmails = [...(prev.notificationSettings?.emails || [])];
+      if (newEmails[index]) {
+        newEmails[index] = { ...newEmails[index], [field]: value };
+      }
       return {
         ...prev,
         notificationSettings: {
-          ...prev.notificationSettings,
+          ...(prev.notificationSettings || {}),
           emails: newEmails
         }
       };
@@ -283,9 +285,9 @@ export default function SettingsPage() {
     setCompanyDetails(prev => ({
       ...prev,
       notificationSettings: {
-        ...prev.notificationSettings,
+        ...(prev.notificationSettings || {}),
         emails: [
-          ...(prev.notificationSettings.emails || []),
+          ...(prev.notificationSettings?.emails || []),
           { email: '', onSale: false, onCriticalStock: false, onEndOfDayReport: false }
         ]
       }
@@ -294,12 +296,12 @@ export default function SettingsPage() {
 
   const removeEmailSetting = (index: number) => {
     setCompanyDetails(prev => {
-      const newEmails = [...(prev.notificationSettings.emails || [])];
+      const newEmails = [...(prev.notificationSettings?.emails || [])];
       newEmails.splice(index, 1);
       return {
         ...prev,
         notificationSettings: {
-          ...prev.notificationSettings,
+          ...(prev.notificationSettings || {}),
           emails: newEmails
         }
       };
@@ -523,7 +525,7 @@ export default function SettingsPage() {
                           </Button>
                         </div>
 
-                        {(!companyDetails.notificationSettings.emails || companyDetails.notificationSettings.emails.length === 0) ? (
+                        {(!companyDetails?.notificationSettings?.emails || companyDetails.notificationSettings.emails.length === 0) ? (
                           <div className="text-sm text-muted-foreground bg-muted p-4 rounded-lg text-center">
                             Nenhum e-mail de notificação configurado.
                           </div>
@@ -545,7 +547,7 @@ export default function SettingsPage() {
                                   <Label>E-mail {index + 1}</Label>
                                   <Input
                                     type="email"
-                                    value={emailConfig.email}
+                                    value={emailConfig.email || ''}
                                     onChange={(e) => handleEmailSettingsChange(index, 'email', e.target.value)}
                                     placeholder="ex: gerente@suaempresa.com"
                                   />
@@ -553,24 +555,27 @@ export default function SettingsPage() {
                                 <div className="space-y-3 pt-2">
                                   <h4 className="font-medium text-sm text-muted-foreground">Alertas Ativos:</h4>
                                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div className="flex items-center justify-between space-x-2 rounded-md border p-3 bg-background/50 cursor-pointer" onClick={() => handleEmailSettingsChange(index, 'onCriticalStock', !emailConfig.onCriticalStock)}>
-                                      <Label className="cursor-pointer text-sm">Stock Crítico</Label>
+                                    <div className="flex items-center justify-between space-x-2 rounded-md border p-3 bg-background/50">
+                                      <Label htmlFor={`email-${index}-critical`} className="cursor-pointer text-sm flex-1">Stock Crítico</Label>
                                       <Switch
-                                        checked={emailConfig.onCriticalStock}
+                                        id={`email-${index}-critical`}
+                                        checked={!!emailConfig.onCriticalStock}
                                         onCheckedChange={(checked) => handleEmailSettingsChange(index, 'onCriticalStock', checked)}
                                       />
                                     </div>
-                                    <div className="flex items-center justify-between space-x-2 rounded-md border p-3 bg-background/50 cursor-pointer" onClick={() => handleEmailSettingsChange(index, 'onSale', !emailConfig.onSale)}>
-                                      <Label className="cursor-pointer text-sm">Novas Vendas</Label>
+                                    <div className="flex items-center justify-between space-x-2 rounded-md border p-3 bg-background/50">
+                                      <Label htmlFor={`email-${index}-sale`} className="cursor-pointer text-sm flex-1">Novas Vendas</Label>
                                       <Switch
-                                        checked={emailConfig.onSale}
+                                        id={`email-${index}-sale`}
+                                        checked={!!emailConfig.onSale}
                                         onCheckedChange={(checked) => handleEmailSettingsChange(index, 'onSale', checked)}
                                       />
                                     </div>
-                                    <div className="flex items-center justify-between space-x-2 rounded-md border p-3 bg-background/50 cursor-pointer" onClick={() => handleEmailSettingsChange(index, 'onEndOfDayReport', !emailConfig.onEndOfDayReport)}>
-                                      <Label className="cursor-pointer text-sm">Relatório Fecho do Dia</Label>
+                                    <div className="flex items-center justify-between space-x-2 rounded-md border p-3 bg-background/50">
+                                      <Label htmlFor={`email-${index}-eod`} className="cursor-pointer text-sm flex-1">Relatório Fecho do Dia</Label>
                                       <Switch
-                                        checked={emailConfig.onEndOfDayReport}
+                                        id={`email-${index}-eod`}
+                                        checked={!!emailConfig.onEndOfDayReport}
                                         onCheckedChange={(checked) => handleEmailSettingsChange(index, 'onEndOfDayReport', checked)}
                                       />
                                     </div>
