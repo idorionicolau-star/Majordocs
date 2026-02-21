@@ -185,32 +185,31 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     try {
       const fbToken = await auth.currentUser?.getIdToken();
 
-      // Loop over relevant emails and send those that qualify
-      const promises = targetEmails.map(async (target) => {
-        let shouldSend = false;
-        if (isCriticalEvent && target.onCriticalStock) shouldSend = true;
-        if (isSaleEvent && target.onSale) shouldSend = true;
+      const validEmails = targetEmails
+        .filter(target => {
+          let shouldSend = false;
+          if (isCriticalEvent && target.onCriticalStock) shouldSend = true;
+          if (isSaleEvent && target.onSale) shouldSend = true;
+          if (payload.type === 'END_OF_DAY_REPORT' && target.onEndOfDayReport) shouldSend = true;
+          return shouldSend && target.email && target.email.trim() !== '';
+        })
+        .map(t => t.email);
 
-        if (!shouldSend || !target.email || target.email.trim() === '') {
-          return;
-        }
+      if (validEmails.length === 0) return;
 
-        const response = await fetch('/api/email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${fbToken}`
-          },
-          body: JSON.stringify({ to: target.email, subject, companyId, logoUrl: companyData?.logoUrl, companyName: companyData?.name, ...payload }),
-        });
-
-        if (!response.ok) {
-          const errorBody = await response.json();
-          throw new Error(`Email failed for ${target.email}: ${errorBody.error || 'Erro desconhecido da API'}`);
-        }
+      const response = await fetch('/api/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${fbToken}`
+        },
+        body: JSON.stringify({ to: validEmails, subject, companyId, logoUrl: companyData?.logoUrl, companyName: companyData?.name, ...payload }),
       });
 
-      await Promise.allSettled(promises);
+      if (!response.ok) {
+        const errorBody = await response.json();
+        throw new Error(`Email failed: ${errorBody.error || 'Erro desconhecido da API'}`);
+      }
     } catch (error: any) {
       console.warn("Falha ao enviar e-mails de notificação:", error.message);
       toast({

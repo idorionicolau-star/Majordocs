@@ -24,6 +24,8 @@ import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useStorage } from "@/firebase/provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import type { ModulePermission } from "@/lib/types";
@@ -139,6 +141,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const { borderRadius, setBorderRadius } = useTheme();
+  const storage = useStorage();
 
   const [companyDetails, setCompanyDetails] = useState({
     name: '',
@@ -464,14 +467,19 @@ export default function SettingsPage() {
                             type="file"
                             accept="image/*"
                             className="hidden"
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                  setCompanyDetails(prev => ({ ...prev, logoUrl: reader.result as string }));
-                                };
-                                reader.readAsDataURL(file);
+                                try {
+                                  toast({ title: "Carregando...", description: "A enviar o logótipo para a nuvem." });
+                                  const storageRef = ref(storage, `logos/${Date.now()}_${file.name}`);
+                                  const snapshot = await uploadBytes(storageRef, file);
+                                  const url = await getDownloadURL(snapshot.ref);
+                                  setCompanyDetails(prev => ({ ...prev, logoUrl: url }));
+                                  toast({ title: "Logótipo Carregado", description: "A imagem foi carregada e salva com sucesso!" });
+                                } catch (error: any) {
+                                  toast({ variant: 'destructive', title: 'Erro no Upload', description: error.message });
+                                }
                               }
                             }}
                           />

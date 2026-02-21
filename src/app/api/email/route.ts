@@ -185,9 +185,20 @@ export async function POST(req: Request) {
       </div>
     `;
 
+    let finalTo: string[] = [];
+    if (Array.isArray(to)) {
+      finalTo = to.flatMap(e => (typeof e === 'string' ? e.split(',') : [])).map(e => e.trim()).filter(Boolean);
+    } else if (typeof to === 'string') {
+      finalTo = to.split(',').map(e => e.trim()).filter(Boolean);
+    }
+
+    if (finalTo.length === 0) {
+      return NextResponse.json({ error: 'Nenhum destinatário válido fornecido.' }, { status: 400 });
+    }
+
     const { data, error } = await resend.emails.send({
       from: 'Major Assistant <assistant@majorgroup.app>',
-      to: [to],
+      to: finalTo,
       subject: subject,
       html: finalHtml,
     });
