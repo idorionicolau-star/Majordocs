@@ -16,11 +16,13 @@ export async function GET(req: Request) {
         const apiKey = process.env.RESEND_API_KEY;
         const resend = new Resend(apiKey);
 
-        // We get today's date boundaries ISO strings
-        const today = new Date();
-        const startOfTodayISO = startOfDay(today).toISOString();
-        const endOfTodayISO = endOfDay(today).toISOString();
-        const formattedDate = format(today, 'dd/MM/yyyy');
+        // Obtém o horário exato de agora e subtrai 24 horas
+        const now = new Date();
+        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+        const startISO = yesterday.toISOString();
+        const endISO = now.toISOString();
+        const formattedDate = format(now, 'dd/MM/yyyy');
 
         // Fetch all companies
         const companiesSnapshot = await db.collection('companies').get();
@@ -41,10 +43,10 @@ export async function GET(req: Request) {
                 const companyId = companyDoc.id;
 
                 const computeAndSend = async () => {
-                    // 1. Fetch Sales for today
+                    // 1. Fetch Sales for the last 24h
                     const salesSnapshot = await db.collection(`companies/${companyId}/sales`)
-                        .where('date', '>=', startOfTodayISO)
-                        .where('date', '<=', endOfTodayISO)
+                        .where('date', '>=', startISO)
+                        .where('date', '<=', endISO)
                         .get();
 
                     let totalSalesCount = 0;
@@ -86,7 +88,7 @@ export async function GET(req: Request) {
              `;
                     const footerHtml = `
                <div style="background-color: #f1f5f9; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8;">
-                 &copy; ${today.getFullYear()} MajorStockX
+                 &copy; ${now.getFullYear()} MajorStockX
                </div>
            `;
 
