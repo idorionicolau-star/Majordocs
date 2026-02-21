@@ -89,15 +89,18 @@ export default function ProductionPage() {
   const handleAddProduction = (newProductionData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
     if (!firestore || !companyId || !user) return;
 
-    const newProduction: Omit<Production, 'id'> = {
+    const newProduction: any = {
       date: new Date().toISOString().split('T')[0],
       productName: newProductionData.productName,
       quantity: newProductionData.quantity,
       unit: newProductionData.unit,
-      location: newProductionData.location,
       registeredBy: user.username || 'Desconhecido',
       status: 'Concluído'
     };
+
+    if (newProductionData.location) {
+      newProduction.location = newProductionData.location;
+    }
 
     const productionsRef = collection(firestore, `companies/${companyId}/productions`);
     addDoc(productionsRef, newProduction);

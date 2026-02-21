@@ -15,6 +15,8 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { BottomNav } from './bottom-nav';
 
 import { LoadingBar } from './loading-bar';
+import { SubscriptionExpired } from './subscription-expired';
+import { differenceInDays } from 'date-fns';
 
 import { useSearchParams } from 'next/navigation';
 
@@ -118,6 +120,29 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const company = authContext?.companyData;
+  let isExpired = false;
+  let isTrial = false;
+  let daysLeft = 0;
+
+  if (company && company.status === 'trial' && company.trialEndsAt) {
+    isTrial = true;
+    const endDate = new Date(company.trialEndsAt);
+    const today = new Date();
+
+    if (today > endDate) {
+      isExpired = true;
+    } else {
+      daysLeft = differenceInDays(endDate, today);
+    }
+  } else if (company && company.status === 'inactive') {
+    isExpired = true;
+  }
+
+  if (isExpired) {
+    return <SubscriptionExpired />;
+  }
+
   return (
     <>
       <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
@@ -125,7 +150,15 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <LoadingBar />
           <NavigationObserver onNavigate={handleNavigationTransition} />
         </Suspense>
-        <div className="flex min-h-screen w-full bg-transparent">
+
+        {isTrial && (
+          <div className="bg-blue-600 text-white text-center py-2 px-4 text-sm font-medium sticky top-0 z-[60] shadow-md flex justify-center items-center gap-2">
+            <span>Você está no período de teste gratuito do MajorStockX.</span>
+            <span className="bg-white/20 px-2 py-0.5 rounded text-xs font-bold">Lhe restam {daysLeft} dias</span>
+          </div>
+        )}
+
+        <div className={`flex min-h-screen w-full bg-transparent ${isTrial ? 'pt-0' : ''}`}>
           <Sidebar />
           <div className="flex flex-col flex-1 min-h-screen transition-[margin,width] duration-300 ease-in-out md:ml-64">
             <Header onSearchClick={() => setOpenCommandMenu(true)} />

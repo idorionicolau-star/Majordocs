@@ -65,6 +65,9 @@ export type Company = {
   validUnits?: string[];
   validCategories?: string[]; // Also adding categories while we are at it, for future proofing or if we want to migrate catalogCategories to here.
   logoUrl?: string; // Base64 Data URL for the company logo, displayed in email headers
+  status?: 'active' | 'trial' | 'inactive';
+  trialEndsAt?: string;
+  subscriptionEndsAt?: string;
 };
 
 export type Location = {

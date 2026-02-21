@@ -374,7 +374,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       batch.set(userMapDocRef, { companyId: newCompanyRef.id });
 
-      batch.set(newCompanyRef, { name: companyName, ownerId: newUserId, isMultiLocation: false, locations: [], businessType, saleCounter: 0 });
+      const trialEndsAt = new Date();
+      trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+
+      batch.set(newCompanyRef, {
+        name: companyName,
+        ownerId: newUserId,
+        isMultiLocation: false,
+        locations: [],
+        businessType,
+        saleCounter: 0,
+        status: 'trial',
+        trialEndsAt: trialEndsAt.toISOString()
+      });
 
       await batch.commit();
 
@@ -1890,32 +1902,72 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         // 5. Update Order Status
         transaction.update(orderRef, { status: 'Entregue' });
 
-        // 6. Deduct Stock from Inventory
+        // 6. Create Production Record & Stock Movements
         if (productRef && freshProductData) {
-          const currentStock = freshProductData.stock || 0;
-          if (currentStock < orderData.quantity) {
-            throw new Error(`Stock insuficiente para finalizar a encomenda. Stock actual: ${currentStock}, Necessário: ${orderData.quantity}. Verifique se o produto foi vendido por engano.`);
-          }
-          const newStock = currentStock - orderData.quantity;
+          const locationToUse = orderData.location || (isMultiLocation ? locations[0]?.id : 'Principal');
+
+          // 6a. Add to 'productions'
+          const productionsRef = collection(firestore, `companies/${companyId}/productions`);
+          const newProduction = {
+            date: new Date().toISOString().split('T')[0],
+            productName: orderData.productName || 'Produto Desconhecido',
+            quantity: Number(orderData.quantity) || 0,
+            unit: orderData.unit || 'un',
+            registeredBy: user.username || 'Sistema',
+            status: 'Concluído',
+            location: locationToUse,
+            orderId: orderId
+          };
+          transaction.set(doc(productionsRef), newProduction);
+
+          // 6b. Register Stock Movement (IN: Production) and (OUT: Delivery)
+          const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+
+          const movementIn = {
+            productId: productRef.id,
+            productName: orderData.productName,
+            type: 'IN',
+            quantity: orderData.quantity,
+            toLocationId: locationToUse,
+            reason: `Produção (Encomenda #${orderId.slice(-6).toUpperCase()}): ${orderData.quantity} ${orderData.unit || 'un'}`,
+            userId: user.id,
+            userName: user.username,
+            timestamp: serverTimestamp()
+          };
+          transaction.set(doc(movementsRef), movementIn);
+
+          const movementOut = {
+            productId: productRef.id,
+            productName: orderData.productName,
+            type: 'OUT',
+            quantity: orderData.quantity,
+            fromLocationId: locationToUse,
+            reason: `Venda (Levantamento Encomenda #${orderId.slice(-6).toUpperCase()}): ${orderData.quantity} ${orderData.unit || 'un'}`,
+            userId: user.id,
+            userName: user.username,
+            saleId: saleRef ? saleRef.id : undefined,
+            timestamp: serverTimestamp()
+          };
+          transaction.set(doc(movementsRef), movementOut);
+
+          // 6c. Deduct Reserved Stock (Actual Stock stays same because +Prod -Sale = 0)
           let newReserved = (freshProductData.reservedStock || 0) - orderData.quantity;
           if (newReserved < 0) newReserved = 0;
 
           transaction.update(productRef, {
-            stock: newStock,
             reservedStock: newReserved,
             lastUpdated: new Date().toISOString()
           });
         }
       });
 
-
-      toast({ title: 'Encomenda Finalizada', description: 'Stock atualizado e venda registada.' });
+      toast({ title: 'Encomenda Finalizada', description: 'A produção foi registada e o stock atualizado.' });
 
     } catch (e: any) {
       console.error("Error finalizing order:", e);
       toast({ variant: 'destructive', title: 'Erro ao Finalizar', description: e.message });
     }
-  }, [firestore, companyId, user, toast]);
+  }, [firestore, companyId, user, toast, isMultiLocation, locations]);
 
   const addRawMaterial = useCallback(async (material: Omit<RawMaterial, 'id'>) => {
     if (!rawMaterialsCollectionRef) return;

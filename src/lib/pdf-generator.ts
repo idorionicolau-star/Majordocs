@@ -352,9 +352,28 @@ export const generateFinancialReportPDF = (companyName: string, period: string, 
         styles: { fontSize: 9 }
     });
 
-    // Sales Summary (Optional, maybe just list total)
-    // doc.text('Vendas do Período', 14, (doc as any).lastAutoTable.finalY + 15);
-    // ... logic for sales table if needed ...
+    // Sales Table
+    const finalY = (doc as any).lastAutoTable.finalY + 15;
+    doc.setFontSize(14);
+    doc.text('Entradas do Período (Vendas)', 14, finalY);
+
+    const salesHeaders = [["Data", "Produto", "Cliente", "Qtd", "Valor"]];
+    const salesRows = sales.map(s => [
+        new Date(s.date).toLocaleDateString('pt-BR'),
+        s.productName,
+        s.clientName || '-',
+        s.quantity.toString(),
+        formatCurrency(s.amountPaid || s.totalValue)
+    ]);
+
+    autoTable(doc, {
+        head: salesHeaders,
+        body: salesRows,
+        startY: finalY + 5,
+        theme: 'striped',
+        headStyles: { fillColor: [22, 163, 74], textColor: 255 }, // Green for income
+        styles: { fontSize: 9 }
+    });
 
     doc.save(`Relatorio_Financeiro_${period.replace(/ /g, '_')}.pdf`);
 };

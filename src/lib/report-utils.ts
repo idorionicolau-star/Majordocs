@@ -112,14 +112,34 @@ export function printFinancialReport(data: FinancialReportData) {
       </div>
   `);
 
-    // Income Table (Optional, or just a summary if list is too long)
-    // For now, let's list top 10 sales or just mention the total sales count in summary
+    // Income Table
     printWindow.document.write(`
-        <div class="section">
-            <h2>Resumo de Vendas</h2>
-            <p>Total de ${data.sales.length} vendas registadas no período.</p>
-        </div>
-    `);
+      <div class="section">
+          <h2>Entradas do Período (Vendas)</h2>
+          <table>
+              <thead>
+                  <tr>
+                      <th>Data</th>
+                      <th>Produto / Descrição</th>
+                      <th>Cliente</th>
+                      <th style="text-align: right;">Qtd</th>
+                      <th style="text-align: right;">Valor</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  ${data.sales.length > 0 ? data.sales.map(s => `
+                      <tr>
+                          <td>${format(new Date(s.date), "dd/MM/yyyy", { locale: ptBR })}</td>
+                          <td>${s.productName}</td>
+                          <td>${s.clientName || '-'}</td>
+                          <td style="text-align: right;">${s.quantity}</td>
+                          <td class="amount income">+${formatCurrency(s.amountPaid || s.totalValue)}</td>
+                      </tr>
+                  `).join('') : '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: #94a3b8;">Nenhuma venda registada neste período.</td></tr>'}
+              </tbody>
+          </table>
+      </div>
+  `);
 
     printWindow.document.write(`
       <div class="footer">
