@@ -86,12 +86,17 @@ const SaleReportCard = ({ sale }: { sale: Sale }) => {
 
 export default function ReportsPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [period, setPeriod] = useState<Period>('monthly');
+  const [period, setPeriod] = useState<Period>('daily');
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const auth = useAuth();
   const inventoryContext = useContext(InventoryContext);
-  const { sales, companyData, loading, user, clearSales } = inventoryContext || { sales: [], companyData: null, loading: true, user: null, clearSales: async () => { } };
+  const contextTemp: any = inventoryContext;
+  const sales: Sale[] = contextTemp?.sales || [];
+  const companyData = contextTemp?.companyData || null;
+  const loading = contextTemp?.loading || true;
+  const user = contextTemp?.user || null;
+  const clearSales = contextTemp?.clearSales || (async () => { });
   const isAdmin = user?.role === 'Admin';
   const isPrivilegedUser = user?.role === 'Admin' || user?.role === 'Dono';
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -121,7 +126,7 @@ export default function ReportsPage() {
         break;
     }
 
-    return sales.filter(sale => {
+    return sales.filter((sale: Sale) => {
       const saleDate = new Date(sale.date);
       return isWithinInterval(saleDate, { start, end });
     });
@@ -129,19 +134,20 @@ export default function ReportsPage() {
 
   const reportSummary = useMemo(() => {
     const totalSales = salesForPeriod.length;
-    const totalValue = salesForPeriod.reduce((sum, sale) => {
+    const totalValue = salesForPeriod.reduce((sum: number, sale: Sale) => {
       return sum + (sale.amountPaid ?? sale.totalValue);
     }, 0);
-    const totalItems = salesForPeriod.reduce((sum, sale) => sum + sale.quantity, 0);
+    const totalItems = salesForPeriod.reduce((sum: number, sale: Sale) => sum + sale.quantity, 0);
     const averageTicket = totalSales > 0 ? totalValue / totalSales : 0;
 
-    const productQuantities = salesForPeriod.reduce((acc, sale) => {
+    const productQuantities = salesForPeriod.reduce((acc: Record<string, number>, sale: Sale) => {
       acc[sale.productName] = (acc[sale.productName] || 0) + sale.quantity;
       return acc;
     }, {} as Record<string, number>);
 
-    const bestSellingProduct = Object.entries(productQuantities).reduce((best, current) => {
-      return current[1] > best.quantity ? { name: current[0], quantity: current[1] } : best;
+    const bestSellingProduct = Object.entries(productQuantities).reduce((best: { name: string, quantity: number }, current: [string, any]) => {
+      const currentQuantity = Number(current[1]);
+      return currentQuantity > best.quantity ? { name: current[0], quantity: currentQuantity } : best;
     }, { name: 'N/A', quantity: 0 });
 
 
@@ -282,7 +288,7 @@ export default function ReportsPage() {
 
       const { generateReportPDF } = await import('@/lib/pdf-generator');
       // Generate blob for sharing
-      const blob = generateReportPDF(salesForPeriod, reportSummary, companyData, selectedDate, aiSummary, getPeriodDescription(), true) as Blob;
+      const blob = generateReportPDF(salesForPeriod, reportSummary, companyData, selectedDate, aiSummary, getPeriodDescription(), true) as unknown as Blob;
 
       const fileName = `relatorio-vendas-${format(selectedDate, 'MM-yyyy')}.pdf`;
       const file = new File([blob], fileName, { type: 'application/pdf' });
@@ -440,7 +446,7 @@ export default function ReportsPage() {
                 </TableHeader>
                 <TableBody>
                   {salesForPeriod.length > 0 ? (
-                    salesForPeriod.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
+                    salesForPeriod.sort((a: Sale, b: Sale) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
                       <TableRow key={sale.id}>
                         <TableCell>{format(new Date(sale.date), 'dd/MM/yy')}</TableCell>
                         <TableCell className="font-medium">{sale.guideNumber}</TableCell>
@@ -470,7 +476,7 @@ export default function ReportsPage() {
             </div>
             <div className="block md:hidden space-y-3">
               {salesForPeriod.length > 0 ? (
-                salesForPeriod.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
+                salesForPeriod.sort((a: Sale, b: Sale) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
                   <SaleReportCard key={sale.id} sale={sale} />
                 ))
               ) : (

@@ -33,10 +33,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { formatCurrency, normalizeString } from '@/lib/utils';
 import { Search, Plus, TrendingUp, TrendingDown, DollarSign, Calendar, Trash2, Printer, Download, CreditCard, ShoppingBag } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
+import { pt, ptBR } from 'date-fns/locale';
 import { printFinancialReport } from '@/lib/report-utils';
 import { useToast } from '@/hooks/use-toast';
+import { DatePicker } from '@/components/ui/date-picker';
+
+type Period = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export default function FinancePage() {
     const { canView, sales, companyData, confirmAction } = useInventory();
@@ -47,24 +50,62 @@ export default function FinancePage() {
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [formData, setFormData] = useState({ description: '', amount: '', category: 'Outros' });
 
-    // Get current month stats
-    const currentMonthStart = startOfMonth(new Date());
-    const currentMonthEnd = endOfMonth(new Date());
+    // Date filtering state
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+    const [period, setPeriod] = useState<Period>('daily');
 
-    const currentMonthSales = sales.filter(s => isWithinInterval(new Date(s.date), { start: currentMonthStart, end: currentMonthEnd }));
-    const currentMonthExpenses = expenses.filter(e => isWithinInterval(new Date(e.date), { start: currentMonthStart, end: currentMonthEnd }));
+    // Calculate generic date boundaries
+    const dateBoundaries = useMemo(() => {
+        if (!selectedDate) return { start: new Date(0), end: new Date() };
+        let start: Date;
+        let end: Date;
 
-    const totalIncome = currentMonthSales.reduce((acc, s) => acc + (s.amountPaid || s.totalValue), 0);
-    const totalExpenses = currentMonthExpenses.reduce((acc, e) => acc + e.amount, 0);
+        switch (period) {
+            case 'daily':
+                start = startOfDay(selectedDate);
+                end = endOfDay(selectedDate);
+                break;
+            case 'weekly':
+                start = startOfWeek(selectedDate, { locale: pt });
+                end = endOfWeek(selectedDate, { locale: pt });
+                break;
+            case 'monthly':
+                start = startOfMonth(selectedDate);
+                end = endOfMonth(selectedDate);
+                break;
+            case 'yearly':
+                start = startOfYear(selectedDate);
+                end = endOfYear(selectedDate);
+                break;
+        }
+        return { start, end };
+    }, [selectedDate, period]);
+
+    const periodLabel = useMemo(() => {
+        switch (period) {
+            case 'daily': return '(Dia)';
+            case 'weekly': return '(Semana)';
+            case 'monthly': return '(Mês)';
+            case 'yearly': return '(Ano)';
+            default: return '';
+        }
+    }, [period]);
+
+    // Filter using boundaries
+    const periodSales = sales.filter(s => isWithinInterval(new Date(s.date), dateBoundaries));
+    const periodExpenses = expenses.filter(e => isWithinInterval(new Date(e.date), dateBoundaries));
+
+    const totalIncome = periodSales.reduce((acc, s) => acc + (s.amountPaid || s.totalValue), 0);
+    const totalExpenses = periodExpenses.reduce((acc, e) => acc + e.amount, 0);
     const netProfit = totalIncome - totalExpenses;
 
-    // Filter transactions for tables
-    const filteredExpenses = expenses.filter(e =>
+    // Filter transactions for tables based on period & search term
+    const filteredExpenses = periodExpenses.filter(e =>
         normalizeString(e.description).includes(normalizeString(searchTerm)) ||
         normalizeString(e.category).includes(normalizeString(searchTerm))
     );
 
-    const filteredSales = sales.filter(s =>
+    const filteredSales = periodSales.filter(s =>
         normalizeString(s.productName).includes(normalizeString(searchTerm)) ||
         (s.clientName && normalizeString(s.clientName).includes(normalizeString(searchTerm))) ||
         (s.guideNumber && normalizeString(s.guideNumber).includes(normalizeString(searchTerm)))
@@ -151,6 +192,24 @@ export default function FinancePage() {
                     </div>
                 </div>
 
+                {/* Period Selector and Action Buttons */}
+                <div className="flex flex-col w-full gap-2 sm:flex-row sm:flex-wrap md:items-center">
+                    <Select value={period} onValueChange={(value: Period) => setPeriod(value)}>
+                        <SelectTrigger className="h-10 w-full sm:w-[150px]">
+                            <SelectValue placeholder="Selecionar Período" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="daily">Diário</SelectItem>
+                            <SelectItem value="weekly">Semanal</SelectItem>
+                            <SelectItem value="monthly">Mensal</SelectItem>
+                            <SelectItem value="yearly">Anual</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <div className="w-full sm:w-auto">
+                        <DatePicker date={selectedDate} setDate={setSelectedDate} />
+                    </div>
+                </div>
+
                 <div className="flex flex-wrap gap-2">
                     <Button
                         variant="outline"
@@ -158,12 +217,12 @@ export default function FinancePage() {
                         className="flex-1 sm:flex-none text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700"
                         onClick={() => printFinancialReport({
                             companyName: companyData?.name || 'Minha Empresa',
-                            period: format(new Date(), "MMMM yyyy", { locale: ptBR }),
+                            period: selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : "N/A",
                             totalIncome,
                             totalExpenses,
                             netProfit,
-                            sales: currentMonthSales,
-                            expenses: currentMonthExpenses
+                            sales: periodSales,
+                            expenses: periodExpenses
                         })}
                     >
                         <Printer className="w-4 h-4 mr-2" />
@@ -179,12 +238,12 @@ export default function FinancePage() {
                                 const { generateFinancialReportPDF } = await import('@/lib/pdf-generator');
                                 generateFinancialReportPDF(
                                     companyData?.name || 'Minha Empresa',
-                                    format(new Date(), "MMMM yyyy", { locale: ptBR }),
+                                    selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : '',
                                     totalIncome,
                                     totalExpenses,
                                     netProfit,
-                                    currentMonthSales,
-                                    currentMonthExpenses
+                                    periodSales,
+                                    periodExpenses
                                 );
                                 toast({ title: "Relatório gerado", description: "Relatório financeiro gerado com sucesso!" });
                             } catch (error) {
@@ -204,38 +263,38 @@ export default function FinancePage() {
                 <Card className="border-green-100 bg-green-50/50 dark:bg-green-900/10 dark:border-green-800">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4" /> Entradas (Mês)
+                            <TrendingUp className="w-4 h-4" /> Entradas {periodLabel}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-green-700 dark:text-green-300">{formatCurrency(totalIncome)}</div>
-                        <p className="text-xs text-green-600/80 mt-1">{currentMonthSales.length} vendas registadas</p>
+                        <p className="text-xs text-green-600/80 mt-1">{periodSales.length} vendas registadas</p>
                     </CardContent>
                 </Card>
 
                 <Card className="border-red-100 bg-red-50/50 dark:bg-red-900/10 dark:border-red-800">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium text-red-600 dark:text-red-400 flex items-center gap-2">
-                            <TrendingDown className="w-4 h-4" /> Saídas (Mês)
+                            <TrendingDown className="w-4 h-4" /> Saídas {periodLabel}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-red-700 dark:text-red-300">{formatCurrency(totalExpenses)}</div>
-                        <p className="text-xs text-red-600/80 mt-1">{currentMonthExpenses.length} despesas registadas</p>
+                        <p className="text-xs text-red-600/80 mt-1">{periodExpenses.length} despesas registadas</p>
                     </CardContent>
                 </Card>
 
                 <Card className={`border-slate-200 dark:border-slate-800 ${netProfit >= 0 ? 'bg-blue-50/50 dark:bg-blue-900/10' : 'bg-orange-50/50 dark:bg-orange-900/10'}`}>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center gap-2">
-                            <DollarSign className="w-4 h-4" /> Lucro Líquido
+                            <DollarSign className="w-4 h-4" /> Lucro Líquido {periodLabel}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className={`text-3xl font-bold ${netProfit >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-600'}`}>
                             {formatCurrency(netProfit)}
                         </div>
-                        <p className="text-xs text-slate-500 mt-1">Margem operacional do mês</p>
+                        <p className="text-xs text-slate-500 mt-1">Margem operacional do período</p>
                     </CardContent>
                 </Card>
             </div>
