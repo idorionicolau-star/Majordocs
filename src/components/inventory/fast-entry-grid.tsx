@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { DataGrid, renderTextEditor as textEditor, Column, RenderEditCellProps } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
 import { Button } from "@/components/ui/button";
@@ -84,13 +85,31 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
         const [inputValue, setInputValue] = useState(row.name);
         const [highlightedIndex, setHighlightedIndex] = useState(-1);
         const suggestionsRef = useRef<HTMLDivElement>(null);
+        const inputRef = useRef<HTMLInputElement>(null);
+        const [inputRect, setInputRect] = useState<DOMRect | null>(null);
+
+        useEffect(() => {
+            const updateRect = () => {
+                if (inputRef.current) {
+                    setInputRect(inputRef.current.getBoundingClientRect());
+                }
+            };
+            updateRect();
+            // True param captures scroll events from the grid container
+            window.addEventListener('scroll', updateRect, true);
+            window.addEventListener('resize', updateRect);
+            return () => {
+                window.removeEventListener('scroll', updateRect, true);
+                window.removeEventListener('resize', updateRect);
+            };
+        }, []);
 
         const fuzzyResults = useFuse(productNames, inputValue, {
             threshold: 0.3,
         });
 
         // Limit suggestions for performance and UI constraints
-        const suggestions = fuzzyResults.slice(0, 10);
+        const suggestions = fuzzyResults.slice(0, 8);
 
         const commitSelection = (val: string) => {
             const existingProduct = products.find(p => p.name.toLowerCase() === val.toLowerCase());
@@ -138,7 +157,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
         };
 
         // Scroll highlighted item into view
-        React.useEffect(() => {
+        useEffect(() => {
             if (highlightedIndex >= 0 && suggestionsRef.current) {
                 const element = suggestionsRef.current.children[highlightedIndex] as HTMLElement;
                 if (element) {
@@ -150,6 +169,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
         return (
             <div className="relative w-full h-full flex items-center bg-background">
                 <input
+                    ref={inputRef}
                     autoFocus
                     className="w-full h-full border-0 outline-none bg-transparent text-foreground px-2"
                     value={inputValue}
@@ -166,15 +186,22 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                         }, 150);
                     }}
                 />
-                {suggestions.length > 0 && inputValue.length > 0 && (
+                {suggestions.length > 0 && inputValue.length > 0 && typeof document !== 'undefined' && inputRect && createPortal(
                     <div
                         ref={suggestionsRef}
-                        className="absolute top-full left-0 w-full max-h-48 overflow-auto bg-popover border shadow-lg z-[100] rounded-b-md"
+                        className="fixed bg-popover border shadow-lg z-[9999] rounded-b-md"
+                        style={{
+                            top: inputRect.bottom,
+                            left: inputRect.left,
+                            width: Math.max(inputRect.width, isMobile ? 200 : 250),
+                            maxHeight: '200px',
+                            overflow: 'auto',
+                        }}
                     >
                         {suggestions.map((suggestion, index) => (
                             <div
                                 key={suggestion}
-                                className={`px-2 py-1.5 text-sm cursor-pointer ${index === highlightedIndex ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-foreground'
+                                className={`px-2 py-3 text-sm cursor-pointer border-b last:border-0 ${index === highlightedIndex ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-foreground'
                                     }`}
                                 onMouseDown={(e) => {
                                     // prevent input blur
@@ -188,20 +215,21 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                                 {suggestion}
                             </div>
                         ))}
-                    </div>
+                    </div>,
+                    document.body
                 )}
             </div>
         );
     };
 
     const columns: Column<RowData>[] = [
-        { key: 'name', name: 'Nome do Produto', renderEditCell: NameEditor, minWidth: isMobile ? 180 : 250 },
-        { key: 'category', name: 'Categoria', renderEditCell: CategoryEditor, width: isMobile ? 120 : 160 },
-        { key: 'unit', name: 'Unid.', renderEditCell: UnitEditor, width: isMobile ? 80 : 100 },
-        { key: 'cost', name: 'Custo (MTn)', renderEditCell: textEditor, width: isMobile ? 100 : 120 },
-        { key: 'price', name: 'Venda (MTn)', renderEditCell: textEditor, width: isMobile ? 100 : 120 },
-        { key: 'stock', name: 'Físico', renderEditCell: textEditor, width: isMobile ? 80 : 100 },
-        { key: 'minStock', name: 'Mínimo', renderEditCell: textEditor, width: isMobile ? 80 : 100 },
+        { key: 'name', name: 'Nome do Produto', renderEditCell: NameEditor, minWidth: isMobile ? 220 : 250 },
+        { key: 'category', name: 'Categoria', renderEditCell: CategoryEditor, width: isMobile ? 140 : 160 },
+        { key: 'unit', name: 'Unid.', renderEditCell: UnitEditor, width: isMobile ? 90 : 100 },
+        { key: 'cost', name: 'Custo (MTn)', renderEditCell: textEditor, width: isMobile ? 110 : 120 },
+        { key: 'price', name: 'Venda (MTn)', renderEditCell: textEditor, width: isMobile ? 110 : 120 },
+        { key: 'stock', name: 'Físico', renderEditCell: textEditor, width: isMobile ? 90 : 100 },
+        { key: 'minStock', name: 'Mínimo', renderEditCell: textEditor, width: isMobile ? 90 : 100 },
     ];
 
     const handleAddRow = () => {
