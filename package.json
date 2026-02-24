@@ -59,6 +59,7 @@
     "patch-package": "^8.0.0",
     "react": "^19.0.0",
     "react-confetti": "^6.1.0",
+    "react-data-grid": "^7.0.0-beta.59",
     "react-day-picker": "^8.10.1",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.52.1",

@@ -36,6 +36,8 @@ import { cn } from "@/lib/utils";
 import { ProductCard } from "@/components/inventory/product-card";
 import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
 import { useInventory } from "@/context/inventory-context";
+import { FastEntryGrid } from "@/components/inventory/fast-entry-grid";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -532,6 +534,18 @@ export default function InventoryPage() {
         {/* Report Actions */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+            {canEditInventory && (
+              <ResponsiveDialog
+                trigger={
+                  <Button variant="default" className="h-12 w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white">
+                    <LayoutGrid className="mr-2 h-4 w-4" />
+                    <span>Entrada Rápida</span>
+                  </Button>
+                }
+              >
+                <FastEntryGrid />
+              </ResponsiveDialog>
+            )}
             <Button onClick={handleDownloadPdfReport} variant="outline" className="h-12 w-full sm:w-auto">
               <Download className="mr-2 h-4 w-4" />
               <span className="truncate">PDF</span>
