@@ -62,6 +62,14 @@ const SheetContent = React.forwardRef<
     e.preventDefault();
   }, []);
 
+  const preventInteractOutside = React.useCallback((e: Event) => {
+    const target = e.target as HTMLElement;
+    // Don't close if clicking on a toast notification
+    if (target.closest('[data-sonner-toast]') || target.closest('[id^="radix-"]')) {
+      e.preventDefault();
+    }
+  }, []);
+
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -69,6 +77,7 @@ const SheetContent = React.forwardRef<
         ref={ref}
         className={cn(sheetVariants({ side }), className)}
         onFocusOutside={preventFocusOutside}
+        onInteractOutside={preventInteractOutside}
         {...props}
       >
         {children}

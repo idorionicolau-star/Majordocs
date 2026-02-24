@@ -44,6 +44,14 @@ const DrawerContent = React.forwardRef<
         e.preventDefault();
     }, []);
 
+    const preventInteractOutside = React.useCallback((e: Event) => {
+        const target = e.target as HTMLElement;
+        // Don't close if clicking on a toast notification
+        if (target.closest('[data-sonner-toast]') || target.closest('[id^="radix-"]')) {
+            e.preventDefault();
+        }
+    }, []);
+
     return (
         <DrawerPortal>
             <DrawerOverlay />
@@ -54,6 +62,7 @@ const DrawerContent = React.forwardRef<
                     className
                 )}
                 onFocusOutside={preventFocusOutside}
+                onInteractOutside={preventInteractOutside}
                 {...props}
             >
                 <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
