@@ -9,6 +9,7 @@ import { PlusCircle, Save } from "lucide-react";
 import { useInventory } from "@/context/inventory-context";
 import { useTheme } from "next-themes";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { useFuse } from "@/hooks/use-fuse";
 import type { Product } from "@/lib/types";
 
 interface RowData {
@@ -83,37 +84,116 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     }, [products]);
 
     const NameEditor = ({ row, onRowChange, onClose }: RenderEditCellProps<RowData>) => {
-        // We use a local state to handle the input value before committing it to the grid row
-        // to make typing smoother and to allow the datalist to work correctly.
-        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            const newName = e.target.value;
-            const existingProduct = products.find(p => p.name.toLowerCase() === newName.toLowerCase());
+        const [inputValue, setInputValue] = useState(row.name);
+        const [highlightedIndex, setHighlightedIndex] = useState(-1);
+        const suggestionsRef = useRef<HTMLDivElement>(null);
+
+        const fuzzyResults = useFuse(productNames, inputValue, {
+            threshold: 0.3,
+        });
+
+        // Limit suggestions for performance and UI constraints
+        const suggestions = fuzzyResults.slice(0, 10);
+
+        const commitSelection = (val: string) => {
+            const existingProduct = products.find(p => p.name.toLowerCase() === val.toLowerCase());
 
             if (existingProduct) {
                 onRowChange({
                     ...row,
-                    name: existingProduct.name, // Keep the exact casing from DB
+                    name: existingProduct.name,
                     category: existingProduct.category || 'Geral',
                     unit: existingProduct.unit || 'un',
                     price: existingProduct.price.toString(),
-                    // cost: existingProduct.cost?.toString() || '', // If we had cost tracking, we would map it here. Product type doesn't have it natively yet.
                     stock: existingProduct.stock.toString(),
                     minStock: existingProduct.lowStockThreshold?.toString() || '0'
-                });
+                }, true);
             } else {
-                onRowChange({ ...row, name: newName });
+                onRowChange({ ...row, name: val }, true);
             }
         };
 
+        const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'ArrowDown') {
+                e.stopPropagation(); // prevent grid navigation
+                setHighlightedIndex(prev => (prev < suggestions.length - 1 ? prev + 1 : prev));
+            } else if (e.key === 'ArrowUp') {
+                e.stopPropagation();
+                setHighlightedIndex(prev => (prev > 0 ? prev - 1 : -1));
+            } else if (e.key === 'Enter') {
+                e.stopPropagation();
+                if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+                    commitSelection(suggestions[highlightedIndex]);
+                } else {
+                    commitSelection(inputValue);
+                }
+                onClose(true);
+            } else if (e.key === 'Escape') {
+                e.stopPropagation();
+                onClose();
+            } else if (e.key === 'Tab') {
+                if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+                    commitSelection(suggestions[highlightedIndex]);
+                } else {
+                    commitSelection(inputValue);
+                }
+            }
+        };
+
+        // Scroll highlighted item into view
+        React.useEffect(() => {
+            if (highlightedIndex >= 0 && suggestionsRef.current) {
+                const element = suggestionsRef.current.children[highlightedIndex] as HTMLElement;
+                if (element) {
+                    element.scrollIntoView({ block: 'nearest' });
+                }
+            }
+        }, [highlightedIndex]);
+
         return (
-            <input
-                autoFocus
-                className="w-full h-full border-2 border-primary outline-none bg-background text-foreground px-2"
-                value={row.name}
-                list="product-names-list"
-                onChange={handleChange}
-                onBlur={() => onClose(true)}
-            />
+            <div className="relative w-full h-full flex items-center bg-background">
+                <input
+                    autoFocus
+                    className="w-full h-full border-0 outline-none bg-transparent text-foreground px-2"
+                    value={inputValue}
+                    onChange={(e) => {
+                        setInputValue(e.target.value);
+                        setHighlightedIndex(-1);
+                    }}
+                    onKeyDown={handleKeyDown}
+                    onBlur={() => {
+                        // Delay closing to allow click events on suggestions to fire
+                        setTimeout(() => {
+                            commitSelection(inputValue);
+                            onClose(true);
+                        }, 150);
+                    }}
+                />
+                {suggestions.length > 0 && inputValue.length > 0 && (
+                    <div
+                        ref={suggestionsRef}
+                        className="absolute top-full left-0 w-full max-h-48 overflow-auto bg-popover border shadow-lg z-[100] rounded-b-md"
+                    >
+                        {suggestions.map((suggestion, index) => (
+                            <div
+                                key={suggestion}
+                                className={`px-2 py-1.5 text-sm cursor-pointer ${index === highlightedIndex ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-foreground'
+                                    }`}
+                                onMouseDown={(e) => {
+                                    // prevent input blur
+                                    e.preventDefault();
+                                }}
+                                onClick={() => {
+                                    commitSelection(suggestion);
+                                    onClose(true);
+                                }}
+                            >
+                                {suggestion}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         );
     };
 
@@ -177,10 +257,6 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
 
     return (
         <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
-            <datalist id="product-names-list">
-                {productNames.map(name => <option key={name} value={name} />)}
-            </datalist>
-
             <div className="flex flex-col">
                 <h2 className="text-xl font-bold font-headline">Entrada Rápida / Edição em Massa</h2>
                 <p className="text-sm text-muted-foreground">Adicione produtos. {isMobile ? "Deslize para ver campos." : "Duplo clique para editar, TAB para navegar."}</p>
