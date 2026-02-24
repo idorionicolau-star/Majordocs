@@ -717,7 +717,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
               finalProductId = docRef.id;
               const existingData = existingDocSnap.data() as Product;
               const oldStock = existingData.stock || 0;
-              const updateData: Record<string, any> = { stock: oldStock + newStock, lastUpdated: new Date().toISOString() };
+              const updateData: Record<string, any> = { stock: oldStock + newStock, lastUpdated: new Date().toISOString(), deletedAt: null };
               // Preserve imageUrl if provided with the new product data
               if (newProductData.imageUrl) {
                 updateData.imageUrl = newProductData.imageUrl;

@@ -237,26 +237,16 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     };
 
     const handleSave = async () => {
-        const validRows = rows.filter(row => row.name.trim() !== '');
-        if (validRows.length === 0) {
-            toast({ title: "Aviso", description: "Nenhum produto válido para guardar.", variant: "destructive" });
-            return;
-        }
-
-        // Strongly enforce data completeness before allowing a save
-        const incompleteRows = validRows.filter(row =>
-            !row.category.trim() ||
-            row.price.trim() === '' ||
-            row.cost.trim() === '' ||
-            row.stock.trim() === ''
+        const validRows = rows.filter(row =>
+            row.name.trim() !== '' &&
+            row.category.trim() !== '' &&
+            row.price.trim() !== '' &&
+            row.cost.trim() !== '' &&
+            row.stock.trim() !== ''
         );
 
-        if (incompleteRows.length > 0) {
-            toast({
-                title: "Dados Incompletos",
-                description: `Todos os produtos listados devem ter "Categoria", "Custo", "Venda" e "Físico" preenchidos.`,
-                variant: "destructive"
-            });
+        if (validRows.length === 0) {
+            toast({ title: "Aviso", description: "Nenhum produto válido e completo para guardar. Apenas linhas totalmente preenchidas são adicionadas.", variant: "destructive" });
             return;
         }
 
