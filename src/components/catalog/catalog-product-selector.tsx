@@ -11,24 +11,12 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, normalizeString, calculateSimilarity } from '@/lib/utils';
 import { useFuse } from '@/hooks/use-fuse';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { ScrollArea } from '../ui/scroll-area';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import dynamic from 'next/dynamic';
 
 const QuickCreateProductDialog = dynamic(() => import('./quick-create-product-dialog').then(mod => mod.QuickCreateProductDialog), {
@@ -51,10 +39,7 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
   const [open, setOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-
-
-
-  const categoryFilteredProducts = useMemo(() => {
+  const isDesktop = useMediaQuery("(min-width: 768px)"); const categoryFilteredProducts = useMemo(() => {
     if (categoryFilter === 'all') return products;
     return products.filter(p => p.category === categoryFilter);
   }, [products, categoryFilter]);
@@ -122,13 +107,22 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
             </Select>
           </div>
           <Command shouldFilter={false}>
-            <CommandInput
-              placeholder="Pesquisar produto..."
-              value={searchQuery}
-              onValueChange={handleInputChange}
-              className="h-12 text-base"
-              autoFocus
-            />
+            <div className="relative">
+              <CommandInput
+                placeholder="Pesquisar produto..."
+                value={searchQuery}
+                onValueChange={handleInputChange}
+                className="h-14 text-base focus:bg-accent/30 focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
+                autoFocus={isDesktop}
+                onFocus={(e) => {
+                  if (!isDesktop) {
+                    setTimeout(() => {
+                      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300);
+                  }
+                }}
+              />
+            </div>
             <CommandList>
               <div className="h-[250px] md:h-[300px] overflow-y-auto overscroll-contain touch-pan-y">
                 <CommandEmpty>
