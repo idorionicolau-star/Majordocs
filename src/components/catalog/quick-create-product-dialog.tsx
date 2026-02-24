@@ -2,14 +2,7 @@
 
 import { useState, useContext, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-    DialogDescription,
-} from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import {
     Form,
     FormControl,
@@ -124,118 +117,115 @@ export function QuickCreateProductDialog({ open, onOpenChange, defaultName, onSu
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>Novo Produto de Catálogo</DialogTitle>
-                    <DialogDescription>
-                        Defina o produto para o adicionar ao catálogo e usar na produção.
-                    </DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+        <ResponsiveDialog
+            open={open}
+            onOpenChange={onOpenChange}
+            title="Novo Produto de Catálogo"
+            description="Defina o produto para o adicionar ao catálogo e usar na produção."
+        >
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+                    <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Nome do Produto</FormLabel>
+                                <FormControl>
+                                    <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
-                            name="name"
+                            name="price"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Nome do Produto</FormLabel>
+                                    <FormLabel>Preço Base (MT)</FormLabel>
                                     <FormControl>
-                                        <Input {...field} />
+                                        <Input type="number" min="0" step="0.01" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="price"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Preço Base (MT)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" min="0" step="0.01" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="unit"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Unidade</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="un">Unidade (un)</SelectItem>
-                                                <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
-                                                <SelectItem value="m">Metro Linear (m)</SelectItem>
-                                                <SelectItem value="cj">Conjunto (cj)</SelectItem>
-                                                <SelectItem value="outro">Outro</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
                         <FormField
                             control={form.control}
-                            name="category"
+                            name="unit"
                             render={({ field }) => (
                                 <FormItem>
-                                    <div className="flex items-center justify-between">
-                                        <FormLabel>Categoria</FormLabel>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-6 px-2 text-xs text-muted-foreground hover:text-primary"
-                                            onClick={() => {
-                                                setIsCreatingCategory(!isCreatingCategory);
-                                                form.setValue('category', ''); // Clear on toggle
-                                            }}
-                                        >
-                                            {isCreatingCategory ? "Escolher Existente" : "+ Nova Categoria"}
-                                        </Button>
-                                    </div>
-                                    {isCreatingCategory ? (
+                                    <FormLabel>Unidade</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                                         <FormControl>
-                                            <Input placeholder="Nome da nova categoria..." {...field} />
+                                            <SelectTrigger><SelectValue /></SelectTrigger>
                                         </FormControl>
-                                    ) : (
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Selecione..." />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {catalogCategories?.map((cat: CatalogCategory) => (
-                                                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    )}
+                                        <SelectContent>
+                                            <SelectItem value="un">Unidade (un)</SelectItem>
+                                            <SelectItem value="m²">Metro Quadrado (m²)</SelectItem>
+                                            <SelectItem value="m">Metro Linear (m)</SelectItem>
+                                            <SelectItem value="cj">Conjunto (cj)</SelectItem>
+                                            <SelectItem value="outro">Outro</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
+                    </div>
 
-                        <DialogFooter>
-                            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                            <Button type="submit">Criar Produto</Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-        </Dialog>
+                    <FormField
+                        control={form.control}
+                        name="category"
+                        render={({ field }) => (
+                            <FormItem>
+                                <div className="flex items-center justify-between">
+                                    <FormLabel>Categoria</FormLabel>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 px-2 text-xs text-muted-foreground hover:text-primary"
+                                        onClick={() => {
+                                            setIsCreatingCategory(!isCreatingCategory);
+                                            form.setValue('category', ''); // Clear on toggle
+                                        }}
+                                    >
+                                        {isCreatingCategory ? "Escolher Existente" : "+ Nova Categoria"}
+                                    </Button>
+                                </div>
+                                {isCreatingCategory ? (
+                                    <FormControl>
+                                        <Input placeholder="Nome da nova categoria..." {...field} />
+                                    </FormControl>
+                                ) : (
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecione..." />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {catalogCategories?.map((cat: CatalogCategory) => (
+                                                <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancelar</Button>
+                        <Button type="submit">Criar Produto</Button>
+                    </div>
+                </form>
+            </Form>
+        </ResponsiveDialog>
     );
 }

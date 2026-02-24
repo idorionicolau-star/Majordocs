@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
 import { ProductionDataTable } from "@/components/production/data-table";
 import { columns } from "@/components/production/columns";
-import { AddProductionDialog } from "@/components/production/add-production-dialog";
 import type { Production, Location, ModulePermission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { List, LayoutGrid, ChevronDown, Lock, MapPin, Trash2, PlusCircle, Plus, Printer, Download } from "lucide-react";
@@ -62,9 +61,9 @@ export default function ProductionPage() {
 
   useEffect(() => {
     if (searchParams.get('action') === 'add' && canEditProduction) {
-      setAddDialogOpen(true);
+      router.push('/production/new');
     }
-  }, [searchParams, canEditProduction]);
+  }, [searchParams, canEditProduction, router]);
 
 
   useEffect(() => {
@@ -86,30 +85,7 @@ export default function ProductionPage() {
     localStorage.setItem('majorstockx-production-grid-cols', cols);
   }
 
-  const handleAddProduction = (newProductionData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
-    if (!firestore || !companyId || !user) return;
 
-    const newProduction: any = {
-      date: new Date().toISOString().split('T')[0],
-      productName: newProductionData.productName,
-      quantity: newProductionData.quantity,
-      unit: newProductionData.unit,
-      registeredBy: user.username || 'Desconhecido',
-      status: 'Concluído'
-    };
-
-    if (newProductionData.location) {
-      newProduction.location = newProductionData.location;
-    }
-
-    const productionsRef = collection(firestore, `companies/${companyId}/productions`);
-    addDoc(productionsRef, newProduction);
-
-    toast({
-      title: "Produção Registrada",
-      description: `O registo de ${newProduction.quantity} unidades de ${newProduction.productName} foi criado.`,
-    });
-  };
 
   const handleConfirmTransfer = async () => {
     if (!productionToTransfer || !firestore || !companyId) return;
@@ -474,13 +450,8 @@ export default function ProductionPage() {
 
         {canEditProduction && (
           <>
-            <AddProductionDialog
-              open={isAddDialogOpen}
-              onOpenChange={setAddDialogOpen}
-              onAddProduction={handleAddProduction}
-            />
             <Button
-              onClick={() => setAddDialogOpen(true)}
+              onClick={() => router.push('/production/new')}
               className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
               size="icon"
             >

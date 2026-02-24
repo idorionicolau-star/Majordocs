@@ -1,15 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import {
   Form,
   FormControl,
@@ -111,125 +103,122 @@ export function TransferStockDialog({ onTransfer }: TransferStockDialogProps) {
   if (!products || !locations) return null;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
+    <TooltipProvider>
+      <Tooltip>
+        <ResponsiveDialog
+          open={open}
+          onOpenChange={setOpen}
+          title="Transferir Stock entre Localizações"
+          description="Mova produtos de uma localização para outra."
+          trigger={
+            <TooltipTrigger asChild>
               <Button variant="outline" size="icon" className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0">
                 <Truck className="h-5 w-5" />
               </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Transferir Stock</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Transferir Stock entre Localizações</DialogTitle>
-          <DialogDescription>
-            Mova produtos de uma localização para outra.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-            <FormField
-              control={form.control}
-              name="productName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Produto</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+            </TooltipTrigger>
+          }
+        >
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+              <FormField
+                control={form.control}
+                name="productName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Produto</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um produto" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {uniqueProducts.map(product => (
+                          <SelectItem key={product.name} value={product.name}>{product.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="fromLocationId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>De</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Origem" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {locations.map(location => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="toLocationId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Para</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Destino" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {locations.map(location => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="quantity"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Quantidade</FormLabel>
+                      {watchedProductName && watchedFromLocation && <p className="text-xs text-muted-foreground mt-1">Disponível: {availableStock}</p>}
+                    </div>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um produto" />
-                      </SelectTrigger>
+                      <Input type="number" min="0.01" step="any" {...field} />
                     </FormControl>
-                    <SelectContent>
-                      {uniqueProducts.map(product => (
-                        <SelectItem key={product.name} value={product.name}>{product.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="fromLocationId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>De</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Origem" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {locations.map(location => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="toLocationId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Para</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Destino" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {locations.map(location => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex justify-between items-center">
-                    <FormLabel>Quantidade</FormLabel>
-                    {watchedProductName && watchedFromLocation && <p className="text-xs text-muted-foreground mt-1">Disponível: {availableStock}</p>}
-                  </div>
-                  <FormControl>
-                    <Input type="number" min="0.01" step="any" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={!form.formState.isValid}>Transferir</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+                <Button type="submit" disabled={!form.formState.isValid}>Transferir</Button>
+              </div>
+            </form>
+          </Form>
+        </ResponsiveDialog>
+        <TooltipContent>
+          <p>Transferir Stock</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

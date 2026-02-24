@@ -18,36 +18,24 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
-    DialogFooter,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency, normalizeString } from '@/lib/utils';
 import { Search, Plus, User, Phone, Mail, Calendar, Edit, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatCurrency } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
 import { useFuse } from '@/hooks/use-fuse';
 
 export default function CustomersPage() {
     const { canView, companyData, sales, confirmAction } = useInventory();
-    const { customers, addCustomer, updateCustomer, deleteCustomer, loading } = useCRM();
-    const { toast } = useToast();
+    const { customers, deleteCustomer, loading } = useCRM();
+    const router = useRouter();
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [isAddOpen, setIsAddOpen] = useState(false);
-    const [editingCustomer, setEditingCustomer] = useState<any>(null);
     const [viewingCustomer, setViewingCustomer] = useState<any>(null);
-
-    // Form State
-    const [formData, setFormData] = useState({ name: '', phone: '', email: '', notes: '' });
-
-    const namePlaceholder = useDynamicPlaceholder('person');
-    const phonePlaceholder = useDynamicPlaceholder('phone');
-    const emailPlaceholder = useDynamicPlaceholder('email');
-    const notesPlaceholder = useDynamicPlaceholder('generic');
     const searchPlaceholder = useDynamicPlaceholder('person');
 
     if (!canView('customers')) {
@@ -56,41 +44,7 @@ export default function CustomersPage() {
 
     const filteredCustomers = useFuse(customers, searchTerm, { keys: ['name', 'phone', 'email'] });
 
-    const handleAddSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!formData.name) return;
-        try {
-            await addCustomer(formData);
-            setIsAddOpen(false);
-            setFormData({ name: '', phone: '', email: '', notes: '' });
-        } catch (e) {
-            // toast handled in context
-        }
-    };
 
-    const handleEditSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!editingCustomer || !formData.name) return;
-        try {
-            await updateCustomer(editingCustomer.id, formData);
-            setEditingCustomer(null);
-            setFormData({ name: '', phone: '', email: '', notes: '' });
-        } catch (e) {
-            // toast handled in context
-        }
-    };
-
-    const openEdit = (customer: any) => {
-        setFormData({
-            name: customer.name,
-            phone: customer.phone || '',
-            email: customer.email || '',
-            notes: customer.notes || '',
-        });
-        setEditingCustomer(customer);
-    };
-
-    // Deletion removed
 
     const getCustomerHistory = (customerId: string) => {
         return sales.filter(s => s.customerId === customerId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -125,42 +79,10 @@ export default function CustomersPage() {
                             Base de clientes e histórico de compras.
                         </p>
                     </div>
-                    <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all active:scale-95">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Novo Cliente
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
-                            <DialogHeader>
-                                <DialogTitle>Adicionar Novo Cliente</DialogTitle>
-                            </DialogHeader>
-                            <form onSubmit={handleAddSubmit} className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">Nome Completo</Label>
-                                    <Input id="name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required placeholder={namePlaceholder} />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="phone">Telefone</Label>
-                                        <Input id="phone" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder={phonePlaceholder} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="email">E-mail</Label>
-                                        <Input id="email" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder={emailPlaceholder} />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="notes">Notas</Label>
-                                    <Input id="notes" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} placeholder={notesPlaceholder} />
-                                </div>
-                                <DialogFooter>
-                                    <Button type="submit" className="w-full">Guardar Cliente</Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+                    <Button onClick={() => router.push('/customers/new')} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all active:scale-95">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Novo Cliente
+                    </Button>
                 </div>
             </div>
 
@@ -245,7 +167,7 @@ export default function CustomersPage() {
                                             <Button variant="ghost" size="icon" onClick={() => setViewingCustomer(customer)} className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50">
                                                 <User className="h-4 w-4" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => openEdit(customer)} className="h-8 w-8 text-slate-500 hover:text-slate-900 hover:bg-slate-100">
+                                            <Button variant="ghost" size="icon" onClick={() => router.push(`/customers/${customer.id}/edit`)} className="h-8 w-8 text-slate-500 hover:text-slate-900 hover:bg-slate-100">
                                                 <Edit className="h-4 w-4" />
                                             </Button>
                                         </div>
@@ -297,7 +219,7 @@ export default function CustomersPage() {
                                     <Button variant="outline" size="sm" className="flex-1 h-9" onClick={() => setViewingCustomer(customer)}>
                                         <User className="h-4 w-4 mr-2" /> Histórico
                                     </Button>
-                                    <Button variant="outline" size="sm" className="h-9 px-3" onClick={() => openEdit(customer)}>
+                                    <Button variant="outline" size="sm" className="h-9 px-3" onClick={() => router.push(`/customers/${customer.id}/edit`)}>
                                         <Edit className="h-4 w-4" />
                                     </Button>
                                 </div>
@@ -307,37 +229,7 @@ export default function CustomersPage() {
                 )}
             </div>
 
-            {/* Edit Dialog */}
-            <Dialog open={!!editingCustomer} onOpenChange={(open) => !open && setEditingCustomer(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Editar Cliente</DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={handleEditSubmit} className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label>Nome Completo</Label>
-                            <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Telefone</Label>
-                                <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>E-mail</Label>
-                                <Input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Notas</Label>
-                            <Input value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} />
-                        </div>
-                        <DialogFooter>
-                            <Button type="submit">Guardar Alterações</Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
+
 
             {/* History Dialog */}
             <Dialog open={!!viewingCustomer} onOpenChange={(open) => !open && setViewingCustomer(null)}>

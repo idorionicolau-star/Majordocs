@@ -1,14 +1,7 @@
 "use client";
 
 import { useState, useContext } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import {
   Form,
   FormControl,
@@ -81,65 +74,64 @@ export function AddProductionLogDialog({ order, onAddLog }: AddProductionLogDial
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={setOpen}
+      title="Registar Produção da Encomenda"
+      description={`Encomenda #${order.id.slice(-6).toUpperCase()} • ${order.productName}`}
+      trigger={
         <Button variant="outline" className="flex-1" size="sm" onClick={(e) => e.stopPropagation()}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Registar
         </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Registar Produção da Encomenda</DialogTitle>
-          <p className='text-sm text-muted-foreground'>Encomenda #{order.id.slice(-6).toUpperCase()} • {order.productName}</p>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-            <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                <FormItem>
-                  <div className='flex items-baseline justify-between'>
-                    <FormLabel>Quantidade Produzida Hoje</FormLabel>
-                    <p className='text-xs text-muted-foreground'>Faltam: {remainingQuantity}</p>
-                  </div>
-                  <FormControl>
-                    <Input type="number" step="any" min="0.01" max={remainingQuantity} {...field} placeholder="0.0" disabled={isSubmitting} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+      }
+    >
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+          <FormField
+            control={form.control}
+            name="quantity"
+            render={({ field }) => (
+              <FormItem>
+                <div className='flex items-baseline justify-between'>
+                  <FormLabel>Quantidade Produzida Hoje</FormLabel>
+                  <p className='text-xs text-muted-foreground'>Faltam: {remainingQuantity}</p>
+                </div>
+                <FormControl>
+                  <Input type="number" step="any" min="0.01" max={remainingQuantity} {...field} placeholder="0.0" disabled={isSubmitting} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Notas (Opcional)</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Alguma observação sobre a produção de hoje?" {...field} disabled={isSubmitting} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="secondary" onClick={() => setOpen(false)} disabled={isSubmitting}>Cancelar</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  A registar...
+                </>
+              ) : (
+                "Adicionar Registo"
               )}
-            />
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notas (Opcional)</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Alguma observação sobre a produção de hoje?" {...field} disabled={isSubmitting} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)} disabled={isSubmitting}>Cancelar</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    A registar...
-                  </>
-                ) : (
-                  "Adicionar Registo"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </ResponsiveDialog>
   );
 }

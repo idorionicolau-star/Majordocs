@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Edit, Printer, FileSearch, CheckCircle, PackageCheck, Download, DollarSign, Mail, Trash2 } from "lucide-react"
 import { useCRM } from "@/context/crm-context"
 import { useToast } from "@/hooks/use-toast"
-import { SaleDetailsDialogContent } from "./sale-details-dialog"
+import { SaleDetailsDialog } from "./sale-details-dialog"
 import { formatCurrency, downloadSaleDocument } from "@/lib/utils"
 import { EditSaleDialog } from "./edit-sale-dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
@@ -102,24 +102,26 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
 
     return (
         <div className="flex items-center justify-end gap-1">
-            <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <DialogTrigger asChild>
+            <TooltipProvider>
+                <Tooltip>
+                    <SaleDetailsDialog
+                        sale={sale}
+                        open={isDetailsOpen}
+                        onOpenChange={setIsDetailsOpen}
+                        trigger={
+                            <TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8">
                                     <FileSearch className="h-4 w-4" />
                                     <span className="sr-only">Ver Detalhes</span>
                                 </Button>
-                            </DialogTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Ver Detalhes</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-                <SaleDetailsDialogContent sale={sale} />
-            </Dialog>
+                            </TooltipTrigger>
+                        }
+                    />
+                    <TooltipContent>
+                        <p>Ver Detalhes</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
 
             {sale.status === 'Pago' && canEdit && (
                 <TooltipProvider>

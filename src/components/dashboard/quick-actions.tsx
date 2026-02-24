@@ -1,10 +1,8 @@
 
 "use client";
 
-import { useContext, useState } from "react";
+import { useContext } from "react";
 import { InventoryContext } from "@/context/inventory-context";
-import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
-import { AddProductionDialog } from "@/components/production/add-production-dialog";
 import type { Sale, Product, Production } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Plus, Package, ArrowUpRight, ArrowDownLeft, FileText, CheckCircle2 } from "lucide-react";
@@ -14,37 +12,13 @@ import { useRouter } from "next/navigation";
 export const QuickActions = () => {
     const context = useContext(InventoryContext);
     const router = useRouter();
-    const [isSaleDialogOpen, setSaleDialogOpen] = useState(false);
-    const [isProductionDialogOpen, setProductionDialogOpen] = useState(false);
     const { toast } = useToast();
 
     if (!context) return null;
 
-    const { addSale, addProduction, addProduct, canEdit } = context;
+    const { addProduction, addProduct, canEdit } = context;
 
-    const handleAddSale = (saleData: Omit<Sale, 'id' | 'guideNumber'>) => {
-        addSale(saleData);
-        setSaleDialogOpen(false);
-        toast({
-            title: "Venda Registrada",
-            description: "A venda foi processada com sucesso.",
-            action: <CheckCircle2 className="text-emerald-500" />
-        });
-    };
 
-    const handleAddProduction = async (prodData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
-        try {
-            await addProduction(prodData);
-            toast({
-                title: "Stock Atualizado",
-                description: "Entrada de produção confirmada.",
-                className: "border-emerald-500/50 text-emerald-500"
-            });
-            setProductionDialogOpen(false);
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: "Erro na Produção", description: e.message });
-        }
-    };
 
     // Removed handledAddProduct as we now use Solid Pages
 
@@ -56,7 +30,7 @@ export const QuickActions = () => {
         {
             title: "Registrar Venda",
             icon: FileText,
-            onClick: () => setSaleDialogOpen(true),
+            onClick: () => router.push('/sales/new'),
             show: canSell,
             color: "cyan",
             gradient: "from-cyan-500/20 to-blue-600/20",
@@ -67,7 +41,7 @@ export const QuickActions = () => {
         {
             title: "Entrada de Estoque",
             icon: ArrowDownLeft,
-            onClick: () => setProductionDialogOpen(true),
+            onClick: () => router.push('/production/new'),
             show: canProduce,
             color: "blue",
             gradient: "from-blue-600/20 to-indigo-600/20",
@@ -132,9 +106,6 @@ export const QuickActions = () => {
                     </button>
                 ))}
             </div>
-
-            <AddSaleDialog open={isSaleDialogOpen} onOpenChange={setSaleDialogOpen} onAddSale={handleAddSale} />
-            <AddProductionDialog open={isProductionDialogOpen} onOpenChange={setProductionDialogOpen} onAddProduction={handleAddProduction} />
         </>
     );
 }

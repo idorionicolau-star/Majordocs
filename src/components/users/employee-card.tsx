@@ -6,20 +6,19 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Edit, Mail, Trash2 } from 'lucide-react';
-import { EditEmployeeDialog } from './edit-employee-dialog';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 interface EmployeeCardProps {
     employee: Employee;
     onDelete: (employee: Employee) => void;
-    onUpdate: (employee: Employee) => void;
     currentUserId?: string | null;
     isAdmin: boolean;
 }
 
-export function EmployeeCard({ employee, onDelete, onUpdate, currentUserId, isAdmin }: EmployeeCardProps) {
+export function EmployeeCard({ employee, onDelete, currentUserId, isAdmin }: EmployeeCardProps) {
     const isCurrentUser = employee.id === currentUserId;
-    
+
     const getInitials = (name: string) => {
         if (!name) return 'U';
         const names = name.split(' ');
@@ -51,12 +50,17 @@ export function EmployeeCard({ employee, onDelete, onUpdate, currentUserId, isAd
             </CardContent>
             {isAdmin && (
                 <CardFooter className="p-2 pt-0 flex gap-2">
-                    <EditEmployeeDialog employee={employee} onUpdateEmployee={onUpdate} trigger="button" />
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1 text-destructive hover:bg-destructive/10 hover:text-destructive" 
-                        onClick={() => onDelete(employee)} 
+                    <Button variant="outline" size="sm" asChild className="flex-1">
+                        <Link href={`/users/${employee.id}/edit`}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
+                        </Link>
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => onDelete(employee)}
                         disabled={isCurrentUser}
                     >
                         <Trash2 className="mr-2 h-4 w-4" />

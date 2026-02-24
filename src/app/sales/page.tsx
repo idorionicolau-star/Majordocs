@@ -9,10 +9,11 @@ import { VirtualSalesGrid } from "@/components/sales/virtual-sales-grid";
 
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronDown, Filter, MapPin } from "lucide-react";
+import { List, LayoutGrid, ChevronDown, Filter, MapPin, PlusCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import Link from 'next/link';
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { doc, updateDoc } from "firebase/firestore";
@@ -166,6 +167,14 @@ export default function SalesPage() {
             <h1 className="text-3xl font-bold tracking-tight">Histórico de Vendas</h1>
             <p className="text-muted-foreground">Consulte o histórico de vendas e saídas de stock.</p>
           </div>
+          {canEditSales && (
+            <Button asChild className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+              <Link href="/sales/new">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Adicionar Venda
+              </Link>
+            </Button>
+          )}
         </div>
 
         <Card className="glass-panel p-4 border-none shrink-0">

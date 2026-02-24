@@ -1,15 +1,7 @@
 "use client";
 
 import { useState, useContext } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import {
   Form,
   FormControl,
@@ -73,22 +65,7 @@ function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProp
   const adjustment = physicalCount - systemStock;
 
   return (
-    <DialogContent className="sm:max-w-md">
-      <DialogHeader>
-        <DialogTitle>Auditoria de Stock: {product.name}</DialogTitle>
-        <DialogDescription>
-          Insira a contagem física para ajustar o stock do sistema.
-          {adjustment === 0 ? (
-            <span className="mt-2 block text-xs text-green-600 dark:text-green-400 font-semibold">
-              A contagem joga com o stock do sistema. Tudo certo!
-            </span>
-          ) : (
-            <span className="mt-2 block text-xs text-amber-600 dark:text-yellow-400 font-semibold">
-              Discrepância detetada. Após confirmar, o stock será ajustado para a nova contagem.
-            </span>
-          )}
-        </DialogDescription>
-      </DialogHeader>
+    <>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit, (errors) => console.error("Form errors:", errors))} className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4 rounded-lg border p-4">
@@ -134,13 +111,13 @@ function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProp
               </FormItem>
             )}
           />
-          <DialogFooter className="pt-4">
+          <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button type="submit">Confirmar Ajuste</Button>
-          </DialogFooter>
+          </div>
         </form>
       </Form>
-    </DialogContent>
+    </>
   );
 }
 
@@ -150,37 +127,20 @@ const AuditStockTrigger = ({ trigger }: { trigger: 'icon' | 'button' | 'card-but
   const buttonClasses = "text-amber-500 hover:bg-amber-500/10 hover:text-amber-600 dark:text-yellow-500 dark:hover:bg-yellow-500/10 dark:hover:text-yellow-400";
   if (trigger === 'icon') {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className={`p-3 h-auto w-auto rounded-xl transition-all ${buttonClasses}`}>
-                <FileCheck className="h-4 w-4" />
-                <span className="sr-only">Auditar Stock</span>
-              </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Auditar Stock</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <TooltipTrigger asChild>
+        <Button variant="ghost" size="icon" className={`p-3 h-auto w-auto rounded-xl transition-all ${buttonClasses}`}>
+          <FileCheck className="h-4 w-4" />
+          <span className="sr-only">Auditar Stock</span>
+        </Button>
+      </TooltipTrigger>
     );
   }
-  // Assuming 'card-button' is another icon-like button
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="icon" className={`flex-1 h-8 sm:h-9 ${buttonClasses}`}>
-              <FileCheck className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent><p>Auditar Stock</p></TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <TooltipTrigger asChild>
+      <Button variant="outline" size="icon" className={`flex-1 h-8 sm:h-9 ${buttonClasses}`}>
+        <FileCheck className="h-4 w-4" />
+      </Button>
+    </TooltipTrigger>
   )
 }
 
@@ -188,9 +148,19 @@ export function AuditStockDialog({ product, trigger }: AuditStockDialogProps) {
   const [open, setOpen] = useState(false);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <AuditStockTrigger trigger={trigger} />
-      {open && <AuditStockDialogContent product={product} setOpen={setOpen} />}
-    </Dialog>
+    <TooltipProvider>
+      <Tooltip>
+        <ResponsiveDialog
+          open={open}
+          onOpenChange={setOpen}
+          title={`Auditoria de Stock: ${product.name}`}
+          description="Insira a contagem física para ajustar o stock do sistema."
+          trigger={<AuditStockTrigger trigger={trigger} />}
+        >
+          <AuditStockDialogContent product={product} setOpen={setOpen} />
+        </ResponsiveDialog>
+        <TooltipContent><p>Auditar Stock</p></TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

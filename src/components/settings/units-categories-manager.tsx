@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Tag, Ruler, Pencil, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { DialogFooter } from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 
 export function UnitsCategoriesManager() {
     const {
@@ -177,45 +178,43 @@ export function UnitsCategoriesManager() {
                 </CardContent>
             </Card>
             {/* Edit Dialogs */}
-            <Dialog open={!!editingUnit} onOpenChange={(open) => !open && setEditingUnit(null)}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>Editar Unidade</DialogTitle>
-                    </DialogHeader>
-                    <div className="py-4">
-                        <Input
-                            value={editingUnit?.newUnit || ""}
-                            onChange={(e) => setEditingUnit(prev => prev ? { ...prev, newUnit: e.target.value } : null)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleEditUnit()}
-                            placeholder="Nome da unidade"
-                        />
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setEditingUnit(null)}>Cancelar</Button>
-                        <Button onClick={handleEditUnit}>Guardar</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ResponsiveDialog
+                open={!!editingUnit}
+                onOpenChange={(open) => !open && setEditingUnit(null)}
+                title="Editar Unidade"
+            >
+                <div className="py-4">
+                    <Input
+                        value={editingUnit?.newUnit || ""}
+                        onChange={(e) => setEditingUnit(prev => prev ? { ...prev, newUnit: e.target.value } : null)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleEditUnit()}
+                        placeholder="Nome da unidade"
+                    />
+                </div>
+                <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="outline" onClick={() => setEditingUnit(null)}>Cancelar</Button>
+                    <Button onClick={handleEditUnit}>Guardar</Button>
+                </div>
+            </ResponsiveDialog>
 
-            <Dialog open={!!editingCategory} onOpenChange={(open) => !open && setEditingCategory(null)}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>Editar Categoria</DialogTitle>
-                    </DialogHeader>
-                    <div className="py-4">
-                        <Input
-                            value={editingCategory?.newCategory || ""}
-                            onChange={(e) => setEditingCategory(prev => prev ? { ...prev, newCategory: e.target.value } : null)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleEditCategory()}
-                            placeholder="Nome da categoria"
-                        />
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setEditingCategory(null)}>Cancelar</Button>
-                        <Button onClick={handleEditCategory}>Guardar</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ResponsiveDialog
+                open={!!editingCategory}
+                onOpenChange={(open) => !open && setEditingCategory(null)}
+                title="Editar Categoria"
+            >
+                <div className="py-4">
+                    <Input
+                        value={editingCategory?.newCategory || ""}
+                        onChange={(e) => setEditingCategory(prev => prev ? { ...prev, newCategory: e.target.value } : null)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleEditCategory()}
+                        placeholder="Nome da categoria"
+                    />
+                </div>
+                <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="outline" onClick={() => setEditingCategory(null)}>Cancelar</Button>
+                    <Button onClick={handleEditCategory}>Guardar</Button>
+                </div>
+            </ResponsiveDialog>
         </div>
     );
 }

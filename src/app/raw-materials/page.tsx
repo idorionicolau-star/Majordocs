@@ -60,27 +60,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatCurrency } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-// Schemas
-const rawMaterialSchema = z.object({
-    name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
-    stock: z.preprocess((val) => {
-        if (val === undefined || val === "" || val === null) return 0;
-        const num = Number(val);
-        return isNaN(num) ? 0 : num;
-    }, z.number().min(0, "O stock não pode ser negativo.")),
-    unit: z.string().min(1, "Selecione uma unidade"),
-    lowStockThreshold: z.preprocess((val) => {
-        if (val === undefined || val === "" || val === null) return 0;
-        const num = Number(val);
-        return isNaN(num) ? 0 : num;
-    }, z.number().min(0, "O limite deve ser um número positivo.")),
-    cost: z.preprocess((val) => {
-        if (val === undefined || val === "" || val === null) return 0;
-        const num = Number(val);
-        return isNaN(num) ? 0 : num;
-    }, z.number().min(0, "O custo não pode ser negativo.").optional()),
-});
-type RawMaterialFormValues = z.infer<typeof rawMaterialSchema>;
+import Link from 'next/link';
 
 const recipeIngredientSchema = z.object({
     rawMaterialId: z.string(),
@@ -115,30 +95,8 @@ type ProductionFormValues = z.infer<typeof productionSchema>;
 
 // Raw Materials Manager Component
 const RawMaterialsManager = () => {
-    const { rawMaterials, addRawMaterial, updateRawMaterial, deleteRawMaterial, loading, companyData, availableUnits, confirmAction } = useContext(InventoryContext)!;
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [materialToEdit, setMaterialToEdit] = useState<RawMaterial | null>(null);
+    const { rawMaterials, deleteRawMaterial, loading, companyData, confirmAction } = useContext(InventoryContext)!;
     const { toast } = useToast();
-
-    const form = useForm<RawMaterialFormValues>({
-        resolver: zodResolver(rawMaterialSchema),
-        defaultValues: { name: '', stock: 0, unit: 'un', lowStockThreshold: 0, cost: 0 },
-    });
-
-    const handleOpenDialog = (material: RawMaterial | null = null) => {
-        setMaterialToEdit(material);
-        form.reset(material ? { ...material, cost: material.cost || 0 } : { name: '', stock: 0, unit: 'un', lowStockThreshold: 10, cost: 0 });
-        setIsDialogOpen(true);
-    };
-
-    const onSubmit = async (values: RawMaterialFormValues) => {
-        if (materialToEdit) {
-            await updateRawMaterial(materialToEdit.id, values);
-        } else {
-            await addRawMaterial(values);
-        }
-        setIsDialogOpen(false);
-    };
 
     const handlePrint = () => {
         const printWindow = window.open('', '', 'height=800,width=800');
@@ -186,8 +144,10 @@ const RawMaterialsManager = () => {
             <CardContent>
                 <div className="flex flex-col sm:flex-row justify-between mb-6 gap-3 pt-2">
                     <div className="flex flex-col gap-2 w-full sm:w-auto">
-                        <Button onClick={() => handleOpenDialog()} className="w-full sm:w-auto bg-primary text-white">
-                            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Matéria-Prima
+                        <Button asChild className="w-full sm:w-auto bg-primary text-white">
+                            <Link href="/raw-materials/new">
+                                <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Matéria-Prima
+                            </Link>
                         </Button>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
@@ -224,7 +184,7 @@ const RawMaterialsManager = () => {
                                             }}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(material)}><Edit className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" asChild><Link href={`/raw-materials/${material.id}/edit`}><Edit className="h-4 w-4" /></Link></Button>
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -263,8 +223,10 @@ const RawMaterialsManager = () => {
                                 }}>
                                     <Trash2 className="h-4 w-4 mr-2" /> Apagar
                                 </Button>
-                                <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(material)}>
-                                    <Edit className="h-4 w-4 mr-2" /> Editar
+                                <Button variant="ghost" size="sm" asChild>
+                                    <Link href={`/raw-materials/${material.id}/edit`}>
+                                        <Edit className="h-4 w-4 mr-2" /> Editar
+                                    </Link>
                                 </Button>
                             </CardFooter>
                         </Card>
@@ -276,40 +238,7 @@ const RawMaterialsManager = () => {
                 </div>
             </CardContent>
 
-            {/* Add/Edit Dialog */}
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>{materialToEdit ? 'Editar' : 'Adicionar'} Matéria-Prima</DialogTitle>
-                    </DialogHeader>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                            <FormField control={form.control} name="name" render={({ field }) => (
-                                <FormItem><FormLabel>Nome</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField control={form.control} name="stock" render={({ field }) => (
-                                    <FormItem><FormLabel>Stock Inicial</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={form.control} name="cost" render={({ field }) => (
-                                    <FormItem><FormLabel>Custo Unitário</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                            </div>
-                            <FormField control={form.control} name="unit" render={({ field }) => (
-                                <FormItem><FormLabel>Unidade</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>
-                                    {availableUnits.map((u: string) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                                </SelectContent></Select><FormMessage /></FormItem>
-                            )} />
-                            <FormField control={form.control} name="lowStockThreshold" render={({ field }) => (
-                                <FormItem><FormLabel>Nível Mínimo de Stock</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <DialogFooter>
-                                <Button type="submit">Salvar</Button>
-                            </DialogFooter>
-                        </form>
-                    </Form>
-                </DialogContent>
-            </Dialog>
+
 
 
         </Card>
@@ -318,43 +247,8 @@ const RawMaterialsManager = () => {
 
 // Recipes Manager Component
 const RecipesManager = () => {
-    const { recipes, catalogProducts, rawMaterials, addRecipe, updateRecipe, deleteRecipe, loading, companyData, confirmAction } = useContext(InventoryContext)!;
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
+    const { recipes, catalogProducts, rawMaterials, loading, companyData, confirmAction } = useContext(InventoryContext)!;
     const { toast } = useToast();
-
-    const form = useForm<RecipeFormValues>({
-        resolver: zodResolver(recipeSchema),
-        defaultValues: { productName: '', ingredients: [] },
-    });
-
-    const handleOpenDialog = (recipe: Recipe | null = null) => {
-        setRecipeToEdit(recipe);
-        form.reset(recipe ? { ...recipe } : { productName: '', ingredients: [] });
-        setIsDialogOpen(true);
-    };
-
-    const addIngredient = () => {
-        const ingredients = form.getValues('ingredients');
-        const firstMaterial = rawMaterials[0];
-        if (firstMaterial) {
-            form.setValue('ingredients', [...ingredients, { rawMaterialId: firstMaterial.id, rawMaterialName: firstMaterial.name, quantity: 1, yieldPerUnit: 1 }]);
-        }
-    };
-
-    const removeIngredient = (index: number) => {
-        const ingredients = form.getValues('ingredients');
-        form.setValue('ingredients', ingredients.filter((_, i) => i !== index));
-    }
-
-    const onSubmit = async (values: RecipeFormValues) => {
-        if (recipeToEdit) {
-            await updateRecipe(recipeToEdit.id, values);
-        } else {
-            await addRecipe(values);
-        }
-        setIsDialogOpen(false);
-    };
 
     const handlePrint = () => {
         const printWindow = window.open('', '', 'height=800,width=800');
@@ -395,8 +289,10 @@ const RecipesManager = () => {
             <CardHeader><CardTitle>Receitas de Produção</CardTitle><CardDescription>Defina os componentes para cada produto final.</CardDescription></CardHeader>
             <CardContent>
                 <div className="flex flex-col sm:flex-row justify-between mb-6 gap-3 pt-2">
-                    <Button onClick={() => handleOpenDialog()} className="w-full sm:w-auto order-first sm:order-last bg-primary text-white">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Receita
+                    <Button asChild className="w-full sm:w-auto order-first sm:order-last bg-primary text-white">
+                        <Link href="/raw-materials/recipes/new">
+                            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Receita
+                        </Link>
                     </Button>
                     <div className="flex gap-2 w-full sm:w-auto">
                         <Button onClick={handleDownload} variant="outline" size="sm" className="flex-1 sm:flex-none"><Download className="mr-2 h-4 w-4" /> PDF</Button>
@@ -425,65 +321,16 @@ const RecipesManager = () => {
                                 </ul>
                             </CardContent>
                             <CardFooter>
-                                <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(recipe)}><Edit className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" asChild>
+                                    <Link href={`/raw-materials/recipes/${recipe.id}/edit`}>
+                                        <Edit className="h-4 w-4" />
+                                    </Link>
+                                </Button>
                             </CardFooter>
                         </Card>
                     ))}
                 </div>
             </CardContent>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-lg">
-                    <DialogHeader><DialogTitle>{recipeToEdit ? 'Editar' : 'Criar'} Receita</DialogTitle></DialogHeader>
-                    <ScrollArea className="max-h-[60vh] p-4">
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                                <FormField control={form.control} name="productName" render={({ field }) => (
-                                    <FormItem><FormLabel>Produto Final</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>
-                                        {catalogProducts.map(p => <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>)}
-                                    </SelectContent></Select><FormMessage /></FormItem>
-                                )} />
-                                <div>
-                                    <Label>Ingredientes</Label>
-                                    {form.watch('ingredients').map((ing, index) => {
-                                        const selectedMat = rawMaterials.find(rm => rm.id === ing.rawMaterialId);
-                                        const matUnit = selectedMat?.unit || 'un';
-                                        return (
-                                            <div key={index} className="flex flex-col gap-2 mt-3 p-3 border rounded-lg bg-slate-50 dark:bg-slate-800/50">
-                                                <div className="flex items-center gap-2">
-                                                    <FormField control={form.control} name={`ingredients.${index}.rawMaterialId`} render={({ field }) => (
-                                                        <FormItem className="flex-1"><Select onValueChange={(value) => {
-                                                            const material = rawMaterials.find(rm => rm.id === value);
-                                                            field.onChange(value);
-                                                            form.setValue(`ingredients.${index}.rawMaterialName`, material?.name || '');
-                                                        }} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>
-                                                                {rawMaterials.map(rm => <SelectItem key={rm.id} value={rm.id}>{rm.name}</SelectItem>)}
-                                                            </SelectContent></Select></FormItem>
-                                                    )} />
-                                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700" onClick={() => removeIngredient(index)}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <FormField control={form.control} name={`ingredients.${index}.quantity`} render={({ field }) => (
-                                                        <FormItem className="flex-shrink-0"><FormControl><Input type="number" min={1} {...field} className="w-16 h-8 text-center font-bold" /></FormControl></FormItem>
-                                                    )} />
-                                                    <span className="text-muted-foreground whitespace-nowrap">{matUnit} produz →</span>
-                                                    <FormField control={form.control} name={`ingredients.${index}.yieldPerUnit`} render={({ field }) => (
-                                                        <FormItem className="flex-shrink-0"><FormControl><Input type="number" min={1} {...field} className="w-20 h-8 text-center font-bold text-primary" /></FormControl></FormItem>
-                                                    )} />
-                                                    <span className="text-muted-foreground whitespace-nowrap">unidades do produto</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                    <Button type="button" variant="outline" size="sm" onClick={addIngredient} className="mt-2">Adicionar Ingrediente</Button>
-                                </div>
-                                <DialogFooter><Button type="submit">Salvar Receita</Button></DialogFooter>
-                            </form>
-                        </Form>
-                    </ScrollArea>
-                </DialogContent>
-            </Dialog>
         </Card>
     )
 };
