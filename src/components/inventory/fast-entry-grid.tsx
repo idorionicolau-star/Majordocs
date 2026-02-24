@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Save } from "lucide-react";
 import { useInventory } from "@/context/inventory-context";
 import { useTheme } from "next-themes";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import type { Product } from "@/lib/types";
 
 interface RowData {
@@ -37,6 +38,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     const { theme, systemTheme } = useTheme();
+    const isMobile = useMediaQuery("(max-width: 640px)");
 
     const currentTheme = theme === 'system' ? systemTheme : theme;
     const gridThemeClass = currentTheme === 'dark' ? 'rdg-dark' : 'rdg-light';
@@ -96,13 +98,13 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     };
 
     const columns: Column<RowData>[] = [
-        { key: 'name', name: 'Nome do Produto', renderEditCell: NameEditor, minWidth: 250 },
-        { key: 'category', name: 'Categoria', renderEditCell: CategoryEditor, width: 160 },
-        { key: 'unit', name: 'Unidade', renderEditCell: UnitEditor, width: 100 },
-        { key: 'cost', name: 'Pr. Custo (MTn)', renderEditCell: textEditor, width: 120 },
-        { key: 'price', name: 'Pr. Venda (MTn)', renderEditCell: textEditor, width: 120 },
-        { key: 'stock', name: 'Físico', renderEditCell: textEditor, width: 100 },
-        { key: 'minStock', name: 'Mínimo', renderEditCell: textEditor, width: 100 },
+        { key: 'name', name: 'Nome do Produto', renderEditCell: NameEditor, minWidth: isMobile ? 180 : 250 },
+        { key: 'category', name: 'Categoria', renderEditCell: CategoryEditor, width: isMobile ? 120 : 160 },
+        { key: 'unit', name: 'Unid.', renderEditCell: UnitEditor, width: isMobile ? 80 : 100 },
+        { key: 'cost', name: 'Custo (MTn)', renderEditCell: textEditor, width: isMobile ? 100 : 120 },
+        { key: 'price', name: 'Venda (MTn)', renderEditCell: textEditor, width: isMobile ? 100 : 120 },
+        { key: 'stock', name: 'Físico', renderEditCell: textEditor, width: isMobile ? 80 : 100 },
+        { key: 'minStock', name: 'Mínimo', renderEditCell: textEditor, width: isMobile ? 80 : 100 },
     ];
 
     const handleAddRow = () => {
@@ -161,7 +163,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
 
             <div className="flex flex-col">
                 <h2 className="text-xl font-bold font-headline">Entrada Rápida / Edição em Massa</h2>
-                <p className="text-sm text-muted-foreground">Adicione produtos múltiplos rapidamente como se fosse num Excel. Duplo clique para editar, TAB para navegar.</p>
+                <p className="text-sm text-muted-foreground">Adicione produtos. {isMobile ? "Deslize para ver campos." : "Duplo clique para editar, TAB para navegar."}</p>
             </div>
 
             <div className="border rounded-md shadow-sm overflow-hidden bg-background">
