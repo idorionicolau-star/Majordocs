@@ -33,7 +33,7 @@ const initialRows: RowData[] = Array.from({ length: 5 }, () => ({
 
 export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     const [rows, setRows] = useState<RowData[]>(initialRows);
-    const { addProduct } = useInventory();
+    const { addProduct, companyData, products } = useInventory();
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     const { theme, systemTheme } = useTheme();
@@ -41,17 +41,49 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     const currentTheme = theme === 'system' ? systemTheme : theme;
     const gridThemeClass = currentTheme === 'dark' ? 'rdg-dark' : 'rdg-light';
 
-    // Focus navigation utility could be added here if needed, 
-    // but react-data-grid handles Tab for cell navigation out of the box.
+    const categories = React.useMemo(() => {
+        const cats = new Set(products.map(p => p.category).filter(Boolean));
+        if (companyData?.validCategories) {
+            companyData.validCategories.forEach(c => cats.add(c));
+        }
+        return Array.from(cats).sort();
+    }, [products, companyData]);
+
+    const units = companyData?.validUnits || ['un', 'kg', 'g', 'l', 'ml', 'm', 'cm', 'cx'];
+
+    const CategoryEditor = ({ row, onRowChange, onClose }: RenderEditCellProps<RowData>) => (
+        <select
+            className="w-full h-full border-2 border-primary outline-none bg-background text-foreground px-2"
+            autoFocus
+            value={row.category}
+            onChange={(e) => onRowChange({ ...row, category: e.target.value }, true)}
+            onBlur={() => onClose(true)}
+        >
+            <option value="">Selecione...</option>
+            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+    );
+
+    const UnitEditor = ({ row, onRowChange, onClose }: RenderEditCellProps<RowData>) => (
+        <select
+            className="w-full h-full border-2 border-primary outline-none bg-background text-foreground px-2"
+            autoFocus
+            value={row.unit}
+            onChange={(e) => onRowChange({ ...row, unit: e.target.value }, true)}
+            onBlur={() => onClose(true)}
+        >
+            {units.map(u => <option key={u} value={u}>{u}</option>)}
+        </select>
+    );
 
     const columns: Column<RowData>[] = [
-        { key: 'name', name: 'Nome do Produto', renderEditCell: textEditor, width: '40%' },
-        { key: 'category', name: 'Categoria', renderEditCell: textEditor },
-        { key: 'unit', name: 'Unidade', renderEditCell: textEditor, width: 80 },
-        { key: 'cost', name: 'Pr. Custo (€)', renderEditCell: textEditor, width: 100 },
-        { key: 'price', name: 'Pr. Venda (€)', renderEditCell: textEditor, width: 100 },
-        { key: 'stock', name: 'Físico', renderEditCell: textEditor, width: 80 },
-        { key: 'minStock', name: 'Mínimo', renderEditCell: textEditor, width: 80 },
+        { key: 'name', name: 'Nome do Produto', renderEditCell: textEditor, minWidth: 250 },
+        { key: 'category', name: 'Categoria', renderEditCell: CategoryEditor, width: 160 },
+        { key: 'unit', name: 'Unidade', renderEditCell: UnitEditor, width: 100 },
+        { key: 'cost', name: 'Pr. Custo (€)', renderEditCell: textEditor, width: 120 },
+        { key: 'price', name: 'Pr. Venda (€)', renderEditCell: textEditor, width: 120 },
+        { key: 'stock', name: 'Físico', renderEditCell: textEditor, width: 100 },
+        { key: 'minStock', name: 'Mínimo', renderEditCell: textEditor, width: 100 },
     ];
 
     const handleAddRow = () => {
@@ -106,7 +138,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
         <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex flex-col">
                 <h2 className="text-xl font-bold font-headline">Entrada Rápida / Edição em Massa</h2>
-                <p className="text-sm text-muted-foreground">Adicione produtos múltiplos rapidamente como se fosse num Excel. Use TAB para navegar.</p>
+                <p className="text-sm text-muted-foreground">Adicione produtos múltiplos rapidamente como se fosse num Excel. Duplo clique para editar, TAB para navegar.</p>
             </div>
 
             <div className="border rounded-md shadow-sm overflow-hidden bg-background">
