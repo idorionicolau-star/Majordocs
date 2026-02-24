@@ -85,13 +85,33 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     const NameEditor = ({ row, onRowChange, onClose }: RenderEditCellProps<RowData>) => {
         // We use a local state to handle the input value before committing it to the grid row
         // to make typing smoother and to allow the datalist to work correctly.
+        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            const newName = e.target.value;
+            const existingProduct = products.find(p => p.name.toLowerCase() === newName.toLowerCase());
+
+            if (existingProduct) {
+                onRowChange({
+                    ...row,
+                    name: existingProduct.name, // Keep the exact casing from DB
+                    category: existingProduct.category || 'Geral',
+                    unit: existingProduct.unit || 'un',
+                    price: existingProduct.price.toString(),
+                    // cost: existingProduct.cost?.toString() || '', // If we had cost tracking, we would map it here. Product type doesn't have it natively yet.
+                    stock: existingProduct.stock.toString(),
+                    minStock: existingProduct.lowStockThreshold?.toString() || '0'
+                });
+            } else {
+                onRowChange({ ...row, name: newName });
+            }
+        };
+
         return (
             <input
                 autoFocus
                 className="w-full h-full border-2 border-primary outline-none bg-background text-foreground px-2"
                 value={row.name}
                 list="product-names-list"
-                onChange={(e) => onRowChange({ ...row, name: e.target.value })}
+                onChange={handleChange}
                 onBlur={() => onClose(true)}
             />
         );
@@ -167,11 +187,22 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
             </div>
 
             <div className="border rounded-md shadow-sm overflow-hidden bg-background">
+                <style dangerouslySetInnerHTML={{
+                    __html: `
+                    .grid-with-lines .rdg-cell {
+                        border-right: 1px solid var(--border);
+                        border-bottom: 1px solid var(--border);
+                    }
+                    .grid-with-lines .rdg-header-row .rdg-cell {
+                        border-bottom: 2px solid var(--border);
+                        background-color: var(--muted);
+                    }
+                `}} />
                 <DataGrid
                     columns={columns}
                     rows={rows}
                     onRowsChange={setRows}
-                    className={gridThemeClass}
+                    className={`${gridThemeClass} grid-with-lines`}
                     style={{ height: 'max(500px, 60vh)', width: '100%' }}
                 />
             </div>
