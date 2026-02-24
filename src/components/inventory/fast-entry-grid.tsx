@@ -55,28 +55,25 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     const units = companyData?.validUnits || ['un', 'kg', 'g', 'l', 'ml', 'm', 'cm', 'cx'];
 
     const CategoryEditor = ({ row, onRowChange, onClose }: RenderEditCellProps<RowData>) => (
-        <select
+        <input
             className="w-full h-full border-2 border-primary outline-none bg-background text-foreground px-2"
             autoFocus
             value={row.category}
-            onChange={(e) => onRowChange({ ...row, category: e.target.value }, true)}
+            list="categories-list"
+            onChange={(e) => onRowChange({ ...row, category: e.target.value })}
             onBlur={() => onClose(true)}
-        >
-            <option value="">Selecione...</option>
-            {categories.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+        />
     );
 
     const UnitEditor = ({ row, onRowChange, onClose }: RenderEditCellProps<RowData>) => (
-        <select
+        <input
             className="w-full h-full border-2 border-primary outline-none bg-background text-foreground px-2"
             autoFocus
             value={row.unit}
-            onChange={(e) => onRowChange({ ...row, unit: e.target.value }, true)}
+            list="units-list"
+            onChange={(e) => onRowChange({ ...row, unit: e.target.value })}
             onBlur={() => onClose(true)}
-        >
-            {units.map(u => <option key={u} value={u}>{u}</option>)}
-        </select>
+        />
     );
 
     const productNames = React.useMemo(() => {
@@ -218,6 +215,29 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
             return;
         }
 
+        // Check for duplicates within the grid itself
+        const seenNames = new Set<string>();
+        const exactDuplicates: string[] = [];
+
+        for (const row of validRows) {
+            const normName = row.name.toLowerCase().trim();
+            if (seenNames.has(normName)) {
+                if (!exactDuplicates.includes(row.name)) {
+                    exactDuplicates.push(row.name);
+                }
+            }
+            seenNames.add(normName);
+        }
+
+        if (exactDuplicates.length > 0) {
+            toast({
+                title: "Existem duplicados na Grelha",
+                description: `Por favor corrija e agrupe as quantidades dos produtos: ${exactDuplicates.join(', ')} antes de guardar.`,
+                variant: "destructive"
+            });
+            return;
+        }
+
         setIsSaving(true);
         let successCount = 0;
 
@@ -257,6 +277,13 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
 
     return (
         <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+            <datalist id="categories-list">
+                {categories.map(c => <option key={c} value={c} />)}
+            </datalist>
+            <datalist id="units-list">
+                {units.map(u => <option key={u} value={u} />)}
+            </datalist>
+
             <div className="flex flex-col">
                 <h2 className="text-xl font-bold font-headline">Entrada Rápida / Edição em Massa</h2>
                 <p className="text-sm text-muted-foreground">Adicione produtos. {isMobile ? "Deslize para ver campos." : "Duplo clique para editar, TAB para navegar."}</p>
@@ -265,12 +292,22 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
             <div className="border rounded-md shadow-sm overflow-hidden bg-background">
                 <style dangerouslySetInnerHTML={{
                     __html: `
-                    .grid-with-lines .rdg-cell {
-                        border-right: 1px solid var(--border);
-                        border-bottom: 1px solid var(--border);
+                    /* Styling based on theme using next-themes HTML class */
+                    html.light .grid-with-lines .rdg-cell {
+                        border-right: 1px solid rgba(0,0,0,0.15);
+                        border-bottom: 1px solid rgba(0,0,0,0.15);
                     }
-                    .grid-with-lines .rdg-header-row .rdg-cell {
-                        border-bottom: 2px solid var(--border);
+                    html.light .grid-with-lines .rdg-header-row .rdg-cell {
+                        border-bottom: 2px solid rgba(0,0,0,0.25);
+                        background-color: var(--muted);
+                    }
+                    
+                    html.dark .grid-with-lines .rdg-cell {
+                        border-right: 1px solid rgba(255,255,255,0.25);
+                        border-bottom: 1px solid rgba(255,255,255,0.25);
+                    }
+                    html.dark .grid-with-lines .rdg-header-row .rdg-cell {
+                        border-bottom: 2px solid rgba(255,255,255,0.4);
                         background-color: var(--muted);
                     }
                 `}} />
