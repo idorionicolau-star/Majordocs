@@ -536,6 +536,7 @@ export default function InventoryPage() {
           <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
             {canEditInventory && (
               <ResponsiveDialog
+                className="sm:max-w-4xl w-[95vw]"
                 trigger={
                   <Button variant="default" className="h-12 w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white">
                     <LayoutGrid className="mr-2 h-4 w-4" />

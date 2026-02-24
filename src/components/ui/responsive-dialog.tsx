@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import { cn } from "@/lib/utils"
 import {
     Dialog,
     DialogContent,
@@ -29,6 +30,7 @@ interface ResponsiveDialogProps {
     description?: string
     open?: boolean
     onOpenChange?: (open: boolean) => void
+    className?: string
 }
 
 export function ResponsiveDialog({
@@ -38,6 +40,7 @@ export function ResponsiveDialog({
     description,
     open,
     onOpenChange,
+    className,
 }: ResponsiveDialogProps) {
     const isDesktop = useMediaQuery("(min-width: 768px)")
 
@@ -45,7 +48,7 @@ export function ResponsiveDialog({
         return (
             <Dialog open={open} onOpenChange={onOpenChange}>
                 {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className={cn("sm:max-w-[425px]", className)}>
                     <DialogHeader>
                         {title && <DialogTitle>{title}</DialogTitle>}
                         {description && <DialogDescription>{description}</DialogDescription>}
@@ -59,7 +62,7 @@ export function ResponsiveDialog({
     return (
         <Drawer open={open} onOpenChange={onOpenChange} repositionInputs>
             {trigger && <DrawerTrigger asChild>{trigger}</DrawerTrigger>}
-            <DrawerContent>
+            <DrawerContent className={className}>
                 <DrawerHeader className="text-left">
                     {title && <DrawerTitle>{title}</DrawerTitle>}
                     {description && <DrawerDescription>{description}</DrawerDescription>}

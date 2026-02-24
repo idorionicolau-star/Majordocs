@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Save } from "lucide-react";
 import { useInventory } from "@/context/inventory-context";
+import { useTheme } from "next-themes";
 import type { Product } from "@/lib/types";
 
 interface RowData {
@@ -35,6 +36,10 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     const { addProduct } = useInventory();
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
+    const { theme, systemTheme } = useTheme();
+
+    const currentTheme = theme === 'system' ? systemTheme : theme;
+    const gridThemeClass = currentTheme === 'dark' ? 'rdg-dark' : 'rdg-light';
 
     // Focus navigation utility could be added here if needed, 
     // but react-data-grid handles Tab for cell navigation out of the box.
@@ -109,7 +114,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                     columns={columns}
                     rows={rows}
                     onRowsChange={setRows}
-                    className="rdg-light"
+                    className={gridThemeClass}
                     style={{ height: 'max(400px, 50vh)', width: '100%' }}
                 />
             </div>
