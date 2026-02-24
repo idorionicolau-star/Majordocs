@@ -76,12 +76,31 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
         </select>
     );
 
+    const productNames = React.useMemo(() => {
+        return Array.from(new Set(products.map(p => p.name).filter(Boolean))).sort();
+    }, [products]);
+
+    const NameEditor = ({ row, onRowChange, onClose }: RenderEditCellProps<RowData>) => {
+        // We use a local state to handle the input value before committing it to the grid row
+        // to make typing smoother and to allow the datalist to work correctly.
+        return (
+            <input
+                autoFocus
+                className="w-full h-full border-2 border-primary outline-none bg-background text-foreground px-2"
+                value={row.name}
+                list="product-names-list"
+                onChange={(e) => onRowChange({ ...row, name: e.target.value })}
+                onBlur={() => onClose(true)}
+            />
+        );
+    };
+
     const columns: Column<RowData>[] = [
-        { key: 'name', name: 'Nome do Produto', renderEditCell: textEditor, minWidth: 250 },
+        { key: 'name', name: 'Nome do Produto', renderEditCell: NameEditor, minWidth: 250 },
         { key: 'category', name: 'Categoria', renderEditCell: CategoryEditor, width: 160 },
         { key: 'unit', name: 'Unidade', renderEditCell: UnitEditor, width: 100 },
-        { key: 'cost', name: 'Pr. Custo (€)', renderEditCell: textEditor, width: 120 },
-        { key: 'price', name: 'Pr. Venda (€)', renderEditCell: textEditor, width: 120 },
+        { key: 'cost', name: 'Pr. Custo (MTn)', renderEditCell: textEditor, width: 120 },
+        { key: 'price', name: 'Pr. Venda (MTn)', renderEditCell: textEditor, width: 120 },
         { key: 'stock', name: 'Físico', renderEditCell: textEditor, width: 100 },
         { key: 'minStock', name: 'Mínimo', renderEditCell: textEditor, width: 100 },
     ];
@@ -136,6 +155,10 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
 
     return (
         <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+            <datalist id="product-names-list">
+                {productNames.map(name => <option key={name} value={name} />)}
+            </datalist>
+
             <div className="flex flex-col">
                 <h2 className="text-xl font-bold font-headline">Entrada Rápida / Edição em Massa</h2>
                 <p className="text-sm text-muted-foreground">Adicione produtos múltiplos rapidamente como se fosse num Excel. Duplo clique para editar, TAB para navegar.</p>
