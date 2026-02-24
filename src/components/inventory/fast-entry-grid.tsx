@@ -172,7 +172,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                     rows={rows}
                     onRowsChange={setRows}
                     className={gridThemeClass}
-                    style={{ height: 'max(400px, 50vh)', width: '100%' }}
+                    style={{ height: 'max(500px, 60vh)', width: '100%' }}
                 />
             </div>
 
