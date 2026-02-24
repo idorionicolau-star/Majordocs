@@ -18,11 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+
 import { cn, normalizeString, calculateSimilarity } from '@/lib/utils';
 import { useFuse } from '@/hooks/use-fuse';
 import { ScrollArea } from '../ui/scroll-area';
@@ -83,35 +79,36 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
 
   return (
     <div className="flex flex-col gap-2">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between h-10 px-3 font-normal"
-          >
-            <div className="flex items-center gap-2 truncate">
-              <Search className="h-4 w-4 shrink-0 opacity-50" />
-              {selectedValue ? (
-                <div className="flex items-center gap-2 truncate">
-                  {(() => {
-                    const selectedProduct = products.find(p => p.name === selectedValue);
-                    return selectedProduct?.imageUrl ? (
-                      <img src={selectedProduct.imageUrl} alt="" className="h-5 w-5 rounded object-cover shrink-0" />
-                    ) : null;
-                  })()}
-                  <span className="truncate">{selectedValue}</span>
-                </div>
-              ) : (
-                <span className="text-muted-foreground">{placeholder}</span>
-              )}
-            </div>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-          <div className="p-2 border-b">
+      {!open ? (
+        <Button
+          type="button"
+          onClick={() => setOpen(true)}
+          variant="outline"
+          role="combobox"
+          aria-expanded={false}
+          className="w-full justify-between h-12 px-3 font-normal"
+        >
+          <div className="flex items-center gap-2 truncate">
+            <Search className="h-4 w-4 shrink-0 opacity-50" />
+            {selectedValue ? (
+              <div className="flex items-center gap-2 truncate">
+                {(() => {
+                  const selectedProduct = products.find(p => p.name === selectedValue);
+                  return selectedProduct?.imageUrl ? (
+                    <img src={selectedProduct.imageUrl} alt="" className="h-5 w-5 rounded object-cover shrink-0" />
+                  ) : null;
+                })()}
+                <span className="truncate">{selectedValue}</span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">{placeholder}</span>
+            )}
+          </div>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      ) : (
+        <div className="w-full border rounded-md shadow-sm bg-background flex flex-col overflow-hidden animate-in slide-in-from-top-2 duration-200">
+          <div className="p-2 border-b bg-muted/50">
             <Select onValueChange={setCategoryFilter} value={categoryFilter}>
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue placeholder="Filtrar por Categoria" />
@@ -129,10 +126,11 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
               placeholder="Pesquisar produto..."
               value={searchQuery}
               onValueChange={handleInputChange}
-              className="h-9"
+              className="h-12 text-base"
+              autoFocus
             />
             <CommandList>
-              <ScrollArea className="h-[200px]" thumbClassName="bg-slate-400 dark:bg-slate-600">
+              <ScrollArea className="h-[250px] md:h-[300px]" thumbClassName="bg-slate-400 dark:bg-slate-600">
                 <CommandEmpty>
                   {searchQuery ? (
                     <div className="p-4 text-sm text-center text-muted-foreground">
@@ -193,8 +191,21 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
               </ScrollArea>
             </CommandList>
           </Command>
-        </PopoverContent>
-      </Popover>
+          <div className="p-2 border-t bg-muted/50">
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full h-10"
+              onClick={() => {
+                setOpen(false);
+                setSearchQuery('');
+              }}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Dialog open={isSimilarityWarningOpen} onOpenChange={setIsSimilarityWarningOpen}>
         <DialogContent>
