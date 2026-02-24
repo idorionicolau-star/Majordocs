@@ -6,6 +6,7 @@ import { useCRM } from '@/context/crm-context';
 import type { CartItem, Product, Sale, Location } from '@/lib/types';
 import { formatCurrency, normalizeString } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useFuse } from '@/hooks/use-fuse';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -171,31 +172,22 @@ export default function POSPage() {
             });
     }, [products, catalogProducts, selectedLocation, isMultiLocation]);
 
-    // Filtered products based on search and category
-    const filteredProducts = useMemo(() => {
-        let result = availableProducts;
+    // Filtered products based on category
+    const categoryFilteredProducts = useMemo(() => {
+        if (!selectedCategory || selectedCategory === 'all') return availableProducts;
 
-        if (searchQuery) {
-            const query = normalizeString(searchQuery);
-            result = result.filter(p =>
-                normalizeString(p.name).includes(query) ||
-                (p.category && normalizeString(p.category).includes(query))
-            );
-        }
+        const normalizedCategory = normalizeString(selectedCategory);
+        return availableProducts.filter(p => {
+            if (!p.category) return false;
+            return normalizeString(p.category) === normalizedCategory;
+        });
+    }, [availableProducts, selectedCategory]);
 
-
-        if (selectedCategory && selectedCategory !== 'all') {
-            const normalizedCategory = normalizeString(selectedCategory);
-            console.log(`Filtering by category: ${selectedCategory} (${normalizedCategory})`);
-
-            result = result.filter(p => {
-                if (!p.category) return false;
-                return normalizeString(p.category) === normalizedCategory;
-            });
-        }
-
-        return result;
-    }, [availableProducts, searchQuery, selectedCategory]);
+    // Search filtering using Fuse for 85% approx match
+    const filteredProducts = useFuse(categoryFilteredProducts, searchQuery, {
+        keys: ['name', 'category'],
+        threshold: 0.15
+    });
 
     // Unique categories
     const categories = useMemo(() => {

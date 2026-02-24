@@ -20,6 +20,7 @@ import { useFirestore } from '@/firebase/provider';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Card } from "@/components/ui/card";
+import { useFuse } from "@/hooks/use-fuse";
 // Removed useFirestorePagination and firestore query imports
 
 export default function SalesPage() {
@@ -65,7 +66,7 @@ export default function SalesPage() {
   const canViewSales = canView('sales');
 
   // --- Client-Side Filtering & Sorting (Mimicking InventoryPage) ---
-  const filteredSales = useMemo(() => {
+  const preFilteredSales = useMemo(() => {
     if (!contextSales) return [];
     let result = [...contextSales];
 
@@ -79,17 +80,7 @@ export default function SalesPage() {
       result = result.filter(s => s.location === locationFilter);
     }
 
-    // 3. Name/Search Filter
-    if (nameFilter) {
-      const lowerName = nameFilter.toLowerCase();
-      result = result.filter(s =>
-        (s.productName && s.productName.toLowerCase().includes(lowerName)) ||
-        (s.clientName && s.clientName.toLowerCase().includes(lowerName)) ||
-        (s.guideNumber && s.guideNumber.toString().includes(lowerName))
-      );
-    }
-
-    // 4. Date Filter
+    // 3. Date Filter
     if (dateFilter) {
       const start = new Date(dateFilter);
       start.setHours(0, 0, 0, 0);
@@ -101,14 +92,16 @@ export default function SalesPage() {
       });
     }
 
-    // 5. Exclude Deleted
+    // 4. Exclude Deleted
     result = result.filter(s => !s.deletedAt);
 
-    // 6. Sort by Date Descending
+    // 5. Sort by Date Descending
     result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return result;
-  }, [contextSales, statusFilter, locationFilter, nameFilter, dateFilter, isMultiLocation]);
+  }, [contextSales, statusFilter, locationFilter, dateFilter, isMultiLocation]);
+
+  const filteredSales = useFuse(preFilteredSales, nameFilter, { keys: ['productName', 'clientName', 'guideNumber'] });
 
   // Use filteredSales for display. No more manual pagination.
   const sales = filteredSales;

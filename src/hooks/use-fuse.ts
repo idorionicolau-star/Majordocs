@@ -32,7 +32,7 @@ export function useFuse<T>(
 
         terms.forEach(term => {
             const fuseInstance = new Fuse(currentList, {
-                threshold: 0.3,
+                threshold: 0.15,
                 ignoreLocation: true,
                 ...options
             });
