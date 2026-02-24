@@ -8,7 +8,6 @@ import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
 import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle, Plus, FileCheck, ChevronsUpDown, Printer, Download, ChevronLeft, ChevronRight, ScanBarcode, Mail } from "lucide-react";
-import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,7 +75,6 @@ export default function InventoryPage() {
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
-  const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(60);
 
@@ -101,14 +99,11 @@ export default function InventoryPage() {
 
 
   useEffect(() => {
-    if (searchParams.get('action') === 'add' && canEditInventory) {
-      setAddDialogOpen(true);
-    }
     const productFilter = searchParams.get('filter');
     if (productFilter) {
       setNameFilter(decodeURIComponent(productFilter));
     }
-  }, [searchParams, canEditInventory]);
+  }, [searchParams]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -129,13 +124,7 @@ export default function InventoryPage() {
     localStorage.setItem('majorstockx-inventory-grid-cols', cols);
   }
 
-  const handleAddProduct = async (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => {
-    await addProduct(newProductData);
-    toast({
-      title: "Produto adicionado",
-      description: `${newProductData.name} foi adicionado ao inventário com sucesso.`,
-    });
-  };
+
 
   const handleUpdateProduct = async (updatedProduct: Product) => {
     if (updatedProduct.instanceId) {
@@ -845,23 +834,17 @@ export default function InventoryPage() {
         )}
       </div >
       {canEditInventory && (
-        <>
-          <AddProductDialog
-            open={isAddDialogOpen}
-            onOpenChange={setAddDialogOpen}
-            onAddProduct={handleAddProduct}
-          />
-          <Button
-            onClick={() => setAddDialogOpen(true)}
-            className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
-            size="icon"
-          >
+        <Button
+          asChild
+          className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
+          size="icon"
+        >
+          <Link href="/inventory/new">
             <Plus className="h-6 w-6" />
             <span className="sr-only">Adicionar Produto</span>
-          </Button>
-        </>
-      )
-      }
+          </Link>
+        </Button>
+      )}
     </>
   );
 }

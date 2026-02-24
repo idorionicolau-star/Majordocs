@@ -4,11 +4,10 @@ import type { Product, Location } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertCircle, Trash2, PackageCheck, History } from "lucide-react";
+import { AlertCircle, Trash2, PackageCheck, History, Edit2 } from "lucide-react";
 import { getStockStatus } from "./columns";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { EditProductDialog } from "./edit-product-dialog";
 import { AuditStockDialog } from "./audit-stock-dialog";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -122,13 +121,16 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                     {canEdit && (
                         <>
                             <AuditStockDialog product={product} trigger="card-button" />
-                            <EditProductDialog
-                                product={product}
-                                onProductUpdate={onProductUpdate}
-                                trigger={'card-button'}
-                                locations={locations}
-                                isMultiLocation={isMultiLocation}
-                            />
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button asChild variant="outline" size="icon" className="flex-1 h-8 sm:h-9">
+                                        <Link href={`/inventory/${product.instanceId || product.id}/edit`}>
+                                            <Edit2 className="h-4 w-4" />
+                                        </Link>
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Editar Produto</p></TooltipContent>
+                            </Tooltip>
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Button

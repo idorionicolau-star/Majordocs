@@ -4,7 +4,6 @@ import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table"
 import { Product, Location } from "@/lib/types"
 import { AlertCircle, MapPin, History, Trash2, Edit2 } from "lucide-react"
-import { EditProductDialog } from "./edit-product-dialog"
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -166,13 +165,19 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
             {canEdit && (
               <>
                 <AuditStockDialog product={product} trigger="icon" />
-                <EditProductDialog
-                  product={product}
-                  onProductUpdate={options.onProductUpdate}
-                  trigger="icon"
-                  locations={options.locations}
-                  isMultiLocation={options.isMultiLocation}
-                />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button asChild variant="ghost" size="icon" className="p-3 h-auto w-auto text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all">
+                      <Link href={`/inventory/${product.instanceId || product.id}/edit`}>
+                        <Edit2 className="h-4 w-4" />
+                        <span className="sr-only">Editar</span>
+                      </Link>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Editar Produto</p>
+                  </TooltipContent>
+                </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button

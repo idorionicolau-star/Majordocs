@@ -5,17 +5,17 @@ import { useContext, useState } from "react";
 import { InventoryContext } from "@/context/inventory-context";
 import { AddSaleDialog } from "@/components/sales/add-sale-dialog";
 import { AddProductionDialog } from "@/components/production/add-production-dialog";
-import { AddProductDialog } from "@/components/inventory/add-product-dialog";
 import type { Sale, Product, Production } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Plus, Package, ArrowUpRight, ArrowDownLeft, FileText, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 export const QuickActions = () => {
     const context = useContext(InventoryContext);
+    const router = useRouter();
     const [isSaleDialogOpen, setSaleDialogOpen] = useState(false);
     const [isProductionDialogOpen, setProductionDialogOpen] = useState(false);
-    const [isProductDialogOpen, setProductDialogOpen] = useState(false);
     const { toast } = useToast();
 
     if (!context) return null;
@@ -46,11 +46,7 @@ export const QuickActions = () => {
         }
     };
 
-    const handleAddProduct = (prodData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock'>) => {
-        addProduct(prodData);
-        toast({ title: "Produto Adicionado" });
-        setProductDialogOpen(false);
-    };
+    // Removed handledAddProduct as we now use Solid Pages
 
     const canSell = canEdit('sales');
     const canProduce = canEdit('production');
@@ -82,7 +78,7 @@ export const QuickActions = () => {
         {
             title: "Novo Produto",
             icon: Plus,
-            onClick: () => setProductDialogOpen(true),
+            onClick: () => router.push('/inventory/new'),
             show: canAddToInventory,
             color: "purple",
             gradient: "from-purple-500/20 to-pink-600/20",
@@ -139,7 +135,6 @@ export const QuickActions = () => {
 
             <AddSaleDialog open={isSaleDialogOpen} onOpenChange={setSaleDialogOpen} onAddSale={handleAddSale} />
             <AddProductionDialog open={isProductionDialogOpen} onOpenChange={setProductionDialogOpen} onAddProduction={handleAddProduction} />
-            <AddProductDialog open={isProductDialogOpen} onOpenChange={setProductDialogOpen} onAddProduct={handleAddProduct} />
         </>
     );
 }
