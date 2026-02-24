@@ -82,13 +82,13 @@ export default function POSPage() {
         companyId,
         locations,
         isMultiLocation,
-        addSale,
+        addBulkSale,
         canView,
         canEdit,
     } = inventoryContext || {
         products: [], catalogProducts: [], catalogCategories: [], loading: true,
         user: null, companyId: null, locations: [], isMultiLocation: false,
-        addSale: async () => { }, canView: () => false, canEdit: () => false,
+        addBulkSale: async () => { }, canView: () => false, canEdit: () => false,
     };
     const { customers, addCustomer } = useCRM();
     const { toast } = useToast();
@@ -276,7 +276,7 @@ export default function POSPage() {
 
     // Checkout
     const handleCheckout = async () => {
-        if (!addSale || !user || cart.length === 0) return;
+        if (!addBulkSale || !user || cart.length === 0) return;
         setIsSubmitting(true);
 
         try {
@@ -296,31 +296,15 @@ export default function POSPage() {
                 }
             }
 
-            // Create individual sales for each cart item, all linked by the same guide number
-            for (const item of cart) {
-                const saleData: Omit<Sale, 'id' | 'guideNumber'> = {
-                    date: checkoutDate.toISOString(),
-                    productId: item.productId,
-                    productName: item.productName,
-                    quantity: item.quantity,
-                    unit: item.unit,
-                    unitPrice: item.unitPrice,
-                    subtotal: item.subtotal,
-                    discount: cart.length === 1 ? discountAmount : 0,
-                    vat: cart.length === 1 ? vatAmount : 0,
-                    totalValue: cart.length === 1 ? cartTotal : item.subtotal,
-                    amountPaid: cart.length === 1 ? cartTotal : item.subtotal,
-                    soldBy: user.username,
-                    status: 'Pago',
-                    location: item.location || '',
-                    documentType: checkoutDocType,
-                    clientName: checkoutClientName || '',
-                    customerId: finalCustomerId || '',
-                    notes: checkoutNotes || '',
-                };
-
-                await addSale(saleData);
-            }
+            await addBulkSale(cart, {
+                customerId: finalCustomerId,
+                clientName: checkoutClientName || '',
+                documentType: checkoutDocType,
+                notes: checkoutNotes || '',
+                discount: { type: checkoutDiscountType, value: checkoutDiscountValue },
+                applyVat: checkoutApplyVat,
+                vatPercentage: checkoutVatPercentage,
+            });
 
             toast({
                 title: '🎉 Venda Concluída!',

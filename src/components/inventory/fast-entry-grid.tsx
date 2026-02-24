@@ -243,6 +243,23 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
             return;
         }
 
+        // Strongly enforce data completeness before allowing a save
+        const incompleteRows = validRows.filter(row =>
+            !row.category.trim() ||
+            row.price.trim() === '' ||
+            row.cost.trim() === '' ||
+            row.stock.trim() === ''
+        );
+
+        if (incompleteRows.length > 0) {
+            toast({
+                title: "Dados Incompletos",
+                description: `Todos os produtos listados devem ter "Categoria", "Custo", "Venda" e "Físico" preenchidos.`,
+                variant: "destructive"
+            });
+            return;
+        }
+
         // Check for duplicates within the grid itself
         const seenNames = new Set<string>();
         const exactDuplicates: string[] = [];
@@ -269,15 +286,21 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
         setIsSaving(true);
         let successCount = 0;
 
+        const defaultLocation = (companyData?.locations && companyData.locations.length > 0)
+            ? companyData.locations[0].id
+            : '';
+
         for (const row of validRows) {
             try {
                 const productData: Omit<Product, 'id' | 'companyId' | 'instanceId'> = {
-                    name: row.name,
-                    category: row.category || 'Geral',
+                    name: row.name.trim(),
+                    category: row.category.trim() || 'Geral',
                     price: parseFloat(row.price) || 0,
                     stock: parseFloat(row.stock) || 0,
                     reservedStock: 0,
                     unit: row.unit || 'un',
+                    location: defaultLocation, // required to prevent undefined crashing firebase addDoc
+                    cost: parseFloat(row.cost) || 0,
                     lastUpdated: new Date().toISOString(),
                     lowStockThreshold: parseFloat(row.minStock) || 0,
                     criticalStockThreshold: Math.floor((parseFloat(row.minStock) || 0) / 2),

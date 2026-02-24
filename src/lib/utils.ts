@@ -73,62 +73,61 @@ export function formatCurrency(value: number, options?: Intl.NumberFormatOptions
   }).format(value);
 }
 
-export function downloadSaleDocument(sale: Sale, companyData: Company | null) {
-  const printWindow = window.open('', '', 'height=800,width=800');
-  if (!printWindow) return;
+export function downloadSaleDocument(saleOrSales: Sale | Sale[], companyData: Company | null) {
+  const isBrowser = typeof window !== 'undefined';
+  if (!isBrowser) return;
+
+  const salesArray = Array.isArray(saleOrSales) ? saleOrSales : [saleOrSales];
+  if (salesArray.length === 0) return;
+
+  const sale = salesArray[0];
+
+  const docTitle = sale.documentType === 'Factura Proforma'
+    ? 'Orçamento / Proposta'
+    : (sale.documentType === 'Guia de Remessa' ? 'Guia de Remessa' : (sale.documentType === 'Recibo' ? 'Recibo' : 'Factura'));
 
   const isProforma = sale.documentType === 'Factura Proforma';
-  const docTitle = sale.documentType;
 
-  printWindow.document.write('<!DOCTYPE html><html><head><title>' + docTitle + '</title>');
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+
   printWindow.document.write(`
-      <link rel="preconnect" href="https://fonts.googleapis.com">
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  `);
-  printWindow.document.write(`
-      <style>
-          :root {
-            --background: #ffffff;
-            --foreground: #09090b;
-            --muted: #f4f4f5;
-            --muted-foreground: #71717a;
-            --border: #e4e4e7;
-            --primary: #18181b;
-          }
+    <html>
+      <head>
+        <title>${docTitle} - ${sale.guideNumber}</title>
+        <style>
+          :root { --background: #ffffff; --foreground: #09090b; --primary: #000000; --muted: #f4f4f5; --border: #e4e4e7; --muted-foreground: #71717a; }
           * { box-sizing: border-box; }
           body { 
-            font-family: 'Inter', sans-serif; 
-            line-height: 1.5; 
-            color: var(--foreground); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #f7f7f8; 
             margin: 0; 
-            background-color: var(--muted); 
-            -webkit-print-color-adjust: exact; 
-            print-color-adjust: exact; 
+            padding: 2rem; 
+            color: var(--foreground); 
+            line-height: 1.5; 
           }
           .wrapper { 
             max-width: 800px; 
-            margin: 2rem auto; 
-            padding: 3rem; 
+            margin: 0 auto; 
             background: var(--background); 
-            border-radius: 12px; 
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); 
+            padding: 3rem; 
             border: 1px solid var(--border); 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
           }
           .header { 
             display: flex; 
             justify-content: space-between; 
             align-items: flex-start; 
             margin-bottom: 3rem; 
-            border-bottom: 1px solid var(--border); 
             padding-bottom: 2rem; 
+            border-bottom: 2px solid var(--primary); 
           }
-          .logo { display: flex; flex-direction: column; }
-          .logo-img { max-height: 60px; margin-bottom: 0.5rem; object-fit: contain; }
-          .logo-text { font-size: 1.25rem; font-weight: 700; color: var(--foreground); letter-spacing: -0.025em; }
+          .logo { display: flex; flex-direction: column; gap: 0.5rem; }
+          .logo-img { max-height: 60px; object-fit: contain; }
+          .logo-text { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
           .doc-type { text-align: right; }
-          .doc-type h1 { font-size: 2.25rem; font-weight: 600; color: var(--foreground); margin: 0 0 0.5rem 0; letter-spacing: -0.025em; text-transform: uppercase; }
-          .doc-type p { margin: 0; color: var(--muted-foreground); font-size: 0.875rem; }
+          .doc-type h1 { margin: 0; font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; text-transform: uppercase; color: var(--primary); }
+          .doc-type p { margin: 0.5rem 0 0 0; font-size: 1.25rem; color: var(--muted-foreground); font-weight: 500; }
           .details-grid { 
             display: grid; 
             grid-template-columns: 1fr 1fr; 
@@ -136,17 +135,20 @@ export function downloadSaleDocument(sale: Sale, companyData: Company | null) {
             margin-bottom: 3rem; 
           }
           .details-box { 
-            background-color: #fafafa; 
+            background: #fafafa; 
             padding: 1.5rem; 
             border-radius: 8px; 
             border: 1px solid var(--border); 
           }
           .details-box h3 { 
-            margin: 0 0 1rem 0; 
+            margin-top: 0; 
+            margin-bottom: 1rem; 
             font-size: 0.875rem; 
             text-transform: uppercase; 
             letter-spacing: 0.05em; 
             color: var(--muted-foreground); 
+            border-bottom: 1px solid var(--border); 
+            padding-bottom: 0.5rem; 
           }
           .details-row { 
             display: flex; 
@@ -260,18 +262,31 @@ export function downloadSaleDocument(sale: Sale, companyData: Company | null) {
   `);
 
   printWindow.document.write('<table><thead><tr><th>Artigo / Descrição</th><th>Qtd.</th><th>Preço Unit.</th><th>Subtotal</th></tr></thead><tbody>');
-  printWindow.document.write(`<tr><td>${sale.productName}</td><td>${sale.quantity} ${sale.unit || 'un'}</td><td>${formatCurrency(sale.unitPrice)}</td><td>${formatCurrency(sale.subtotal)}</td></tr>`);
+
+  let totalSubtotals = 0;
+  let totalDiscounts = 0;
+  let totalVats = 0;
+  let totalFinalValue = 0;
+
+  salesArray.forEach(s => {
+    printWindow.document.write(`<tr><td>${s.productName}</td><td>${s.quantity} ${s.unit || 'un'}</td><td>${formatCurrency(s.unitPrice)}</td><td>${formatCurrency(s.subtotal)}</td></tr>`);
+    totalSubtotals += s.subtotal;
+    totalDiscounts += s.discount || 0;
+    totalVats += s.vat || 0;
+    totalFinalValue += s.totalValue;
+  });
+
   printWindow.document.write('</tbody></table>');
 
   let totalsHtml = '<div class="totals-wrapper"><table class="totals-table">';
-  totalsHtml += `<tr><td>Subtotal:</td><td>${formatCurrency(sale.subtotal)}</td></tr>`;
-  if (sale.discount && sale.discount > 0) {
-    totalsHtml += `<tr><td>Desconto:</td><td>-${formatCurrency(sale.discount)}</td></tr>`;
+  totalsHtml += `<tr><td>Subtotal:</td><td>${formatCurrency(totalSubtotals)}</td></tr>`;
+  if (totalDiscounts > 0) {
+    totalsHtml += `<tr><td>Desconto:</td><td>-${formatCurrency(totalDiscounts)}</td></tr>`;
   }
-  if (sale.vat && sale.vat > 0) {
-    totalsHtml += `<tr><td>IVA:</td><td>${formatCurrency(sale.vat)}</td></tr>`;
+  if (totalVats > 0) {
+    totalsHtml += `<tr><td>IVA:</td><td>${formatCurrency(totalVats)}</td></tr>`;
   }
-  totalsHtml += `<tr class="final-total"><td>Total a Pagar:</td><td>${formatCurrency(sale.totalValue)}</td></tr>`;
+  totalsHtml += `<tr class="final-total"><td>Total a Pagar:</td><td>${formatCurrency(totalFinalValue)}</td></tr>`;
   totalsHtml += '</table></div>';
   printWindow.document.write(totalsHtml);
 

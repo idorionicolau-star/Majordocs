@@ -89,6 +89,7 @@ export type Product = {
   lastUpdated: string;
   location?: string;
   unit?: string;
+  cost?: number;
   deletedAt?: string;
   deletedBy?: string;
   imageUrl?: string;

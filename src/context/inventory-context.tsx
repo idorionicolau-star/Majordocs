@@ -1223,19 +1223,42 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!items || items.length === 0) throw new Error("O carrinho está vazio.");
 
     const salesCollectionRef = collection(firestore, `companies/${companyId}/sales`);
-    const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
     const companyDocRef = doc(firestore, `companies/${companyId}`);
 
     let guideNumberForOuterScope: string | null = null;
     let createdSalesForOuterScope: Sale[] = [];
 
+    // Calculate totals for proportional distribution
+    const cartSubtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+    const totalDiscountAmount = saleData.discount
+      ? (saleData.discount.type === 'percentage' ? cartSubtotal * (saleData.discount.value / 100) : saleData.discount.value)
+      : 0;
+    const totalAfterDiscount = Math.max(0, cartSubtotal - totalDiscountAmount);
+    const totalVatAmount = saleData.applyVat ? totalAfterDiscount * (saleData.vatPercentage / 100) : 0;
+    const cartTotal = totalAfterDiscount + totalVatAmount;
+
+    // To deduct across multiple source documents, we need all relevant products.
+    // We already have `products` aggregated from the query. Let's just use the sourceIds!
+    // But we are in a transaction, so we must read the raw docs.
+    const allSourceIds = new Set<string>();
+    items.forEach(item => {
+      const aggregatedProduct = products.find(p => p.name === item.productName && (p.location === item.location || (!item.location && p.location === (isMultiLocation ? locations[0]?.id : 'Principal'))));
+      if (aggregatedProduct?.sourceIds) {
+        aggregatedProduct.sourceIds.forEach(id => allSourceIds.add(id));
+      } else {
+        allSourceIds.add(item.productId);
+      }
+    });
+
     await runTransaction(firestore, async (transaction) => {
-      // 1. READS (All reads must come before writes)
+      // 1. READS
       const companyDoc = await transaction.get(companyDocRef);
       if (!companyDoc.exists()) throw new Error("Empresa não encontrada.");
 
-      const productReads = items.map(item => transaction.get(doc(productsCollectionRef, item.productId)));
-      const productSnaps = await Promise.all(productReads);
+      const sourceDocRefs = Array.from(allSourceIds).map(id => doc(productsCollectionRef, id));
+      const sourceSnaps = await Promise.all(sourceDocRefs.map(ref => transaction.get(ref)));
+
+      const loadedProducts = sourceSnaps.filter(s => s.exists()).map(s => ({ id: s.id, ref: s.ref, data: s.data() as Product }));
 
       // 2. VALIDATION & LOGIC
       const currentCompanyData = companyDoc.data();
@@ -1244,46 +1267,70 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       guideNumberForOuterScope = guideNumber;
 
       const salesToCreate: Sale[] = [];
-      const movementsToCreate: any[] = [];
       const productUpdates: { ref: DocumentReference; data: any }[] = [];
 
-      productSnaps.forEach((pSnap, index) => {
-        if (!pSnap.exists()) {
-          throw new Error(`Produto "${items[index].productName}" (ID: ${items[index].productId}) não encontrado.`);
-        }
-        const productData = pSnap.data() as Product;
-        const item = items[index];
-
+      items.forEach((item, index) => {
         const isProforma = saleData.documentType === 'Factura Proforma';
 
-        if (!isProforma) {
-          const availableStock = productData.stock - productData.reservedStock;
-          if (availableStock < item.quantity) {
-            throw new Error(`Stock insuficiente para "${item.productName}". Disponível: ${availableStock}.`);
-          }
+        let remainingQuantityToDeduct = item.quantity;
+        // Find all underlying documents for this item's name and location
+        const targetLocation = item.location || (isMultiLocation && locations.length > 0 ? locations[0].id : 'Principal');
+        const availableSources = loadedProducts.filter(p => p.data.name === item.productName && (p.data.location === targetLocation || !p.data.location));
 
-          const newReservedStock = productData.reservedStock + item.quantity;
-          productUpdates.push({
-            ref: pSnap.ref,
-            data: { reservedStock: newReservedStock, lastUpdated: new Date().toISOString() }
-          });
+        const totalAvailableStock = availableSources.reduce((sum, p) => sum + (p.data.stock - p.data.reservedStock), 0);
+
+        if (!isProforma && totalAvailableStock < item.quantity) {
+          throw new Error(`Stock insuficiente para "${item.productName}". Disponível: ${totalAvailableStock}.`);
         }
+
+        if (!isProforma) {
+          // Deduct from sources
+          for (const source of availableSources) {
+            if (remainingQuantityToDeduct <= 0) break;
+            const availableInSource = source.data.stock - source.data.reservedStock;
+            if (availableInSource > 0) {
+              const deductAmount = Math.min(availableInSource, remainingQuantityToDeduct);
+              source.data.reservedStock += deductAmount; // update local memory for subsequent items just in case
+              remainingQuantityToDeduct -= deductAmount;
+
+              // We might push multiple updates for the same ref if we are not careful
+              const existingUpdate = productUpdates.find(u => u.ref.id === source.ref.id);
+              if (existingUpdate) {
+                existingUpdate.data.reservedStock = source.data.reservedStock;
+              } else {
+                productUpdates.push({
+                  ref: source.ref,
+                  data: { reservedStock: source.data.reservedStock, lastUpdated: new Date().toISOString() }
+                });
+              }
+            }
+          }
+        }
+
+        // Proportional math for this specific Sale document
+        const proportion = cartSubtotal > 0 ? (item.subtotal / cartSubtotal) : 0;
+        const itemDiscount = totalDiscountAmount * proportion;
+        const itemVat = totalVatAmount * proportion;
+        const itemTotal = item.subtotal - itemDiscount + itemVat;
 
         const newSaleRef = doc(salesCollectionRef); // Auto-ID
         const sale: Sale = {
           id: newSaleRef.id,
           guideNumber,
-          productId: item.productId,
+          productId: item.productId, // primary id reference
           productName: item.productName,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
-          totalValue: item.subtotal,
           subtotal: item.subtotal,
+          discount: itemDiscount,
+          vat: itemVat,
+          totalValue: itemTotal,
+          amountPaid: saleData.documentType !== 'Factura Proforma' ? itemTotal : 0,
           date: new Date().toISOString(),
-          status: saleData.documentType === 'Factura Proforma' ? 'Pendente' : 'Pago', // Default to Paid for POS/Bulk, unless Proforma
-          paymentMethod: 'Numerário', // Default, should be passed in saleData ideally
-          location: item.location || productData.location || (locations.length > 0 ? locations[0].id : 'Principal'),
-          unit: item.unit || productData.unit || 'un',
+          status: saleData.documentType === 'Factura Proforma' ? 'Pendente' : 'Pago',
+          paymentMethod: 'Numerário',
+          location: targetLocation,
+          unit: item.unit || 'un',
           soldBy: user.username,
           documentType: saleData.documentType,
           clientName: saleData.clientName,
@@ -1293,23 +1340,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
         salesToCreate.push(sale);
         createdSalesForOuterScope.push(sale);
-
-        // We don't create movement here for RESERVED stock, only when picked up? 
-        // Logic in addSale updates reservedStock. Logic in confirmSalePickup deducts stock and creates movement.
-        // Assuming bulk sale (POS) is immediate pickup? 
-        // If it's POS, usually stock is deducted immediately. 
-        // However, addSale logic reserves it. 
-        // If we want immediate deduction, we should do it here. 
-        // But to keep consistency with "Confirm Pickup" flow, we might just reserve. 
-        // WAITING: If POS, we usually want it DONE. 
-        // Let's stick to RESERVING logic to match `addSale`, or check if `addSale` has an option.
-        // `addSale` has `reserveStock` param. 
-        // For POS, if the customer takes it, we should probably confirm pickup immediately?
-        // But for now, let's just create the sale (which reserves stock) and let the user "Confirm Pickup" or we auto-confirm?
-        // To be safe and consistent with existing flow: Create Sale (Reserved). 
-        // The user can then "Deliver" it. 
-        // OR: If it's POS, maybe we auto-confirm? 
-        // Let's just do Reserve for now to be safe.
       });
 
       // 3. WRITES
@@ -1330,10 +1360,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         title: "Venda Registada!",
         description: `Guia ${guideNumberForOuterScope} gerada com ${items.length} itens.`,
       });
-      // Trigger alerts or downloads if needed
+      // Try to download single document with all sales
+      downloadSaleDocument(createdSalesForOuterScope, companyData);
+
+      await triggerEmailAlert({
+        type: 'SALE',
+        ...createdSalesForOuterScope[0], // Use first for email alert properties like status/clientName
+        totalValue: cartTotal, // overriding total for single sum
+        guideNumber: guideNumberForOuterScope,
+        location: locations.find(l => l.id === createdSalesForOuterScope[0].location)?.name || 'Principal',
+      });
     }
 
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, toast, triggerEmailAlert]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, products, toast, triggerEmailAlert]);
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
