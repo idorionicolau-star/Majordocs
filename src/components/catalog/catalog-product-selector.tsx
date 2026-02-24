@@ -130,7 +130,7 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
               autoFocus
             />
             <CommandList>
-              <ScrollArea className="h-[250px] md:h-[300px]" thumbClassName="bg-slate-400 dark:bg-slate-600">
+              <div className="h-[250px] md:h-[300px] overflow-y-auto overscroll-contain touch-pan-y">
                 <CommandEmpty>
                   {searchQuery ? (
                     <div className="p-4 text-sm text-center text-muted-foreground">
@@ -188,7 +188,7 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
                     </CommandItem>
                   ))}
                 </CommandGroup>
-              </ScrollArea>
+              </div>
             </CommandList>
           </Command>
           <div className="p-2 border-t bg-muted/50">
