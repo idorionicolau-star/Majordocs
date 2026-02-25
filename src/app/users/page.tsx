@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useContext } from "react";
+import { useState, useContext, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { UsersDataTable } from "@/components/users/data-table";
 import { columns } from "@/components/users/columns";
@@ -57,6 +57,13 @@ export default function UsersPage() {
     );
   }
 
+  const tableColumns = useMemo(() => columns({
+    onDelete: (employee) => setEmployeeToDelete(employee),
+    currentUserId: user?.id,
+    isAdmin: isAdmin,
+    companyName: companyData?.name || null
+  }), [user?.id, isAdmin, companyData?.name]);
+
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
       <AlertDialog open={!!employeeToDelete} onOpenChange={(open) => !open && setEmployeeToDelete(null)}>
@@ -86,12 +93,7 @@ export default function UsersPage() {
 
       <div className="hidden md:block">
         <UsersDataTable
-          columns={columns({
-            onDelete: (employee) => setEmployeeToDelete(employee),
-            currentUserId: user?.id,
-            isAdmin: isAdmin,
-            companyName: companyData?.name || null
-          })}
+          columns={tableColumns}
           data={employees || []}
         />
       </div>
