@@ -6,8 +6,9 @@ import { DataGrid, renderTextEditor as textEditor, Column, RenderEditCellProps }
 import 'react-data-grid/lib/styles.css';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Save } from "lucide-react";
+import { PlusCircle, Save, Camera, Upload, Loader2 } from "lucide-react";
 import { useInventory } from "@/context/inventory-context";
+import { useAuth } from "@/firebase/provider";
 import { useTheme } from "next-themes";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useFuse } from "@/hooks/use-fuse";
@@ -36,9 +37,12 @@ const initialRows: RowData[] = Array.from({ length: 5 }, () => ({
 
 export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     const [rows, setRows] = useState<RowData[]>(initialRows);
-    const { addProduct, companyData, products } = useInventory();
+    const { addProduct, companyData, products, companyId } = useInventory();
     const { toast } = useToast();
+    const auth = useAuth();
     const [isSaving, setIsSaving] = useState(false);
+    const [isExtracting, setIsExtracting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const { theme, systemTheme } = useTheme();
     const isMobile = useMediaQuery("(max-width: 640px)");
 
@@ -316,6 +320,125 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
         })));
     };
 
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsExtracting(true);
+        toast({ title: "A processar...", description: "A IA está a ler a imagem. Isto pode demorar alguns segundos." });
+
+        try {
+            // Convert to base64
+            const base64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            const fbToken = await auth.currentUser?.getIdToken();
+
+            const response = await fetch('/api/extract-inventory', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${fbToken}`
+                },
+                body: JSON.stringify({
+                    imageBase64: base64,
+                    companyId: companyId
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Erro ao processar imagem.");
+            }
+
+            const data = await response.json();
+            const extractedItems = data.items || [];
+
+            if (extractedItems.length === 0) {
+                toast({ variant: "destructive", title: "Nenhum Produto", description: "A IA não conseguiu identificar nenhum produto com quantidade legível na imagem." });
+                return;
+            }
+
+            // Map to grid rows
+            const newRows: RowData[] = [];
+
+            extractedItems.forEach((item: { productName: string, quantity: number }) => {
+                const searchName = item.productName.toLowerCase().trim();
+                // Simple exact match first
+                const exactMatch = products.find(p => p.name.toLowerCase() === searchName);
+
+                if (exactMatch) {
+                    newRows.push({
+                        name: exactMatch.name,
+                        category: exactMatch.category || 'Geral',
+                        unit: exactMatch.unit || 'un',
+                        price: exactMatch.price.toString(),
+                        cost: (exactMatch.cost || 0).toString(),
+                        stock: item.quantity.toString(),
+                        minStock: exactMatch.lowStockThreshold?.toString() || '0'
+                    });
+                } else {
+                    // Try to find the closest match manually (simple included word matching)
+                    const tokens = searchName.split(" ");
+                    let bestMatch: any = null;
+                    let bestCount = 0;
+
+                    products.forEach(p => {
+                        const pName = p.name.toLowerCase();
+                        let matches = 0;
+                        tokens.forEach(t => { if (t.length > 2 && pName.includes(t)) matches++; });
+                        if (matches > bestCount) {
+                            bestCount = matches;
+                            bestMatch = p;
+                        }
+                    });
+
+                    if (bestMatch && bestCount > 0) {
+                        newRows.push({
+                            name: bestMatch.name,
+                            category: bestMatch.category || 'Geral',
+                            unit: bestMatch.unit || 'un',
+                            price: bestMatch.price.toString(),
+                            cost: (bestMatch.cost || 0).toString(),
+                            stock: item.quantity.toString(),
+                            minStock: bestMatch.lowStockThreshold?.toString() || '0'
+                        });
+                    } else {
+                        // Unmatched generic entry
+                        newRows.push({
+                            name: item.productName,
+                            category: '',
+                            unit: 'un',
+                            price: '',
+                            cost: '',
+                            stock: item.quantity.toString(),
+                            minStock: '0'
+                        });
+                    }
+                }
+            });
+
+            // Ensure at least 5 rows
+            while (newRows.length < 5) {
+                newRows.push({ name: '', category: '', unit: 'un', price: '', cost: '', stock: '0', minStock: '0' });
+            }
+
+            setRows(newRows);
+            toast({ title: "Leitura Concluída", description: `Encontrados ${extractedItems.length} produtos. Verifique os dados abaixo antes de guardar.` });
+
+        } catch (error: any) {
+            console.error(error);
+            toast({ variant: "destructive", title: "Erro na Leitura da IA", description: error.message || "Tente tirar a foto com melhor iluminação." });
+        } finally {
+            setIsExtracting(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
     return (
         <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
             <datalist id="categories-list">
@@ -325,9 +448,31 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                 {units.map(u => <option key={u} value={u} />)}
             </datalist>
 
-            <div className="flex flex-col">
-                <h2 className="text-xl font-bold font-headline">Entrada Rápida / Edição em Massa</h2>
-                <p className="text-sm text-muted-foreground">Adicione produtos. {isMobile ? "Deslize para ver campos." : "Duplo clique para editar, TAB para navegar."}</p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex flex-col">
+                    <h2 className="text-xl font-bold font-headline">Entrada Rápida / Edição em Massa</h2>
+                    <p className="text-sm text-muted-foreground">Adicione produtos. {isMobile ? "Deslize para ver campos." : "Duplo clique para editar, TAB para navegar."}</p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        ref={fileInputRef}
+                        onChange={handleImageUpload}
+                    />
+                    <Button
+                        variant="secondary"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isExtracting}
+                        className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20 border-indigo-200 dark:border-indigo-800"
+                    >
+                        {isExtracting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
+                        {isExtracting ? 'Analisando Foto...' : 'Scan Contagem (IA)'}
+                    </Button>
+                </div>
             </div>
 
             <div className="border rounded-md shadow-sm overflow-hidden bg-background">
