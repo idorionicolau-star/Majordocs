@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Employee } from "@/lib/types";
-import { useFirestore } from '@/firebase/provider';
+import { useFirestore, useMemoFirebase } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection } from "firebase/firestore";
 import {
@@ -35,7 +35,10 @@ export default function UsersPage() {
   const { companyId, user, loading, companyData } = useContext(InventoryContext) || {};
   const isAdmin = user?.role === 'Admin';
 
-  const employeesCollectionRef = firestore && companyId ? collection(firestore, `companies/${companyId}/employees`) : null;
+  const employeesCollectionRef = useMemoFirebase(
+    () => firestore && companyId ? collection(firestore, `companies/${companyId}/employees`) : null,
+    [firestore, companyId]
+  );
 
   const { data: employees, isLoading: employeesLoading } = useCollection<Employee>(employeesCollectionRef);
 
