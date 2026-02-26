@@ -94,7 +94,7 @@ export default function ReportsPage() {
   const contextTemp: any = inventoryContext;
   const sales: Sale[] = contextTemp?.sales || [];
   const companyData = contextTemp?.companyData || null;
-  const loading = contextTemp?.loading || true;
+  const loading = contextTemp?.loading ?? true;
   const user = contextTemp?.user || null;
   const clearSales = contextTemp?.clearSales || (async () => { });
   const isAdmin = user?.role === 'Admin';
