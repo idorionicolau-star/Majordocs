@@ -9,6 +9,53 @@ import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Trash2, X, Minus, Plus, CreditCard } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { CartItem } from '@/lib/types';
+import { useState, useEffect } from 'react';
+
+// A local component to handle quantity input smoothly without losing cursor or decimal points
+function QuantityInput({
+    initialValue,
+    onChange
+}: {
+    initialValue: number;
+    onChange: (val: number) => void;
+}) {
+    const [localValue, setLocalValue] = useState(initialValue.toString());
+
+    useEffect(() => {
+        setLocalValue(initialValue.toString());
+    }, [initialValue]);
+
+    const handleBlur = () => {
+        const num = Number(localValue);
+        if (!isNaN(num) && num > 0) {
+            onChange(num);
+        } else {
+            setLocalValue(initialValue.toString());
+        }
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setLocalValue(val);
+        const num = Number(val);
+        // Only update parent if it's a valid number and greater than 0
+        // and doesn't end with a dot (so user can type "1.5")
+        if (!isNaN(num) && num > 0 && !val.endsWith('.') && !val.endsWith(',')) {
+            onChange(num);
+        }
+    };
+
+    return (
+        <Input
+            type="text"
+            inputMode="decimal"
+            value={localValue}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            className="w-16 h-8 text-center border-none shadow-none focus-visible:ring-0 p-0 font-medium"
+        />
+    );
+}
 
 interface PosCartProps {
     cart: CartItem[];
@@ -109,16 +156,9 @@ export function PosCart({
                                                 >
                                                     <Minus className="h-3.5 w-3.5" />
                                                 </Button>
-                                                <Input
-                                                    type="number"
-                                                    min={0.01}
-                                                    step="any"
-                                                    value={item.quantity}
-                                                    onChange={(e) => {
-                                                        const val = Number(e.target.value);
-                                                        onUpdateQuantity(item.productName, val > 0 ? val : 1);
-                                                    }}
-                                                    className="w-12 h-8 text-center border-none shadow-none focus-visible:ring-0 p-0 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                <QuantityInput
+                                                    initialValue={item.quantity}
+                                                    onChange={(val) => onUpdateQuantity(item.productName, val)}
                                                 />
                                                 <Button
                                                     variant="ghost"
