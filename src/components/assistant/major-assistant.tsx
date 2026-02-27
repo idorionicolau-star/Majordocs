@@ -202,38 +202,100 @@ export function MajorAssistant({ variant = 'sheet', className }: { variant?: 'sh
         setIsLoading(true);
 
         try {
-            // "Read Context" logic
+            // Build comprehensive business context
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const allSales = context?.sales || [];
+            const allProducts = context?.products || [];
+            const allOrders = context?.orders || [];
+
+            const todaySales = allSales.filter((s: any) => {
+                const d = new Date(s.date);
+                return d.toDateString() === now.toDateString();
+            });
+            const monthSales = allSales.filter((s: any) => new Date(s.date) >= startOfMonth);
+
+            const revenueToday = todaySales.reduce((sum: number, s: any) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);
+            const revenueMonth = monthSales.reduce((sum: number, s: any) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);
+
+            // Top products by revenue this month
+            const productRevenueMap = new Map<string, { name: string; qty: number; revenue: number }>();
+            monthSales.forEach((s: any) => {
+                const existing = productRevenueMap.get(s.productId) || { name: s.productName, qty: 0, revenue: 0 };
+                existing.qty += s.quantity;
+                existing.revenue += (s.amountPaid ?? s.totalValue ?? 0);
+                productRevenueMap.set(s.productId, existing);
+            });
+            const topProducts = Array.from(productRevenueMap.values())
+                .sort((a, b) => b.revenue - a.revenue)
+                .slice(0, 10);
+
             const globalContext = {
-                // Global knowledge base (always available)
-                inventory: context?.products?.map(p => ({
+                company: {
+                    name: context?.companyData?.name,
+                    businessType: context?.companyData?.businessType,
+                    taxId: context?.companyData?.taxId,
+                    email: context?.companyData?.email,
+                    phone: context?.companyData?.phone,
+                },
+                summary: {
+                    totalProducts: allProducts.length,
+                    totalSales: allSales.length,
+                    salesToday: todaySales.length,
+                    revenueToday: Math.round(revenueToday),
+                    salesThisMonth: monthSales.length,
+                    revenueThisMonth: Math.round(revenueMonth),
+                    inventoryValue: context?.dashboardStats?.totalInventoryValue || 0,
+                    pendingOrders: allOrders.filter((o: any) => o.status !== 'Concluída').length,
+                    totalCustomers: (context as any)?.customers?.length || 0,
+                },
+                inventory: allProducts.map((p: any) => ({
                     name: p.name,
-                    qty: p.stock,
+                    stock: p.stock,
                     price: p.price,
-                    min: p.lowStockThreshold || 0 // Ensure consistent property name usage
-                })) || [],
-
-                // Computed Alerts for Context
-                alerts: context?.products?.filter(p => p.stock <= (p.lowStockThreshold || 0)).map(p => ({
-                    product: p.name,
-                    status: p.stock === 0 ? 'CRÍTICO (0)' : 'BAIXO',
-                    current: p.stock,
-                    min: p.lowStockThreshold
-                })) || [],
-
-                // Screen-specific context
+                    cost: p.cost || 0,
+                    category: p.category || 'Sem categoria',
+                    unit: p.unit || 'un',
+                    alertThreshold: p.criticalStockThreshold || p.lowStockThreshold || 0,
+                    reserved: p.reservedStock || 0,
+                })),
+                alerts: allProducts
+                    .filter((p: any) => p.stock <= (p.lowStockThreshold || p.criticalStockThreshold || 0))
+                    .map((p: any) => ({
+                        product: p.name,
+                        status: p.stock === 0 ? 'ESGOTADO' : 'STOCK BAIXO',
+                        current: p.stock,
+                        threshold: p.lowStockThreshold || p.criticalStockThreshold || 0,
+                    })),
+                topProducts,
+                recentSales: allSales.slice(0, 50).map((s: any) => ({
+                    date: s.date,
+                    product: s.productName,
+                    qty: s.quantity,
+                    total: s.totalValue,
+                    paid: s.amountPaid,
+                    type: s.documentType,
+                    client: s.clientName || 'Avulso',
+                    seller: s.soldBy,
+                })),
+                customers: ((context as any)?.customers || []).slice(0, 30).map((c: any) => ({
+                    name: c.name,
+                    phone: c.phone,
+                    totalPurchases: c.totalPurchases || 0,
+                })),
+                orders: allOrders
+                    .filter((o: any) => o.status !== 'Concluída')
+                    .slice(0, 20)
+                    .map((o: any) => ({
+                        product: o.productName,
+                        qty: o.quantity,
+                        status: o.status,
+                        client: o.customerName || 'N/D',
+                        date: o.createdAt,
+                    })),
                 currentScreen: {
                     path: pathname,
-                    viewData: pathname.includes('inventory') ? context?.products?.slice(0, 10) :
-                        pathname.includes('sales') ? context?.sales?.slice(0, 10) :
-                            pathname.includes('production') ? context?.productions?.slice(0, 10) :
-                                null
                 },
-
-                summary: {
-                    totalProducts: context?.products?.length || 0,
-                    totalSales: context?.sales?.length || 0,
-                    pendingOrders: context?.orders?.filter(o => o.status !== 'Concluída').length || 0
-                }
             };
 
             const fbToken = await context?.firebaseUser?.getIdToken();
