@@ -384,6 +384,11 @@ export default function NewInventoryProductPage() {
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
+                                                {(field.value && !(catalogCategories || []).some(c => c.name === field.value)) && (
+                                                    <SelectItem value={field.value}>
+                                                        {field.value}
+                                                    </SelectItem>
+                                                )}
                                                 {(catalogCategories || []).sort((a, b) => a.name.localeCompare(b.name)).map((cat) => (
                                                     <SelectItem key={cat.id} value={cat.name}>
                                                         {cat.name}

@@ -209,6 +209,9 @@ export function QuickCreateProductDialog({ open, onOpenChange, defaultName, onSu
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
+                                            {(field.value && !catalogCategories?.some((c: CatalogCategory) => c.name === field.value)) && (
+                                                <SelectItem value={field.value}>{field.value}</SelectItem>
+                                            )}
                                             {catalogCategories?.map((cat: CatalogCategory) => (
                                                 <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                                             ))}

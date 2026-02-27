@@ -37,7 +37,7 @@ const initialRows: RowData[] = Array.from({ length: 5 }, () => ({
 
 export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     const [rows, setRows] = useState<RowData[]>(initialRows);
-    const { addProduct, companyData, products, companyId } = useInventory();
+    const { addProduct, addCatalogProduct, catalogProducts, addCatalogCategory, catalogCategories, companyData, products, companyId } = useInventory();
     const { toast } = useToast();
     const auth = useAuth();
     const [isSaving, setIsSaving] = useState(false);
@@ -286,9 +286,30 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
 
         for (const row of validRows) {
             try {
+                // Ensure category exists in catalog
+                const categoryName = row.category.trim() || 'Geral';
+                const catExists = catalogCategories?.some(c => c.name.toLowerCase() === categoryName.toLowerCase());
+                if (!catExists && addCatalogCategory) {
+                    await addCatalogCategory(categoryName);
+                }
+
+                // Ensure product exists in catalog
+                const prodName = row.name.trim();
+                const prodExists = catalogProducts?.some(p => p.name.toLowerCase() === prodName.toLowerCase());
+                if (!prodExists && addCatalogProduct) {
+                    await addCatalogProduct({
+                        name: prodName,
+                        category: categoryName,
+                        price: parseFloat(row.price) || 0,
+                        unit: row.unit || 'un',
+                        lowStockThreshold: parseFloat(row.minStock) || 0,
+                        criticalStockThreshold: Math.floor((parseFloat(row.minStock) || 0) / 2),
+                    });
+                }
+
                 const productData: Omit<Product, 'id' | 'companyId' | 'instanceId'> = {
-                    name: row.name.trim(),
-                    category: row.category.trim() || 'Geral',
+                    name: prodName,
+                    category: categoryName,
                     price: parseFloat(row.price) || 0,
                     stock: parseFloat(row.stock) || 0,
                     reservedStock: 0,

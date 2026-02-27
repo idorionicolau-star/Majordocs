@@ -300,14 +300,40 @@ export default function InventoryPage() {
         </thead>
       `);
       printWindow.document.write('<tbody>');
-      filteredProducts.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)).forEach(product => {
+
+      // If filtering by a specific location and no products match, it means
+      // the location exists but has 0 products attached to it.
+      // In this case, we still want to list all known products with 0 stock so the user can count them.
+      let listToPrint = filteredProducts;
+      if (listToPrint.length === 0 && selectedLocation !== 'all' && locations.length > 0) {
+        // Create a list of all unique products with 0 stock for this empty location
+        const uniqueNames = new Set();
+        listToPrint = products.reduce((acc: Product[], p) => {
+          const normName = p.name.toLowerCase().trim();
+          if (!uniqueNames.has(normName)) {
+            uniqueNames.add(normName);
+            acc.push({ ...p, stock: 0, reservedStock: 0, location: selectedLocation });
+          }
+          return acc;
+        }, []);
+
+        // Apply the same category/name filters if defined
+        if (categoryFilter.length > 0) {
+          listToPrint = listToPrint.filter(p => categoryFilter.includes(p.category));
+        }
+        if (nameFilter) {
+          listToPrint = listToPrint.filter(p => p.name.toLowerCase().includes(nameFilter.toLowerCase()));
+        }
+      }
+
+      listToPrint.sort((a, b) => (a.category || '').localeCompare(b.category || '') || (a.name || '').localeCompare(b.name || '')).forEach(product => {
         const locationName = isMultiLocation ? (locations.find(l => l.id === product.location)?.name || product.location) : '';
         printWindow.document.write(`
             <tr>
                 <td>${product.name}</td>
-                <td>${product.category}</td>
+                <td>${product.category || 'Geral'}</td>
                 ${isMultiLocation ? `<td>${locationName}</td>` : ''}
-                <td>${product.stock - product.reservedStock}</td>
+                <td>${product.stock - (product.reservedStock || 0)}</td>
                 <td></td>
                 <td></td>
                 <td></td>
