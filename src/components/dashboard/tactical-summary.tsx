@@ -9,6 +9,7 @@ import { Sparkles, RefreshCw, FileDown, Printer, MoreHorizontal } from "lucide-r
 import { InventoryContext } from '@/context/inventory-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { useTypingEffect } from '@/hooks/use-typing-effect';
 import { isToday } from 'date-fns';
 import {
   DropdownMenu,
@@ -22,6 +23,7 @@ const STORAGE_KEY = 'majorstockx-tactical-insights';
 export const TacticalSummary = () => {
   const [insights, setInsights] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFreshlyGenerated, setIsFreshlyGenerated] = useState(false);
   const auth = useAuth();
   const { sales, products, dashboardStats, companyData } = useContext(InventoryContext) || {};
 
@@ -34,6 +36,7 @@ export const TacticalSummary = () => {
         if (cachedItem) {
           const { insights: cachedInsights, timestamp } = JSON.parse(cachedItem);
           if (isToday(new Date(timestamp))) {
+            setIsFreshlyGenerated(false);
             setInsights(cachedInsights);
             setIsLoading(false);
             return;
@@ -66,6 +69,7 @@ export const TacticalSummary = () => {
       }
 
       const data = await response.json();
+      setIsFreshlyGenerated(true);
       setInsights(data.text);
 
       try {
@@ -136,6 +140,10 @@ export const TacticalSummary = () => {
     printWindow.print();
   };
 
+  const displayedInsights = useTypingEffect(insights || "", 15, isFreshlyGenerated, () => {
+    setIsFreshlyGenerated(false);
+  });
+
   return (
     <Card className="bg-card/60 dark:bg-slate-900/50 border-border shadow-sm lg:col-span-2">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -189,7 +197,7 @@ export const TacticalSummary = () => {
               }}
               remarkPlugins={[remarkGfm]}
             >
-              {insights || "Nenhum insight disponível no momento."}
+              {isFreshlyGenerated ? displayedInsights : (insights || "Nenhum insight disponível no momento.")}
             </ReactMarkdown>
           )}
         </div>

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useTypingEffect } from "@/hooks/use-typing-effect";
 
 const INSIGHTS_STORAGE_KEY = 'majorstockx-daily-insights';
 
@@ -25,6 +26,7 @@ export const BusinessSummary = () => {
     const [insights, setInsights] = useState<string | null>(null);
     const [insightsLoading, setInsightsLoading] = useState(false);
     const [insightsFetched, setInsightsFetched] = useState(false);
+    const [isFreshlyGenerated, setIsFreshlyGenerated] = useState(false);
 
     if (!context) return null;
 
@@ -79,6 +81,7 @@ export const BusinessSummary = () => {
                 if (cached) {
                     const { text, timestamp } = JSON.parse(cached);
                     if (isToday(new Date(timestamp))) {
+                        setIsFreshlyGenerated(false);
                         setInsights(text);
                         setInsightsFetched(true);
                         return;
@@ -110,6 +113,7 @@ export const BusinessSummary = () => {
             }
 
             const data = await response.json();
+            setIsFreshlyGenerated(true);
             setInsights(data.text);
             setInsightsFetched(true);
 
@@ -146,6 +150,10 @@ export const BusinessSummary = () => {
     const stockHealthPercent = summary.totalProducts > 0
         ? Math.round((summary.healthyProducts / summary.totalProducts) * 100)
         : 100;
+
+    const displayedInsights = useTypingEffect(insights || "", 15, isFreshlyGenerated, () => {
+        setIsFreshlyGenerated(false);
+    });
 
     return (
         <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-white via-slate-50/50 to-blue-50/30 dark:from-slate-900 dark:via-slate-900/80 dark:to-blue-950/20 p-4 md:p-5 shadow-sm">
@@ -276,7 +284,7 @@ export const BusinessSummary = () => {
                         ) : (
                             <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-slate-600 dark:prose-p:text-slate-400 prose-strong:text-sky-600 dark:prose-strong:text-sky-400">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                    {insights || "Clique para gerar os insights do dia."}
+                                    {isFreshlyGenerated ? displayedInsights : (insights || "Clique para gerar os insights do dia.")}
                                 </ReactMarkdown>
                             </div>
                         )}

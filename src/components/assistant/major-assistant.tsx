@@ -3,7 +3,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-import { useState, useEffect, useRef, useContext, useCallback } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import { useTypingEffect } from "@/hooks/use-typing-effect";
 import {
     Sparkles,
@@ -39,45 +39,9 @@ type Message = {
     role: 'assistant' | 'user';
     content: string;
     timestamp: Date;
+    isNew?: boolean;
 };
 
-// Component that renders a single message with typing animation
-function TypingMessage({ text, onComplete, scrollRef }: { text: string; onComplete: () => void; scrollRef: React.RefObject<HTMLDivElement> }) {
-    const { displayedText, isTyping, skipTyping } = useTypingEffect(text, {
-        speed: 10,
-        enabled: true,
-        onComplete,
-    });
-
-    // Auto-scroll while typing
-    useEffect(() => {
-        if (isTyping && scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, [displayedText, isTyping, scrollRef]);
-
-    return (
-        <div className="flex gap-3">
-            <div className="h-8 w-8 shrink-0 rounded-lg bg-primary text-primary-foreground flex items-center justify-center border border-primary/20 shadow-sm">
-                <Bot className="h-4 w-4" />
-            </div>
-            <div
-                className="rounded-xl px-4 py-2 text-sm max-w-[85%] shadow-sm leading-relaxed bg-muted/50 border border-border cursor-pointer"
-                onClick={skipTyping}
-                title="Clique para mostrar tudo"
-            >
-                <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>ol]:list-decimal [&>ol]:pl-4 [&>ul]:list-disc [&>ul]:pl-4">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {displayedText}
-                    </ReactMarkdown>
-                    {isTyping && (
-                        <span className="inline-block w-[2px] h-[1em] bg-primary ml-0.5 animate-pulse align-text-bottom" />
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-}
 
 type ChatInterfaceProps = {
     messages: Message[];
@@ -86,12 +50,27 @@ type ChatInterfaceProps = {
     handleSend: (customMessage?: string) => void;
     isLoading: boolean;
     scrollRef: React.RefObject<HTMLDivElement>;
-    typingMessageId: string | null;
-    typingText: string;
-    onTypingComplete: () => void;
+    setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
 };
 
-const ChatInterface = ({ messages, input, setInput, handleSend, isLoading, scrollRef, typingMessageId, typingText, onTypingComplete }: ChatInterfaceProps) => (
+function TypingMessage({ msg, onComplete }: { msg: Message, onComplete?: () => void }) {
+    const [isTyping, setIsTyping] = useState(!!msg.isNew);
+
+    const displayedContent = useTypingEffect(msg.content, 15, isTyping, () => {
+        setIsTyping(false);
+        if (onComplete) onComplete();
+    });
+
+    return (
+        <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>ol]:list-decimal [&>ol]:pl-4 [&>ul]:list-disc [&>ul]:pl-4">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {displayedContent}
+            </ReactMarkdown>
+        </div>
+    );
+}
+
+const ChatInterface = ({ messages, input, setInput, handleSend, isLoading, scrollRef, setMessages }: ChatInterfaceProps) => (
     <div className="flex flex-col h-full bg-background">
         <div className="p-4 border-b border-border bg-muted/20 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
@@ -141,48 +120,37 @@ const ChatInterface = ({ messages, input, setInput, handleSend, isLoading, scrol
                     </div>
                 )}
 
-                {messages.map((msg) => {
-                    // If this message is currently being typed, render the TypingMessage component
-                    if (msg.id === typingMessageId && msg.role === 'assistant') {
-                        return (
-                            <TypingMessage
-                                key={msg.id}
-                                text={typingText}
-                                onComplete={onTypingComplete}
-                                scrollRef={scrollRef}
-                            />
-                        );
-                    }
-
-                    return (
-                        <div key={msg.id} className={cn("flex gap-3", msg.role === 'user' ? "flex-row-reverse" : "flex-row")}>
-                            <div className={cn(
-                                "h-8 w-8 shrink-0 rounded-lg flex items-center justify-center border shadow-sm",
-                                msg.role === 'user'
-                                    ? "bg-muted border-border"
-                                    : "bg-primary text-primary-foreground border-primary/20"
-                            )}>
-                                {msg.role === 'user' ? <UserIcon className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-                            </div>
-                            <div className={cn(
-                                "rounded-xl px-4 py-2 text-sm max-w-[85%] shadow-sm leading-relaxed",
-                                msg.role === 'user'
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-muted/50 border border-border"
-                            )}>
-                                {msg.role === 'user' ? (
-                                    msg.content
-                                ) : (
-                                    <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>ol]:list-decimal [&>ol]:pl-4 [&>ul]:list-disc [&>ul]:pl-4">
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                            {msg.content}
-                                        </ReactMarkdown>
-                                    </div>
-                                )}
-                            </div>
+                {messages.map((msg) => (
+                    <div key={msg.id} className={cn("flex gap-3", msg.role === 'user' ? "flex-row-reverse" : "flex-row")}>
+                        <div className={cn(
+                            "h-8 w-8 shrink-0 rounded-lg flex items-center justify-center border shadow-sm",
+                            msg.role === 'user'
+                                ? "bg-muted border-border"
+                                : "bg-primary text-primary-foreground border-primary/20"
+                        )}>
+                            {msg.role === 'user' ? <UserIcon className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                         </div>
-                    );
-                })}
+                        <div className={cn(
+                            "rounded-xl px-4 py-2 text-sm max-w-[85%] shadow-sm leading-relaxed",
+                            msg.role === 'user'
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted/50 border border-border"
+                        )}>
+                            {msg.role === 'user' ? (
+                                msg.content
+                            ) : (
+                                <TypingMessage
+                                    msg={msg}
+                                    onComplete={() => {
+                                        if (msg.isNew) {
+                                            setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isNew: false } : m));
+                                        }
+                                    }}
+                                />
+                            )}
+                        </div>
+                    </div>
+                ))}
 
                 {isLoading && (
                     <div className="flex gap-3">
@@ -231,8 +199,6 @@ export function MajorAssistant({ variant = 'sheet', className }: { variant?: 'sh
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
-    const [typingText, setTypingText] = useState("");
     const scrollRef = useRef<HTMLDivElement>(null);
     const db = getFirestoreInstance();
 
@@ -374,17 +340,14 @@ export function MajorAssistant({ variant = 'sheet', className }: { variant?: 'sh
 
             if (data.error) throw new Error(data.error);
 
-            const aiMsgId = (Date.now() + 1).toString();
             const aiMsg: Message = {
-                id: aiMsgId,
+                id: (Date.now() + 1).toString(),
                 role: 'assistant',
                 content: data.text,
-                timestamp: new Date()
+                timestamp: new Date(),
+                isNew: true
             };
 
-            // Start typing animation
-            setTypingText(data.text);
-            setTypingMessageId(aiMsgId);
             setMessages(prev => [...prev, aiMsg]);
 
             // Persist to Firestore
@@ -428,9 +391,7 @@ export function MajorAssistant({ variant = 'sheet', className }: { variant?: 'sh
                     handleSend={handleSend}
                     isLoading={isLoading}
                     scrollRef={scrollRef}
-                    typingMessageId={typingMessageId}
-                    typingText={typingText}
-                    onTypingComplete={() => setTypingMessageId(null)}
+                    setMessages={setMessages}
                 />
             </div>
         );
@@ -466,9 +427,7 @@ export function MajorAssistant({ variant = 'sheet', className }: { variant?: 'sh
                     handleSend={handleSend}
                     isLoading={isLoading}
                     scrollRef={scrollRef}
-                    typingMessageId={typingMessageId}
-                    typingText={typingText}
-                    onTypingComplete={() => setTypingMessageId(null)}
+                    setMessages={setMessages}
                 />
             </SheetContent>
         </Sheet>

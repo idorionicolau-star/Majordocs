@@ -9,6 +9,7 @@ import { InventoryContext } from '@/context/inventory-context';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { isToday } from 'date-fns';
+import { useTypingEffect } from '@/hooks/use-typing-effect';
 import {
   Accordion,
   AccordionContent,
@@ -21,6 +22,7 @@ const STORAGE_KEY = 'majorstockx-strategic-summary';
 export function StrategicSummary() {
   const [summary, setSummary] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFreshlyGenerated, setIsFreshlyGenerated] = useState(false);
   const { sales, products, dashboardStats, stockMovements, user, companyData, firebaseUser } = useContext(InventoryContext) || {};
 
   const generateSummary = useCallback(async (forceRefresh = false) => {
@@ -32,6 +34,7 @@ export function StrategicSummary() {
         if (cachedItem) {
           const { summary: cachedSummary, timestamp } = JSON.parse(cachedItem);
           if (isToday(new Date(timestamp))) {
+            setIsFreshlyGenerated(false);
             setSummary(cachedSummary);
             setIsLoading(false);
             return;
@@ -68,6 +71,7 @@ export function StrategicSummary() {
         throw new Error(errorData.error || 'Falha ao gerar o resumo.');
       }
       const data = await response.json();
+      setIsFreshlyGenerated(true);
       setSummary(data.text);
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ summary: data.text, timestamp: new Date().toISOString() }));
@@ -94,6 +98,10 @@ export function StrategicSummary() {
     e.stopPropagation();
     generateSummary(true);
   };
+
+  const displayedSummary = useTypingEffect(summary || "", 15, isFreshlyGenerated, () => {
+    setIsFreshlyGenerated(false);
+  });
 
   return (
     <Card className="glass-card shadow-sm p-0">
@@ -124,7 +132,7 @@ export function StrategicSummary() {
             {summary && (
               <div className="prose dark:prose-invert prose-sm max-w-none">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {summary}
+                  {isFreshlyGenerated ? displayedSummary : summary}
                 </ReactMarkdown>
               </div>
             )}
