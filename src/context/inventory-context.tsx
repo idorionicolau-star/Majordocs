@@ -1257,7 +1257,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const targetLoc = item.location || (isMultiLocation && locations.length > 0 ? locations[0]?.id : 'Principal');
       const aggregatedProduct = products.find(p =>
         p.name === item.productName &&
-        (p.location === targetLoc || (!p.location && (targetLoc === 'Principal' || !item.location)))
+        (!isMultiLocation || p.location === targetLoc || (!p.location && (targetLoc === 'Principal' || !item.location)))
       );
 
       if (aggregatedProduct?.sourceIds) {
@@ -1304,7 +1304,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         const targetLocation = item.location || (isMultiLocation && locations.length > 0 ? locations[0]?.id : 'Principal');
         const availableSources = loadedProducts.filter(p =>
           p.data.name === item.productName &&
-          (p.data.location === targetLocation || (!p.data.location && (targetLocation === 'Principal' || !item.location)))
+          (!isMultiLocation || p.data.location === targetLocation || (!p.data.location && (targetLocation === 'Principal' || !item.location)))
         );
 
         const totalAvailableStock = availableSources.reduce((sum, p) => sum + (p.data.stock - p.data.reservedStock), 0);
