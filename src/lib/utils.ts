@@ -84,7 +84,8 @@ export function downloadSaleDocument(saleOrSales: Sale | Sale[], companyData: Co
 
   const docTitle = sale.documentType === 'Factura Proforma'
     ? 'Orçamento / Proposta'
-    : (sale.documentType === 'Guia de Remessa' ? 'Guia de Remessa' : (sale.documentType === 'Recibo' ? 'Recibo' : 'Factura'));
+    : sale.documentType === 'Venda a Dinheiro' ? 'Venda a Dinheiro'
+      : (sale.documentType === 'Guia de Remessa' ? 'Guia de Remessa' : (sale.documentType === 'Recibo' ? 'Recibo' : 'Factura'));
 
   const isProforma = sale.documentType === 'Factura Proforma';
 

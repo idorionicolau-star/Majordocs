@@ -1164,9 +1164,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         throw new Error("Documento da empresa não encontrado.");
       }
       const currentCompanyData = companyDoc.data();
+      const numbering = currentCompanyData.documentNumbering;
       const newSaleCounter = (currentCompanyData.saleCounter || 0) + 1;
 
-      const guideNumber = `GT-${String(newSaleCounter).padStart(6, '0')}`;
+      let guideNumber: string;
+      if (numbering && numbering.prefix) {
+        const num = numbering.nextNumber || newSaleCounter;
+        const padded = numbering.padding > 0 ? String(num).padStart(numbering.padding, '0') : String(num);
+        guideNumber = `${numbering.prefix}${numbering.separator || ''}${padded}`;
+      } else {
+        guideNumber = `GT-${String(newSaleCounter).padStart(6, '0')}`;
+      }
       guideNumberForOuterScope = guideNumber;
 
       if (shouldReserveStock && productDocRef) {
@@ -1185,7 +1193,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         transaction.update(productDoc.ref, { reservedStock: newReservedStock });
       }
 
-      transaction.update(companyDocRef, { saleCounter: newSaleCounter });
+      transaction.update(companyDocRef, {
+        saleCounter: newSaleCounter,
+        ...(numbering && numbering.prefix ? { 'documentNumbering.nextNumber': (numbering.nextNumber || newSaleCounter) + 1 } : {})
+      });
       transaction.set(newSaleRef, { ...newSaleData, status: finalStatus, guideNumber });
     });
 
@@ -1262,8 +1273,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       // 2. VALIDATION & LOGIC
       const currentCompanyData = companyDoc.data();
+      const bulkNumbering = currentCompanyData.documentNumbering;
       const newSaleCounter = (currentCompanyData.saleCounter || 0) + 1;
-      const guideNumber = `GT-${String(newSaleCounter).padStart(6, '0')}`;
+
+      let guideNumber: string;
+      if (bulkNumbering && bulkNumbering.prefix) {
+        const num = bulkNumbering.nextNumber || newSaleCounter;
+        const padded = bulkNumbering.padding > 0 ? String(num).padStart(bulkNumbering.padding, '0') : String(num);
+        guideNumber = `${bulkNumbering.prefix}${bulkNumbering.separator || ''}${padded}`;
+      } else {
+        guideNumber = `GT-${String(newSaleCounter).padStart(6, '0')}`;
+      }
       guideNumberForOuterScope = guideNumber;
 
       const salesToCreate: Sale[] = [];
@@ -1343,7 +1363,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       });
 
       // 3. WRITES
-      transaction.update(companyDocRef, { saleCounter: newSaleCounter });
+      transaction.update(companyDocRef, {
+        saleCounter: newSaleCounter,
+        ...(bulkNumbering && bulkNumbering.prefix ? { 'documentNumbering.nextNumber': (bulkNumbering.nextNumber || newSaleCounter) + 1 } : {})
+      });
 
       productUpdates.forEach(update => {
         transaction.update(update.ref, update.data);

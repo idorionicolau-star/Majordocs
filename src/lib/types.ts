@@ -62,6 +62,12 @@ export type Company = {
   isMultiLocation?: boolean;
   locations?: Location[];
   saleCounter?: number;
+  documentNumbering?: {
+    prefix: string;
+    separator: string;
+    nextNumber: number;
+    padding: number;
+  };
   validUnits?: string[];
   validCategories?: string[]; // Also adding categories while we are at it, for future proofing or if we want to migrate catalogCategories to here.
   logoUrl?: string; // Base64 Data URL for the company logo, displayed in email headers
@@ -159,7 +165,7 @@ export type Sale = {
   location?: string;
   customerId?: string; // Link to Customer
   status: 'Pago' | 'Levantado' | 'Pendente';
-  documentType: 'Guia de Remessa' | 'Factura' | 'Factura Proforma' | 'Recibo' | 'Encomenda';
+  documentType: 'Venda a Dinheiro' | 'Guia de Remessa' | 'Factura' | 'Factura Proforma' | 'Recibo' | 'Encomenda';
   clientName?: string; // Legacy field, allow keep for history
   notes?: string;
   transactionId?: string; // For grouping multi-item sales

@@ -67,7 +67,7 @@ const formSchema = z.object({
     const num = Number(val);
     return isNaN(num) ? 0 : num;
   }, z.number().min(0, "O valor pago não pode ser negativo.").optional()),
-  documentType: z.enum(['Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo', 'Encomenda']),
+  documentType: z.enum(['Venda a Dinheiro', 'Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo', 'Encomenda']),
   clientName: z.string().optional(),
   customerId: z.string().optional(),
   notes: z.string().optional(),
@@ -276,6 +276,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
+                    <SelectItem value="Venda a Dinheiro">Venda a Dinheiro</SelectItem>
                     <SelectItem value="Factura Proforma">Factura Proforma</SelectItem>
                     <SelectItem value="Guia de Remessa">Guia de Remessa</SelectItem>
                     <SelectItem value="Factura">Factura</SelectItem>

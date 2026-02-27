@@ -233,8 +233,18 @@ export default function NewOrderPage() {
                 };
                 transaction.set(orderRef, newOrder);
 
-                const newSaleCounter = (companyDoc.data().saleCounter || 0) + 1;
-                const guideNumber = `ENC-${String(newSaleCounter).padStart(6, '0')}`;
+                const companyData = companyDoc.data();
+                const numbering = companyData.documentNumbering;
+                const newSaleCounter = (companyData.saleCounter || 0) + 1;
+
+                let guideNumber: string;
+                if (numbering && numbering.prefix) {
+                    const num = numbering.nextNumber || newSaleCounter;
+                    const padded = numbering.padding > 0 ? String(num).padStart(numbering.padding, '0') : String(num);
+                    guideNumber = `${numbering.prefix}${numbering.separator || ''}${padded}`;
+                } else {
+                    guideNumber = `ENC-${String(newSaleCounter).padStart(6, '0')}`;
+                }
 
                 const newSale: Omit<Sale, 'id'> = {
                     orderId: orderRef.id,
@@ -256,7 +266,10 @@ export default function NewOrderPage() {
                 };
                 transaction.set(saleRef, newSale);
 
-                transaction.update(companyRef, { saleCounter: newSaleCounter });
+                transaction.update(companyRef, {
+                    saleCounter: newSaleCounter,
+                    ...(numbering && numbering.prefix ? { 'documentNumbering.nextNumber': (numbering.nextNumber || newSaleCounter) + 1 } : {})
+                });
 
                 if (productRef && productData) {
                     transaction.update(productRef, {

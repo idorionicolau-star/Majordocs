@@ -73,7 +73,7 @@ const formSchema = z.object({
         const num = Number(val);
         return isNaN(num) ? 0 : num;
     }, z.number().min(0, "O IVA deve ser um valor positivo.").max(100).optional()),
-    documentType: z.enum(['Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo']),
+    documentType: z.enum(['Venda a Dinheiro', 'Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo']),
     clientName: z.string().optional(),
     customerId: z.string().optional(),
     notes: z.string().optional(),
@@ -108,7 +108,7 @@ export default function NewSalePage() {
             discountValue: 0,
             applyVat: false,
             vatPercentage: 17,
-            documentType: 'Factura Proforma',
+            documentType: 'Venda a Dinheiro',
             clientName: '',
             customerId: '',
             notes: '',
@@ -132,7 +132,7 @@ export default function NewSalePage() {
             discountValue: 0,
             applyVat: false,
             vatPercentage: 17,
-            documentType: 'Factura Proforma',
+            documentType: 'Venda a Dinheiro',
             clientName: '',
             customerId: '',
             notes: '',
@@ -457,6 +457,7 @@ export default function NewSalePage() {
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
+                                                    <SelectItem value="Venda a Dinheiro">Venda a Dinheiro</SelectItem>
                                                     <SelectItem value="Factura Proforma">Factura Proforma</SelectItem>
                                                     <SelectItem value="Guia de Remessa">Guia de Remessa</SelectItem>
                                                     <SelectItem value="Factura">Factura</SelectItem>

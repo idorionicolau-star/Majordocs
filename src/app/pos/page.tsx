@@ -102,7 +102,7 @@ export default function POSPage() {
     // Checkout form state
     const [checkoutClientName, setCheckoutClientName] = useState('');
     const [checkoutCustomerId, setCheckoutCustomerId] = useState('new');
-    const [checkoutDocType, setCheckoutDocType] = useState<'Factura Proforma' | 'Guia de Remessa' | 'Factura' | 'Recibo'>('Factura Proforma');
+    const [checkoutDocType, setCheckoutDocType] = useState<'Venda a Dinheiro' | 'Factura Proforma' | 'Guia de Remessa' | 'Factura' | 'Recibo'>('Venda a Dinheiro');
     const [checkoutNotes, setCheckoutNotes] = useState('');
     const [checkoutApplyVat, setCheckoutApplyVat] = useState(false);
     const [checkoutVatPercentage, setCheckoutVatPercentage] = useState(17);
@@ -329,7 +329,7 @@ export default function POSPage() {
         setCheckoutDate(new Date());
         setCheckoutClientName('');
         setCheckoutCustomerId('new');
-        setCheckoutDocType('Factura Proforma');
+        setCheckoutDocType('Venda a Dinheiro');
         setCheckoutNotes('');
         setCheckoutApplyVat(false);
         setCheckoutVatPercentage(17);
@@ -601,6 +601,7 @@ export default function POSPage() {
                                 <Select value={checkoutDocType} onValueChange={(v: any) => setCheckoutDocType(v)}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="Venda a Dinheiro">Venda a Dinheiro</SelectItem>
                                         <SelectItem value="Factura Proforma">Factura Proforma</SelectItem>
                                         <SelectItem value="Guia de Remessa">Guia de Remessa</SelectItem>
                                         <SelectItem value="Factura">Factura</SelectItem>

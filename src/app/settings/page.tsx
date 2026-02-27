@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Code, RefreshCw, Trash2, ShieldCheck, ImagePlus, X, Tag } from "lucide-react";
+import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Code, RefreshCw, Trash2, ShieldCheck, ImagePlus, X, Tag, Hash } from "lucide-react";
 
 import { LocationsManager } from "@/components/settings/locations-manager";
 import { AdminMergeTool } from "@/components/admin/admin-merge-tool";
@@ -160,6 +160,12 @@ export default function SettingsPage() {
       }[]
     }
   });
+  const [docNumbering, setDocNumbering] = useState({
+    prefix: '',
+    separator: '-',
+    nextNumber: 1,
+    padding: 0,
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { companyData, updateCompany } = inventoryContext || {};
@@ -217,6 +223,14 @@ export default function SettingsPage() {
           )
         }
       });
+      if (companyData.documentNumbering) {
+        setDocNumbering({
+          prefix: companyData.documentNumbering.prefix || '',
+          separator: companyData.documentNumbering.separator ?? '-',
+          nextNumber: companyData.documentNumbering.nextNumber || 1,
+          padding: companyData.documentNumbering.padding || 0,
+        });
+      }
     }
   }, [companyData]);
 
@@ -258,7 +272,11 @@ export default function SettingsPage() {
     }
     setIsSubmitting(true);
     toast({ title: 'A atualizar...', description: 'A guardar os dados da empresa.' });
-    await updateCompany(companyDetails);
+    const dataToSave = {
+      ...companyDetails,
+      ...(docNumbering.prefix ? { documentNumbering: docNumbering } : {}),
+    };
+    await updateCompany(dataToSave);
     toast({ title: 'Sucesso!', description: 'Os dados da empresa foram atualizados.' });
     setIsSubmitting(false);
   };
@@ -591,6 +609,67 @@ export default function SettingsPage() {
                                 </div>
                               </div>
                             ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-4 pt-6 border-t">
+                        <Label className="flex items-center gap-2 font-semibold text-base">
+                          <Hash className="h-5 w-5 text-primary" />
+                          Numeração de Documentos
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          Configure o formato dos números dos documentos de venda (ex: VD-1, FAC-0001).
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="doc-prefix">Prefixo</Label>
+                            <Input
+                              id="doc-prefix"
+                              value={docNumbering.prefix}
+                              onChange={(e) => setDocNumbering(prev => ({ ...prev, prefix: e.target.value }))}
+                              placeholder="Ex: VD, FAC, REC"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="doc-separator">Separador</Label>
+                            <Input
+                              id="doc-separator"
+                              value={docNumbering.separator}
+                              onChange={(e) => setDocNumbering(prev => ({ ...prev, separator: e.target.value }))}
+                              placeholder="Ex: -, /, ."
+                              maxLength={3}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="doc-next-number">Próximo Número</Label>
+                            <Input
+                              id="doc-next-number"
+                              type="number"
+                              min={1}
+                              value={docNumbering.nextNumber}
+                              onChange={(e) => setDocNumbering(prev => ({ ...prev, nextNumber: Math.max(1, parseInt(e.target.value) || 1) }))}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="doc-padding">Zeros à Esquerda</Label>
+                            <Input
+                              id="doc-padding"
+                              type="number"
+                              min={0}
+                              max={10}
+                              value={docNumbering.padding}
+                              onChange={(e) => setDocNumbering(prev => ({ ...prev, padding: Math.max(0, Math.min(10, parseInt(e.target.value) || 0)) }))}
+                            />
+                            <p className="text-xs text-muted-foreground">0 = sem zeros (ex: 1), 4 = com zeros (ex: 0001)</p>
+                          </div>
+                        </div>
+                        {docNumbering.prefix && (
+                          <div className="rounded-lg bg-muted p-4 flex items-center gap-3">
+                            <span className="text-sm text-muted-foreground">Pré-visualização:</span>
+                            <span className="font-mono font-bold text-lg">
+                              {docNumbering.prefix}{docNumbering.separator}{docNumbering.padding > 0 ? String(docNumbering.nextNumber).padStart(docNumbering.padding, '0') : docNumbering.nextNumber}
+                            </span>
                           </div>
                         )}
                       </div>
