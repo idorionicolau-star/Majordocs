@@ -17,7 +17,6 @@ import { StockAlerts } from "@/components/dashboard/stock-alerts";
 import { DeadStock } from "@/components/dashboard/dead-stock";
 import { EmptyStateWelcome } from "@/components/dashboard/empty-state";
 import { MajorAssistant } from "@/components/assistant/major-assistant";
-import { TacticalSummary } from "@/components/dashboard/tactical-summary";
 
 // Removed dynamic imports to prevent circular dependency issues in production build
 // The loading state is handled by the main component logic below
@@ -78,10 +77,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Row 3 - AI Insights */}
-          <TacticalSummary />
-
-          {/* Row 4 - Stock Alerts + Assistant side by side */}
+          {/* Row 3 - Stock Alerts + Assistant side by side */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[450px]">
             <StockAlerts className="h-full" />
             <MajorAssistant variant="card" className="h-full" />

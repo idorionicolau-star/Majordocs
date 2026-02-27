@@ -1,16 +1,31 @@
 "use client";
 
-import { useContext, useMemo } from "react";
+import { useContext, useMemo, useState, useEffect, useCallback } from "react";
 import { InventoryContext } from "@/context/inventory-context";
+import { useAuth } from "@/firebase/provider";
 import { cn, formatCurrency } from "@/lib/utils";
 import {
-    Package, ShoppingCart, AlertTriangle, Users,
-    TrendingUp, TrendingDown, BarChart3, Warehouse
+    Package, ShoppingCart, AlertTriangle,
+    TrendingUp, BarChart3, Warehouse,
+    Sparkles, ChevronDown, RefreshCw
 } from "lucide-react";
 import { isToday, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+const INSIGHTS_STORAGE_KEY = 'majorstockx-daily-insights';
 
 export const BusinessSummary = () => {
     const context = useContext(InventoryContext);
+    const auth = useAuth();
+    const [insightsOpen, setInsightsOpen] = useState(false);
+    const [insights, setInsights] = useState<string | null>(null);
+    const [insightsLoading, setInsightsLoading] = useState(false);
+    const [insightsFetched, setInsightsFetched] = useState(false);
+
     if (!context) return null;
 
     const { sales, products, dashboardStats, companyData, loading } = context;
@@ -53,6 +68,70 @@ export const BusinessSummary = () => {
             inventoryValue: dashboardStats.totalInventoryValue,
         };
     }, [sales, products, dashboardStats, loading]);
+
+    const fetchInsights = useCallback(async (forceRefresh = false) => {
+        if (insightsLoading) return;
+
+        // Check cache first (once per day)
+        if (!forceRefresh) {
+            try {
+                const cached = localStorage.getItem(INSIGHTS_STORAGE_KEY);
+                if (cached) {
+                    const { text, timestamp } = JSON.parse(cached);
+                    if (isToday(new Date(timestamp))) {
+                        setInsights(text);
+                        setInsightsFetched(true);
+                        return;
+                    }
+                }
+            } catch (e) { /* ignore */ }
+        }
+
+        setInsightsLoading(true);
+        try {
+            const fbToken = await auth.currentUser?.getIdToken();
+            const response = await fetch('/api/generate-insights', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${fbToken}`
+                },
+                body: JSON.stringify({
+                    sales: sales?.slice(0, 100),
+                    products: products,
+                    stats: dashboardStats,
+                    companyId: companyData?.id
+                }),
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Falha ao gerar insights.');
+            }
+
+            const data = await response.json();
+            setInsights(data.text);
+            setInsightsFetched(true);
+
+            // Cache for the rest of the day
+            localStorage.setItem(INSIGHTS_STORAGE_KEY, JSON.stringify({
+                text: data.text,
+                timestamp: new Date().toISOString()
+            }));
+        } catch (error: any) {
+            setInsights(`Não foi possível gerar os insights: ${error.message}`);
+            setInsightsFetched(true);
+        } finally {
+            setInsightsLoading(false);
+        }
+    }, [sales, products, dashboardStats, companyData, auth]);
+
+    // Fetch insights when expanded for the first time
+    useEffect(() => {
+        if (insightsOpen && !insightsFetched && sales && sales.length > 0) {
+            fetchInsights();
+        }
+    }, [insightsOpen, insightsFetched, sales, fetchInsights]);
 
     if (loading || !summary) {
         return (
@@ -157,6 +236,53 @@ export const BusinessSummary = () => {
                     <span className="text-muted-foreground ml-auto flex-shrink-0">{summary.topProduct.qty} un • {formatCurrency(summary.topProduct.revenue, { compact: true })}</span>
                 </div>
             )}
+
+            {/* AI Insights - Collapsible */}
+            <Collapsible open={insightsOpen} onOpenChange={setInsightsOpen} className="mt-3">
+                <div className="flex items-center gap-2">
+                    <CollapsibleTrigger asChild>
+                        <button className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-950/30 dark:to-indigo-950/30 border border-sky-100 dark:border-sky-900/30 hover:shadow-sm transition-all group text-left">
+                            <Sparkles className="h-3.5 w-3.5 text-sky-500 flex-shrink-0" />
+                            <span className="text-xs font-semibold text-sky-700 dark:text-sky-400">Insights da IA</span>
+                            <span className="text-[10px] text-muted-foreground">— análise diária automática</span>
+                            <ChevronDown className={cn(
+                                "h-3.5 w-3.5 text-muted-foreground ml-auto transition-transform duration-200",
+                                insightsOpen && "rotate-180"
+                            )} />
+                        </button>
+                    </CollapsibleTrigger>
+                    {insightsOpen && insightsFetched && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 flex-shrink-0"
+                            onClick={(e) => { e.stopPropagation(); fetchInsights(true); }}
+                            disabled={insightsLoading}
+                        >
+                            <RefreshCw className={cn("h-3.5 w-3.5", insightsLoading && "animate-spin")} />
+                        </Button>
+                    )}
+                </div>
+                <CollapsibleContent className="mt-2">
+                    <div className="rounded-lg border border-sky-100 dark:border-sky-900/20 bg-white/60 dark:bg-slate-800/50 p-4 max-h-72 overflow-y-auto scrollbar-thin">
+                        {insightsLoading ? (
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-5/6" />
+                                <Skeleton className="h-4 w-4/6" />
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-3/4" />
+                            </div>
+                        ) : (
+                            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-slate-600 dark:prose-p:text-slate-400 prose-strong:text-sky-600 dark:prose-strong:text-sky-400">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {insights || "Clique para gerar os insights do dia."}
+                                </ReactMarkdown>
+                            </div>
+                        )}
+                    </div>
+                </CollapsibleContent>
+            </Collapsible>
         </div>
     );
 };
