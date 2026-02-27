@@ -77,10 +77,10 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Row 3 - Stock Alerts + Assistant side by side */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[450px]">
-            <StockAlerts className="h-full" />
-            <MajorAssistant variant="card" className="h-full" />
+          {/* Row 3 - Assistant + Stock Alerts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:h-[450px]">
+            <MajorAssistant variant="card" className="h-[400px] md:h-full md:order-2" />
+            <StockAlerts className="h-[400px] md:h-full md:order-1" />
           </div>
         </>
       ) : (
