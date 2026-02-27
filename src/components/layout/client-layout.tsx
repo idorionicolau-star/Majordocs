@@ -9,6 +9,7 @@ import { Sidebar } from './sidebar';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 const CommandMenu = dynamic(() => import('@/components/command-menu').then(mod => mod.CommandMenu), { ssr: false });
+const MajorAssistant = dynamic(() => import('@/components/assistant/major-assistant').then(mod => ({ default: mod.MajorAssistant })), { ssr: false });
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { MobileNav } from './mobile-nav';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -175,6 +176,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             </main>
           </div>
           <BottomNav onMenuClick={() => setIsMobileNavOpen(true)} />
+          <MajorAssistant className="mb-16 md:mb-0" />
           <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
         </div>
         <SheetContent side="left" className="p-0 glass-panel border-r border-white/10">
