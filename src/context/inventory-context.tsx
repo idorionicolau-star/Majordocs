@@ -1254,10 +1254,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     // But we are in a transaction, so we must read the raw docs.
     const allSourceIds = new Set<string>();
     items.forEach(item => {
-      const aggregatedProduct = products.find(p => p.name === item.productName && (p.location === item.location || (!item.location && p.location === (isMultiLocation ? locations[0]?.id : 'Principal'))));
+      const targetLoc = item.location || (isMultiLocation && locations.length > 0 ? locations[0]?.id : 'Principal');
+      const aggregatedProduct = products.find(p =>
+        p.name === item.productName &&
+        (p.location === targetLoc || (!p.location && (targetLoc === 'Principal' || !item.location)))
+      );
+
       if (aggregatedProduct?.sourceIds) {
         aggregatedProduct.sourceIds.forEach(id => allSourceIds.add(id));
-      } else {
+      } else if (item.productId) {
         allSourceIds.add(item.productId);
       }
     });
@@ -1296,8 +1301,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
         let remainingQuantityToDeduct = item.quantity;
         // Find all underlying documents for this item's name and location
-        const targetLocation = item.location || (isMultiLocation && locations.length > 0 ? locations[0].id : 'Principal');
-        const availableSources = loadedProducts.filter(p => p.data.name === item.productName && (p.data.location === targetLocation || !p.data.location));
+        const targetLocation = item.location || (isMultiLocation && locations.length > 0 ? locations[0]?.id : 'Principal');
+        const availableSources = loadedProducts.filter(p =>
+          p.data.name === item.productName &&
+          (p.data.location === targetLocation || (!p.data.location && (targetLocation === 'Principal' || !item.location)))
+        );
 
         const totalAvailableStock = availableSources.reduce((sum, p) => sum + (p.data.stock - p.data.reservedStock), 0);
 
