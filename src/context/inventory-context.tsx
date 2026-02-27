@@ -1164,14 +1164,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         throw new Error("Documento da empresa não encontrado.");
       }
       const currentCompanyData = companyDoc.data();
-      const numbering = currentCompanyData.documentNumbering;
+      const allNumbering = currentCompanyData.documentNumbering || {};
+      const typeConfig = allNumbering[newSaleData.documentType];
       const newSaleCounter = (currentCompanyData.saleCounter || 0) + 1;
 
       let guideNumber: string;
-      if (numbering && numbering.prefix) {
-        const num = numbering.nextNumber || newSaleCounter;
-        const padded = numbering.padding > 0 ? String(num).padStart(numbering.padding, '0') : String(num);
-        guideNumber = `${numbering.prefix}${numbering.separator || ''}${padded}`;
+      if (typeConfig && typeConfig.prefix) {
+        const num = typeConfig.nextNumber || 1;
+        const padded = typeConfig.padding > 0 ? String(num).padStart(typeConfig.padding, '0') : String(num);
+        guideNumber = `${typeConfig.prefix}${typeConfig.separator || ''}${padded}`;
       } else {
         guideNumber = `GT-${String(newSaleCounter).padStart(6, '0')}`;
       }
@@ -1195,7 +1196,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       transaction.update(companyDocRef, {
         saleCounter: newSaleCounter,
-        ...(numbering && numbering.prefix ? { 'documentNumbering.nextNumber': (numbering.nextNumber || newSaleCounter) + 1 } : {})
+        ...(typeConfig && typeConfig.prefix ? { [`documentNumbering.${newSaleData.documentType}.nextNumber`]: (typeConfig.nextNumber || 1) + 1 } : {})
       });
       transaction.set(newSaleRef, { ...newSaleData, status: finalStatus, guideNumber });
     });
@@ -1273,14 +1274,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       // 2. VALIDATION & LOGIC
       const currentCompanyData = companyDoc.data();
-      const bulkNumbering = currentCompanyData.documentNumbering;
+      const allBulkNumbering = currentCompanyData.documentNumbering || {};
+      const bulkTypeConfig = allBulkNumbering[saleData.documentType];
       const newSaleCounter = (currentCompanyData.saleCounter || 0) + 1;
 
       let guideNumber: string;
-      if (bulkNumbering && bulkNumbering.prefix) {
-        const num = bulkNumbering.nextNumber || newSaleCounter;
-        const padded = bulkNumbering.padding > 0 ? String(num).padStart(bulkNumbering.padding, '0') : String(num);
-        guideNumber = `${bulkNumbering.prefix}${bulkNumbering.separator || ''}${padded}`;
+      if (bulkTypeConfig && bulkTypeConfig.prefix) {
+        const num = bulkTypeConfig.nextNumber || 1;
+        const padded = bulkTypeConfig.padding > 0 ? String(num).padStart(bulkTypeConfig.padding, '0') : String(num);
+        guideNumber = `${bulkTypeConfig.prefix}${bulkTypeConfig.separator || ''}${padded}`;
       } else {
         guideNumber = `GT-${String(newSaleCounter).padStart(6, '0')}`;
       }
@@ -1365,7 +1367,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       // 3. WRITES
       transaction.update(companyDocRef, {
         saleCounter: newSaleCounter,
-        ...(bulkNumbering && bulkNumbering.prefix ? { 'documentNumbering.nextNumber': (bulkNumbering.nextNumber || newSaleCounter) + 1 } : {})
+        ...(bulkTypeConfig && bulkTypeConfig.prefix ? { [`documentNumbering.${saleData.documentType}.nextNumber`]: (bulkTypeConfig.nextNumber || 1) + 1 } : {})
       });
 
       productUpdates.forEach(update => {

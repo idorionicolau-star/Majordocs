@@ -62,12 +62,12 @@ export type Company = {
   isMultiLocation?: boolean;
   locations?: Location[];
   saleCounter?: number;
-  documentNumbering?: {
+  documentNumbering?: Record<string, {
     prefix: string;
     separator: string;
     nextNumber: number;
     padding: number;
-  };
+  }>;
   validUnits?: string[];
   validCategories?: string[]; // Also adding categories while we are at it, for future proofing or if we want to migrate catalogCategories to here.
   logoUrl?: string; // Base64 Data URL for the company logo, displayed in email headers

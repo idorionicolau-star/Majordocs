@@ -160,12 +160,9 @@ export default function SettingsPage() {
       }[]
     }
   });
-  const [docNumbering, setDocNumbering] = useState({
-    prefix: '',
-    separator: '-',
-    nextNumber: 1,
-    padding: 0,
-  });
+  const DOCUMENT_TYPES = ['Venda a Dinheiro', 'Factura', 'Factura Proforma', 'Recibo', 'Guia de Remessa', 'Encomenda'] as const;
+  const defaultTypeConfig = { prefix: '', separator: '-', nextNumber: 1, padding: 0 };
+  const [docNumberingMap, setDocNumberingMap] = useState<Record<string, { prefix: string; separator: string; nextNumber: number; padding: number }>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { companyData, updateCompany } = inventoryContext || {};
@@ -224,12 +221,7 @@ export default function SettingsPage() {
         }
       });
       if (companyData.documentNumbering) {
-        setDocNumbering({
-          prefix: companyData.documentNumbering.prefix || '',
-          separator: companyData.documentNumbering.separator ?? '-',
-          nextNumber: companyData.documentNumbering.nextNumber || 1,
-          padding: companyData.documentNumbering.padding || 0,
-        });
+        setDocNumberingMap(companyData.documentNumbering as any);
       }
     }
   }, [companyData]);
@@ -274,7 +266,9 @@ export default function SettingsPage() {
     toast({ title: 'A atualizar...', description: 'A guardar os dados da empresa.' });
     const dataToSave = {
       ...companyDetails,
-      ...(docNumbering.prefix ? { documentNumbering: docNumbering } : {}),
+      documentNumbering: Object.fromEntries(
+        Object.entries(docNumberingMap).filter(([_, v]) => v.prefix)
+      ),
     };
     await updateCompany(dataToSave);
     toast({ title: 'Sucesso!', description: 'Os dados da empresa foram atualizados.' });
@@ -619,59 +613,80 @@ export default function SettingsPage() {
                           Numeração de Documentos
                         </Label>
                         <p className="text-sm text-muted-foreground">
-                          Configure o formato dos números dos documentos de venda (ex: VD-1, FAC-0001).
+                          Configure o formato dos números para cada tipo de documento. Cada tipo pode ter a sua própria numeração independente.
                         </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="doc-prefix">Prefixo</Label>
-                            <Input
-                              id="doc-prefix"
-                              value={docNumbering.prefix}
-                              onChange={(e) => setDocNumbering(prev => ({ ...prev, prefix: e.target.value }))}
-                              placeholder="Ex: VD, FAC, REC"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="doc-separator">Separador</Label>
-                            <Input
-                              id="doc-separator"
-                              value={docNumbering.separator}
-                              onChange={(e) => setDocNumbering(prev => ({ ...prev, separator: e.target.value }))}
-                              placeholder="Ex: -, /, ."
-                              maxLength={3}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="doc-next-number">Próximo Número</Label>
-                            <Input
-                              id="doc-next-number"
-                              type="number"
-                              min={1}
-                              value={docNumbering.nextNumber}
-                              onChange={(e) => setDocNumbering(prev => ({ ...prev, nextNumber: Math.max(1, parseInt(e.target.value) || 1) }))}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="doc-padding">Zeros à Esquerda</Label>
-                            <Input
-                              id="doc-padding"
-                              type="number"
-                              min={0}
-                              max={10}
-                              value={docNumbering.padding}
-                              onChange={(e) => setDocNumbering(prev => ({ ...prev, padding: Math.max(0, Math.min(10, parseInt(e.target.value) || 0)) }))}
-                            />
-                            <p className="text-xs text-muted-foreground">0 = sem zeros (ex: 1), 4 = com zeros (ex: 0001)</p>
-                          </div>
-                        </div>
-                        {docNumbering.prefix && (
-                          <div className="rounded-lg bg-muted p-4 flex items-center gap-3">
-                            <span className="text-sm text-muted-foreground">Pré-visualização:</span>
-                            <span className="font-mono font-bold text-lg">
-                              {docNumbering.prefix}{docNumbering.separator}{docNumbering.padding > 0 ? String(docNumbering.nextNumber).padStart(docNumbering.padding, '0') : docNumbering.nextNumber}
-                            </span>
-                          </div>
-                        )}
+                        <Accordion type="multiple" className="w-full space-y-2">
+                          {DOCUMENT_TYPES.map((docType) => {
+                            const cfg = docNumberingMap[docType] || defaultTypeConfig;
+                            const updateField = (field: string, value: any) => {
+                              setDocNumberingMap(prev => ({
+                                ...prev,
+                                [docType]: { ...defaultTypeConfig, ...prev[docType], [field]: value }
+                              }));
+                            };
+                            const previewNum = cfg.padding > 0 ? String(cfg.nextNumber || 1).padStart(cfg.padding, '0') : String(cfg.nextNumber || 1);
+                            return (
+                              <AccordionItem key={docType} value={docType} className="border rounded-lg">
+                                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                                  <div className="flex items-center gap-3">
+                                    <span className="font-medium">{docType}</span>
+                                    {cfg.prefix && (
+                                      <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded text-muted-foreground">
+                                        {cfg.prefix}{cfg.separator}{previewNum}
+                                      </span>
+                                    )}
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="px-4 pb-4">
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">Prefixo</Label>
+                                      <Input
+                                        value={cfg.prefix}
+                                        onChange={(e) => updateField('prefix', e.target.value)}
+                                        placeholder="Ex: VD"
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">Separador</Label>
+                                      <Input
+                                        value={cfg.separator}
+                                        onChange={(e) => updateField('separator', e.target.value)}
+                                        placeholder="-"
+                                        maxLength={3}
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">Próx. Número</Label>
+                                      <Input
+                                        type="number"
+                                        min={1}
+                                        value={cfg.nextNumber || 1}
+                                        onChange={(e) => updateField('nextNumber', Math.max(1, parseInt(e.target.value) || 1))}
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">Zeros</Label>
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        max={10}
+                                        value={cfg.padding || 0}
+                                        onChange={(e) => updateField('padding', Math.max(0, Math.min(10, parseInt(e.target.value) || 0)))}
+                                      />
+                                    </div>
+                                  </div>
+                                  {cfg.prefix && (
+                                    <div className="mt-3 rounded-md bg-muted p-3 flex items-center gap-2">
+                                      <span className="text-xs text-muted-foreground">Pré-visualização:</span>
+                                      <span className="font-mono font-bold">{cfg.prefix}{cfg.separator}{previewNum}</span>
+                                    </div>
+                                  )}
+                                </AccordionContent>
+                              </AccordionItem>
+                            );
+                          })}
+                        </Accordion>
                       </div>
 
                       <div className="flex justify-end">

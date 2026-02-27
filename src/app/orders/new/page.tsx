@@ -234,14 +234,15 @@ export default function NewOrderPage() {
                 transaction.set(orderRef, newOrder);
 
                 const companyData = companyDoc.data();
-                const numbering = companyData.documentNumbering;
+                const allNumbering = companyData.documentNumbering || {};
+                const orderTypeConfig = allNumbering['Encomenda'];
                 const newSaleCounter = (companyData.saleCounter || 0) + 1;
 
                 let guideNumber: string;
-                if (numbering && numbering.prefix) {
-                    const num = numbering.nextNumber || newSaleCounter;
-                    const padded = numbering.padding > 0 ? String(num).padStart(numbering.padding, '0') : String(num);
-                    guideNumber = `${numbering.prefix}${numbering.separator || ''}${padded}`;
+                if (orderTypeConfig && orderTypeConfig.prefix) {
+                    const num = orderTypeConfig.nextNumber || 1;
+                    const padded = orderTypeConfig.padding > 0 ? String(num).padStart(orderTypeConfig.padding, '0') : String(num);
+                    guideNumber = `${orderTypeConfig.prefix}${orderTypeConfig.separator || ''}${padded}`;
                 } else {
                     guideNumber = `ENC-${String(newSaleCounter).padStart(6, '0')}`;
                 }
@@ -268,7 +269,7 @@ export default function NewOrderPage() {
 
                 transaction.update(companyRef, {
                     saleCounter: newSaleCounter,
-                    ...(numbering && numbering.prefix ? { 'documentNumbering.nextNumber': (numbering.nextNumber || newSaleCounter) + 1 } : {})
+                    ...(orderTypeConfig && orderTypeConfig.prefix ? { [`documentNumbering.Encomenda.nextNumber`]: (orderTypeConfig.nextNumber || 1) + 1 } : {})
                 });
 
                 if (productRef && productData) {
