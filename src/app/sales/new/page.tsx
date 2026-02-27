@@ -188,7 +188,10 @@ export default function NewSalePage() {
         return catalogProducts.filter(p => inStockNames.includes(p.name));
     }, [products, catalogProducts, watchedLocation, isMultiLocation]);
 
-    const selectedProductInstance = products?.find(p => p.name === watchedProductName && p.location === watchedLocation);
+    const selectedProductInstance = products?.find(p =>
+        p.name === watchedProductName &&
+        (isMultiLocation ? p.location === watchedLocation : true)
+    );
     const availableStock = selectedProductInstance ? selectedProductInstance.stock - selectedProductInstance.reservedStock : 0;
 
     const handleProductSelect = (productName: string, product?: CatalogProduct) => {
@@ -210,8 +213,11 @@ export default function NewSalePage() {
             } else {
                 form.clearErrors("quantity");
             }
-        } else if (watchedProductName && watchedLocation) {
-            const productExistsInLocation = products.some(p => p.name === watchedProductName && p.location === watchedLocation);
+        } else if (watchedProductName) {
+            const productExistsInLocation = products.some(p =>
+                p.name === watchedProductName &&
+                (isMultiLocation ? p.location === watchedLocation : true)
+            );
             if (!productExistsInLocation) {
                 form.setError("productName", { type: "manual", message: `Produto sem estoque nesta localização.` });
             } else {
@@ -262,7 +268,7 @@ export default function NewSalePage() {
 
         const newSale: Omit<Sale, 'id' | 'guideNumber'> = {
             date: values.date.toISOString(),
-            productId: products?.find(p => p.name === values.productName)?.id || 'unknown',
+            productId: products?.find(p => p.name === values.productName && (isMultiLocation ? p.location === values.location : true))?.id || 'unknown',
             productName: values.productName,
             quantity: values.quantity,
             unit: values.unit,
