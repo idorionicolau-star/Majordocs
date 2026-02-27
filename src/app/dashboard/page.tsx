@@ -4,7 +4,7 @@ import { useContext } from "react";
 import { InventoryContext } from "@/context/inventory-context";
 import { Lock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { QuickActions } from "@/components/dashboard/quick-actions";
+import { BusinessSummary } from "@/components/dashboard/business-summary";
 import { KPISkeleton } from "@/components/dashboard/kpi-skeleton";
 import { PanelSkeleton } from "@/components/dashboard/panel-skeleton";
 
@@ -48,8 +48,8 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-4 animate-in fade-in duration-700 pb-10 main-content">
 
-      {/* 1. Quick Action Cards (Top Row) */}
-      <QuickActions />
+      {/* 1. Business Summary (Top Row) */}
+      <BusinessSummary />
 
       {isPrivilegedUser ? (
         <>
