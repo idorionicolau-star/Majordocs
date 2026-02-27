@@ -5,7 +5,7 @@
 import { useState, useEffect, useContext, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlusCircle, Trash2, Edit, Search, ChevronsDown } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Search, ChevronsDown, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
@@ -51,7 +51,7 @@ export function CatalogManager() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { companyId } = inventoryContext || {};
+  const { companyId, products: inventoryProducts, addCatalogProduct, addCatalogCategory, catalogCategories: contextCatalogCategories } = inventoryContext || {};
 
   const [activeTab, setActiveTab] = useState("categories");
   const [highlightProductsTab, setHighlightProductsTab] = useState(false);
@@ -59,6 +59,7 @@ export function CatalogManager() {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const [currentProductPage, setCurrentProductPage] = useState(1);
   const [currentCategoryPage, setCurrentCategoryPage] = useState(1);
@@ -137,6 +138,60 @@ export function CatalogManager() {
     } catch (e) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível adicionar a categoria.' });
     }
+  };
+
+  const handleSyncMissingProducts = async () => {
+    if (!inventoryProducts || !products) return;
+
+    setIsSyncing(true);
+    const catalogNames = new Set(products.map((p) => p.name.toLowerCase().trim()));
+
+    // Group by name to avoid duplicates if inventory has multiple instances of same product name
+    const uniqueMissingProducts = new Map<string, Product>();
+    for (const p of inventoryProducts) {
+      const normName = p.name.toLowerCase().trim();
+      if (!catalogNames.has(normName) && !uniqueMissingProducts.has(normName)) {
+        uniqueMissingProducts.set(normName, p);
+      }
+    }
+
+    const missingProducts = Array.from(uniqueMissingProducts.values());
+
+    if (missingProducts.length === 0) {
+      toast({ title: 'Tudo sincronizado', description: 'Nenhum produto em falta no catálogo.' });
+      setIsSyncing(false);
+      return;
+    }
+
+    toast({ title: 'A sincronizar...', description: `A adicionar ${missingProducts.length} produto(s) em falta ao catálogo.` });
+
+    let addedCount = 0;
+    for (const missing of missingProducts) {
+      try {
+        const categoryName = missing.category || 'Geral';
+        const catExists = contextCatalogCategories?.some((c: any) => c.name.toLowerCase() === categoryName.toLowerCase());
+        if (!catExists && addCatalogCategory) {
+          await addCatalogCategory(categoryName);
+        }
+
+        if (addCatalogProduct) {
+          await addCatalogProduct({
+            name: missing.name,
+            category: categoryName,
+            price: missing.price || 0,
+            unit: missing.unit || 'un',
+            lowStockThreshold: missing.lowStockThreshold || 0,
+            criticalStockThreshold: missing.criticalStockThreshold || 0,
+          });
+          addedCount++;
+        }
+      } catch (e) {
+        console.error("Failed to sync", missing.name, e);
+      }
+    }
+
+    toast({ title: 'Sincronização Concluída', description: `${addedCount} produto(s) adicionado(s) ao catálogo.` });
+    setIsSyncing(false);
   };
 
   const handleAddProduct = async (productData: Omit<CatalogProduct, 'id'>) => {
@@ -354,6 +409,10 @@ export function CatalogManager() {
                 <p className="text-sm text-muted-foreground">A gerir {products?.length || 0} produtos base do catálogo.</p>
               </div>
               <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleSyncMissingProducts} disabled={isSyncing}>
+                  <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+                  {isSyncing ? "A Sincronizar..." : "Sincronizar Inventário"}
+                </Button>
                 <AddCatalogProductDialog
                   categories={categories?.map(c => c.name) || []}
                   units={inventoryContext?.availableUnits || []}
