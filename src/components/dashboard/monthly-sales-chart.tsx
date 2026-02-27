@@ -36,11 +36,12 @@ export function MonthlySalesChart({ className }: { className?: string }) {
 
       return dayInterval.map(day => {
         const daySales = sales.filter(s => {
+          if (s.documentType === 'Factura Proforma') return false;
           const saleDate = new Date(s.date);
           return saleDate.getFullYear() === day.getFullYear() &&
             saleDate.getMonth() === day.getMonth() &&
             saleDate.getDate() === day.getDate();
-        }).reduce((sum, s) => sum + s.totalValue, 0);
+        }).reduce((sum, s) => sum + (s.amountPaid ?? s.totalValue), 0);
 
         const dayName = format(day, 'dd/MMM', { locale: pt });
         return {
@@ -75,9 +76,10 @@ export function MonthlySalesChart({ className }: { className?: string }) {
 
     const salesByMonth = monthInterval.map(monthStart => {
       const monthSales = sales.filter(s => {
+        if (s.documentType === 'Factura Proforma') return false;
         const saleDate = new Date(s.date);
         return saleDate.getFullYear() === monthStart.getFullYear() && saleDate.getMonth() === monthStart.getMonth();
-      }).reduce((sum, s) => sum + s.totalValue, 0);
+      }).reduce((sum, s) => sum + (s.amountPaid ?? s.totalValue), 0);
 
       const monthName = format(monthStart, 'MMM', { locale: pt });
       return {

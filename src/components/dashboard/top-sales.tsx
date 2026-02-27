@@ -40,7 +40,7 @@ export function TopSales({ className }: { className?: string }) {
     if (!sales || sales.length === 0) return [];
 
     const now = new Date();
-    let filteredSales = sales; // Default to all sales
+    let filteredSales = sales.filter(s => s.documentType !== 'Factura Proforma'); // Exclude proformas
 
     // Filter by period
     if (period === 'daily') {

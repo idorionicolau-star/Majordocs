@@ -233,10 +233,14 @@ export function MajorAssistant({ variant = 'sheet', className }: { variant?: 'sh
             const allOrders = context?.orders || [];
 
             const todaySales = allSales.filter((s: any) => {
+                if (s.documentType === 'Factura Proforma') return false;
                 const d = new Date(s.date);
                 return d.toDateString() === now.toDateString();
             });
-            const monthSales = allSales.filter((s: any) => new Date(s.date) >= startOfMonth);
+            const monthSales = allSales.filter((s: any) => {
+                if (s.documentType === 'Factura Proforma') return false;
+                return new Date(s.date) >= startOfMonth;
+            });
 
             const revenueToday = todaySales.reduce((sum: number, s: any) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);
             const revenueMonth = monthSales.reduce((sum: number, s: any) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);

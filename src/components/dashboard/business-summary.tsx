@@ -36,10 +36,10 @@ export const BusinessSummary = () => {
         if (loading || !sales || !products || !dashboardStats) return null;
 
         const now = new Date();
-        const todaySales = sales.filter(s => isToday(parseISO(s.date)));
+        const todaySales = sales.filter(s => s.documentType !== 'Factura Proforma' && isToday(parseISO(s.date)));
         const monthStart = startOfMonth(now);
         const monthEnd = endOfMonth(now);
-        const monthSales = sales.filter(s => isWithinInterval(parseISO(s.date), { start: monthStart, end: monthEnd }));
+        const monthSales = sales.filter(s => s.documentType !== 'Factura Proforma' && isWithinInterval(parseISO(s.date), { start: monthStart, end: monthEnd }));
 
         const todayRevenue = todaySales.reduce((sum, s) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);
         const monthRevenue = monthSales.reduce((sum, s) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);
