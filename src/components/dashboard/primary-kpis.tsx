@@ -228,12 +228,12 @@ export const PrimaryKPIs = () => {
 
     return (
         <div>
-            <div className="mb-4">
-                <Tabs defaultValue="daily" value={period} onValueChange={(value) => setPeriod(value as Period)} className="w-full sm:w-auto">
-                    <TabsList className="grid w-full grid-cols-3 sm:w-auto">
-                        <TabsTrigger value="daily">Diário</TabsTrigger>
-                        <TabsTrigger value="weekly">Semanal</TabsTrigger>
-                        <TabsTrigger value="monthly">Mensal</TabsTrigger>
+            <div className="flex justify-end mb-2">
+                <Tabs defaultValue="daily" value={period} onValueChange={(value) => setPeriod(value as Period)}>
+                    <TabsList className="h-8">
+                        <TabsTrigger value="daily" className="text-xs px-3 h-6">Diário</TabsTrigger>
+                        <TabsTrigger value="weekly" className="text-xs px-3 h-6">Semanal</TabsTrigger>
+                        <TabsTrigger value="monthly" className="text-xs px-3 h-6">Mensal</TabsTrigger>
                     </TabsList>
                 </Tabs>
             </div>
