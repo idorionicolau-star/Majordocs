@@ -224,9 +224,44 @@ export function downloadSaleDocument(saleOrSales: Sale | Sale[], companyData: Co
             letter-spacing: 0.05em;
             margin-bottom: 1rem;
           }
+          .actions-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-top: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            z-index: 100;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+          }
+          .actions-bar button {
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s ease;
+          }
+          .btn-print {
+            background: var(--primary);
+            color: #fff;
+          }
+          .btn-print:hover { opacity: 0.9; }
+          .btn-pdf {
+            background: var(--muted);
+            color: var(--foreground);
+            border: 1px solid var(--border) !important;
+          }
+          .btn-pdf:hover { background: #e4e4e7; }
           @media print {
             body { margin: 0; background-color: white; }
             .wrapper { margin: 0; padding: 0; border: none; box-shadow: none; max-width: 100%; }
+            .actions-bar { display: none !important; }
           }
       </style>
   `);
@@ -305,11 +340,16 @@ export function downloadSaleDocument(saleOrSales: Sale | Sale[], companyData: Co
   `);
 
   printWindow.document.write(`<div class="footer"><p>${companyData?.name || 'MajorStockX'} &copy; ${new Date().getFullYear()} &bull; Processado por Software</p></div>`);
-  printWindow.document.write('</div></body></html>');
-  printWindow.document.close();
+  printWindow.document.write('</div>');
 
-  setTimeout(() => {
-    printWindow.focus();
-    printWindow.print();
-  }, 500);
+  // Action buttons (hidden during print)
+  printWindow.document.write(`
+    <div class="actions-bar">
+      <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+      <button class="btn-pdf" onclick="window.print()">📄 Guardar PDF</button>
+    </div>
+  `);
+
+  printWindow.document.write('</body></html>');
+  printWindow.document.close();
 }
