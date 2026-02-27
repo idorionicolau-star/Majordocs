@@ -228,7 +228,7 @@ export const PrimaryKPIs = () => {
 
     return (
         <div>
-            <div className="flex justify-end mb-2">
+            <div className="flex justify-center mb-2">
                 <Tabs defaultValue="daily" value={period} onValueChange={(value) => setPeriod(value as Period)}>
                     <TabsList className="h-8">
                         <TabsTrigger value="daily" className="text-xs px-3 h-6">Diário</TabsTrigger>
