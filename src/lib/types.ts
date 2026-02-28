@@ -297,9 +297,11 @@ export interface InventoryContextType {
   companyId: string | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<boolean>;
   logout: () => void;
   resetPassword: (email: string) => Promise<void>;
   registerCompany: (companyName: string, adminUsername: string, adminEmail: string, adminPass: string, businessType: 'manufacturer' | 'reseller') => Promise<boolean>;
+  registerCompanyWithGoogle: (companyName: string, businessType: 'manufacturer' | 'reseller') => Promise<boolean>;
   profilePicture: string | null;
   setProfilePicture: (url: string) => void;
 

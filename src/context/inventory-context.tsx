@@ -24,6 +24,8 @@ import {
   signOut,
   sendPasswordResetEmail,
   User as FirebaseAuthUser,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import {
   collection,
@@ -311,6 +313,40 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loginWithGoogle = async (): Promise<boolean> => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+
+      // Verify if the user exists in our users collection
+      if (firestore) {
+        const userDoc = await getDoc(doc(firestore, `users/${result.user.uid}`));
+        if (!userDoc.exists()) {
+          // User authenticated with Google but has no company mapping
+          await auth.signOut();
+          toast({
+            variant: 'destructive',
+            title: 'Conta não encontrada',
+            description: 'Esta conta Google não está associada a nenhuma empresa. Por favor, faça o registo.'
+          });
+          return false;
+        }
+      }
+
+      return true;
+    } catch (error: any) {
+      console.error("Google Auth login error:", error);
+      let message = "Ocorreu um erro ao fazer login com o Google.";
+      if (error.code === 'auth/popup-closed-by-user') {
+        message = "O login foi cancelado.";
+      } else if (error.code === 'auth/operation-not-allowed') {
+        message = "O login com Google não está activo nas configurações do sistema.";
+      }
+      toast({ variant: 'destructive', title: 'Erro de Login', description: message });
+      throw error;
+    }
+  };
+
   const resetPassword = async (email: string): Promise<void> => {
     try {
       const actionCodeSettings = {
@@ -416,6 +452,109 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       let message = 'Ocorreu um erro inesperado durante o registo.';
       if (error.code === 'auth/email-already-in-use') {
         message = 'Este endereço de email já está a ser utilizado.';
+      } else if (error.message.includes('Uma empresa com este nome')) {
+        message = error.message;
+      }
+      toast({ variant: 'destructive', title: 'Erro no Registo', description: message });
+      return false;
+    }
+  };
+
+  const registerCompanyWithGoogle = async (companyName: string, businessType: 'manufacturer' | 'reseller'): Promise<boolean> => {
+    if (!firestore) return false;
+
+    try {
+      const companiesRef = collection(firestore, 'companies');
+      const companyQuery = query(companiesRef, where('name', '==', companyName));
+      const existingCompanySnapshot = await getDocs(companyQuery);
+      if (!existingCompanySnapshot.empty) {
+        throw new Error('Uma empresa com este nome já existe.');
+      }
+
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
+      const newUserId = userCredential.user.uid;
+      const adminEmail = userCredential.user.email || '';
+      const adminUsername = userCredential.user.displayName || 'Admin';
+
+      // Check if user already has a company
+      const existingUserMap = await getDoc(doc(firestore, `users/${newUserId}`));
+      if (existingUserMap.exists()) {
+        toast({
+          variant: 'destructive',
+          title: 'Erro no Registo',
+          description: 'Esta conta Google já está associada a uma empresa. Por favor, faça login em vez de se registar.'
+        });
+        return false;
+      }
+
+      const newCompanyRef = doc(companiesRef);
+
+      const adminPermissions = allPermissions.reduce((acc, p) => {
+        acc[p.id] = 'write';
+        return acc;
+      }, {} as Record<ModulePermission, PermissionLevel>);
+
+      const employeesCollectionRef = collection(firestore, `companies/${newCompanyRef.id}/employees`);
+      const newEmployeeRef = doc(employeesCollectionRef, newUserId);
+      const userMapDocRef = doc(firestore, `users/${newUserId}`);
+
+      const batch = writeBatch(firestore);
+
+      batch.set(newEmployeeRef, {
+        username: adminUsername,
+        email: adminEmail,
+        role: 'Admin',
+        companyId: newCompanyRef.id,
+        permissions: adminPermissions,
+      });
+
+      batch.set(userMapDocRef, { companyId: newCompanyRef.id });
+
+      const trialEndsAt = new Date();
+      trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+
+      batch.set(newCompanyRef, {
+        name: companyName,
+        ownerId: newUserId,
+        isMultiLocation: false,
+        locations: [],
+        businessType,
+        saleCounter: 0,
+        status: 'trial',
+        trialEndsAt: trialEndsAt.toISOString()
+      });
+
+      await batch.commit();
+
+      try {
+        const fbToken = await auth.currentUser?.getIdToken();
+        await fetch('/api/email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${fbToken}`
+          },
+          body: JSON.stringify({
+            to: adminEmail,
+            subject: '🎉 Bem-vindo ao MajorStockX!',
+            type: 'WELCOME',
+            companyName: companyName,
+            companyId: newCompanyRef.id,
+          }),
+        });
+      } catch (emailError) {
+        console.warn("Falha ao enviar e-mail de boas-vindas, mas o registo foi bem-sucedido:", emailError);
+      }
+
+      return true;
+    } catch (error: any) {
+      console.error('Registration with Google error: ', error);
+      let message = 'Ocorreu um erro inesperado durante o registo.';
+      if (error.code === 'auth/popup-closed-by-user') {
+        message = 'Registo com Google cancelado.';
+      } else if (error.code === 'auth/operation-not-allowed') {
+        message = "O login com Google não está activo nas configurações do sistema.";
       } else if (error.message.includes('Uma empresa com este nome')) {
         message = error.message;
       }
@@ -2535,8 +2674,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const value: InventoryContextType = useMemo(() => ({
-    user, firebaseUser, companyId, loading: isDataLoading,
-    login, logout, resetPassword, registerCompany, profilePicture, setProfilePicture: handleSetProfilePicture,
+    user,
+    firebaseUser,
+    companyId,
+    loading: isDataLoading,
+    login,
+    loginWithGoogle,
+    logout,
+    resetPassword,
+    registerCompany,
+    registerCompanyWithGoogle,
+    profilePicture, setProfilePicture: handleSetProfilePicture,
     canView, canEdit,
     companyData,
     products: products,
@@ -2580,7 +2728,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     confirmAction,
   }), [
     user, firebaseUser, companyId, isDataLoading,
-    login, logout, resetPassword, registerCompany, profilePicture, handleSetProfilePicture,
+    login, loginWithGoogle, logout, resetPassword, registerCompany, registerCompanyWithGoogle, profilePicture, handleSetProfilePicture,
     canView, canEdit,
     companyData, productsData, salesData, productionsData, ordersData, stockMovementsData, catalogProductsData, catalogCategoriesData,
     rawMaterialsData, recipesData,
