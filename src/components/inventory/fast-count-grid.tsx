@@ -7,10 +7,12 @@ import { InventoryContext } from "@/context/inventory-context";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
-import { Search, Save, MapPin } from "lucide-react";
+import { Search, Save, MapPin, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { writeBatch, doc } from "firebase/firestore";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { writeBatch, doc, collection, serverTimestamp } from "firebase/firestore";
 import { useFirestore } from "@/firebase/provider";
+import { StockMovement, Product } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils";
 
@@ -43,14 +45,17 @@ interface FastCountRow {
     originalStock: number;
     stock: string; // The editable field, kept as string while editing
     hasChanged: boolean;
+    sourceIds: string[];
+    lastUpdated?: string;
 }
 
 export function FastCountGrid() {
     const inventoryContext = useContext(InventoryContext);
-    const { products, companyId, locations: contextLocations } = inventoryContext || {};
+    const { products, companyId, locations: contextLocations, user } = inventoryContext || {};
     const { toast } = useToast();
     const { theme, systemTheme } = useTheme();
     const firestore = useFirestore();
+    const isMobile = useMediaQuery("(max-width: 640px)");
 
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedLocation, setSelectedLocation] = useState<string>("all");
@@ -100,6 +105,8 @@ export function FastCountGrid() {
                 originalStock: p.stock || 0,
                 stock: (p.stock || 0).toString(),
                 hasChanged: false,
+                sourceIds: p.sourceIds || [p.id!],
+                lastUpdated: p.lastUpdated,
             };
         });
     }, [products, searchTerm, selectedLocation, editedRows]);
@@ -108,7 +115,27 @@ export function FastCountGrid() {
     const gridThemeClass = currentTheme === 'dark' ? 'rdg-dark' : 'rdg-light';
 
     const columns: Column<FastCountRow>[] = [
-        { key: 'name', name: 'Artigo', minWidth: 250 },
+        {
+            key: 'name',
+            name: 'Artigo',
+            minWidth: isMobile ? 220 : 250,
+            frozen: true,
+            renderCell: ({ row }) => {
+                const isRecentlyAudited = row.lastUpdated &&
+                    (new Date().getTime() - new Date(row.lastUpdated).getTime() < 24 * 60 * 60 * 1000);
+
+                return (
+                    <div className="flex items-center gap-2">
+                        <span className="truncate">{row.name}</span>
+                        {isRecentlyAudited && (
+                            <div title="Auditado recentemente (últimas 24h)">
+                                <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+        },
         { key: 'category', name: 'Categoria', width: 140 },
         {
             key: 'location',
@@ -177,24 +204,62 @@ export function FastCountGrid() {
     const changedCount = Object.keys(editedRows).length;
 
     const handleSave = async () => {
-        if (!firestore || !companyId || changedCount === 0) return;
-
         setIsSaving(true);
         try {
             let batch = writeBatch(firestore);
+            const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
             const docsToUpdate = Object.values(editedRows).filter(r => r.hasChanged);
 
             let operationsCount = 0;
 
             for (const row of docsToUpdate) {
-                const docRef = doc(firestore, `companies/${companyId}/products`, row.instanceId);
-                const newStock = parseFloat(row.stock) || 0;
+                const newStockNum = parseFloat(row.stock) || 0;
+                const adjustment = newStockNum - row.originalStock;
 
-                batch.update(docRef, { stock: newStock });
+                // Handle merged products: update first source with total, zero out others
+                const primaryId = row.sourceIds[0];
+                const primaryDocRef = doc(firestore, `companies/${companyId}/products`, primaryId);
+
+                batch.update(primaryDocRef, {
+                    stock: newStockNum,
+                    lastUpdated: new Date().toISOString()
+                });
+                operationsCount++;
+
+                // If it was a merged product, zero out the other source IDs
+                if (row.sourceIds.length > 1) {
+                    for (let i = 1; i < row.sourceIds.length; i++) {
+                        const otherDocRef = doc(firestore, `companies/${companyId}/products`, row.sourceIds[i]);
+                        batch.update(otherDocRef, {
+                            stock: 0,
+                            reservedStock: 0,
+                            lastUpdated: new Date().toISOString()
+                        });
+                        operationsCount++;
+                    }
+                }
+
+                // Record Stock Movement
+                const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+                    productId: primaryId,
+                    productName: row.name,
+                    type: 'ADJUSTMENT',
+                    quantity: adjustment,
+                    toLocationId: row.location,
+                    reason: 'Contagem Rápida',
+                    userId: user?.id || 'unknown',
+                    userName: user?.username || 'Sistema',
+                    isAudit: true,
+                    systemCountBefore: row.originalStock,
+                    physicalCount: newStockNum,
+                };
+
+                const movementDocRef = doc(movementsRef);
+                batch.set(movementDocRef, { ...movement, timestamp: serverTimestamp() });
                 operationsCount++;
 
                 // Firebase batches have a 500 operation limit
-                if (operationsCount >= 490) {
+                if (operationsCount >= 480) {
                     await batch.commit();
                     batch = writeBatch(firestore);
                     operationsCount = 0;
@@ -262,7 +327,26 @@ export function FastCountGrid() {
                 </div>
             </div>
 
-            <div className={`border rounded-lg overflow-hidden flex flex-col ${gridThemeClass}`} style={{ height: 'calc(100vh - 280px)', minHeight: '400px' }}>
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                .grid-with-solids .rdg-cell {
+                    background-color: var(--background);
+                }
+                .grid-with-solids .rdg-header-row .rdg-cell {
+                    background-color: var(--muted);
+                    font-weight: 700;
+                }
+                .grid-with-solids .rdg-cell-frozen {
+                    z-index: 1;
+                    background-color: var(--background) !important;
+                }
+                .grid-with-solids .rdg-header-row .rdg-cell-frozen {
+                    z-index: 2;
+                    background-color: var(--muted) !important;
+                }
+            `}} />
+
+            <div className={`border rounded-lg overflow-hidden flex flex-col ${gridThemeClass} grid-with-solids`} style={{ height: 'calc(100vh - 280px)', minHeight: '400px' }}>
                 <DataGrid
                     columns={columns}
                     rows={rows}
