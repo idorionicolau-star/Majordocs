@@ -74,10 +74,12 @@ export const BusinessSummary = () => {
     const fetchInsights = useCallback(async (forceRefresh = false) => {
         if (insightsLoading) return;
 
+        const storageKey = `${INSIGHTS_STORAGE_KEY}-${auth.currentUser?.uid || 'guest'}`;
+
         // Check cache first (once per day)
         if (!forceRefresh) {
             try {
-                const cached = localStorage.getItem(INSIGHTS_STORAGE_KEY);
+                const cached = localStorage.getItem(storageKey);
                 if (cached) {
                     const { text, timestamp } = JSON.parse(cached);
                     if (isToday(new Date(timestamp))) {
@@ -118,7 +120,7 @@ export const BusinessSummary = () => {
             setInsightsFetched(true);
 
             // Cache for the rest of the day
-            localStorage.setItem(INSIGHTS_STORAGE_KEY, JSON.stringify({
+            localStorage.setItem(storageKey, JSON.stringify({
                 text: data.text,
                 timestamp: new Date().toISOString()
             }));
@@ -128,7 +130,7 @@ export const BusinessSummary = () => {
         } finally {
             setInsightsLoading(false);
         }
-    }, [sales, products, dashboardStats, companyData, auth]);
+    }, [sales, products, dashboardStats, companyData, auth.currentUser?.uid]);
 
     // Fetch insights when expanded for the first time
     useEffect(() => {

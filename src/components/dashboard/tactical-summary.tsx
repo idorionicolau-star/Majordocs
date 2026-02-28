@@ -30,9 +30,11 @@ export const TacticalSummary = () => {
   const generateInsights = useCallback(async (forceRefresh = false) => {
     setIsLoading(true);
 
+    const storageKey = `${STORAGE_KEY}-${auth.currentUser?.uid || 'guest'}`;
+
     if (!forceRefresh) {
       try {
-        const cachedItem = localStorage.getItem(STORAGE_KEY);
+        const cachedItem = localStorage.getItem(storageKey);
         if (cachedItem) {
           const { insights: cachedInsights, timestamp } = JSON.parse(cachedItem);
           if (isToday(new Date(timestamp))) {
@@ -73,7 +75,7 @@ export const TacticalSummary = () => {
       setInsights(data.text);
 
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        localStorage.setItem(storageKey, JSON.stringify({
           insights: data.text,
           timestamp: new Date().toISOString()
         }));
@@ -86,7 +88,7 @@ export const TacticalSummary = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [sales, products, dashboardStats]);
+  }, [sales, products, dashboardStats, companyData, auth.currentUser?.uid]);
 
   useEffect(() => {
     if (sales && sales.length > 0 && dashboardStats) {

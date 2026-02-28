@@ -28,9 +28,11 @@ export function StrategicSummary() {
   const generateSummary = useCallback(async (forceRefresh = false) => {
     setIsLoading(true);
 
+    const storageKey = `${STORAGE_KEY}-${firebaseUser?.uid || 'guest'}`;
+
     if (!forceRefresh) {
       try {
-        const cachedItem = localStorage.getItem(STORAGE_KEY);
+        const cachedItem = localStorage.getItem(storageKey);
         if (cachedItem) {
           const { summary: cachedSummary, timestamp } = JSON.parse(cachedItem);
           if (isToday(new Date(timestamp))) {
@@ -74,7 +76,7 @@ export function StrategicSummary() {
       setIsFreshlyGenerated(true);
       setSummary(data.text);
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ summary: data.text, timestamp: new Date().toISOString() }));
+        localStorage.setItem(storageKey, JSON.stringify({ summary: data.text, timestamp: new Date().toISOString() }));
       } catch (error) {
         console.error("Failed to write to localStorage", error);
       }
@@ -84,7 +86,7 @@ export function StrategicSummary() {
     } finally {
       setIsLoading(false);
     }
-  }, [sales, products, dashboardStats, stockMovements, user, companyData]);
+  }, [sales, products, dashboardStats, stockMovements, user, companyData, firebaseUser?.uid]);
 
   useEffect(() => {
     // Make sure we only generate summary when data is available
