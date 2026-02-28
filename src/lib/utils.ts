@@ -84,10 +84,11 @@ export function downloadSaleDocument(saleOrSales: Sale | Sale[], companyData: Co
 
   const docTitle = sale.documentType === 'Factura Proforma'
     ? 'Orçamento / Proposta'
-    : sale.documentType === 'Venda a Dinheiro' ? 'Venda a Dinheiro'
-      : (sale.documentType === 'Guia de Remessa' ? 'Guia de Remessa' : (sale.documentType === 'Recibo' ? 'Recibo' : 'Factura'));
+    : sale.documentType === 'Cotação' ? 'Cotação / Proposta'
+      : sale.documentType === 'Venda a Dinheiro' ? 'Venda a Dinheiro'
+        : (sale.documentType === 'Guia de Remessa' ? 'Guia de Remessa' : (sale.documentType === 'Recibo' ? 'Recibo' : 'Factura'));
 
-  const isProforma = sale.documentType === 'Factura Proforma';
+  const isProforma = sale.documentType === 'Factura Proforma' || sale.documentType === 'Cotação';
 
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;

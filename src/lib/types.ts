@@ -165,7 +165,7 @@ export type Sale = {
   location?: string;
   customerId?: string; // Link to Customer
   status: 'Pago' | 'Levantado' | 'Pendente';
-  documentType: 'Venda a Dinheiro' | 'Guia de Remessa' | 'Factura' | 'Factura Proforma' | 'Recibo' | 'Encomenda';
+  documentType: 'Venda a Dinheiro' | 'Guia de Remessa' | 'Factura' | 'Factura Proforma' | 'Recibo' | 'Encomenda' | 'Cotação';
   clientName?: string; // Legacy field, allow keep for history
   notes?: string;
   transactionId?: string; // For grouping multi-item sales

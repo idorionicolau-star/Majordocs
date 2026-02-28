@@ -67,7 +67,7 @@ const formSchema = z.object({
     const num = Number(val);
     return isNaN(num) ? 0 : num;
   }, z.number().min(0, "O valor pago não pode ser negativo.").optional()),
-  documentType: z.enum(['Venda a Dinheiro', 'Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo', 'Encomenda']),
+  documentType: z.enum(['Venda a Dinheiro', 'Guia de Remessa', 'Factura', 'Factura Proforma', 'Recibo', 'Encomenda', 'Cotação']),
   clientName: z.string().optional(),
   customerId: z.string().optional(),
   notes: z.string().optional(),

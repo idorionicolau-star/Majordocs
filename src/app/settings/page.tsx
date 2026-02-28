@@ -160,7 +160,7 @@ export default function SettingsPage() {
       }[]
     }
   });
-  const DOCUMENT_TYPES = ['Venda a Dinheiro', 'Factura', 'Factura Proforma', 'Recibo', 'Guia de Remessa', 'Encomenda'] as const;
+  const DOCUMENT_TYPES = ['Venda a Dinheiro', 'Factura', 'Factura Proforma', 'Recibo', 'Guia de Remessa', 'Encomenda', 'Cotação'] as const;
   const defaultTypeConfig = { prefix: '', separator: '-', nextNumber: 1, padding: 0 };
   const [docNumberingMap, setDocNumberingMap] = useState<Record<string, { prefix: string; separator: string; nextNumber: number; padding: number }>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
