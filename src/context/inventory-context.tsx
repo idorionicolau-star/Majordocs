@@ -339,14 +339,20 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (error: any) {
       console.error("Google Auth login error:", error);
-      let message = "Ocorreu um erro ao fazer login com o Google.";
+      let message = `Ocorreu um erro ao fazer login com o Google: ${error.message || error.code || 'Desconhecido'}`;
       if (error.code === 'auth/popup-closed-by-user') {
-        message = "O login foi cancelado.";
+        message = "O login foi cancelado pelo utilizador.";
       } else if (error.code === 'auth/operation-not-allowed') {
         message = "O login com Google não está activo nas configurações do sistema.";
+      } else if (error.code === 'auth/account-exists-with-different-credential') {
+        message = "Já existe uma conta com este email. Faça login manualmente (Email/Senha).";
+      } else if (error.code === 'auth/popup-blocked') {
+        message = "O pop-up de login foi bloqueado. Por favor, permita pop-ups para este site.";
+      } else if (error.code === 'auth/unauthorized-domain') {
+        message = "Este domínio não está autorizado na Firebase Console para o Google Auth.";
       }
       toast({ variant: 'destructive', title: 'Erro de Login', description: message });
-      throw error;
+      return false;
     }
   };
 
@@ -501,13 +507,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!firestore) return false;
 
     try {
-      const companiesRef = collection(firestore, 'companies');
-      const companyQuery = query(companiesRef, where('name', '==', companyName));
-      const existingCompanySnapshot = await getDocs(companyQuery);
-      if (!existingCompanySnapshot.empty) {
-        throw new Error('Uma empresa com este nome já existe.');
-      }
-
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
       const newUserId = userCredential.user.uid;
@@ -517,12 +516,21 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       // Check if user already has a company
       const existingUserMap = await getDoc(doc(firestore, `users/${newUserId}`));
       if (existingUserMap.exists()) {
+        await auth.signOut();
         toast({
           variant: 'destructive',
           title: 'Erro no Registo',
           description: 'Esta conta Google já está associada a uma empresa. Por favor, faça login em vez de se registar.'
         });
         return false;
+      }
+
+      const companiesRef = collection(firestore, 'companies');
+      const companyQuery = query(companiesRef, where('name', '==', companyName));
+      const existingCompanySnapshot = await getDocs(companyQuery);
+      if (!existingCompanySnapshot.empty) {
+        await auth.signOut();
+        throw new Error('Uma empresa com este nome já existe.');
       }
 
       const newCompanyRef = doc(companiesRef);
@@ -587,12 +595,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (error: any) {
       console.error('Registration with Google error: ', error);
-      let message = 'Ocorreu um erro inesperado durante o registo.';
+      let message = `Erro inesperado: ${error.message || error.code || 'Desconhecido'}`;
       if (error.code === 'auth/popup-closed-by-user') {
         message = 'Registo com Google cancelado.';
       } else if (error.code === 'auth/operation-not-allowed') {
         message = "O login com Google não está activo nas configurações do sistema.";
-      } else if (error.message.includes('Uma empresa com este nome')) {
+      } else if (error.code === 'auth/account-exists-with-different-credential') {
+        message = "Já existe uma conta com este email. Faça login manualmente (Email/Senha).";
+      } else if (error.code === 'auth/popup-blocked') {
+        message = "O pop-up de login foi bloqueado. Por favor, permita pop-ups para este site.";
+      } else if (error.code === 'auth/unauthorized-domain') {
+        message = "Este domínio não está autorizado na Firebase Console para o Google Auth.";
+      } else if (error.message?.includes('Uma empresa com este nome')) {
         message = error.message;
       }
       toast({ variant: 'destructive', title: 'Erro no Registo', description: message });

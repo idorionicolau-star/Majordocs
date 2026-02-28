@@ -86,16 +86,14 @@ export default function RegisterPage() {
       return;
     }
 
-    // Validate only companyName and businessType
-    const isCompanyValid = await form.trigger(['companyName', 'businessType']);
-    if (!isCompanyValid) {
-      toast({ variant: 'destructive', title: 'Campos obrigatórios', description: 'Preencha o Nome da Empresa e Tipo de Negócio antes de continuar com o Google.' });
+    const currentCompanyName = form.getValues('companyName');
+    const currentBusinessType = form.getValues('businessType');
+
+    if (!currentCompanyName || currentCompanyName.trim().length < 3) {
+      toast({ variant: 'destructive', title: 'Campos obrigatórios', description: 'Preencha o Nome da Empresa (mín. 3 caracteres) antes de continuar com o Google.' });
       setIsGoogleLoading(false);
       return;
     }
-
-    const currentCompanyName = form.getValues('companyName');
-    const currentBusinessType = form.getValues('businessType');
 
     try {
       const success = await context.registerCompanyWithGoogle(currentCompanyName, currentBusinessType);
