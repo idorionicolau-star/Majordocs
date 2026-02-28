@@ -67,7 +67,13 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                         setRows(currentRows => {
                             if (currentRows[index]?.name === row.name) {
                                 const newRows = [...currentRows];
-                                newRows[index] = { ...newRows[index], category: suggestedCategory || 'Geral', isCategorizing: false };
+                                // ONLY apply AI suggestion if the user hasn't typed their own category in the meantime
+                                if (newRows[index].category === 'A carregar IA...' || newRows[index].category === '') {
+                                    newRows[index] = { ...newRows[index], category: suggestedCategory || 'Geral', isCategorizing: false };
+                                } else {
+                                    // User already typed something, just remove the loading flag
+                                    newRows[index] = { ...newRows[index], isCategorizing: false };
+                                }
                                 return newRows;
                             }
                             return currentRows;

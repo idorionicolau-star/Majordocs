@@ -23,7 +23,7 @@ export async function POST(req: Request) {
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: "gemini-3-pro-preview",
+            model: "models/gemini-3-flash-preview",
             systemInstruction: `Você é um Assistente de Categorização de Frota de Produtos (Data Custodian). O seu objetivo é limpar os dados do cliente e classificar itens rigorosamente.
 Regras:
 1. O utilizador fornecerá o 'Nome do Produto' e uma lista de 'Categorias Existentes'.
