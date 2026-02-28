@@ -23,6 +23,9 @@ import {
   signInWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   User as FirebaseAuthUser,
   GoogleAuthProvider,
   signInWithPopup
@@ -370,6 +373,40 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       }
       toast({ variant: 'destructive', title: 'Erro', description: message });
       throw error;
+    }
+  };
+
+  const changePassword = async (currentPass: string, newPass: string): Promise<boolean> => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser || !currentUser.email) {
+        throw new Error("Utilizador não autenticado.");
+      }
+
+      // Reauthenticate first to satisfy "recent login" requirement
+      const credential = EmailAuthProvider.credential(currentUser.email, currentPass);
+      await reauthenticateWithCredential(currentUser, credential);
+
+      // Update password
+      await updatePassword(currentUser, newPass);
+
+      toast({
+        title: "Senha alterada",
+        description: "A sua senha foi alterada com sucesso.",
+      });
+      return true;
+    } catch (error: any) {
+      console.error("Firebase Auth change password error:", error);
+      let message = "Ocorreu um erro ao alterar a senha.";
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        message = "A senha atual está incorreta.";
+      } else if (error.code === 'auth/weak-password') {
+        message = "A nova senha tem de ter no mínimo 6 caracteres.";
+      } else if (error.code === 'auth/requires-recent-login') {
+        message = "Faça logout e login novamente antes de tentar alterar a senha.";
+      }
+      toast({ variant: 'destructive', title: 'Erro de Autenticação', description: message });
+      return false;
     }
   };
 
@@ -2682,6 +2719,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     loginWithGoogle,
     logout,
     resetPassword,
+    changePassword,
     registerCompany,
     registerCompanyWithGoogle,
     profilePicture, setProfilePicture: handleSetProfilePicture,

@@ -41,6 +41,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useTheme } from "@/components/theme-provider";
 import {
   Accordion,
@@ -60,10 +68,17 @@ const colorOptions = [
 ];
 
 function ProfileTab() {
-  const { user, profilePicture, setProfilePicture } = useContext(InventoryContext) || {};
+  const { user, profilePicture, setProfilePicture, changePassword } = useContext(InventoryContext) || {};
   const { toast } = useToast();
   // Holds the newly selected image before it's saved
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  // Password change state
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -89,6 +104,30 @@ function ProfileTab() {
     }
     return name.substring(0, 2).toUpperCase();
   }
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'A nova senha e a confirmação não coincidem.' });
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'A nova senha deve ter pelo menos 6 caracteres.' });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    if (changePassword) {
+      const success = await changePassword(currentPassword, newPassword);
+      if (success) {
+        setIsPasswordDialogOpen(false);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    }
+    setIsChangingPassword(false);
+  };
 
   const displayImage = selectedImage || profilePicture;
 
@@ -126,6 +165,61 @@ function ProfileTab() {
             <Label>Função</Label>
             <p className="font-semibold">{user?.role}</p>
           </div>
+
+          {(user?.role === 'Admin' || user?.role === 'Dono') && (
+            <div className="pt-4">
+              <Button variant="outline" onClick={() => setIsPasswordDialogOpen(true)}>
+                Alterar Senha
+              </Button>
+
+              <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Alterar Senha de Administrador</DialogTitle>
+                    <DialogDescription>Introduza a sua senha atual e a nova senha pretendida.</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleChangePassword} className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="currentPassword">Senha Atual</Label>
+                      <Input
+                        id="currentPassword"
+                        type="password"
+                        value={currentPassword}
+                        onChange={e => setCurrentPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newPassword">Nova Senha</Label>
+                      <Input
+                        id="newPassword"
+                        type="password"
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setIsPasswordDialogOpen(false)} disabled={isChangingPassword}>Cancelar</Button>
+                      <Button type="submit" disabled={isChangingPassword}>
+                        {isChangingPassword ? 'Guardando...' : 'Salvar Nova Senha'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
