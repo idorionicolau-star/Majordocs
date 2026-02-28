@@ -78,7 +78,7 @@ export function BottomNav({ onMenuClick }: BottomNavProps) {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 md:hidden pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 md:hidden pb-safe touch-none select-none">
       <div className="grid h-full grid-flow-col auto-cols-fr">
         {items.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
@@ -89,7 +89,7 @@ export function BottomNav({ onMenuClick }: BottomNavProps) {
               key={item.id}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 transition-colors relative",
+                "flex flex-col items-center justify-center gap-1 transition-colors relative touch-manipulation",
                 isActive
                   ? "text-primary dark:text-primary"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
@@ -112,7 +112,7 @@ export function BottomNav({ onMenuClick }: BottomNavProps) {
         {/* Menu Button */}
         <button
           onClick={onMenuClick}
-          className="flex flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+          className="flex flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors touch-manipulation"
         >
           <div className="p-1">
             <Menu className="h-5 w-5" />

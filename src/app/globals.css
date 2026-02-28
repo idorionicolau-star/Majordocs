@@ -134,6 +134,15 @@
   h6 {
     @apply font-bold tracking-tight font-sans;
   }
+
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [role="button"] {
+    touch-action: manipulation;
+  }
 }
 
 @layer components {

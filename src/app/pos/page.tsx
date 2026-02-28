@@ -433,7 +433,7 @@ export default function POSPage() {
                                     onClick={() => addToCart(product)}
                                     className={`
                     relative group text-left rounded-xl border-2 transition-all duration-200
-                    hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex flex-col
+                    hover:shadow-lg hover:scale-[1.02] flex flex-col
                     ${inCart
                                             ? 'border-primary bg-primary/5 shadow-md'
                                             : 'border-border/50 bg-card hover:border-primary/50'
@@ -505,7 +505,7 @@ export default function POSPage() {
             <div className="lg:hidden">
                 <Drawer>
                     <DrawerTrigger asChild>
-                        <div className="fixed bottom-16 md:bottom-0 left-0 w-full bg-background border-t p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 flex items-center justify-between cursor-pointer active:bg-muted/50 transition-colors">
+                        <div className="fixed bottom-16 md:bottom-0 left-0 w-full bg-background border-t p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 flex items-center justify-between cursor-pointer active:bg-[rgba(0,0,0,0.05)] transition-colors touch-none select-none touch-manipulation pb-safe">
                             <div className="flex items-center gap-3">
                                 <div className="bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-sm font-bold shadow-sm">
                                     {cart.length}
@@ -700,7 +700,7 @@ export default function POSPage() {
                         <Button
                             onClick={handleCheckout}
                             disabled={isSubmitting || cart.length === 0}
-                            className="min-w-[140px]"
+                            className="h-12 w-full text-base font-bold transition-all shadow-md hover:shadow-lg"
                         >
                             {isSubmitting ? 'A processar...' : `Confirmar ${formatCurrency(cartTotal)}`}
                         </Button>
