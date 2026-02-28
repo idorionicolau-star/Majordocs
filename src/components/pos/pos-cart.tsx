@@ -57,6 +57,54 @@ function QuantityInput({
     );
 }
 
+// A local component to handle price input
+function PriceInput({
+    initialValue,
+    onChange
+}: {
+    initialValue: number;
+    onChange: (val: number) => void;
+}) {
+    const [localValue, setLocalValue] = useState(initialValue.toString());
+
+    useEffect(() => {
+        setLocalValue(initialValue.toString());
+    }, [initialValue]);
+
+    const handleBlur = () => {
+        const num = Number(localValue);
+        if (!isNaN(num) && num >= 0) {
+            onChange(num);
+        } else {
+            setLocalValue(initialValue.toString());
+        }
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setLocalValue(val);
+        const num = Number(val);
+        // Only trigger onChange if it's a valid positive number
+        if (!isNaN(num) && num >= 0 && !val.endsWith('.') && !val.endsWith(',')) {
+            onChange(num);
+        }
+    };
+
+    return (
+        <div className="flex items-center gap-1">
+            <span className="text-muted-foreground text-xs">MT</span>
+            <Input
+                type="text"
+                inputMode="decimal"
+                value={localValue}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className="w-16 h-7 text-right px-1 py-0 shadow-sm text-xs font-semibold focus-visible:ring-1"
+            />
+        </div>
+    );
+}
+
 interface PosCartProps {
     cart: CartItem[];
     cartSubtotal: number;
@@ -66,6 +114,7 @@ interface PosCartProps {
     vatAmount: number;
     cartTotal: number;
     onUpdateQuantity: (productName: string, quantity: number) => void;
+    onUpdatePrice: (productName: string, newPrice: number) => void;
     onRemoveItem: (productName: string) => void;
     onClearCart: () => void;
     onCheckout: () => void;
@@ -81,6 +130,7 @@ export function PosCart({
     vatAmount,
     cartTotal,
     onUpdateQuantity,
+    onUpdatePrice,
     onRemoveItem,
     onClearCart,
     onCheckout,
@@ -186,9 +236,13 @@ export function PosCart({
                                                     <Plus className="h-3.5 w-3.5" />
                                                 </Button>
                                             </div>
-                                            <p className="text-xs text-muted-foreground pl-1">
-                                                {formatCurrency(item.unitPrice)} x {item.quantity} {item.unit || 'un'}
-                                            </p>
+                                            <div className="flex items-center gap-1 mt-1 pl-1">
+                                                <PriceInput
+                                                    initialValue={item.unitPrice}
+                                                    onChange={(val) => onUpdatePrice(item.productName, val)}
+                                                />
+                                                <span className="text-[10px] text-muted-foreground">x {item.quantity} {item.unit || 'un'}</span>
+                                            </div>
                                         </div>
 
                                         <div className="text-right">

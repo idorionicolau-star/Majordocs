@@ -490,8 +490,8 @@ export default function POSPage() {
                         <div className="mt-6 mb-2">
                             <AiSuggestions
                                 cart={cart}
-                                catalogProducts={availableProducts}
-                                onAddToCart={addToCart}
+                                catalogProducts={availableProducts as any}
+                                onAddToCart={addToCart as any}
                             />
                         </div>
                     )}
@@ -516,6 +516,7 @@ export default function POSPage() {
                         vatAmount={vatAmount}
                         cartTotal={cartTotal}
                         onUpdateQuantity={updateCartQuantity}
+                        onUpdatePrice={updateCartPrice}
                         onRemoveItem={removeFromCart}
                         onClearCart={clearCart}
                         onCheckout={() => setIsCheckoutOpen(true)}
@@ -563,6 +564,7 @@ export default function POSPage() {
                                 vatAmount={vatAmount}
                                 cartTotal={cartTotal}
                                 onUpdateQuantity={updateCartQuantity}
+                                onUpdatePrice={updateCartPrice}
                                 onRemoveItem={removeFromCart}
                                 onClearCart={clearCart}
                                 onCheckout={() => setIsCheckoutOpen(true)}

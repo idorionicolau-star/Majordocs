@@ -65,18 +65,31 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                     categorizeProductWithAI(row.name).then(suggestedCategory => {
                         if (!mounted) return;
                         setRows(currentRows => {
-                            if (currentRows[index]?.name === row.name) {
-                                const newRows = [...currentRows];
+                            // Check if the row still exists and is currently categorizing 
+                            if (!currentRows[index] || !currentRows[index].isCategorizing) return currentRows;
+
+                            const newRows = [...currentRows];
+                            const currentRow = newRows[index];
+
+                            if (currentRow.name === row.name) {
                                 // ONLY apply AI suggestion if the user hasn't typed their own category in the meantime
-                                if (newRows[index].category === 'A carregar IA...' || newRows[index].category === '') {
-                                    newRows[index] = { ...newRows[index], category: suggestedCategory || 'Geral', isCategorizing: false };
+                                if (currentRow.category === 'A carregar IA...' || currentRow.category === '') {
+                                    newRows[index] = { ...currentRow, category: suggestedCategory || 'Geral', isCategorizing: false };
                                 } else {
                                     // User already typed something, just remove the loading flag
-                                    newRows[index] = { ...newRows[index], isCategorizing: false };
+                                    newRows[index] = { ...currentRow, isCategorizing: false };
                                 }
-                                return newRows;
+                            } else {
+                                // Race condition: The name changed mid-flight. 
+                                // We MUST clear the loading state so the next effect cycle can pick up the new name.
+                                // We also clear the category back to empty ONLY if it was our placeholder, so the next cycle can run.
+                                if (currentRow.category === 'A carregar IA...') {
+                                    newRows[index] = { ...currentRow, isCategorizing: false, category: '' };
+                                } else {
+                                    newRows[index] = { ...currentRow, isCategorizing: false };
+                                }
                             }
-                            return currentRows;
+                            return newRows;
                         });
                     });
                 }
