@@ -1363,9 +1363,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           unit: item.unit || 'un',
           soldBy: user.username,
           documentType: saleData.documentType,
-          clientName: saleData.clientName,
-          customerId: saleData.customerId,
-          notes: saleData.notes,
+          clientName: saleData.clientName || '',
+          ...(saleData.customerId && { customerId: saleData.customerId }),
+          ...(saleData.notes && { notes: saleData.notes }),
         };
 
         salesToCreate.push(sale);
