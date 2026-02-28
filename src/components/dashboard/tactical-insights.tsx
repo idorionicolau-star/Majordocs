@@ -111,7 +111,7 @@ export function TacticalInsights({ className }: { className?: string }) {
                 body: JSON.stringify({
                     messages: [{
                         role: 'user',
-                        content: "Analisa o meu Dead Stock e os meus Riscos de Ruptura (stock que acaba em breve). Gera 3 ordens táticas prioritárias. Se houver rupturas iminentes (daysRemaining < 5), uma das ordens DEVE ser de reabastecimento proativo. Responde APENAS em formato JSON: { insights: [{ title, action, impact, reason, priority }] }"
+                        content: `Analisa os meus dados reais de inventário abaixo:\n\nDead Stock:\n${JSON.stringify(promptContext.deadStock)}\n\nRiscos de Ruptura:\n${JSON.stringify(promptContext.ruptureRisks)}\n\nCapital Imobilizado Total: ${promptContext.totalDeadStockValue} MT\nValor Total do Inventário: ${promptContext.inventoryValue} MT\n\nGera 3 ordens táticas prioritárias. Se houver rupturas iminentes (daysRemaining < 5), uma das ordens DEVE ser de reabastecimento proativo com o nome do produto específico. Se houver capital imobilizado alto, foque na liquidação. Responde APENAS em formato JSON: { "insights": [{ "title": "...", "action": "...", "impact": "...", "reason": "...", "priority": "high" | "medium" | "low" }] }`
                     }],
                     context: promptContext,
                     userId: firebaseUser?.uid,
@@ -140,10 +140,10 @@ export function TacticalInsights({ className }: { className?: string }) {
     };
 
     useEffect(() => {
-        if (!loading && deadStockData.items.length > 0 && insights.length === 0) {
+        if (!loading && insights.length === 0 && (deadStockData.items.length > 0 || products.length > 0)) {
             generateTacticalOrders();
         }
-    }, [loading, deadStockData.items.length]);
+    }, [loading, deadStockData.items.length, products.length, insights.length]);
 
     return (
         <Card className={cn("glass-panel border-none shadow-xl overflow-hidden bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 text-white", className)}>

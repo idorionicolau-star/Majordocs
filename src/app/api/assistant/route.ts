@@ -58,6 +58,10 @@ export async function POST(req: Request) {
 }
 
 function buildSystemPrompt(ctx: any): string {
+    if (ctx.type === 'TACTICAL_INSIGHTS') {
+        return `Você é o Major Assistant, especialista em inteligência de inventário. O seu objetivo é analisar os dados de stock parado (Dead Stock) e riscos de ruptura recebidos na mensagem e devolver APENAS o JSON estruturado com as ordens táticas. Avalie os valores reais enviados pelo utilizador. NUNCA invente dados.`;
+    }
+
     const company = ctx.company || {};
     const summary = ctx.summary || {};
     const inventory = ctx.inventory || [];
