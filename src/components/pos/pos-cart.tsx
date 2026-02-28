@@ -87,7 +87,7 @@ export function PosCart({
     className
 }: PosCartProps) {
     return (
-        <Card className={`border-none shadow-sm h-full flex flex-col bg-card/50 backdrop-blur-sm ${className}`}>
+        <Card className={`border-none shadow-sm h-full flex flex-col bg-card ${className}`}>
             <CardHeader className="pb-4 pt-6 px-6 flex-none">
                 <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-3 text-xl">
