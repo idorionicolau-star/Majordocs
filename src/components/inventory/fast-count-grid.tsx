@@ -47,7 +47,7 @@ interface FastCountRow {
 
 export function FastCountGrid() {
     const inventoryContext = useContext(InventoryContext);
-    const { products, companyId } = inventoryContext || {};
+    const { products, companyId, locations: contextLocations } = inventoryContext || {};
     const { toast } = useToast();
     const { theme, systemTheme } = useTheme();
     const firestore = useFirestore();
@@ -57,7 +57,18 @@ export function FastCountGrid() {
     const [editedRows, setEditedRows] = useState<Record<string, FastCountRow>>({});
     const [isSaving, setIsSaving] = useState(false);
 
-    // Get unique locations from products
+    // Map for quick ID -> Name lookup
+    const locationMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        if (contextLocations) {
+            contextLocations.forEach(loc => {
+                map[loc.id] = loc.name;
+            });
+        }
+        return map;
+    }, [contextLocations]);
+
+    // Get unique locations from products for filtering
     const locations = useMemo(() => {
         if (!products) return [];
         const locs = new Set(products.map(p => p.location).filter(Boolean));
@@ -99,7 +110,12 @@ export function FastCountGrid() {
     const columns: Column<FastCountRow>[] = [
         { key: 'name', name: 'Artigo', minWidth: 250 },
         { key: 'category', name: 'Categoria', width: 140 },
-        { key: 'location', name: 'Localização', width: 140 },
+        {
+            key: 'location',
+            name: 'Localização',
+            width: 140,
+            renderCell: ({ row }) => <span>{locationMap[row.location] || row.location}</span>
+        },
         {
             key: 'price',
             name: 'Preço Venda',
@@ -211,8 +227,10 @@ export function FastCountGrid() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todas as Localizações</SelectItem>
-                                {locations.map(loc => (
-                                    <SelectItem key={loc || 'unknown'} value={loc as string}>{loc}</SelectItem>
+                                {locations.map(locId => (
+                                    <SelectItem key={locId || 'unknown'} value={locId as string}>
+                                        {locationMap[locId as string] || locId}
+                                    </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
