@@ -53,7 +53,21 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
       cell: ({ row }) => (
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
-            <span className="text-sm font-[800] text-foreground group-hover:text-primary transition-colors">{row.original.name}</span>
+            <span className="text-sm font-[800] text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
+              {row.original.name}
+              {(row.original.cost === undefined || row.original.cost <= 0) && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="cursor-help">
+                      <AlertCircle className="h-4 w-4 text-amber-500" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Produto sem custo registado. O lucro reportado será de 100%.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </span>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">ID: {row.original.id?.toUpperCase().substring(0, 6)}</span>
           </div>
         </div>

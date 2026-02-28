@@ -28,7 +28,7 @@ import type { Location, Product } from '@/lib/types';
 import { useInventory } from "@/context/inventory-context";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useStorage } from "@/firebase/provider";
-import { Loader2, Image as ImageIcon, X, ArrowLeft } from "lucide-react";
+import { Loader2, Image as ImageIcon, X, ArrowLeft, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -41,6 +41,11 @@ const formSchema = z.object({
         const num = Number(val);
         return isNaN(num) ? 0 : num;
     }, z.number().min(0, { message: "O preço não pode ser negativo." })),
+    cost: z.preprocess((val) => {
+        if (val === undefined || val === "" || val === null) return 0;
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+    }, z.number().min(0, { message: "O custo não pode ser negativo." })),
     stock: z.preprocess((val) => {
         if (val === undefined || val === "" || val === null) return 0;
         const num = Number(val);
@@ -65,7 +70,7 @@ type EditProductFormValues = z.infer<typeof formSchema>;
 export default function EditInventoryProductPage() {
     const { id } = useParams() as { id: string };
     const router = useRouter();
-    const { products, availableUnits, locations, isMultiLocation, updateProduct } = useInventory();
+    const { products, availableUnits, locations, isMultiLocation, updateProduct, catalogCategories, addCatalogCategory, categorizeProductWithAI } = useInventory();
     const storage = useStorage();
     const { toast } = useToast();
 
@@ -73,6 +78,8 @@ export default function EditInventoryProductPage() {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+    const [isCategorizing, setIsCategorizing] = useState(false);
 
     const form = useForm<EditProductFormValues>({
         resolver: zodResolver(formSchema),
@@ -80,6 +87,7 @@ export default function EditInventoryProductPage() {
             name: "",
             category: "",
             price: 0,
+            cost: 0,
             stock: 0,
             unit: 'un',
             lowStockThreshold: 10,
@@ -97,6 +105,7 @@ export default function EditInventoryProductPage() {
                     name: found.name,
                     category: found.category,
                     price: found.price,
+                    cost: found.cost || 0,
                     stock: found.stock,
                     unit: found.unit || 'un',
                     lowStockThreshold: found.lowStockThreshold,
@@ -132,6 +141,14 @@ export default function EditInventoryProductPage() {
                 imageUrl = null as any;
             }
 
+            if (isCreatingCategory && values.category.trim() !== "") {
+                const newCat = values.category.trim();
+                const exists = catalogCategories?.some(c => c.name.toLowerCase() === newCat.toLowerCase());
+                if (!exists && addCatalogCategory) {
+                    await addCatalogCategory(newCat);
+                }
+            }
+
             await updateProduct(product.instanceId!, {
                 ...product,
                 ...values,
@@ -154,6 +171,32 @@ export default function EditInventoryProductPage() {
             setIsSubmitting(false);
         }
     }
+
+    const handleNameBlur = async (e: React.FocusEvent<HTMLInputElement>, hookFormBlur: () => void) => {
+        hookFormBlur();
+        const currentName = e.target.value;
+        const currentCategory = form.getValues('category');
+
+        // Auto-categorize only if category is currently empty or user is trying to get a new one
+        if (currentName.trim() && (!currentCategory || currentCategory === product?.category) && currentName !== product?.name && categorizeProductWithAI) {
+            setIsCategorizing(true);
+            try {
+                const suggested = await categorizeProductWithAI(currentName);
+                if (suggested) {
+                    const exists = catalogCategories?.some(c => c.name.toLowerCase() === suggested.toLowerCase());
+                    if (!exists) {
+                        setIsCreatingCategory(true);
+                    } else {
+                        setIsCreatingCategory(false);
+                    }
+                    form.setValue('category', suggested, { shouldValidate: true });
+                    toast({ title: "Categoria Atualizada (IA)", description: `O sistema sugeriu nova categoria: ${suggested}` });
+                }
+            } finally {
+                setIsCategorizing(false);
+            }
+        }
+    };
 
     if (!product) {
         return (
@@ -245,7 +288,11 @@ export default function EditInventoryProductPage() {
                                     <FormItem>
                                         <FormLabel>Nome do Produto</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="Ex: Grelha 30x30" {...field} />
+                                            <Input
+                                                placeholder="Ex: Grelha 30x30"
+                                                {...field}
+                                                onBlur={(e) => handleNameBlur(e, field.onBlur)}
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -256,10 +303,44 @@ export default function EditInventoryProductPage() {
                                 name="category"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Categoria</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Ex: Grelhas" {...field} />
-                                        </FormControl>
+                                        <div className="flex items-center justify-between">
+                                            <FormLabel className="flex items-center gap-2">
+                                                Categoria
+                                                {isCategorizing && <span className="text-xs text-indigo-500 animate-pulse">(IA a processar...)</span>}
+                                            </FormLabel>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 px-2 text-xs text-muted-foreground hover:text-primary"
+                                                onClick={() => {
+                                                    setIsCreatingCategory(!isCreatingCategory);
+                                                }}
+                                            >
+                                                {isCreatingCategory ? "Escolher Existente" : "+ Nova Categoria"}
+                                            </Button>
+                                        </div>
+                                        {isCreatingCategory ? (
+                                            <FormControl>
+                                                <Input placeholder="Nome da nova categoria..." {...field} />
+                                            </FormControl>
+                                        ) : (
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Selecione..." />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {(field.value && !catalogCategories?.some(c => c.name === field.value)) && (
+                                                        <SelectItem value={field.value}>{field.value}</SelectItem>
+                                                    )}
+                                                    {catalogCategories?.map(cat => (
+                                                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -293,23 +374,50 @@ export default function EditInventoryProductPage() {
                             />
                         )}
 
-                        <FormField
-                            control={form.control}
-                            name="price"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Preço Unitário (MT)</FormLabel>
-                                    <FormControl>
-                                        <MathInput
-                                            {...field}
-                                            onValueChange={field.onChange}
-                                            ref={field.ref}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="price"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Preço de Venda (MT)</FormLabel>
+                                        <FormControl>
+                                            <MathInput
+                                                {...field}
+                                                onValueChange={field.onChange}
+                                                ref={field.ref}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="cost"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Preço de Custo (MT)</FormLabel>
+                                        <FormControl>
+                                            <MathInput
+                                                {...field}
+                                                onValueChange={field.onChange}
+                                                ref={field.ref}
+                                                className={(!field.value || field.value <= 0) ? "border-amber-500 focus-visible:ring-amber-500" : ""}
+                                            />
+                                        </FormControl>
+                                        {(!field.value || field.value <= 0) && (
+                                            <div className="flex items-start gap-2 mt-2 p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-amber-800 dark:text-amber-400 text-xs">
+                                                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                                                <p><strong>Atenção:</strong> Um custo igual a 0 fará com que o lucro reportado seja 100%. Tem a certeza de que não há custo associado?</p>
+                                            </div>
+                                        )}
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <FormField

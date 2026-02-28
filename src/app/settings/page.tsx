@@ -20,6 +20,8 @@ import { AdminMergeTool } from "@/components/admin/admin-merge-tool";
 import { BackupManager } from "@/components/settings/backup-manager";
 import { RecycleBin } from "@/components/settings/recycle-bin";
 import { UnitsCategoriesManager } from "@/components/settings/units-categories-manager";
+import { CategoryMergeTool } from "@/components/settings/category-merge-tool";
+import { BulkEditCosts } from "@/components/settings/bulk-edit-costs";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
 import { useToast } from "@/hooks/use-toast";
@@ -834,10 +836,22 @@ export default function SettingsPage() {
                       </Button>
                     </div>
 
+                    <div className="space-y-2">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        Atualização Rápida de Custos
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Atualize custos de múltiplos produtos agilmente para garantir o cálculo real do lucro.
+                      </p>
+                      <BulkEditCosts />
+                    </div>
+
                     <Separator />
 
                     {user?.role === 'Admin' && (
                       <>
+                        <CategoryMergeTool />
+                        <Separator />
                         <AdminMergeTool />
                         <Separator />
                       </>

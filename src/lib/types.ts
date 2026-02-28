@@ -390,6 +390,7 @@ export interface InventoryContextType {
   addRecipe: (recipe: Omit<Recipe, 'id'>) => Promise<void>;
   updateRecipe: (recipeId: string, data: Partial<Recipe>) => Promise<void>;
   // deleteRecipe: (recipeId: string) => Promise<void>;
+  categorizeProductWithAI: (productName: string) => Promise<string | null>;
 
   mergeProducts: (targetProductId: string, sourceProductIds: string[]) => Promise<void>;
   restoreItem: (collectionName: string, id: string) => Promise<void>;

@@ -758,6 +758,39 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }, new Date(salesData[0].date));
   }, [salesData]);
 
+  const categorizeProductWithAI = async (productName: string): Promise<string | null> => {
+    if (!productName || productName.trim().length === 0) return null;
+
+    try {
+      const fbToken = await auth.currentUser?.getIdToken();
+      if (!fbToken) return null;
+
+      const existingCategories = catalogCategoriesData?.map(c => c.name) || [];
+
+      const response = await fetch('/api/categorize-product', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${fbToken}`
+        },
+        body: JSON.stringify({
+          productName,
+          existingCategories
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Falha na API de Categorização.');
+      }
+
+      const data = await response.json();
+      return data.category || null;
+    } catch (error) {
+      console.error("Error categorizing product:", error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const end = new Date();
     const start = subMonths(end, 5);
@@ -2573,6 +2606,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const companyRef = doc(firestore, 'companies', companyId);
       batch.update(companyRef, { validCategories: updatedValidCategories });
 
+      // Clean up catalogCategories: Drop old one, create new one if it doesn't exist
+      const oldCatalogCat = catalogCategoriesData?.find(c => c.name.toLowerCase() === oldCategory.toLowerCase());
+      if (oldCatalogCat && oldCatalogCat.id) {
+        const docRef = doc(firestore, `companies/${companyId}/catalogCategories`, oldCatalogCat.id);
+        batch.delete(docRef);
+      }
+
+      const newCatalogCatExists = catalogCategoriesData?.some(c => c.name.toLowerCase() === newCategory.toLowerCase());
+      if (!newCatalogCatExists) {
+        const newCatRef = doc(collection(firestore, `companies/${companyId}/catalogCategories`));
+        batch.set(newCatRef, { name: newCategory });
+      }
+
       const catalogProductsToUpdate = catalogProductsData?.filter(p => p.category === oldCategory) || [];
       catalogProductsToUpdate.forEach(p => {
         if (p.id) {
@@ -2590,12 +2636,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       });
 
       await batch.commit();
-      toast({ title: 'Categoria Editada', description: `A categoria "${oldCategory}" passou a "${newCategory}".` });
+      toast({ title: 'Categorias Fundidas', description: `A categoria "${oldCategory}" foi unificada com "${newCategory}".` });
     } catch (error) {
       console.error("Error editing category:", error);
       toast({ variant: "destructive", title: "Erro", description: "Falha ao editar a categoria." });
     }
-  }, [firestore, companyId, toast, companyData, productsData, catalogProductsData]);
+  }, [firestore, companyId, toast, companyData, productsData, catalogProductsData, catalogCategoriesData]);
 
   const removeCategory = useCallback(async (category: string) => {
     if (!firestore || !companyId || !category) return;
@@ -2773,6 +2819,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     addRecipe,
     updateRecipe,
     // deleteRecipe,
+    categorizeProductWithAI,
 
     availableUnits, addUnit, editUnit, removeUnit,
     availableCategories, addCategory, editCategory, removeCategory,

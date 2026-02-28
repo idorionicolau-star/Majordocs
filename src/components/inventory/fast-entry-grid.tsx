@@ -22,6 +22,7 @@ interface RowData {
     cost: string;
     stock: string;
     minStock: string;
+    isCategorizing?: boolean;
 }
 
 const initialRows: RowData[] = Array.from({ length: 5 }, () => ({
@@ -37,7 +38,7 @@ const initialRows: RowData[] = Array.from({ length: 5 }, () => ({
 
 export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     const [rows, setRows] = useState<RowData[]>(initialRows);
-    const { addProduct, addCatalogProduct, catalogProducts, addCatalogCategory, catalogCategories, companyData, products, companyId } = useInventory();
+    const { addProduct, addCatalogProduct, catalogProducts, addCatalogCategory, catalogCategories, companyData, products, companyId, categorizeProductWithAI } = useInventory();
     const { toast } = useToast();
     const auth = useAuth();
     const [isSaving, setIsSaving] = useState(false);
@@ -45,6 +46,39 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { theme, systemTheme } = useTheme();
     const isMobile = useMediaQuery("(max-width: 640px)");
+
+    // Auto-categorize new entries
+    useEffect(() => {
+        let mounted = true;
+
+        rows.forEach((row, index) => {
+            if (row.name && row.name.trim() !== '' && row.category === '' && !row.isCategorizing) {
+                const existingProduct = products.find(p => p.name.toLowerCase() === row.name.toLowerCase());
+
+                if (!existingProduct && categorizeProductWithAI) {
+                    setRows(currentRows => {
+                        const newRows = [...currentRows];
+                        newRows[index] = { ...newRows[index], isCategorizing: true, category: 'A carregar IA...' };
+                        return newRows;
+                    });
+
+                    categorizeProductWithAI(row.name).then(suggestedCategory => {
+                        if (!mounted) return;
+                        setRows(currentRows => {
+                            if (currentRows[index]?.name === row.name) {
+                                const newRows = [...currentRows];
+                                newRows[index] = { ...newRows[index], category: suggestedCategory || 'Geral', isCategorizing: false };
+                                return newRows;
+                            }
+                            return currentRows;
+                        });
+                    });
+                }
+            }
+        });
+
+        return () => { mounted = false; };
+    }, [rows, products, categorizeProductWithAI]);
 
     const currentTheme = theme === 'system' ? systemTheme : theme;
     const gridThemeClass = currentTheme === 'dark' ? 'rdg-dark' : 'rdg-light';
@@ -230,7 +264,21 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
         { key: 'name', name: 'Nome do Produto', renderEditCell: NameEditor, minWidth: isMobile ? 220 : 250 },
         { key: 'category', name: 'Categoria', renderEditCell: CategoryEditor, width: isMobile ? 140 : 160 },
         { key: 'unit', name: 'Unid.', renderEditCell: UnitEditor, width: isMobile ? 90 : 100 },
-        { key: 'cost', name: 'Custo (MTn)', renderEditCell: textEditor, width: isMobile ? 110 : 120 },
+        {
+            key: 'cost',
+            name: 'Custo (MTn)',
+            renderEditCell: textEditor,
+            width: isMobile ? 110 : 120,
+            renderCell: ({ row }) => {
+                const cost = parseFloat(row.cost);
+                const isZero = isNaN(cost) || cost <= 0;
+                return (
+                    <div className={isZero ? "bg-destructive/20 text-destructive font-bold h-full flex items-center px-2" : "h-full flex items-center px-2"}>
+                        {row.cost}
+                    </div>
+                );
+            }
+        },
         { key: 'price', name: 'Venda (MTn)', renderEditCell: textEditor, width: isMobile ? 110 : 120 },
         { key: 'stock', name: 'Físico', renderEditCell: textEditor, width: isMobile ? 90 : 100 },
         { key: 'minStock', name: 'Mínimo', renderEditCell: textEditor, width: isMobile ? 90 : 100 },

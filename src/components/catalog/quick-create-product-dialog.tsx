@@ -46,9 +46,10 @@ interface QuickCreateProductDialogProps {
 export function QuickCreateProductDialog({ open, onOpenChange, defaultName, onSuccess }: QuickCreateProductDialogProps) {
     const inventoryContext = useContext(InventoryContext);
 
-    const { addCatalogProduct, addCatalogCategory, catalogCategories } = inventoryContext || { addCatalogProduct: async () => { }, addCatalogCategory: async () => { }, catalogCategories: [] };
+    const { addCatalogProduct, addCatalogCategory, catalogCategories, categorizeProductWithAI } = inventoryContext || { addCatalogProduct: async () => { }, addCatalogCategory: async () => { }, catalogCategories: [], categorizeProductWithAI: async () => null };
     const { toast } = useToast();
     const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+    const [isCategorizing, setIsCategorizing] = useState(false);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -69,8 +70,45 @@ export function QuickCreateProductDialog({ open, onOpenChange, defaultName, onSu
                 unit: 'un',
                 price: 0,
             });
+
+            // Try auto-categorizing immediately if a default name was passed
+            if (defaultName && categorizeProductWithAI) {
+                setIsCategorizing(true);
+                categorizeProductWithAI(defaultName).then(suggested => {
+                    if (suggested) {
+                        const exists = catalogCategories?.some((c: CatalogCategory) => c.name.toLowerCase() === suggested.toLowerCase());
+                        if (!exists) setIsCreatingCategory(true);
+                        form.setValue('category', suggested, { shouldValidate: true });
+                    }
+                }).finally(() => setIsCategorizing(false));
+            }
         }
-    }, [open, defaultName, form]);
+    }, [open, defaultName, form, categorizeProductWithAI, catalogCategories]);
+
+    const handleNameBlur = async (e: React.FocusEvent<HTMLInputElement>, hookFormBlur: () => void) => {
+        hookFormBlur();
+        const currentName = e.target.value;
+        const currentCategory = form.getValues('category');
+
+        if (currentName.trim() && !currentCategory && categorizeProductWithAI) {
+            setIsCategorizing(true);
+            try {
+                const suggested = await categorizeProductWithAI(currentName);
+                if (suggested) {
+                    const exists = catalogCategories?.some((c: CatalogCategory) => c.name.toLowerCase() === suggested.toLowerCase());
+                    if (!exists) {
+                        setIsCreatingCategory(true);
+                    } else {
+                        setIsCreatingCategory(false);
+                    }
+                    form.setValue('category', suggested, { shouldValidate: true });
+                    toast({ title: "Categoria Sugerida (IA)", description: `O sistema classificou como: ${suggested}` });
+                }
+            } finally {
+                setIsCategorizing(false);
+            }
+        }
+    };
 
     const onSubmit = async (values: FormValues) => {
         // 0. Ensure Category Exists
@@ -132,7 +170,10 @@ export function QuickCreateProductDialog({ open, onOpenChange, defaultName, onSu
                             <FormItem>
                                 <FormLabel>Nome do Produto</FormLabel>
                                 <FormControl>
-                                    <Input {...field} />
+                                    <Input
+                                        {...field}
+                                        onBlur={(e) => handleNameBlur(e, field.onBlur)}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -183,7 +224,10 @@ export function QuickCreateProductDialog({ open, onOpenChange, defaultName, onSu
                         render={({ field }) => (
                             <FormItem>
                                 <div className="flex items-center justify-between">
-                                    <FormLabel>Categoria</FormLabel>
+                                    <FormLabel className="flex items-center gap-2">
+                                        Categoria
+                                        {isCategorizing && <span className="text-xs text-indigo-500 animate-pulse">(IA a processar...)</span>}
+                                    </FormLabel>
                                     <Button
                                         type="button"
                                         variant="ghost"

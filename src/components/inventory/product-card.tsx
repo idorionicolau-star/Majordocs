@@ -92,8 +92,22 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                         </Tooltip>
                     </TooltipProvider>
                 )}
-                <div className="text-center">
+                <div className="text-center relative inline-block w-full">
                     <p className={cn("font-medium text-muted-foreground", isCondensed ? "text-xs" : "text-sm")}>{formatCurrency(product.price)}</p>
+                    {(product.cost === undefined || product.cost <= 0) && (
+                        <div className="absolute top-1/2 -translate-y-1/2 right-2 sm:right-4">
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger className="cursor-help flex items-center justify-center bg-amber-50 dark:bg-amber-950/50 text-amber-500 rounded-full p-1 border border-amber-200 dark:border-amber-800">
+                                        <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4" strokeWidth={3} />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p className="text-xs">Sem preço de custo registado.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
+                    )}
                 </div>
                 {status !== 'ok' && !isCondensed && (
                     <div className={cn(
