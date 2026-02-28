@@ -24,13 +24,13 @@ export async function generateSalesReport(input: GenerateSalesReportInput): Prom
 
 Pedido/dados do utilizador:
 ${input}`;
-  
+
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    
+
     // ATUALIZAÇÃO: Mudando para 2.0 Flash para garantir a quota de 1500 req/dia e evitar erro 429
     const model = genAI.getGenerativeModel({ model: "models/gemini-3-flash-preview" });
-    
+
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();

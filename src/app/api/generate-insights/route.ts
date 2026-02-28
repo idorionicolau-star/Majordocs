@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const genAI = new GoogleGenerativeAI(apiKey);
 
     // CORREÇÃO 1: Adicionado o prefixo 'models/' (Essencial para evitar Erro 404)
-    const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+    const model = genAI.getGenerativeModel({ model: "models/gemini-3-pro-preview" });
 
     const systemPrompt = `
       Atue como um Consultor Sênior de Operações e BI para o MajorStockX.
