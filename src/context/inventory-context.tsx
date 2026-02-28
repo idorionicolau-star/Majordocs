@@ -1669,63 +1669,118 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [firestore, companyId, user, addNotification, recipesData, productsData, catalogProductsData, isMultiLocation, locations, toast]);
 
-  const addProductionLog = useCallback((orderId: string, logData: { quantity: number; notes?: string }) => {
+  const addProductionLog = useCallback(async (orderId: string, logData: { quantity: number; notes?: string }) => {
     if (!firestore || !companyId || !user || !ordersData) return;
 
     const orderToUpdate = ordersData.find(o => o.id === orderId);
+    if (!orderToUpdate) return;
 
-    if (orderToUpdate) {
+    try {
       const orderDocRef = doc(firestore, `companies/${companyId}/orders`, orderId);
       const productionsRef = collection(firestore, `companies/${companyId}/productions`);
+      const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
-      const batch = writeBatch(firestore);
+      // Resolve product reference outside transaction (queries not allowed inside)
+      let resolvedProductRef: DocumentReference | null = null;
+      if (orderToUpdate.productId) {
+        const directRef = doc(firestore, `companies/${companyId}/products`, orderToUpdate.productId);
+        const directSnap = await getDoc(directRef);
+        if (directSnap.exists()) {
+          resolvedProductRef = directRef;
+        } else {
+          // Fallback: productId might be the product name
+          const targetLoc = orderToUpdate.location || (isMultiLocation ? locations[0]?.id : 'Principal');
+          const pQuery = query(
+            collection(firestore, `companies/${companyId}/products`),
+            where('name', '==', orderToUpdate.productName),
+            where('location', '==', targetLoc),
+            limit(1)
+          );
+          const pSnap = await getDocs(pQuery);
+          if (!pSnap.empty) {
+            resolvedProductRef = pSnap.docs[0].ref;
+          }
+        }
+      }
 
-      const newLog: ProductionLog = {
-        id: `log-${Date.now()}`,
-        date: new Date().toISOString(),
-        quantity: logData.quantity,
-        notes: logData.notes,
-        registeredBy: user.username || 'Desconhecido',
-      };
-      const newQuantityProduced = orderToUpdate.quantityProduced + logData.quantity;
+      await runTransaction(firestore, async (transaction) => {
+        // --- READS ---
+        let productData: Product | null = null;
+        if (resolvedProductRef) {
+          const pDoc = await transaction.get(resolvedProductRef);
+          if (pDoc.exists()) {
+            productData = pDoc.data() as Product;
+          }
+        }
 
-      batch.update(orderDocRef, {
-        quantityProduced: newQuantityProduced,
-        productionLogs: arrayUnion(newLog)
+        // --- WRITES ---
+        const newLog: ProductionLog = {
+          id: `log-${Date.now()}`,
+          date: new Date().toISOString(),
+          quantity: logData.quantity,
+          notes: logData.notes,
+          registeredBy: user.username || 'Desconhecido',
+        };
+        const newQuantityProduced = orderToUpdate.quantityProduced + logData.quantity;
+
+        transaction.update(orderDocRef, {
+          quantityProduced: newQuantityProduced,
+          productionLogs: arrayUnion(newLog)
+        });
+
+        const newProduction: Omit<Production, 'id'> = {
+          date: new Date().toISOString().split('T')[0],
+          productName: orderToUpdate.productName,
+          quantity: logData.quantity,
+          unit: orderToUpdate.unit,
+          location: orderToUpdate.location,
+          registeredBy: user.username || 'Desconhecido',
+          status: 'Concluído',
+          orderId: orderId
+        };
+        transaction.set(doc(productionsRef), newProduction);
+
+        // Increment physical stock and register stock movement
+        if (resolvedProductRef && productData) {
+          transaction.update(resolvedProductRef, {
+            stock: (productData.stock || 0) + logData.quantity,
+            lastUpdated: new Date().toISOString()
+          });
+
+          const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+            productId: resolvedProductRef.id,
+            productName: orderToUpdate.productName,
+            type: 'IN',
+            quantity: logData.quantity,
+            toLocationId: orderToUpdate.location,
+            reason: `Produção Parcial (Encomenda #${orderId.slice(-6).toUpperCase()}): ${logData.quantity} ${orderToUpdate.unit || 'un'}`,
+            userId: user.id,
+            userName: user.username,
+          };
+          transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+        }
       });
 
-      const newProduction: Omit<Production, 'id'> = {
-        date: new Date().toISOString().split('T')[0],
-        productName: orderToUpdate.productName,
-        quantity: logData.quantity,
-        unit: orderToUpdate.unit,
-        location: orderToUpdate.location,
-        registeredBy: user.username || 'Desconhecido',
-        status: 'Concluído',
-        orderId: orderId // Link production to order
-      };
-      batch.set(doc(productionsRef), newProduction);
+      toast({
+        title: "Registo de Produção Adicionado",
+        description: `${logData.quantity} unidades de "${orderToUpdate.productName}" foram produzidas e adicionadas ao stock.`,
+      });
+      addNotification({
+        type: 'production',
+        message: `Produção de ${orderToUpdate.productName} atualizada.`,
+        href: `/orders?id=${orderId}`
+      });
 
-      batch.commit().then(() => {
-        toast({
-          title: "Registo de Produção Adicionado",
-          description: `${logData.quantity} unidades de "${orderToUpdate?.productName}" foram registadas.`,
-        });
-        addNotification({
-          type: 'production',
-          message: `Produção de ${orderToUpdate.productName} atualizada.`,
-          href: `/orders?id=${orderId}`
-        })
-      }).catch(error => {
-        console.error("Error adding production log: ", error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao Registar",
-          description: "Não foi possível guardar o registo de produção.",
-        });
+    } catch (error: any) {
+      console.error("Error adding production log: ", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao Registar",
+        description: error.message || "Não foi possível guardar o registo de produção.",
       });
     }
-  }, [firestore, companyId, user, ordersData, toast, addNotification]);
+  }, [firestore, companyId, user, ordersData, toast, addNotification, isMultiLocation, locations]);
+
 
   const addCatalogProduct = useCallback(async (productData: Omit<CatalogProduct, 'id'>) => {
     if (!catalogProductsCollectionRef) {
@@ -1919,40 +1974,71 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       if (orderSnap.exists()) {
         const orderData = orderSnap.data() as Order;
 
+        // Find the associated sale to soft-delete it too
+        const salesRef = collection(firestore, `companies/${companyId}/sales`);
+        const saleQuery = query(salesRef, where('orderId', '==', orderId), limit(1));
+        const saleSnap = await getDocs(saleQuery);
+        const associatedSaleRef = !saleSnap.empty ? saleSnap.docs[0].ref : null;
+
         // If order is pending or in production, we need to release the Reserved Stock
         if ((orderData.status === 'Pendente' || orderData.status === 'Em produção') && orderData.productId) {
-          const productRef = doc(firestore, `companies/${companyId}/products`, orderData.productId);
-          await runTransaction(firestore, async (transaction) => {
-            const pDoc = await transaction.get(productRef);
-            if (pDoc.exists()) {
-              const pData = pDoc.data() as Product;
-              const currentReserved = pData.reservedStock || 0;
-              const quantityToRelease = orderData.quantity;
-
-              // Clamp to 0 to avoid negative stock if data is somehow inconsistent
-              const newReserved = Math.max(0, currentReserved - quantityToRelease);
-
-              transaction.update(productRef, {
-                reservedStock: newReserved,
-                lastUpdated: new Date().toISOString()
-              });
+          // Resolve product reference with fallback
+          let resolvedProductRef: DocumentReference | null = null;
+          const directRef = doc(firestore, `companies/${companyId}/products`, orderData.productId);
+          const directSnap = await getDoc(directRef);
+          if (directSnap.exists()) {
+            resolvedProductRef = directRef;
+          } else {
+            // Fallback: productId might be the product name
+            const targetLoc = orderData.location || 'Principal';
+            const pQuery = query(
+              collection(firestore, `companies/${companyId}/products`),
+              where('name', '==', orderData.productName),
+              where('location', '==', targetLoc),
+              limit(1)
+            );
+            const pSnap = await getDocs(pQuery);
+            if (!pSnap.empty) {
+              resolvedProductRef = pSnap.docs[0].ref;
             }
-            // Perform the soft delete within the transaction or after? 
-            // Transaction is safer for stock. 
-            // Soft delete is just an update to the order doc.
+          }
+
+          await runTransaction(firestore, async (transaction) => {
+            if (resolvedProductRef) {
+              const pDoc = await transaction.get(resolvedProductRef);
+              if (pDoc.exists()) {
+                const pData = pDoc.data() as Product;
+                const currentReserved = pData.reservedStock || 0;
+                const quantityToRelease = orderData.quantity;
+                const newReserved = Math.max(0, currentReserved - quantityToRelease);
+
+                transaction.update(resolvedProductRef, {
+                  reservedStock: newReserved,
+                  lastUpdated: new Date().toISOString()
+                });
+              }
+            }
+            // Soft delete the order
             transaction.update(orderRef, { deletedAt: new Date().toISOString() });
+            // Also soft delete the associated sale
+            if (associatedSaleRef) {
+              transaction.update(associatedSaleRef, { deletedAt: new Date().toISOString(), deletedBy: user?.username || 'Sistema' });
+            }
           });
         } else {
           // Standard soft delete for completed/delivered orders (stock was already handled)
-          await updateDocumentNonBlocking(orderRef, { deletedAt: new Date().toISOString() });
+          updateDocumentNonBlocking(orderRef, { deletedAt: new Date().toISOString() });
+          if (associatedSaleRef) {
+            updateDocumentNonBlocking(associatedSaleRef, { deletedAt: new Date().toISOString(), deletedBy: user?.username || 'Sistema' });
+          }
         }
-        toast({ title: 'Encomenda movida para Lixeira' });
+        toast({ title: 'Encomenda movida para Lixeira', description: 'A venda associada também foi removida.' });
       }
     } catch (e: any) {
       console.error("Error deleting order:", e);
       toast({ variant: 'destructive', title: 'Erro ao Apagar', description: e.message });
     }
-  }, [ordersCollectionRef, firestore, companyId, toast]);
+  }, [ordersCollectionRef, firestore, companyId, toast, user]);
 
   const finalizeOrder = useCallback(async (orderId: string, finalPayment: number) => {
     if (!firestore || !companyId || !user) return;
@@ -2013,37 +2099,43 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         // 6. Create Production Record & Stock Movements
         if (productRef && freshProductData) {
           const locationToUse = orderData.location || (isMultiLocation ? locations[0]?.id : 'Principal');
-
-          // 6a. Add to 'productions'
-          const productionsRef = collection(firestore, `companies/${companyId}/productions`);
-          const newProduction = {
-            date: new Date().toISOString().split('T')[0],
-            productName: orderData.productName || 'Produto Desconhecido',
-            quantity: Number(orderData.quantity) || 0,
-            unit: orderData.unit || 'un',
-            registeredBy: user.username || 'Sistema',
-            status: 'Concluído',
-            location: locationToUse,
-            orderId: orderId
-          };
-          transaction.set(doc(productionsRef), newProduction);
-
-          // 6b. Register Stock Movement (IN: Production) and (OUT: Delivery)
           const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
-          const movementIn = {
-            productId: productRef.id,
-            productName: orderData.productName,
-            type: 'IN',
-            quantity: orderData.quantity,
-            toLocationId: locationToUse,
-            reason: `Produção (Encomenda #${orderId.slice(-6).toUpperCase()}): ${orderData.quantity} ${orderData.unit || 'un'}`,
-            userId: user.id,
-            userName: user.username,
-            timestamp: serverTimestamp()
-          };
-          transaction.set(doc(movementsRef), movementIn);
+          // Only create production record and IN movement if order was NOT already completed
+          // (confirmAutoProduction or addProductionLog already handled stock IN)
+          const alreadyProduced = orderData.status === 'Concluída';
 
+          if (!alreadyProduced) {
+            // 6a. Add to 'productions'
+            const productionsRef = collection(firestore, `companies/${companyId}/productions`);
+            const newProduction = {
+              date: new Date().toISOString().split('T')[0],
+              productName: orderData.productName || 'Produto Desconhecido',
+              quantity: Number(orderData.quantity) || 0,
+              unit: orderData.unit || 'un',
+              registeredBy: user.username || 'Sistema',
+              status: 'Concluído',
+              location: locationToUse,
+              orderId: orderId
+            };
+            transaction.set(doc(productionsRef), newProduction);
+
+            // 6b-IN. Register Stock Movement IN (Production)
+            const movementIn = {
+              productId: productRef.id,
+              productName: orderData.productName,
+              type: 'IN',
+              quantity: orderData.quantity,
+              toLocationId: locationToUse,
+              reason: `Produção (Encomenda #${orderId.slice(-6).toUpperCase()}): ${orderData.quantity} ${orderData.unit || 'un'}`,
+              userId: user.id,
+              userName: user.username,
+              timestamp: serverTimestamp()
+            };
+            transaction.set(doc(movementsRef), movementIn);
+          }
+
+          // 6b-OUT. Always register the delivery OUT movement
           const movementOut = {
             productId: productRef.id,
             productName: orderData.productName,
@@ -2058,14 +2150,27 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           };
           transaction.set(doc(movementsRef), movementOut);
 
-          // 6c. Deduct Reserved Stock (Actual Stock stays same because +Prod -Sale = 0)
+          // 6c. Update stock and deduct reservation
+          // If already produced: stock already has the units, just deduct stock + reserved
+          // If not produced: +stock (production) -stock (delivery) = net 0 change to stock, just deduct reserved
           let newReserved = (freshProductData.reservedStock || 0) - orderData.quantity;
           if (newReserved < 0) newReserved = 0;
 
-          transaction.update(productRef, {
-            reservedStock: newReserved,
-            lastUpdated: new Date().toISOString()
-          });
+          if (alreadyProduced) {
+            // Stock was already added by confirmAutoProduction/addProductionLog, now deduct for delivery
+            const newStock = (freshProductData.stock || 0) - orderData.quantity;
+            transaction.update(productRef, {
+              stock: Math.max(0, newStock),
+              reservedStock: newReserved,
+              lastUpdated: new Date().toISOString()
+            });
+          } else {
+            // Net stock change is 0 (+prod -delivery), just clear reservation
+            transaction.update(productRef, {
+              reservedStock: newReserved,
+              lastUpdated: new Date().toISOString()
+            });
+          }
         }
       });
 
