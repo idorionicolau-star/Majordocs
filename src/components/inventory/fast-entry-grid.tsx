@@ -261,7 +261,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     };
 
     const columns: Column<RowData>[] = [
-        { key: 'name', name: 'Nome do Produto', renderEditCell: NameEditor, minWidth: isMobile ? 220 : 250 },
+        { key: 'name', name: 'Nome do Produto', renderEditCell: NameEditor, minWidth: isMobile ? 220 : 250, frozen: true },
         { key: 'category', name: 'Categoria', renderEditCell: CategoryEditor, width: isMobile ? 140 : 160 },
         { key: 'unit', name: 'Unid.', renderEditCell: UnitEditor, width: isMobile ? 90 : 100 },
         {
@@ -549,21 +549,37 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                     __html: `
                     /* Styling based on theme using next-themes HTML class */
                     html.light .grid-with-lines .rdg-cell {
-                        border-right: 1px solid rgba(0,0,0,0.15);
-                        border-bottom: 1px solid rgba(0,0,0,0.15);
+                        border-right: 1px solid rgba(0,0,0,0.1);
+                        border-bottom: 1px solid rgba(0,0,0,0.1);
+                        background-color: var(--background);
                     }
                     html.light .grid-with-lines .rdg-header-row .rdg-cell {
-                        border-bottom: 2px solid rgba(0,0,0,0.25);
+                        border-bottom: 2px solid rgba(0,0,0,0.2);
                         background-color: var(--muted);
+                        font-weight: 700;
+                        color: var(--foreground);
                     }
                     
                     html.dark .grid-with-lines .rdg-cell {
-                        border-right: 1px solid rgba(255,255,255,0.25);
-                        border-bottom: 1px solid rgba(255,255,255,0.25);
+                        border-right: 1px solid rgba(255,255,255,0.1);
+                        border-bottom: 1px solid rgba(255,255,255,0.1);
+                        background-color: var(--background);
                     }
                     html.dark .grid-with-lines .rdg-header-row .rdg-cell {
-                        border-bottom: 2px solid rgba(255,255,255,0.4);
+                        border-bottom: 2px solid rgba(255,255,255,0.2);
                         background-color: var(--muted);
+                        font-weight: 700;
+                        color: var(--foreground);
+                    }
+
+                    /* Ensure frozen columns have a solid background */
+                    .rdg-cell-frozen {
+                        z-index: 1;
+                        background-color: var(--background) !important;
+                    }
+                    .rdg-header-row .rdg-cell-frozen {
+                        z-index: 2;
+                        background-color: var(--muted) !important;
                     }
                 `}} />
                 <DataGrid
