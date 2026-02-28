@@ -7,7 +7,7 @@ import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle, Plus, FileCheck, ChevronsUpDown, Printer, Download, ChevronLeft, ChevronRight, ScanBarcode, Mail } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle, Plus, FileCheck, ChevronsUpDown, Printer, Download, ChevronLeft, ChevronRight, ScanBarcode, Mail, ClipboardList } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -563,6 +563,14 @@ export default function InventoryPage() {
                 <Link href="/inventory/fast-entry">
                   <LayoutGrid className="mr-2 h-4 w-4" />
                   <span>Entrada Rápida</span>
+                </Link>
+              </Button>
+            )}
+            {canEditInventory && (
+              <Button variant="outline" className="h-12 w-full sm:w-auto border-blue-600 text-blue-600 hover:bg-blue-50" asChild>
+                <Link href="/inventory/fast-count">
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  <span>Contagem Rápida</span>
                 </Link>
               </Button>
             )}

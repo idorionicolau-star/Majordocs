@@ -51,35 +51,56 @@ export function Sidebar() {
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 flex flex-col gap-2 w-full px-4 overflow-y-auto scrollbar-none">
+            <nav className="flex-1 flex flex-col gap-1 w-full px-4 overflow-y-auto scrollbar-none">
                 {navItems.map(item => {
                     const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                    const subItems = mainNavItems.filter(sub => sub.isSubItem && sub.id === item.id);
+
                     return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={() => window.dispatchEvent(new CustomEvent('navigation-start'))}
-                            className={cn(
-                                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative",
-                                isActive
-                                    ? "bg-primary/10 text-primary"
-                                    : "text-slate-500 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                        <div key={item.href} className="flex flex-col gap-1">
+                            <Link
+                                href={item.href}
+                                onClick={() => window.dispatchEvent(new CustomEvent('navigation-start'))}
+                                className={cn(
+                                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative",
+                                    isActive
+                                        ? "bg-primary/10 text-primary font-bold shadow-sm"
+                                        : "text-slate-500 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                                )}
+                            >
+                                <item.icon className={cn(
+                                    "h-5 w-5 shrink-0 transition-transform duration-200",
+                                    isActive ? "text-primary scale-110" : "group-hover:text-primary group-hover:scale-110"
+                                )} />
+
+                                <span className={cn(
+                                    "font-medium text-sm transition-colors duration-200",
+                                    isActive ? "text-primary font-bold" : "group-hover:text-primary"
+                                )}>
+                                    {item.title}
+                                </span>
+                            </Link>
+
+                            {/* Sub-items rendering */}
+                            {isActive && subItems.length > 0 && (
+                                <div className="flex flex-col gap-1 ml-9 pl-4 border-l-2 border-primary/20 mt-1 mb-2 animate-in slide-in-from-left-2 duration-300">
+                                    {subItems.map(sub => (
+                                        <Link
+                                            key={sub.href}
+                                            href={sub.href}
+                                            className={cn(
+                                                "py-2 text-xs transition-colors px-2 rounded-lg",
+                                                pathname === sub.href
+                                                    ? "text-primary font-bold bg-primary/5"
+                                                    : "text-slate-400 hover:text-primary hover:bg-slate-50"
+                                            )}
+                                        >
+                                            {sub.title}
+                                        </Link>
+                                    ))}
+                                </div>
                             )}
-                        >
-                            <item.icon className={cn(
-                                "h-5 w-5 shrink-0 transition-transform duration-200",
-                                isActive ? "text-primary scale-110" : "group-hover:text-primary group-hover:scale-110"
-                            )} />
-
-                            <span className={cn(
-                                "font-medium text-sm transition-colors duration-200",
-                                isActive ? "text-primary font-bold" : "group-hover:text-primary"
-                            )}>
-                                {item.title}
-                            </span>
-
-
-                        </Link>
+                        </div>
                     )
                 })}
             </nav>
