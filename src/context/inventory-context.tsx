@@ -1437,58 +1437,94 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const productQuery = query(
-      productsCollectionRef,
-      where("name", "==", freshSale.productName),
-      where("location", "==", freshSale.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
+    const targetLocation = freshSale.location || (isMultiLocation ? locations[0]?.id : 'Principal');
+    const aggregatedProduct = products.find(p =>
+      p.name === freshSale.productName &&
+      (!isMultiLocation || p.location === targetLocation || (!p.location && (targetLocation === 'Principal' || !freshSale.location)))
     );
-    const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
-    const productQuerySnapshot = await getDocs(productQuery);
-    if (productQuerySnapshot.empty) {
+    let sourceIdsToCheck: string[] = [];
+    if (aggregatedProduct?.sourceIds && aggregatedProduct.sourceIds.length > 0) {
+      sourceIdsToCheck = aggregatedProduct.sourceIds;
+    } else if (freshSale.productId) {
+      sourceIdsToCheck = [freshSale.productId];
+    } else {
+      // Fallback query if not in context
+      const productQuery = query(
+        productsCollectionRef,
+        where("name", "==", freshSale.productName),
+        where("location", "==", targetLocation)
+      );
+      const snap = await getDocs(productQuery);
+      if (!snap.empty) {
+        sourceIdsToCheck = snap.docs.map(d => d.id);
+      }
+    }
+
+    if (sourceIdsToCheck.length === 0) {
       throw new Error(`Produto "${freshSale.productName}" não encontrado para atualizar estoque.`);
     }
-    const productDocRef = productQuerySnapshot.docs[0].ref;
 
     await runTransaction(firestore, async (transaction) => {
       // 1. READS
-      const pSnap = await transaction.get(productDocRef);
-      if (!pSnap.exists()) {
+      const sourceDocRefs = sourceIdsToCheck.map(id => doc(productsCollectionRef, id));
+      const sourceSnaps = await Promise.all(sourceDocRefs.map(ref => transaction.get(ref)));
+
+      const loadedProducts = sourceSnaps.filter(s => s.exists()).map(s => ({ ref: s.ref, data: s.data() as Product }));
+
+      if (loadedProducts.length === 0) {
         throw new Error(`Produto "${freshSale.productName}" não encontrado na base de dados.`);
       }
-      const productData = pSnap.data() as Product;
 
-      // 2. CALCULATIONS
-      const newStock = productData.stock - freshSale.quantity;
-      let newReservedStock = productData.reservedStock - freshSale.quantity;
-
-      if (newReservedStock < 0) {
-        console.warn(`[Audit] Negative reserved stock detected for ${productData.name} during pickup. Clamped to 0. Was: ${productData.reservedStock}, Deducting: ${freshSale.quantity}`);
-        newReservedStock = 0;
+      // Check total available BEFORE deducting
+      const totalStock = loadedProducts.reduce((sum, p) => sum + p.data.stock, 0);
+      if (totalStock < freshSale.quantity) {
+        throw new Error(`Erro Crítico: Stock insuficiente para realizar o levantamento. Disp: ${totalStock}, Necessário: ${freshSale.quantity}`);
       }
 
-      if (newStock < 0) {
-        throw new Error("Erro Crítico: Stock insuficiente para realizar o levantamento.");
+      // 2. CALCULATIONS & WRITES
+      let remainingToDeduct = freshSale.quantity;
+      const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+
+      for (const source of loadedProducts) {
+        if (remainingToDeduct <= 0) break;
+
+        // Prefer deducting from products that have reserved stock first
+        const availableInSource = source.data.stock;
+        if (availableInSource > 0) {
+          const deductAmount = Math.min(availableInSource, remainingToDeduct);
+
+          let newStock = source.data.stock - deductAmount;
+          let newReservedStock = source.data.reservedStock - deductAmount;
+
+          if (newReservedStock < 0) {
+            newReservedStock = 0;
+          }
+
+          transaction.update(source.ref, { stock: newStock, reservedStock: newReservedStock, lastUpdated: new Date().toISOString() });
+
+          // Movement log per document modified
+          const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+            productId: source.ref.id,
+            productName: freshSale.productName,
+            type: 'OUT',
+            quantity: -deductAmount,
+            fromLocationId: source.data.location,
+            reason: `Levantamento Venda #${freshSale.guideNumber}`,
+            userId: user.id,
+            userName: user.username,
+          };
+          transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+
+          remainingToDeduct -= deductAmount;
+        }
       }
 
-      // 3. WRITES
-      transaction.update(productDocRef, { stock: newStock, reservedStock: newReservedStock, lastUpdated: new Date().toISOString() });
       transaction.update(saleRef, { status: 'Levantado' });
 
       // Side effect post-transaction logic
-      checkStockAndNotify({ ...productData, stock: newStock });
-
-      const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
-        productId: productDocRef.id,
-        productName: freshSale.productName,
-        type: 'OUT',
-        quantity: -freshSale.quantity,
-        fromLocationId: productData.location,
-        reason: `Venda #${freshSale.guideNumber}`,
-        userId: user.id,
-        userName: user.username,
-      };
-      transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+      // Send notification with total remaining stock
+      checkStockAndNotify({ ...loadedProducts[0].data, stock: totalStock - freshSale.quantity });
     });
 
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user, checkStockAndNotify, toast]);
