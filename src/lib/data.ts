@@ -15,6 +15,7 @@ import {
   Banknote,
   Book,
   Zap,
+  TrendingDown,
 } from 'lucide-react';
 
 export const mainNavItems: NavItem[] = [
@@ -38,6 +39,7 @@ export const mainNavItems: NavItem[] = [
   { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList },
   { title: 'Financeiro', href: '/finance', id: 'finance', icon: Banknote },
   { title: 'Relatórios', href: '/reports', id: 'reports', icon: FileText },
+  { title: 'Impacto de Auditoria', href: '/reports/inventory-impact', id: 'reports', isSubItem: true, icon: TrendingDown },
   { title: 'Funcionários', href: '/users', id: 'users', icon: Users, adminOnly: true },
   { title: 'Ajustes', href: '/settings', id: 'settings', icon: Settings },
 ];

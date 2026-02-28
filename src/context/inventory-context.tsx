@@ -1401,27 +1401,29 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       }
       guideNumberForOuterScope = guideNumber;
 
-      if (shouldReserveStock && productDocRef) {
-        const productDoc = await transaction.get(productDocRef);
-        if (!productDoc.exists()) {
-          throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque.`);
-        }
-        const productData = productDoc.data() as Product;
-        const availableStock = productData.stock - productData.reservedStock;
+      let unitCost = 0;
+      if (productDocRef) {
+        const productDoc = await transaction.get(productDocRef as DocumentReference);
+        if (productDoc.exists()) {
+          const productData = productDoc.data() as Product;
+          unitCost = productData.cost || 0;
 
-        if (availableStock < newSaleData.quantity) {
-          throw new Error(`Estoque insuficiente. Disponível: ${availableStock}.`);
+          if (shouldReserveStock) {
+            const availableStock = productData.stock - productData.reservedStock;
+            if (availableStock < newSaleData.quantity) {
+              throw new Error(`Estoque insuficiente. Disponível: ${availableStock}.`);
+            }
+            const newReservedStock = productData.reservedStock + newSaleData.quantity;
+            transaction.update(productDoc.ref, { reservedStock: newReservedStock });
+          }
         }
-
-        const newReservedStock = productData.reservedStock + newSaleData.quantity;
-        transaction.update(productDoc.ref, { reservedStock: newReservedStock });
       }
 
       transaction.update(companyDocRef, {
         saleCounter: newSaleCounter,
         ...(typeConfig && typeConfig.prefix ? { [`documentNumbering.${newSaleData.documentType}.nextNumber`]: (typeConfig.nextNumber || 1) + 1 } : {})
       });
-      transaction.set(newSaleRef, { ...newSaleData, status: finalStatus, guideNumber });
+      transaction.set(newSaleRef, { ...newSaleData, status: finalStatus, guideNumber, unitCost });
     });
 
     if (guideNumberForOuterScope) {
@@ -1574,6 +1576,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           productName: item.productName,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
+          unitCost: item.originalCost || 0,
           subtotal: item.subtotal,
           discount: itemDiscount,
           vat: itemVat,
@@ -1629,6 +1632,57 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
 
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, products, toast, triggerEmailAlert]);
+
+  const syncSmartThresholds = useCallback(async () => {
+    if (!firestore || !companyId || !productsData || !salesData) return;
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // Calculate ADS for all products
+    const productSalesVelocity = new Map<string, number>();
+    salesData.forEach(s => {
+      // Use timestamp if available, fallback to date
+      const saleDate = (s.timestamp as any)?.toDate ? (s.timestamp as any).toDate() : (s.timestamp ? new Date(s.timestamp) : new Date(s.date));
+      if (saleDate >= thirtyDaysAgo) {
+        const current = productSalesVelocity.get(s.productName) || 0;
+        productSalesVelocity.set(s.productName, current + (s.quantity || 0));
+      }
+    });
+
+    const batch = writeBatch(firestore);
+    let updatesCount = 0;
+
+    productsData.forEach(p => {
+      if (p.thresholdMode === 'manual') return;
+
+      const totalSold30d = productSalesVelocity.get(p.name) || 0;
+      const ads = totalSold30d / 30;
+
+      const newCritical = Math.max(ads > 0 ? 1 : 0, Math.ceil(ads * 5));
+      const newLow = Math.max(ads > 0 ? 2 : 0, Math.ceil(ads * 10));
+
+      const hasSignificantChange =
+        Math.abs((p.criticalStockThreshold || 0) - newCritical) > ((p.criticalStockThreshold || 0) * 0.2) ||
+        Math.abs((p.lowStockThreshold || 0) - newLow) > ((p.lowStockThreshold || 0) * 0.2) ||
+        p.ads !== ads;
+
+      if (hasSignificantChange && p.id) {
+        batch.update(doc(firestore, 'companies', companyId, 'products', p.id), {
+          criticalStockThreshold: newCritical,
+          lowStockThreshold: newLow,
+          ads: ads,
+          lastUpdated: new Date().toISOString()
+        });
+        updatesCount++;
+      }
+    });
+
+    if (updatesCount > 0) {
+      await batch.commit();
+      console.log(`Smart Thresholds updated for ${updatesCount} products.`);
+    }
+  }, [firestore, companyId, productsData, salesData]);
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
@@ -2809,6 +2863,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     restoreItem,
     hardDelete,
     exportCompanyData,
+    syncSmartThresholds,
 
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
     recalculateReservedStock,
@@ -2850,6 +2905,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     exportCompanyData,
     availableUnits, addUnit,
     availableCategories, addCategory,
+    syncSmartThresholds,
     confirmAction,
   ]);
 

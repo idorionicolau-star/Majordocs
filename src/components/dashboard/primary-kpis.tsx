@@ -114,8 +114,11 @@ export const PrimaryKPIs = () => {
             .filter(e => isWithinInterval(parseISO(e.date), { start: prevExpenseStart, end: prevExpenseEnd }))
             .reduce((sum, e) => sum + e.amount, 0);
 
-        const currentProfit = currentPeriodSales.reduce((sum, s) => sum + (s.amountPaid || s.totalValue), 0) - currentExpensesVal;
-        const prevProfit = previousPeriodSales.reduce((sum, s) => sum + (s.amountPaid || s.totalValue), 0) - prevExpensesVal;
+        const currentCOGS = currentPeriodSales.reduce((sum, s) => sum + (s.quantity * (s.unitCost || 0)), 0);
+        const prevCOGS = previousPeriodSales.reduce((sum, s) => sum + (s.quantity * (s.unitCost || 0)), 0);
+
+        const currentProfit = currentPeriodSales.reduce((sum, s) => sum + (s.amountPaid || s.totalValue), 0) - currentCOGS - currentExpensesVal;
+        const prevProfit = previousPeriodSales.reduce((sum, s) => sum + (s.amountPaid || s.totalValue), 0) - prevCOGS - prevExpensesVal;
 
         const profitGrowth = prevProfit !== 0 ? ((currentProfit - prevProfit) / Math.abs(prevProfit)) * 100 : (currentProfit > 0 ? 100 : 0);
 

@@ -15,6 +15,7 @@ import { FinancialHealthChart } from "@/components/dashboard/financial-health-ch
 import { TopSales } from "@/components/dashboard/top-sales";
 import { StockAlerts } from "@/components/dashboard/stock-alerts";
 import { DeadStock } from "@/components/dashboard/dead-stock";
+import { TacticalInsights } from "@/components/dashboard/tactical-insights";
 import { EmptyStateWelcome } from "@/components/dashboard/empty-state";
 import { MajorAssistant } from "@/components/assistant/major-assistant";
 
@@ -73,7 +74,7 @@ export default function DashboardPage() {
               <FinancialHealthChart className="h-full" />
             </div>
             <div className="lg:col-span-1">
-              <DeadStock className="h-full" />
+              <TacticalInsights className="h-full" />
             </div>
           </div>
 

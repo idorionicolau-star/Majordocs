@@ -99,6 +99,8 @@ export type Product = {
   deletedAt?: string;
   deletedBy?: string;
   imageUrl?: string;
+  thresholdMode?: 'auto' | 'manual';
+  ads?: number;
 };
 
 
@@ -155,6 +157,7 @@ export type Sale = {
   quantity: number;
   unit?: string;
   unitPrice: number;
+  unitCost?: number;
   subtotal: number;
   discount?: number;
   vat?: number;
@@ -170,6 +173,7 @@ export type Sale = {
   notes?: string;
   transactionId?: string; // For grouping multi-item sales
   paymentMethod?: string;
+  timestamp?: any; // Firestore serverTimestamp or Date
 };
 
 export type CartItem = {
@@ -408,6 +412,7 @@ export interface InventoryContextType {
   addCategory: (category: string) => Promise<void>;
   editCategory: (oldCategory: string, newCategory: string) => Promise<void>;
   removeCategory: (category: string) => Promise<void>;
+  syncSmartThresholds: () => Promise<void>;
   confirmAction: (action: () => Promise<void>, title?: string, message?: string) => void;
 }
 

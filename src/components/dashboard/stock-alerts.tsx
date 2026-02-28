@@ -3,7 +3,7 @@ import { useContext, useMemo, useState } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, Download, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertTriangle, Download, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 export function StockAlerts({ className }: { className?: string }) {
-    const { products, loading, companyData } = useContext(InventoryContext) || { products: [], loading: true, companyData: null };
+    const { products, sales, loading, companyData } = useContext(InventoryContext) || { products: [], sales: [], loading: true, companyData: null };
     const [currentPage, setCurrentPage] = useState(1);
     const [isDownloading, setIsDownloading] = useState(false);
     const { toast } = useToast();
@@ -19,26 +19,48 @@ export function StockAlerts({ className }: { className?: string }) {
     const ITEMS_PER_PAGE = 5;
 
     const criticalStockProducts = useMemo(() => {
-        if (!products) return [];
+        if (!products || !sales) return [];
+
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const productSalesVelocity = new Map<string, number>();
+        sales.forEach(s => {
+            const saleDate = (s.timestamp as any)?.toDate ? (s.timestamp as any).toDate() : new Date(s.timestamp as any);
+            if (saleDate >= thirtyDaysAgo) {
+                const current = productSalesVelocity.get(s.productName) || 0;
+                productSalesVelocity.set(s.productName, current + (s.quantity || 0));
+            }
+        });
 
         return products
             .filter(p => {
                 const availableStock = p.stock - p.reservedStock;
                 return availableStock <= p.criticalStockThreshold;
             })
-            .sort((a, b) => (a.stock - a.reservedStock) - (b.stock - b.reservedStock));
+            .map(p => {
+                const totalSold30d = productSalesVelocity.get(p.name) || 0;
+                const ads = totalSold30d / 30;
+                const availableStock = p.stock - p.reservedStock;
+                const daysOfStock = ads > 0 ? Math.floor(availableStock / ads) : Infinity;
 
-    }, [products]);
+                return {
+                    ...p,
+                    ads,
+                    daysOfStock
+                };
+            })
+            .sort((a, b) => a.daysOfStock - b.daysOfStock);
+
+    }, [products, sales]);
 
     // Reset to page 1 if data changes significantly
     useMemo(() => {
         setCurrentPage(1);
     }, [criticalStockProducts.length]);
 
-
     const handleDownloadCriticalStock = async () => {
         if (criticalStockProducts.length === 0) return;
-
         setIsDownloading(true);
         if (!companyData) {
             toast({ variant: "destructive", title: "Erro", description: "Dados da empresa não encontrados." });
@@ -48,7 +70,7 @@ export function StockAlerts({ className }: { className?: string }) {
 
         try {
             const { generateCriticalStockPDF } = await import('@/lib/pdf-generator');
-            await generateCriticalStockPDF(criticalStockProducts, companyData);
+            await generateCriticalStockPDF(criticalStockProducts as any, companyData);
             toast({ title: "Relatório gerado", description: "Relatório de stock crítico gerado com sucesso!" });
         } catch (error) {
             console.error("Erro ao gerar PDF:", error);
@@ -145,11 +167,16 @@ export function StockAlerts({ className }: { className?: string }) {
                     return (
                         <Link
                             href={`/inventory?filter=${encodeURIComponent(product.name)}`}
-                            key={product.instanceId}
+                            key={product.id}
                             className="block group"
                         >
                             <div className="flex items-center justify-between p-3 rounded-xl bg-white/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 group-hover:border-red-500/30 transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/60 shadow-sm dark:shadow-none">
-                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-foreground transition-colors truncate mr-2">{product.name}</span>
+                                <div className="flex flex-col min-w-0">
+                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-foreground transition-colors truncate mr-2">{product.name}</span>
+                                    <span className="text-[10px] text-red-500 font-bold uppercase tracking-wider mt-0.5">
+                                        {product.daysOfStock === Infinity ? "Sem Giro Recente" : `Acaba em aprox. ${product.daysOfStock} dias`}
+                                    </span>
+                                </div>
                                 <div className="text-right flex items-center gap-2 shrink-0">
                                     <span className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_5px_currentColor]" />
                                     <span className="text-sm font-bold text-red-600 dark:text-red-400">
