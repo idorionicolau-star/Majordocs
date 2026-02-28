@@ -177,6 +177,7 @@ export type CartItem = {
   productName: string;
   quantity: number;
   unitPrice: number;
+  originalCost?: number;
   unit?: string;
   location?: string;
   subtotal: number;

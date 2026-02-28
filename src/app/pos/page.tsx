@@ -51,6 +51,7 @@ import {
 
 import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 import { PosCart } from '@/components/pos/pos-cart';
+import { AiSuggestions } from '@/components/pos/ai-suggestions';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -209,6 +210,15 @@ export default function POSPage() {
     const vatAmount = checkoutApplyVat ? totalAfterDiscount * (checkoutVatPercentage / 100) : 0;
     const cartTotal = totalAfterDiscount + vatAmount;
 
+    // Projected Profit Calculations (Admin/Owner only)
+    const isAdminOrOwner = user?.role === 'Admin' || user?.role === 'Dono';
+    const cartTotalCost = useMemo(() => {
+        return cart.reduce((sum, item) => sum + ((item.originalCost || 0) * item.quantity), 0);
+    }, [cart]);
+
+    const projectedProfit = totalAfterDiscount - cartTotalCost;
+    const projectedMargin = totalAfterDiscount > 0 ? (projectedProfit / totalAfterDiscount) * 100 : 0;
+
     // Cart actions
     const addToCart = useCallback((product: typeof availableProducts[0]) => {
         setCart(prev => {
@@ -231,6 +241,7 @@ export default function POSPage() {
                 productName: product.name,
                 quantity: 1,
                 unitPrice: product.price || 0,
+                originalCost: product.cost || 0,
                 unit: product.unit || 'un',
                 location: selectedLocation || undefined,
                 subtotal: product.price || 0,
@@ -474,6 +485,17 @@ export default function POSPage() {
                         })}
                     </div>
 
+                    {/* AI Cross-Selling Suggestions */}
+                    {cart.length > 0 && (
+                        <div className="mt-6 mb-2">
+                            <AiSuggestions
+                                cart={cart}
+                                catalogProducts={availableProducts}
+                                onAddToCart={addToCart}
+                            />
+                        </div>
+                    )}
+
                     {filteredProducts.length === 0 && (
                         <Card className="p-8 text-center text-muted-foreground">
                             <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -515,8 +537,18 @@ export default function POSPage() {
                                     <span className="text-xs text-muted-foreground">{cart.length === 1 ? '1 item' : `${cart.length} itens`}</span>
                                 </div>
                             </div>
-                            <div className="text-lg font-bold text-primary">
-                                {formatCurrency(cartTotal)}
+                            <div className="flex flex-col items-end">
+                                <div className="text-lg font-bold text-primary">
+                                    {formatCurrency(cartTotal)}
+                                </div>
+                                {isAdminOrOwner && cart.length > 0 && (
+                                    <div className="text-[10px] text-muted-foreground flex gap-1 items-center">
+                                        <span>Lucro:</span>
+                                        <span className={projectedProfit > 0 ? 'text-emerald-500 font-semibold' : projectedProfit < 0 ? 'text-destructive font-semibold' : ''}>
+                                            {formatCurrency(projectedProfit)} ({projectedMargin.toFixed(1)}%)
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </DrawerTrigger>
@@ -689,6 +721,21 @@ export default function POSPage() {
                                     <span className="font-bold">Total</span>
                                     <span className="font-bold text-primary">{formatCurrency(cartTotal)}</span>
                                 </div>
+                                {isAdminOrOwner && (
+                                    <>
+                                        <Separator />
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-muted-foreground">Custo Total (Produtos)</span>
+                                            <span className="font-medium text-amber-600 dark:text-amber-500">{formatCurrency(cartTotalCost)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-muted-foreground">Lucro Projetado (S/Iva)</span>
+                                            <span className={`font-medium ${projectedProfit > 0 ? 'text-emerald-500' : projectedProfit < 0 ? 'text-destructive' : ''}`}>
+                                                {formatCurrency(projectedProfit)} ({projectedMargin.toFixed(1)}%)
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </ScrollArea>

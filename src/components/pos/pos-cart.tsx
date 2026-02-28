@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Trash2, X, Minus, Plus, CreditCard } from 'lucide-react';
+import { ShoppingCart, Trash2, X, Minus, Plus, CreditCard, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { CartItem } from '@/lib/types';
 import { useState, useEffect } from 'react';
@@ -131,20 +131,37 @@ export function PosCart({
                                 <div key={item.productName} className="p-5 hover:bg-muted/30 transition-colors group">
                                     {/* Top Row: Name and Remove */}
                                     <div className="flex justify-between items-start gap-4 mb-4">
-                                        <p className="font-medium text-base text-foreground leading-snug">
+                                        <div className="flex items-center gap-2">
                                             {item.productName}
-                                        </p>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-muted-foreground hover:text-destructive -mr-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            onClick={() => onRemoveItem(item.productName)}
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </Button>
-                                    </div>
+                                            {item.originalCost !== undefined && item.originalCost > 0 && (
+                                                (() => {
+                                                    // Calculate effective price after global discount
+                                                    // Assuming discountAmount is a global discount applied proportionally
+                                                    const itemProportion = item.subtotal / (cartSubtotal || 1);
+                                                    const itemDiscount = discountAmount * itemProportion;
+                                                    const effectivePrice = (item.subtotal - itemDiscount) / item.quantity;
 
-                                    {/* Bottom Row: Controls and Price */}
+                                                    if (effectivePrice <= item.originalCost) {
+                                                        return (
+                                                            <div title={`Atenção! Preço efetivo (${formatCurrency(effectivePrice)}) está abaixo ou igual ao preço de custo (${formatCurrency(item.originalCost)}). Venda com prejuízo.`}>
+                                                                <AlertTriangle className="h-4 w-4 text-destructive animate-pulse" />
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()
+                                            )}
+                                        </div>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-muted-foreground hover:text-destructive -mr-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={() => onRemoveItem(item.productName)}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+
                                     <div className="flex items-end justify-between">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2 bg-background border rounded-lg p-0.5 shadow-sm">
@@ -230,6 +247,6 @@ export function PosCart({
                     </div>
                 )}
             </CardContent>
-        </Card>
+        </Card >
     );
 }
