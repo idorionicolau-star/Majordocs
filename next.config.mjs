@@ -17,7 +17,7 @@ const pwaConfig = withPWA({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: false,
+  disable: true, // Temporarily disabled for Vercel deployment debug
 });
 
 export default pwaConfig(nextConfig);
