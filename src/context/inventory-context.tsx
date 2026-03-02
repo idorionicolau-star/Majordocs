@@ -1634,7 +1634,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, products, toast, triggerEmailAlert]);
 
   const syncSmartThresholds = useCallback(async (isManual = false) => {
-    if (!firestore || !companyId || !productsData || !salesData) return;
+    if (!firestore || !companyId || !productsData || !stockMovementsData) return;
 
     if (!isManual) {
       const lastSync = localStorage.getItem(`majorstockx_last_smart_sync_${companyId}`);
@@ -1649,14 +1649,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Calculate ADS for all products
+    // Calculate ADS for all products based on OUT movements
     const productSalesVelocity = new Map<string, number>();
-    salesData.forEach(s => {
-      // Use timestamp if available, fallback to date
-      const saleDate = (s.timestamp as any)?.toDate ? (s.timestamp as any).toDate() : (s.timestamp ? new Date(s.timestamp) : new Date(s.date));
-      if (saleDate >= thirtyDaysAgo) {
-        const current = productSalesVelocity.get(s.productName) || 0;
-        productSalesVelocity.set(s.productName, current + (s.quantity || 0));
+    stockMovementsData.forEach(m => {
+      if (m.type === 'OUT') {
+        // Use timestamp if available, fallback to date
+        const moveDate = (m.timestamp as any)?.toDate ? (m.timestamp as any).toDate() : (m.timestamp ? new Date(m.timestamp) : null);
+
+        // If no timestamp, skip, but most should have it. Keep null check safe.
+        if (!moveDate || moveDate >= thirtyDaysAgo) {
+          const current = productSalesVelocity.get(m.productName) || 0;
+          // quantity for OUT is usually negative, so we take absolute value
+          productSalesVelocity.set(m.productName, current + Math.abs(m.quantity || 0));
+        }
       }
     });
 
@@ -1715,7 +1720,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
 
     localStorage.setItem(`majorstockx_last_smart_sync_${companyId}`, Date.now().toString());
-  }, [firestore, companyId, productsData, salesData]);
+  }, [firestore, companyId, productsData, stockMovementsData]);
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
@@ -2841,7 +2846,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   // Auto-Sync Smart Thresholds Background
   useEffect(() => {
-    if (!companyId || !firestore || !productsData || !salesData) return;
+    if (!companyId || !firestore || !productsData || !stockMovementsData) return;
 
     const tryAutoSync = () => {
       syncSmartThresholds();
@@ -2850,7 +2855,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     // Run slightly after mount to not block UI rendering
     const timer = setTimeout(tryAutoSync, 8000);
     return () => clearTimeout(timer);
-  }, [companyId, firestore, productsData, salesData, syncSmartThresholds]);
+  }, [companyId, firestore, productsData, stockMovementsData, syncSmartThresholds]);
 
   // confirmAction implementation
   const [confirmationAction, setConfirmationAction] = useState<(() => Promise<void>) | null>(null);

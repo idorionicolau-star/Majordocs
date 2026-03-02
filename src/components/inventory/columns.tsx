@@ -138,6 +138,38 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
       },
     },
     {
+      accessorKey: "restock",
+      header: "Reposição",
+      cell: ({ row }) => {
+        const p = row.original;
+        const available = p.stock - p.reservedStock;
+
+        // Calculate target stock: 30 days cover if ads exists, otherwise double the low threshold
+        let targetStock = p.lowStockThreshold * 2;
+        if (p.ads && p.ads > 0) {
+          targetStock = Math.ceil(p.ads * 30);
+        }
+
+        // Minimum target shouldn't be zero, and should at least clear the low threshold
+        targetStock = Math.max(targetStock, p.lowStockThreshold + 1);
+
+        const needed = targetStock - available;
+        const isLow = available <= p.lowStockThreshold;
+
+        if (!isLow || needed <= 0) {
+          return <div className="text-center text-muted-foreground">-</div>;
+        }
+
+        return (
+          <div className="text-center">
+            <span className="text-[10px] font-black px-2.5 py-1.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+              +{needed} un.
+            </span>
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: "lastUpdated",
       header: "Estado",
       cell: ({ row }) => {
