@@ -6,13 +6,14 @@ import { DataGrid, renderTextEditor as textEditor, Column, RenderEditCellProps }
 import 'react-data-grid/lib/styles.css';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Save, Camera, Upload, Loader2 } from "lucide-react";
+import { PlusCircle, Save, Camera, Upload, Loader2, MapPin } from "lucide-react";
 import { useInventory } from "@/context/inventory-context";
 import { useAuth } from "@/firebase/provider";
 import { useTheme } from "next-themes";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useFuse } from "@/hooks/use-fuse";
 import type { Product } from "@/lib/types";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface RowData {
     name: string;
@@ -22,6 +23,7 @@ interface RowData {
     cost: string;
     stock: string;
     minStock: string;
+    location: string;
     isCategorizing?: boolean;
 }
 
@@ -33,6 +35,7 @@ const initialRows: RowData[] = Array.from({ length: 5 }, () => ({
     cost: '',
     stock: '0',
     minStock: '0',
+    location: '',
 }));
 
 
@@ -99,6 +102,24 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
         return () => { mounted = false; };
     }, [rows, products, categorizeProductWithAI]);
 
+    // Automatically set location if empty and company has locations
+    useEffect(() => {
+        if (companyData?.locations && companyData.locations.length > 0) {
+            const defaultLocation = companyData.locations[0].id;
+            setRows(currentRows => {
+                let hasChanges = false;
+                const newRows = currentRows.map(row => {
+                    if (row.location === '') {
+                        hasChanges = true;
+                        return { ...row, location: defaultLocation };
+                    }
+                    return row;
+                });
+                return hasChanges ? newRows : currentRows;
+            });
+        }
+    }, [companyData?.locations]);
+
     const currentTheme = theme === 'system' ? systemTheme : theme;
     const gridThemeClass = currentTheme === 'dark' ? 'rdg-dark' : 'rdg-light';
 
@@ -132,6 +153,24 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
             onChange={(e) => onRowChange({ ...row, unit: e.target.value })}
             onBlur={() => onClose(true)}
         />
+    );
+
+    const LocationEditor = ({ row, onRowChange, onClose }: RenderEditCellProps<RowData>) => (
+        <select
+            autoFocus
+            className="w-full h-full border-2 border-primary outline-none bg-background text-foreground px-2 cursor-pointer"
+            value={row.location}
+            onChange={(e) => {
+                onRowChange({ ...row, location: e.target.value }, true);
+                onClose(true);
+            }}
+            onBlur={() => onClose(true)}
+        >
+            <option value="" disabled>Selecione um local...</option>
+            {companyData?.locations?.map(loc => (
+                <option key={loc.id} value={loc.id}>{loc.name}</option>
+            ))}
+        </select>
     );
 
     const productNames = React.useMemo(() => {
@@ -179,7 +218,8 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                     unit: existingProduct.unit || 'un',
                     price: existingProduct.price.toString(),
                     stock: existingProduct.stock.toString(),
-                    minStock: existingProduct.lowStockThreshold?.toString() || '0'
+                    minStock: existingProduct.lowStockThreshold?.toString() || '0',
+                    location: existingProduct.location || row.location,
                 }, true);
             } else {
                 onRowChange({ ...row, name: val }, true);
@@ -281,8 +321,23 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
 
     const columns: Column<RowData>[] = [
         { key: 'name', name: 'Nome do Produto', renderEditCell: NameEditor, minWidth: isMobile ? 220 : 250, frozen: true },
-        { key: 'category', name: 'Categoria', renderEditCell: CategoryEditor, width: isMobile ? 140 : 160 },
-        { key: 'unit', name: 'Unid.', renderEditCell: UnitEditor, width: isMobile ? 90 : 100 },
+        {
+            key: 'location',
+            name: 'Localização',
+            renderEditCell: LocationEditor,
+            width: isMobile ? 120 : 150,
+            renderCell: ({ row }) => {
+                const locName = companyData?.locations?.find(l => l.id === row.location)?.name || "—";
+                return (
+                    <div className="flex items-center gap-1.5 h-full px-2 text-slate-600 dark:text-slate-400">
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{locName}</span>
+                    </div>
+                );
+            }
+        },
+        { key: 'category', name: 'Categoria', renderEditCell: CategoryEditor, width: isMobile ? 130 : 140 },
+        { key: 'unit', name: 'Unid.', renderEditCell: UnitEditor, width: isMobile ? 80 : 90 },
         {
             key: 'cost',
             name: 'Custo (MTn)',
@@ -304,7 +359,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     ];
 
     const handleAddRow = () => {
-        setRows([...rows, { name: '', category: '', unit: 'un', price: '', cost: '', stock: '0', minStock: '0' }]);
+        setRows([...rows, { name: '', category: '', unit: 'un', price: '', cost: '', stock: '0', minStock: '0', location: companyData?.locations?.[0]?.id || '' }]);
     };
 
     const handleSave = async () => {
@@ -313,7 +368,8 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
             row.category.trim() !== '' &&
             row.price.trim() !== '' &&
             row.cost.trim() !== '' &&
-            row.stock.trim() !== ''
+            row.stock.trim() !== '' &&
+            row.location.trim() !== ''
         );
 
         if (validRows.length === 0) {
@@ -347,10 +403,6 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
         setIsSaving(true);
         let successCount = 0;
 
-        const defaultLocation = (companyData?.locations && companyData.locations.length > 0)
-            ? companyData.locations[0].id
-            : '';
-
         for (const row of validRows) {
             try {
                 // Ensure category exists in catalog
@@ -381,7 +433,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                     stock: parseFloat(row.stock) || 0,
                     reservedStock: 0,
                     unit: row.unit || 'un',
-                    location: defaultLocation, // required to prevent undefined crashing firebase addDoc
+                    location: row.location,
                     cost: parseFloat(row.cost) || 0,
                     lastUpdated: new Date().toISOString(),
                     lowStockThreshold: parseFloat(row.minStock) || 0,
@@ -404,7 +456,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
 
         // Reset keeping 5 rows
         setRows(Array.from({ length: 5 }, () => ({
-            name: '', category: '', unit: 'un', price: '', cost: '', stock: '0', minStock: '0',
+            name: '', category: '', unit: 'un', price: '', cost: '', stock: '0', minStock: '0', location: companyData?.locations?.[0]?.id || ''
         })));
     };
 
@@ -453,6 +505,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
 
             // Map to grid rows
             const newRows: RowData[] = [];
+            const dLoc = companyData?.locations?.[0]?.id || '';
 
             extractedItems.forEach((item: { productName: string, quantity: number }) => {
                 const searchName = item.productName.toLowerCase().trim();
@@ -467,7 +520,8 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                         price: exactMatch.price.toString(),
                         cost: (exactMatch.cost || 0).toString(),
                         stock: item.quantity.toString(),
-                        minStock: exactMatch.lowStockThreshold?.toString() || '0'
+                        minStock: exactMatch.lowStockThreshold?.toString() || '0',
+                        location: exactMatch.location || dLoc
                     });
                 } else {
                     // Try to find the closest match manually (simple included word matching)
@@ -493,7 +547,8 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                             price: bestMatch.price.toString(),
                             cost: (bestMatch.cost || 0).toString(),
                             stock: item.quantity.toString(),
-                            minStock: bestMatch.lowStockThreshold?.toString() || '0'
+                            minStock: bestMatch.lowStockThreshold?.toString() || '0',
+                            location: bestMatch.location || dLoc
                         });
                     } else {
                         // Unmatched generic entry
@@ -504,7 +559,8 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                             price: '',
                             cost: '',
                             stock: item.quantity.toString(),
-                            minStock: '0'
+                            minStock: '0',
+                            location: dLoc
                         });
                     }
                 }
@@ -512,7 +568,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
 
             // Ensure at least 5 rows
             while (newRows.length < 5) {
-                newRows.push({ name: '', category: '', unit: 'un', price: '', cost: '', stock: '0', minStock: '0' });
+                newRows.push({ name: '', category: '', unit: 'un', price: '', cost: '', stock: '0', minStock: '0', location: dLoc });
             }
 
             setRows(newRows);
@@ -528,7 +584,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     };
 
     return (
-        <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+        <Card className="flex flex-col animate-in fade-in zoom-in-95 duration-200 border-none shadow-xl bg-white dark:bg-slate-900/50 overflow-hidden">
             <datalist id="categories-list">
                 {categories.map(c => <option key={c} value={c} />)}
             </datalist>
@@ -536,13 +592,13 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                 {units.map(u => <option key={u} value={u} />)}
             </datalist>
 
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex flex-col">
-                    <h2 className="text-xl font-bold font-headline">Entrada Rápida / Edição em Massa</h2>
-                    <p className="text-sm text-muted-foreground">Adicione produtos. {isMobile ? "Deslize para ver campos." : "Duplo clique para editar, TAB para navegar."}</p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-5 md:p-6 border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="flex flex-col gap-1.5">
+                    <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Entrada Rápida e Físico</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Adicione produtos. {isMobile ? "Deslize para ver campos." : "Duplo clique para editar, TAB para navegar."}</p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                     <input
                         type="file"
                         accept="image/*"
@@ -552,82 +608,101 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                         onChange={handleImageUpload}
                     />
                     <Button
-                        variant="secondary"
+                        variant="outline"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isExtracting}
-                        className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20 border-indigo-200 dark:border-indigo-800"
+                        className="h-10 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20 border-indigo-200 dark:border-indigo-800/30 font-medium"
                     >
                         {isExtracting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
-                        {isExtracting ? 'Analisando Foto...' : 'Scan Contagem (IA)'}
+                        {isExtracting ? 'A Analisar...' : 'Scan com IA'}
                     </Button>
                 </div>
             </div>
 
-            <div className="border rounded-md shadow-sm overflow-hidden bg-background">
-                <style dangerouslySetInnerHTML={{
-                    __html: `
-                    /* Styling based on theme using next-themes HTML class */
-                    html.light .grid-with-lines .rdg-cell {
-                        border-right: 1px solid rgba(0,0,0,0.1);
-                        border-bottom: 1px solid rgba(0,0,0,0.1);
-                        background-color: var(--background);
-                    }
-                    html.light .grid-with-lines .rdg-header-row .rdg-cell {
-                        border-bottom: 2px solid rgba(0,0,0,0.2);
-                        background-color: var(--muted);
-                        font-weight: 700;
-                        color: var(--foreground);
-                    }
-                    
-                    html.dark .grid-with-lines .rdg-cell {
-                        border-right: 1px solid rgba(255,255,255,0.1);
-                        border-bottom: 1px solid rgba(255,255,255,0.1);
-                        background-color: var(--background);
-                    }
-                    html.dark .grid-with-lines .rdg-header-row .rdg-cell {
-                        border-bottom: 2px solid rgba(255,255,255,0.2);
-                        background-color: var(--muted);
-                        font-weight: 700;
-                        color: var(--foreground);
-                    }
+            <CardContent className="p-0">
+                <div className="grid-container relative">
+                    <style dangerouslySetInnerHTML={{
+                        __html: `
+                        .grid-with-lines .rdg-cell {
+                            border-right: 1px solid rgba(0,0,0,0.05);
+                            border-bottom: 1px solid rgba(0,0,0,0.05);
+                            background-color: transparent;
+                            transition: background-color 0.2s;
+                        }
+                        .rdg-cell:hover {
+                            background-color: rgba(0,0,0,0.02) !important;
+                        }
+                        .dark .grid-with-lines .rdg-cell {
+                            border-right: 1px solid rgba(255,255,255,0.05);
+                            border-bottom: 1px solid rgba(255,255,255,0.05);
+                        }
+                        .dark .rdg-cell:hover {
+                            background-color: rgba(255,255,255,0.02) !important;
+                        }
+                        
+                        .rdg-header-row .rdg-cell {
+                            background-color: rgba(0,0,0,0.03) !important;
+                            font-weight: 600;
+                            text-transform: uppercase;
+                            font-size: 0.7rem;
+                            letter-spacing: 0.05em;
+                            color: var(--muted-foreground);
+                            border-bottom: 2px solid rgba(0,0,0,0.08) !important;
+                        }
+                        .dark .rdg-header-row .rdg-cell {
+                            background-color: rgba(255,255,255,0.03) !important;
+                            border-bottom: 2px solid rgba(255,255,255,0.08) !important;
+                        }
+                        
+                        .rdg-cell-frozen {
+                            z-index: 1;
+                            background-color: rgba(255,255,255,0.95) !important;
+                            backdrop-blur: sm;
+                        }
+                        .dark .rdg-cell-frozen {
+                            background-color: rgba(15, 23, 42, 0.95) !important;
+                        }
+                    `}} />
+                    <DataGrid
+                        columns={columns}
+                        rows={rows}
+                        onRowsChange={setRows}
+                        className={`${gridThemeClass} grid-with-lines border-none`}
+                        style={{ height: 'max(400px, 50vh)', width: '100%' }}
+                    />
+                </div>
 
-                    /* Ensure frozen columns have a solid background */
-                    .rdg-cell-frozen {
-                        z-index: 1;
-                        background-color: var(--background) !important;
-                    }
-                    .rdg-header-row .rdg-cell-frozen {
-                        z-index: 2;
-                        background-color: var(--muted) !important;
-                    }
-                `}} />
-                <DataGrid
-                    columns={columns}
-                    rows={rows}
-                    onRowsChange={setRows}
-                    className={`${gridThemeClass} grid-with-lines`}
-                    style={{ height: 'max(500px, 60vh)', width: '100%' }}
-                />
-            </div>
+                <div className="flex justify-between items-center p-4 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-200/50 dark:border-slate-800/50">
+                    <Button
+                        onClick={handleAddRow}
+                        variant="ghost"
+                        className="h-10 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400"
+                    >
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Mais uma Linha
+                    </Button>
 
-            <div className="flex justify-between items-center bg-muted/30 p-2 rounded-md border border-dashed">
-                <Button onClick={handleAddRow} variant="outline" size="sm">
-                    <PlusCircle className="mr-2 h-4 w-4" /> Mais uma Linha (Enter)
-                </Button>
-
-                <Button onClick={handleSave} disabled={isSaving || rows.filter(r => r.name.trim() !== '').length === 0}>
-                    {isSaving ? (
-                        <>
-                            <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                            A Gravar...
-                        </>
-                    ) : (
-                        <>
-                            <Save className="mr-2 h-4 w-4" /> Guardar {rows.filter(r => r.name.trim() !== '').length} Produtos
-                        </>
-                    )}
-                </Button>
-            </div>
-        </div>
+                    <Button
+                        onClick={handleSave}
+                        size="lg"
+                        disabled={isSaving || rows.filter(r => r.name.trim() !== '').length === 0}
+                        className="h-11 px-8 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 transition-all shadow-lg"
+                    >
+                        {isSaving ? (
+                            <>
+                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                A Gravar...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="mr-2 h-5 w-5" />
+                                Guardar {rows.filter(r => r.name.trim() !== '').length} Produtos
+                            </>
+                        )}
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
     );
 }
+
