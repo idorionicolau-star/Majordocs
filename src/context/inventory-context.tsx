@@ -1633,8 +1633,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, products, toast, triggerEmailAlert]);
 
-  const syncSmartThresholds = useCallback(async () => {
+  const syncSmartThresholds = useCallback(async (isManual = false) => {
     if (!firestore || !companyId || !productsData || !salesData) return;
+
+    if (!isManual) {
+      const lastSync = localStorage.getItem(`majorstockx_last_smart_sync_${companyId}`);
+      if (lastSync) {
+        const _3daysInMs = 3 * 24 * 60 * 60 * 1000;
+        if (Date.now() - parseInt(lastSync, 10) < _3daysInMs) {
+          return; // Skip if less than 3 days ago
+        }
+      }
+    }
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -1659,8 +1669,29 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const totalSold30d = productSalesVelocity.get(p.name) || 0;
       const ads = totalSold30d / 30;
 
-      const newCritical = Math.max(ads > 0 ? 1 : 0, Math.ceil(ads * 5));
-      const newLow = Math.max(ads > 0 ? 2 : 0, Math.ceil(ads * 10));
+      let daysLow = 10;
+      let daysCritical = 5;
+
+      if (ads <= 0.5) {
+        // Very slow moving: keep lean
+        daysLow = 7;
+        daysCritical = 3;
+      } else if (ads <= 2) {
+        // Slow
+        daysLow = 10;
+        daysCritical = 5;
+      } else if (ads <= 5) {
+        // Medium
+        daysLow = 14;
+        daysCritical = 7;
+      } else {
+        // Fast moving: need bigger cushion to prevent stockouts
+        daysLow = 21;
+        daysCritical = 10;
+      }
+
+      const newCritical = Math.max(ads > 0 ? 1 : 0, Math.ceil(ads * daysCritical));
+      const newLow = Math.max(ads > 0 ? 2 : 0, Math.ceil(ads * daysLow));
 
       const hasSignificantChange =
         Math.abs((p.criticalStockThreshold || 0) - newCritical) > ((p.criticalStockThreshold || 0) * 0.2) ||
@@ -1682,6 +1713,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       await batch.commit();
       console.log(`Smart Thresholds updated for ${updatesCount} products.`);
     }
+
+    localStorage.setItem(`majorstockx_last_smart_sync_${companyId}`, Date.now().toString());
   }, [firestore, companyId, productsData, salesData]);
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
@@ -2805,6 +2838,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const timer = setTimeout(cleanupOldDeletedItems, 5000);
     return () => clearTimeout(timer);
   }, [companyId, firestore, user, productsData, salesData, hardDelete]);
+
+  // Auto-Sync Smart Thresholds Background
+  useEffect(() => {
+    if (!companyId || !firestore || !productsData || !salesData) return;
+
+    const tryAutoSync = () => {
+      syncSmartThresholds();
+    };
+
+    // Run slightly after mount to not block UI rendering
+    const timer = setTimeout(tryAutoSync, 8000);
+    return () => clearTimeout(timer);
+  }, [companyId, firestore, productsData, salesData, syncSmartThresholds]);
 
   // confirmAction implementation
   const [confirmationAction, setConfirmationAction] = useState<(() => Promise<void>) | null>(null);

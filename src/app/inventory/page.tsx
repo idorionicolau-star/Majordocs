@@ -7,7 +7,7 @@ import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle, Plus, FileCheck, ChevronsUpDown, Printer, Download, ChevronLeft, ChevronRight, ScanBarcode, Mail, ClipboardList } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle, Plus, FileCheck, ChevronsUpDown, Printer, Download, ChevronLeft, ChevronRight, ScanBarcode, Mail, ClipboardList, WandSparkles } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,6 +66,7 @@ export default function InventoryPage() {
     user,
     companyData,
     confirmAction,
+    syncSmartThresholds,
   } = useInventory();
   const searchParams = useSearchParams();
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
@@ -572,6 +573,20 @@ export default function InventoryPage() {
                   <ClipboardList className="mr-2 h-4 w-4" />
                   <span>Contagem Rápida</span>
                 </Link>
+              </Button>
+            )}
+            {canEditInventory && isAdmin && (
+              <Button
+                onClick={async () => {
+                  toast({ title: "A calcular...", description: "A gerar sugestões com base no histórico recente." });
+                  await syncSmartThresholds(true);
+                  toast({ title: "Sucesso", description: "Quantidades mínimas recomendadas foram atualizadas." });
+                }}
+                variant="outline"
+                className="h-12 w-full sm:w-auto border-purple-600 text-purple-600 hover:bg-purple-50"
+              >
+                <WandSparkles className="mr-2 h-4 w-4" />
+                <span>Atualizar Sugestões</span>
               </Button>
             )}
             <Button onClick={handleDownloadPdfReport} variant="outline" className="h-12 w-full sm:w-auto">
