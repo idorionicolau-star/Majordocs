@@ -88,6 +88,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const auth = getFirebaseAuth();
   const wasSyncing = useRef(false);
+  const [lastSaleTimestamp, setLastSaleTimestamp] = useState<number>(0);
 
   const [companyData, setCompanyData] = useState<Company | null>(null);
 
@@ -1442,6 +1443,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       });
     }
 
+    setLastSaleTimestamp(Date.now());
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, toast, triggerEmailAlert]);
 
   const addBulkSale = useCallback(async (
@@ -1631,6 +1633,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       });
     }
 
+    setLastSaleTimestamp(Date.now());
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, products, toast, triggerEmailAlert]);
 
   const syncSmartThresholds = useCallback(async (isManual = false) => {
@@ -2862,6 +2865,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const timer = setTimeout(tryAutoSync, 8000);
     return () => clearTimeout(timer);
   }, [companyId, firestore, productsData, stockMovementsData, syncSmartThresholds]);
+
+  // Real-time Event-Driven Prediction Recalculation (Após Vendas)
+  useEffect(() => {
+    if (!lastSaleTimestamp || lastSaleTimestamp === 0) return;
+
+    // Wait 5 seconds to ensure Firebase snapshot is complete, then force a sync (true)
+    const timer = setTimeout(() => {
+      syncSmartThresholds(true);
+      console.log("Triggered Smart Threshold Sync after POS sale.");
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [lastSaleTimestamp, syncSmartThresholds]);
 
   // confirmAction implementation
   const [confirmationAction, setConfirmationAction] = useState<(() => Promise<void>) | null>(null);

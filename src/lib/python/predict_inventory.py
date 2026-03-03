@@ -108,9 +108,16 @@ def calculate_predictions(data):
         
         # Ensure it doesn't recommend 0 for active catalogue items
         # Minimum stock is always at least 1, or 2 if there's any movement at all.
-        minimum_safe = 2 if ads > 0 else 1
+        if ads > 0:
+            minimum_safe = 2
+            target_stock = max(target_stock, minimum_safe)
+        else:
+            # HYBRID LOGIC: Se não há histórico de vendas (ads == 0),
+            # O nosso Target Inicial de Aviso será igual a 50% do stock real que está na prateleira hoje.
+            # Assume-se que a primeira encomenda representa a "Visão" do gestor, e o alerta deve disparar a meio.
+            current_stock = product.get("stock", 0) - product.get("reservedStock", 0)
+            target_stock = max(1, math.ceil(current_stock / 2)) # Metade do stock atual como linha de alerta inicial
         
-        target_stock = max(target_stock, minimum_safe)
         
         # Also assign low and critical based on safety/lead time ratio
         # Low = Target Stock
