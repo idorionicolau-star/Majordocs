@@ -993,6 +993,115 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     [productsCollectionRef, firestore, user, companyId, addNotification, toast]
   );
 
+  const syncSmartThresholds = useCallback(async (isManual = false) => {
+    if (!firestore || !companyId || !productsData || !stockMovementsData) return;
+
+    if (!isManual) {
+      const lastSync = localStorage.getItem(`majorstockx_last_smart_sync_${companyId}`);
+      if (lastSync) {
+        const _1dayInMs = 1 * 24 * 60 * 60 * 1000;
+        if (Date.now() - parseInt(lastSync, 10) < _1dayInMs) {
+          return; // Skip if less than 1 day ago
+        }
+      }
+    }
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // Filter recent movements and sales for the API
+    const recentMovements = stockMovementsData.filter(m => {
+      if (m.type !== 'OUT') return false;
+      const ts = m.timestamp;
+      let moveDate: Date | null = null;
+      if (ts) {
+        if (typeof (ts as any).toDate === 'function') {
+          moveDate = (ts as any).toDate();
+        } else if (typeof (ts as any).seconds === 'number') {
+          moveDate = new Date((ts as any).seconds * 1000);
+        } else {
+          moveDate = new Date(ts as any);
+        }
+      }
+
+      // If we cannot parse it, keep it and let Python try its best
+      if (!moveDate || isNaN(moveDate.getTime())) return true;
+      return moveDate >= thirtyDaysAgo;
+    });
+
+    const recentSales = salesData?.filter(s => {
+      const saleDate = new Date(s.date);
+      return !isNaN(saleDate.getTime()) && saleDate >= thirtyDaysAgo;
+    }) || [];
+
+    try {
+      const response = await fetch('/api/predict-inventory', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          products: productsData,
+          movements: recentMovements,
+          sales: recentSales
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro de resposta do servidor da API Preditiva.");
+      }
+
+      const { success, predictions, error } = await response.json();
+
+      if (!success || !predictions) {
+        console.error("AI Prediction failed:", error);
+        return;
+      }
+
+      const batch = writeBatch(firestore);
+      let updatesCount = 0;
+
+      predictions.forEach((pred: any) => {
+        const p = productsData.find(prod => prod.id === pred.id);
+        if (!p || p.thresholdMode === 'manual') return;
+
+        const hasSignificantChange =
+          p.criticalStockThreshold !== pred.criticalStockThreshold ||
+          p.lowStockThreshold !== pred.lowStockThreshold ||
+          p.ads !== pred.ads ||
+          p.targetStock !== pred.targetStock;
+
+        if (hasSignificantChange && p.id) {
+          batch.update(doc(firestore, 'companies', companyId, 'products', p.id), {
+            criticalStockThreshold: pred.criticalStockThreshold,
+            lowStockThreshold: pred.lowStockThreshold,
+            ads: pred.ads,
+            targetStock: pred.targetStock,
+            lastUpdated: new Date().toISOString()
+          });
+          updatesCount++;
+        }
+      });
+
+      if (updatesCount > 0) {
+        await batch.commit();
+        console.log(`Smart Thresholds updated via AI for ${updatesCount} products.`);
+        if (isManual) {
+          toast({ title: 'Sincronização Concluída', description: `${updatesCount} limites de stock foram atualizados pela IA v2.` });
+        }
+      } else if (isManual) {
+        toast({ title: 'Sincronização Concluída', description: 'Os limites já estão otimizados.' });
+      }
+    } catch (error) {
+      console.error("Falha ao rodar sincronização inteligente:", error);
+      if (isManual) {
+        toast({ variant: 'destructive', title: 'Erro na Sincronização', description: 'Não foi possível recalcular os limites neste momento.' });
+      }
+    }
+
+    localStorage.setItem(`majorstockx_last_smart_sync_${companyId}`, Date.now().toString());
+  }, [firestore, companyId, productsData, stockMovementsData, salesData, toast]);
+
   const updateProduct = useCallback(async (instanceId: string, updatedData: Partial<Product>) => {
     if (!productsCollectionRef || !instanceId || !firestore) return;
 
@@ -1666,114 +1775,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     setLastSaleTimestamp(Date.now());
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, products, toast, triggerEmailAlert]);
 
-  const syncSmartThresholds = useCallback(async (isManual = false) => {
-    if (!firestore || !companyId || !productsData || !stockMovementsData) return;
-
-    if (!isManual) {
-      const lastSync = localStorage.getItem(`majorstockx_last_smart_sync_${companyId}`);
-      if (lastSync) {
-        const _1dayInMs = 1 * 24 * 60 * 60 * 1000;
-        if (Date.now() - parseInt(lastSync, 10) < _1dayInMs) {
-          return; // Skip if less than 1 day ago
-        }
-      }
-    }
-
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    // Filter recent movements and sales for the API
-    const recentMovements = stockMovementsData.filter(m => {
-      if (m.type !== 'OUT') return false;
-      const ts = m.timestamp;
-      let moveDate: Date | null = null;
-      if (ts) {
-        if (typeof (ts as any).toDate === 'function') {
-          moveDate = (ts as any).toDate();
-        } else if (typeof (ts as any).seconds === 'number') {
-          moveDate = new Date((ts as any).seconds * 1000);
-        } else {
-          moveDate = new Date(ts as any);
-        }
-      }
-
-      // If we cannot parse it, keep it and let Python try its best
-      if (!moveDate || isNaN(moveDate.getTime())) return true;
-      return moveDate >= thirtyDaysAgo;
-    });
-
-    const recentSales = salesData?.filter(s => {
-      const saleDate = new Date(s.date);
-      return !isNaN(saleDate.getTime()) && saleDate >= thirtyDaysAgo;
-    }) || [];
-
-    try {
-      const response = await fetch('/api/predict-inventory', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          products: productsData,
-          movements: recentMovements,
-          sales: recentSales
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error("Erro de resposta do servidor da API Preditiva.");
-      }
-
-      const { success, predictions, error } = await response.json();
-
-      if (!success || !predictions) {
-        console.error("AI Prediction failed:", error);
-        return;
-      }
-
-      const batch = writeBatch(firestore);
-      let updatesCount = 0;
-
-      predictions.forEach((pred: any) => {
-        const p = productsData.find(prod => prod.id === pred.id);
-        if (!p || p.thresholdMode === 'manual') return;
-
-        const hasSignificantChange =
-          p.criticalStockThreshold !== pred.criticalStockThreshold ||
-          p.lowStockThreshold !== pred.lowStockThreshold ||
-          p.ads !== pred.ads ||
-          p.targetStock !== pred.targetStock;
-
-        if (hasSignificantChange && p.id) {
-          batch.update(doc(firestore, 'companies', companyId, 'products', p.id), {
-            criticalStockThreshold: pred.criticalStockThreshold,
-            lowStockThreshold: pred.lowStockThreshold,
-            ads: pred.ads,
-            targetStock: pred.targetStock,
-            lastUpdated: new Date().toISOString()
-          });
-          updatesCount++;
-        }
-      });
-
-      if (updatesCount > 0) {
-        await batch.commit();
-        console.log(`Smart Thresholds updated via AI for ${updatesCount} products.`);
-        if (isManual) {
-          toast({ title: 'Sincronização Concluída', description: `${updatesCount} limites de stock foram atualizados pela IA v2.` });
-        }
-      } else if (isManual) {
-        toast({ title: 'Sincronização Concluída', description: 'Os limites já estão otimizados.' });
-      }
-    } catch (error) {
-      console.error("Falha ao rodar sincronização inteligente:", error);
-      if (isManual) {
-        toast({ variant: 'destructive', title: 'Erro na Sincronização', description: 'Não foi possível recalcular os limites neste momento.' });
-      }
-    }
-
-    localStorage.setItem(`majorstockx_last_smart_sync_${companyId}`, Date.now().toString());
-  }, [firestore, companyId, productsData, stockMovementsData, salesData, toast]);
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
