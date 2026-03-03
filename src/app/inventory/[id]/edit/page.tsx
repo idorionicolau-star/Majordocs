@@ -28,10 +28,13 @@ import type { Location, Product } from '@/lib/types';
 import { useInventory } from "@/context/inventory-context";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useStorage } from "@/firebase/provider";
-import { Loader2, Image as ImageIcon, X, ArrowLeft, AlertTriangle } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Loader2, Image as ImageIcon, X, ArrowLeft, AlertTriangle, BrainCircuit, Info } from "lucide-react";
 
 const formSchema = z.object({
     name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -63,6 +66,7 @@ const formSchema = z.object({
         return isNaN(num) ? 0 : num;
     }, z.number().min(0, { message: "O limite não pode ser negativo." })),
     location: z.string().optional(),
+    thresholdMode: z.enum(['manual', 'auto']).default('manual'),
 });
 
 type EditProductFormValues = z.infer<typeof formSchema>;
@@ -93,6 +97,7 @@ export default function EditInventoryProductPage() {
             lowStockThreshold: 10,
             criticalStockThreshold: 5,
             location: '',
+            thresholdMode: 'manual',
         },
     });
 
@@ -111,6 +116,7 @@ export default function EditInventoryProductPage() {
                     lowStockThreshold: found.lowStockThreshold,
                     criticalStockThreshold: found.criticalStockThreshold,
                     location: found.location || '',
+                    thresholdMode: found.thresholdMode || 'manual',
                 });
                 setPreviewUrl(found.imageUrl || null);
             }
@@ -461,19 +467,70 @@ export default function EditInventoryProductPage() {
                             />
                         </div>
 
+                        <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10 mb-6 group transition-all hover:bg-primary/10">
+                            <FormField
+                                control={form.control}
+                                name="thresholdMode"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-background shadow-sm">
+                                        <div className="space-y-0.5">
+                                            <FormLabel className="text-base flex items-center gap-2">
+                                                <BrainCircuit className="h-5 w-5 text-primary" />
+                                                Modo Inteligente (ADS v2)
+                                            </FormLabel>
+                                            <p className="text-sm text-muted-foreground">
+                                                Permitir que a IA gerencie automaticamente estes limites com base nas suas vendas reais.
+                                            </p>
+                                        </div>
+                                        <FormControl>
+                                            <Switch
+                                                checked={field.value === 'auto'}
+                                                onCheckedChange={(checked) => field.onChange(checked ? 'auto' : 'manual')}
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
                                 name="lowStockThreshold"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Alerta Baixo</FormLabel>
+                                        <div className="flex items-center justify-between">
+                                            <FormLabel>Alerta Baixo</FormLabel>
+                                            {form.watch('thresholdMode') === 'auto' && (
+                                                <Badge variant="outline" className="text-[10px] py-0 h-5 bg-indigo-50 text-indigo-700 border-indigo-200">
+                                                    Gerido pela IA
+                                                </Badge>
+                                            )}
+                                        </div>
                                         <FormControl>
-                                            <MathInput
-                                                {...field}
-                                                onValueChange={field.onChange}
-                                                ref={field.ref}
-                                            />
+                                            <div className="relative">
+                                                <MathInput
+                                                    {...field}
+                                                    onValueChange={field.onChange}
+                                                    ref={field.ref}
+                                                    disabled={form.watch('thresholdMode') === 'auto'}
+                                                    className={form.watch('thresholdMode') === 'auto' ? "opacity-60 bg-muted pr-10" : ""}
+                                                />
+                                                {form.watch('thresholdMode') === 'auto' && (
+                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild type="button">
+                                                                    <Info className="h-4 w-4 text-muted-foreground" />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent className="max-w-[200px]">
+                                                                    <p>Este valor é calculado automaticamente pela engine ADS v2 com base no histórico de vendas e peso recente.</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -484,13 +541,38 @@ export default function EditInventoryProductPage() {
                                 name="criticalStockThreshold"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Alerta Crítico</FormLabel>
+                                        <div className="flex items-center justify-between">
+                                            <FormLabel>Alerta Crítico</FormLabel>
+                                            {form.watch('thresholdMode') === 'auto' && (
+                                                <Badge variant="outline" className="text-[10px] py-0 h-5 bg-indigo-50 text-indigo-700 border-indigo-200">
+                                                    Gerido pela IA
+                                                </Badge>
+                                            )}
+                                        </div>
                                         <FormControl>
-                                            <MathInput
-                                                {...field}
-                                                onValueChange={field.onChange}
-                                                ref={field.ref}
-                                            />
+                                            <div className="relative">
+                                                <MathInput
+                                                    {...field}
+                                                    onValueChange={field.onChange}
+                                                    ref={field.ref}
+                                                    disabled={form.watch('thresholdMode') === 'auto'}
+                                                    className={form.watch('thresholdMode') === 'auto' ? "opacity-60 bg-muted pr-10" : ""}
+                                                />
+                                                {form.watch('thresholdMode') === 'auto' && (
+                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild type="button">
+                                                                    <Info className="h-4 w-4 text-muted-foreground" />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent className="max-w-[200px]">
+                                                                    <p>O limite crítico é definido estatisticamente para evitar ruturas completas de stock.</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

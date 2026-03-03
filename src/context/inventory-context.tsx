@@ -1027,12 +1027,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     await batch.commit();
 
+    // Trigger immediate AI sync if switched to 'auto' mode
+    if (updatedData.thresholdMode === 'auto') {
+      syncSmartThresholds(true);
+    }
+
     const fullProduct = products.find(p => p.id === instanceId);
     if (fullProduct) {
       const productForNotification = { ...fullProduct, ...updatedData };
       checkStockAndNotify(productForNotification);
     }
-  }, [productsCollectionRef, products, checkStockAndNotify, firestore]);
+  }, [productsCollectionRef, products, checkStockAndNotify, firestore, syncSmartThresholds]);
 
   const deleteProduct = useCallback(async (instanceId: string) => {
     if (!productsCollectionRef || !instanceId || !firestore || !user) return;

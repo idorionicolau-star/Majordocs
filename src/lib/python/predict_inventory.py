@@ -71,7 +71,8 @@ def calculate_predictions(data):
     results = []
     
     for product in products:
-        if product.get("thresholdMode") == "manual": continue
+        # Default to 'auto' if field is missing. Only skip if explicitly 'manual'.
+        if product.get("thresholdMode", "auto") == "manual": continue
         
         pname = product.get("name", "").strip()
         ploc = product.get("location") or "Principal"
