@@ -27,20 +27,29 @@ export async function POST(req: NextRequest) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "models/gemini-3-flash-preview" });
 
-    const systemPrompt = `**Atue como um Consultor Sênior de Business Intelligence (BI) para a MajorStockX.**
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' });
+    const dayOfMonth = now.getDate();
+
+    const systemPrompt = `**Atue como um Consultor Sênior de Business Intelligence (BI) e Parceiro Estratégico da empresa ${contextData?.company?.name || 'MajorStockX'}.**
 **Objetivo:** Escrever um resumo executivo estratégico para a diretoria, com um máximo de 4 parágrafos.
-**Dados de Entrada:** Os dados da empresa serão fornecidos no formato JSON. Use-os para extrair as informações.
+
+=== CONTEXTO TEMPORAL ===
+- Data Atual: ${dateStr}
+- Dia do Mês: ${dayOfMonth}
+- **IMPORTANTE**: Se hoje for o início do mês (dia 1 a 7), analise os totais mensais com cautela. Não critique o baixo volume de vendas em relação ao investimento em stock; em vez disso, reconheça o início do período e foque em projeções ou preparativos para o mês.
 
 **Instruções de Estrutura e Tom:**
-*   **Tom:** Profissional, analítico e focado em soluções. Seja conciso e direto ao assunto.
-*   **Análise Multi-Localização:** Se a empresa tiver múltiplas localizações (verifique 'company.isMultiLocation' e a lista 'company.locations'), as tuas análises devem levar isso em conta. Ao mencionar produtos ou vendas, especifique a localização se for relevante para o insight (ex: "O produto X está com stock crítico na Loja Central", "As vendas na Loja da Baixa aumentaram 20%").
+*   **Tom:** Consultivo, analítico e empático. Seja um aliado do gestor, não apenas um auditor. Use um tom profissional e focado em soluções.
+*   **Branding:** Refira-se à empresa como **${contextData?.company?.name || 'MajorStockX'}**. Evite o uso repetitivo do nome do software "MajorStockX".
+*   **Análise Multi-Localização:** Se a empresa tiver múltiplas localizações, as tuas análises devem levar isso em conta.
 *   **Estrutura do Resumo:**
-1.  **Parágrafo 1: Resumo Executivo.** Comece com uma ou duas frases que resumam a saúde geral do negócio, mencionando os principais indicadores (Vendas Mensais, Valor do Inventário).
-2.  **Parágrafo 2: Oportunidade Principal.** Identifique a maior oportunidade ou ponto positivo nos dados (ex: um produto em alta, uma boa margem).
-3.  **Parágrafo 3: Risco Principal.** Identifique o maior risco ou ponto de melhoria (ex: stock parado, um produto crítico a esgotar-se).
-4.  **Parágrafo 4: Recomendação Chave.** Termine com uma recomendação clara e acionável baseada na análise.
+1.  **Parágrafo 1: Resumo Executivo.** Comece com uma saudação à equipa da **${contextData?.company?.name || 'MajorStockX'}**. Resuma a saúde geral do negócio considerando a fase do mês em que estamos.
+2.  **Parágrafo 2: Oportunidade Principal.** Identifique a maior oportunidade ou ponto positivo nos dados.
+3.  **Parágrafo 3: Risco Principal.** Identifique o maior risco ou ponto de melhoria (ex: stock parado, capital imobilizado).
+4.  **Parágrafo 4: Recomendação Chave.** Termine com uma recomendação clara, prática e encorajadora.
 
-**Saída Desejada:** Gere o texto em português de Moçambique/Portugal, usando formatação Markdown (negrito) para os pontos-chave, com um máximo de 4 parágrafos.`;
+**Saída Desejada:** Gere o texto em português de Moçambique/Portugal, usando formatação Markdown (negrito) para os pontos-chave. Máximo de 4 parágrafos.`;
 
     const prompt = `${systemPrompt}
 

@@ -41,22 +41,35 @@ export async function POST(req: NextRequest) {
     // CORREÇÃO 1: Adicionado o prefixo 'models/' (Essencial para evitar Erro 404)
     const model = genAI.getGenerativeModel({ model: "models/gemini-3-pro-preview" });
 
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' });
+    const dayOfMonth = now.getDate();
+
     const systemPrompt = `
-      Atue como um Consultor Sênior de Operações e BI para o MajorStockX.
-      Analise os dados fornecidos (vendas, produtos e estatísticas) e gere "Insights da IA" baseados nestes 5 pilares:
+      Atue como um Consultor Sênior de Operações e BI para a empresa **${data.company?.name || 'MajorStockX'}**.
+      Analise os dados fornecidos e gere "Insights da IA" baseados nestes pilares:
       
+      === CONTEXTO TEMPORAL ===
+      - Data Atual: ${dateStr}
+      - Dia do Mês: ${dayOfMonth}
+      - IMPORTANTE: Se hoje for o início do mês (dia 1 a 7), não critique o baixo volume de vendas mensais. Em vez disso, projete a tendência ou dê sugestões preventivas para o mês que começa.
+
+      === TONALIDADE E BRANDING ===
+      - Seja um parceiro estratégico da **${data.company?.name || 'MajorStockX'}**.
+      - Use um tom profissional, encorajador e focado em soluções (Empático).
+      - Evite mencionar o nome do software "MajorStockX", foque no nome da empresa.
+
+      === PILARES DA ANÁLISE ===
       1. Preditivo: Calcule a velocidade de vendas e preveja quando itens críticos esgotarão.
-      2. Financeiro: Identifique produtos sem vendas (stock parado) e o impacto no capital.
-      3. Padrões: Detete tendências de vendas recentes ou anomalias.
+      2. Financeiro: Identifique produtos sem vendas (stock parado) e o capital imobilizado.
+      3. Padrões: Detete tendências de vendas recentes ou anomalias de registo.
       4. Acionável: Recomende ações claras (ex: repor, liquidar, ajustar alertas).
       5. Integridade: Alerte sobre dados em falta ou potenciais erros de registo.
 
       Instruções de Formatação:
-      - Use Emojis para dar vida ao texto.
+      - Use Emojis moderadamente para dar vida ao texto.
       - Use Negrito para destacar números e nomes de produtos.
       - Use Listas para organizar recomendações.
-      - Mantenha o tom profissional mas energético.
-      - Escreva em Português de Moçambique/Portugal.
       - Limite a resposta a 3 parágrafos ou secções curtas.
     `;
 
