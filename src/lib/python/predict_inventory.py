@@ -20,24 +20,31 @@ def calculate_predictions(data):
         if not m_date_raw:
             continue
             
+        pid = movement.get("productName", "Unknown")
+        
         # Parse ISO date or simplify (fallback wrapper)
         try:
-            # We just need it to be within 30 days
-            # If it's a JS date string, fromisoformat might fail, so we catch
+            # If it's a dict like Firebase Timestamp {"seconds": ...}
             if isinstance(m_date_raw, dict) and "seconds" in m_date_raw:
-               # Firebase timestamp
                m_date = datetime.utcfromtimestamp(m_date_raw["seconds"])
             else:
                # Try to parse string timestamp, taking only first 10 chars (YYYY-MM-DD)
-               m_date = datetime.fromisoformat(str(m_date_raw).replace('Z', '+00:00'))
-        except Exception:
-            # If datetime parsing fails, we skip
+               # e.g. "2024-03-03T00:00:00.000Z" -> replace Z
+               date_str = str(m_date_raw).strip()
+               if "T" in date_str:
+                   date_str = date_str.replace("Z", "+00:00")
+                   m_date = datetime.fromisoformat(date_str)
+               else:
+                   # Maybe just a simple YYYY-MM-DD
+                   m_date = datetime.strptime(date_str[:10], "%Y-%m-%d")
+        except Exception as e:
+            # Print to stderr for debugging
+            print(f"DEBUG: Skipping movement for {pid} due to date parse error on '{m_date_raw}': {e}", file=sys.stderr)
             continue
             
         if m_date.replace(tzinfo=None) < thirty_days_ago:
             continue
             
-        pid = movement.get("productName")
         if not pid:
             continue
             

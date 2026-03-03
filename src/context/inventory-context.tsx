@@ -1652,8 +1652,21 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     // Pass only recent OUT movements to save bandwidth and ensure logic applies
     const recentMovements = stockMovementsData.filter(m => {
       if (m.type !== 'OUT') return false;
-      const moveDate = (m.timestamp as any)?.toDate ? (m.timestamp as any).toDate() : (m.timestamp ? new Date(m.timestamp) : null);
-      return !moveDate || moveDate >= thirtyDaysAgo;
+      const ts = m.timestamp || m.date;
+      let moveDate: Date | null = null;
+      if (ts) {
+        if (typeof (ts as any).toDate === 'function') {
+          moveDate = (ts as any).toDate();
+        } else if (typeof (ts as any).seconds === 'number') {
+          moveDate = new Date((ts as any).seconds * 1000);
+        } else {
+          moveDate = new Date(ts as any);
+        }
+      }
+
+      // If we cannot parse it, keep it and let Python try its best
+      if (!moveDate || isNaN(moveDate.getTime())) return true;
+      return moveDate >= thirtyDaysAgo;
     });
 
     try {
