@@ -126,19 +126,26 @@ def calculate_predictions(data):
         safety_stock = Z_SCORE * std_dev * math.sqrt(lead_time)
         
         # Calculate Target Stock
-        target_stock = math.ceil((ads * lead_time) + safety_stock)
+        theoretical_target = (ads * lead_time) + safety_stock
         
-        # Hybrid logic for new or low-activity items
+        # Determine Final Target Stock with safer logic
         if ads > 0:
-            # Minimum stock for active items
-            target_stock = max(target_stock, 2)
+            # Active items: use statistical target but ensure a minimum of 2
+            target_stock = math.ceil(max(theoretical_target, 2))
         else:
-            # No sales history: use 50% of current available stock as starting point
-            current_stock = product.get("stock", 0) - product.get("reservedStock", 0)
-            target_stock = max(1, math.ceil(current_stock / 2))
+            # No sales history: 
+            # We don't want to guess 50% of stock (too aggressive)
+            # But we also don't want 0 (risk of rupture for new items)
+            # Use a conservative default (e.g., 2) or keep existing if reasonable
+            existing_low = product.get("lowStockThreshold", 0)
+            if existing_low > 0:
+                # If they already have a threshold, don't zero it out, but cap it if it was wild
+                target_stock = min(existing_low, 5) 
+            else:
+                target_stock = 2
         
         low_stock = target_stock
-        critical_stock = math.ceil(low_stock / 2)
+        critical_stock = max(1, math.ceil(low_stock / 2))
         
         results.append({
             "id": product_id,

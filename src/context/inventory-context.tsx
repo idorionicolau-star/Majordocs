@@ -1667,9 +1667,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!isManual) {
       const lastSync = localStorage.getItem(`majorstockx_last_smart_sync_${companyId}`);
       if (lastSync) {
-        const _3daysInMs = 3 * 24 * 60 * 60 * 1000;
-        if (Date.now() - parseInt(lastSync, 10) < _3daysInMs) {
-          return; // Skip if less than 3 days ago
+        const _1dayInMs = 1 * 24 * 60 * 60 * 1000;
+        if (Date.now() - parseInt(lastSync, 10) < _1dayInMs) {
+          return; // Skip if less than 1 day ago
         }
       }
     }
