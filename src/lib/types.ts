@@ -101,6 +101,7 @@ export type Product = {
   imageUrl?: string;
   thresholdMode?: 'auto' | 'manual';
   ads?: number;
+  targetStock?: number;
 };
 
 

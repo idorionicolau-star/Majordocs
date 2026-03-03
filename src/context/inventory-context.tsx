@@ -1649,74 +1649,67 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Calculate ADS for all products based on OUT movements
-    const productSalesVelocity = new Map<string, number>();
-    stockMovementsData.forEach(m => {
-      if (m.type === 'OUT') {
-        // Use timestamp if available, fallback to date
-        const moveDate = (m.timestamp as any)?.toDate ? (m.timestamp as any).toDate() : (m.timestamp ? new Date(m.timestamp) : null);
+    // Pass only recent OUT movements to save bandwidth and ensure logic applies
+    const recentMovements = stockMovementsData.filter(m => {
+      if (m.type !== 'OUT') return false;
+      const moveDate = (m.timestamp as any)?.toDate ? (m.timestamp as any).toDate() : (m.timestamp ? new Date(m.timestamp) : null);
+      return !moveDate || moveDate >= thirtyDaysAgo;
+    });
 
-        // If no timestamp, skip, but most should have it. Keep null check safe.
-        if (!moveDate || moveDate >= thirtyDaysAgo) {
-          const current = productSalesVelocity.get(m.productName) || 0;
-          // quantity for OUT is usually negative, so we take absolute value
-          productSalesVelocity.set(m.productName, current + Math.abs(m.quantity || 0));
+    try {
+      const response = await fetch('/api/predict-inventory', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          products: productsData,
+          movements: recentMovements
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro de resposta do servidor da API Preditiva.");
+      }
+
+      const { success, predictions, error } = await response.json();
+
+      if (!success || !predictions) {
+        console.error("AI Prediction failed:", error);
+        return;
+      }
+
+      const batch = writeBatch(firestore);
+      let updatesCount = 0;
+
+      predictions.forEach((pred: any) => {
+        const p = productsData.find(prod => prod.id === pred.id);
+        if (!p || p.thresholdMode === 'manual') return;
+
+        const hasSignificantChange =
+          p.criticalStockThreshold !== pred.criticalStockThreshold ||
+          p.lowStockThreshold !== pred.lowStockThreshold ||
+          p.ads !== pred.ads ||
+          p.targetStock !== pred.targetStock;
+
+        if (hasSignificantChange && p.id) {
+          batch.update(doc(firestore, 'companies', companyId, 'products', p.id), {
+            criticalStockThreshold: pred.criticalStockThreshold,
+            lowStockThreshold: pred.lowStockThreshold,
+            ads: pred.ads,
+            targetStock: pred.targetStock,
+            lastUpdated: new Date().toISOString()
+          });
+          updatesCount++;
         }
+      });
+
+      if (updatesCount > 0) {
+        await batch.commit();
+        console.log(`Smart Thresholds updated via AI for ${updatesCount} products.`);
       }
-    });
-
-    const batch = writeBatch(firestore);
-    let updatesCount = 0;
-
-    productsData.forEach(p => {
-      if (p.thresholdMode === 'manual') return;
-
-      const totalSold30d = productSalesVelocity.get(p.name) || 0;
-      const ads = totalSold30d / 30;
-
-      let daysLow = 10;
-      let daysCritical = 5;
-
-      if (ads <= 0.5) {
-        // Very slow moving: keep lean
-        daysLow = 7;
-        daysCritical = 3;
-      } else if (ads <= 2) {
-        // Slow
-        daysLow = 10;
-        daysCritical = 5;
-      } else if (ads <= 5) {
-        // Medium
-        daysLow = 14;
-        daysCritical = 7;
-      } else {
-        // Fast moving: need bigger cushion to prevent stockouts
-        daysLow = 21;
-        daysCritical = 10;
-      }
-
-      const newCritical = Math.max(ads > 0 ? 1 : 0, Math.ceil(ads * daysCritical));
-      const newLow = Math.max(ads > 0 ? 2 : 0, Math.ceil(ads * daysLow));
-
-      const hasSignificantChange =
-        Math.abs((p.criticalStockThreshold || 0) - newCritical) > ((p.criticalStockThreshold || 0) * 0.2) ||
-        Math.abs((p.lowStockThreshold || 0) - newLow) > ((p.lowStockThreshold || 0) * 0.2) ||
-        p.ads !== ads;
-
-      if (hasSignificantChange && p.id) {
-        batch.update(doc(firestore, 'companies', companyId, 'products', p.id), {
-          criticalStockThreshold: newCritical,
-          lowStockThreshold: newLow,
-          ads: ads,
-          lastUpdated: new Date().toISOString()
-        });
-        updatesCount++;
-      }
-    });
-
-    if (updatesCount > 0) {
-      await batch.commit();
-      console.log(`Smart Thresholds updated for ${updatesCount} products.`);
+    } catch (error) {
+      console.error("Falha ao rodar sincronização inteligente:", error);
     }
 
     localStorage.setItem(`majorstockx_last_smart_sync_${companyId}`, Date.now().toString());

@@ -144,11 +144,8 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
         const p = row.original;
         const available = p.stock - p.reservedStock;
 
-        // Calculate target stock: 30 days cover if ads exists, otherwise double the low threshold
-        let targetStock = p.lowStockThreshold * 2;
-        if (p.ads && p.ads > 0) {
-          targetStock = Math.ceil(p.ads * 30);
-        }
+        // Utilize the Target Stock designated by the Python AI Prediction, otherwise fallback
+        let targetStock = p.targetStock || (p.lowStockThreshold * 2);
 
         // Minimum target shouldn't be zero, and should at least clear the low threshold
         targetStock = Math.max(targetStock, p.lowStockThreshold + 1);
