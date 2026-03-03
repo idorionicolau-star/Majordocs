@@ -1754,13 +1754,21 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       if (updatesCount > 0) {
         await batch.commit();
         console.log(`Smart Thresholds updated via AI for ${updatesCount} products.`);
+        if (isManual) {
+          toast({ title: 'Sincronização Concluída', description: `${updatesCount} limites de stock foram atualizados pela IA v2.` });
+        }
+      } else if (isManual) {
+        toast({ title: 'Sincronização Concluída', description: 'Os limites já estão otimizados.' });
       }
     } catch (error) {
       console.error("Falha ao rodar sincronização inteligente:", error);
+      if (isManual) {
+        toast({ variant: 'destructive', title: 'Erro na Sincronização', description: 'Não foi possível recalcular os limites neste momento.' });
+      }
     }
 
     localStorage.setItem(`majorstockx_last_smart_sync_${companyId}`, Date.now().toString());
-  }, [firestore, companyId, productsData, stockMovementsData]);
+  }, [firestore, companyId, productsData, stockMovementsData, salesData, toast]);
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");

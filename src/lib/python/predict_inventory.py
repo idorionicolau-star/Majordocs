@@ -8,171 +8,160 @@ def calculate_predictions(data):
     movements = data.get("movements", [])
     sales = data.get("sales", [])
     
-    # 1. Map demand to calculate true variance and ADS
-    # We group by (productName, location) to find consumption per location
-    # We use both Sales and OUT movements, but avoid double counting
-    movement_history = {}
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    # Configuration
+    Z_SCORE = 1.65 # 90% service level
+    WINDOW_DAYS = 30
+    MIN_SALES_FOR_STATS = 3 # "Discovery Mode" threshold
     
-    # Process Sales (Primary source of demand)
+    # 1. Map consumption per (productName, locationId)
+    # We use a 30-day window
+    consumption_history = {}
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    cutoff_date = today - timedelta(days=WINDOW_DAYS)
+    
+    # Helper to parse dates
+    def parse_date(date_val):
+        if not date_val: return None
+        try:
+            if isinstance(date_val, dict) and "seconds" in date_val:
+                return datetime.utcfromtimestamp(date_val["seconds"])
+            if isinstance(date_val, (int, float)):
+                return datetime.utcfromtimestamp(date_val / 1000.0 if date_val > 1e11 else date_val)
+            date_str = str(date_val).strip()
+            if "T" in date_str:
+                return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            return datetime.strptime(date_str[:10], "%Y-%m-%d")
+        except:
+            return None
+
+    # Process Sales
     for sale in sales:
-        s_date_raw = sale.get("date")
-        if not s_date_raw:
-            continue
-            
         pname = sale.get("productName", "Unknown").strip()
         loc = sale.get("location") or "Principal"
         qty = float(sale.get("quantity", 0))
+        s_date = parse_date(sale.get("date"))
         
-        try:
-            s_date = datetime.fromisoformat(s_date_raw.replace("Z", "+00:00"))
-        except:
+        if not s_date or s_date.replace(tzinfo=None) < cutoff_date:
             continue
             
-        if s_date.replace(tzinfo=None) < thirty_days_ago:
-            continue
-            
-        day_key = s_date.strftime("%Y-%m-%d")
-        history_key = (pname, loc)
-        
-        if history_key not in movement_history:
-            movement_history[history_key] = {}
-        movement_history[history_key][day_key] = movement_history[history_key].get(day_key, 0) + qty
+        key = (pname, loc)
+        day_str = s_date.strftime("%Y-%m-%d")
+        if key not in consumption_history: consumption_history[key] = {}
+        consumption_history[key][day_str] = consumption_history[key].get(day_str, 0) + qty
 
-    # Process Movements (Other OUT types like Adjustments, but skip Sale Pickups to avoid double count)
-    for movement in movements:
-        if movement.get("type") != "OUT":
-            continue
-            
-        # If the reason contains "Venda" or "Levantamento", we skip it as it's likely already in 'sales'
-        reason = movement.get("reason", "")
-        if "Venda" in reason or "Levantamento" in reason:
-            continue
-
-        m_date_raw = movement.get("timestamp") or movement.get("date")
-        if not m_date_raw:
-            continue
-            
-        pname = movement.get("productName", "Unknown").strip()
-        loc = movement.get("fromLocationId") or movement.get("location") or "Principal"
-        qty = abs(float(movement.get("quantity", 0)))
+    # Process Movements (OUT only, avoiding doubles)
+    for move in movements:
+        if move.get("type") != "OUT": continue
+        reason = move.get("reason", "")
+        if "Venda" in reason or "Levantamento" in reason: continue
         
-        try:
-            if isinstance(m_date_raw, dict) and "seconds" in m_date_raw:
-               m_date = datetime.utcfromtimestamp(m_date_raw["seconds"])
-            elif isinstance(m_date_raw, (int, float)):
-               m_date = datetime.utcfromtimestamp(m_date_raw / 1000.0 if m_date_raw > 1e11 else m_date_raw)
-            else:
-               date_str = str(m_date_raw).strip()
-               if "T" in date_str:
-                   m_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-               else:
-                   m_date = datetime.strptime(date_str[:10], "%Y-%m-%d")
-        except:
-            continue
-            
-        if m_date.replace(tzinfo=None) < thirty_days_ago:
-            continue
-            
-        day_key = m_date.strftime("%Y-%m-%d")
-        history_key = (pname, loc)
+        pname = move.get("productName", "Unknown").strip()
+        loc = move.get("fromLocationId") or move.get("location") or "Principal"
+        qty = abs(float(move.get("quantity", 0)))
+        m_date = parse_date(move.get("timestamp") or move.get("date"))
         
-        if history_key not in movement_history:
-            movement_history[history_key] = {}
-        movement_history[history_key][day_key] = movement_history[history_key].get(day_key, 0) + qty
+        if not m_date or m_date.replace(tzinfo=None) < cutoff_date:
+            continue
+            
+        key = (pname, loc)
+        day_str = m_date.strftime("%Y-%m-%d")
+        if key not in consumption_history: consumption_history[key] = {}
+        consumption_history[key][day_str] = consumption_history[key].get(day_str, 0) + qty
 
-    # 2. Compute Target Stock 
-    Z_SCORE = 1.65
     results = []
     
     for product in products:
-        if product.get("thresholdMode") == "manual":
-            continue
-            
+        if product.get("thresholdMode") == "manual": continue
+        
         pname = product.get("name", "").strip()
         ploc = product.get("location") or "Principal"
-        product_id = product.get("id")
+        pid = product.get("id")
         
-        # Get history for THIS product in THIS location
-        history = movement_history.get((pname, ploc), {})
+        history = consumption_history.get((pname, ploc), {})
         
-        # Calculate daily demand array for the last 30 days
-        daily_demands = []
-        for i in range(30):
-            d_key = (datetime.utcnow() - timedelta(days=i)).strftime("%Y-%m-%d")
-            daily_demands.append(history.get(d_key, 0))
+        # Build 30-day demand array
+        demands = []
+        for i in range(WINDOW_DAYS):
+            d_key = (today - timedelta(days=i)).strftime("%Y-%m-%d")
+            demands.append(history.get(d_key, 0))
+        
+        total_sales_count = sum(1 for x in demands if x > 0)
+        total_qty = sum(demands)
+        
+        # --- PREDICTION LOGIC V2 ---
+        
+        if total_sales_count >= MIN_SALES_FOR_STATS:
+            # A. Statistical Mode (Robust)
             
-        total_30d = sum(daily_demands)
-        ads = total_30d / 30.0
-        
-        # Calculate Standard Deviation of daily demand
-        if ads > 0:
-            variance = sum((x - ads) ** 2 for x in daily_demands) / 30.0
-            std_dev = math.sqrt(variance)
-        else:
-            std_dev = 0
+            # 1. Outlier Filtering (Simple 3-sigma-ish)
+            avg_all = total_qty / WINDOW_DAYS
+            std_raw = math.sqrt(sum((x - avg_all)**2 for x in demands) / WINDOW_DAYS)
+            filter_threshold = avg_all + (2.5 * std_raw) if std_raw > 0 else 999
+            filtered_demands = [min(x, filter_threshold) if x > filter_threshold else x for x in demands]
             
-        # Dynamically classify lead time to represent 'days cover' logic 
-        if ads <= 0.5:
-            lead_time = 7
-        elif ads <= 2:
-            lead_time = 10
-        elif ads <= 5:
-            lead_time = 14
-        else:
-            lead_time = 21
+            # 2. Weighted Moving Average (WMA)
+            # W1 (0-7d): 0.5 | W2 (8-14d): 0.3 | W3 (15-30d): 0.2
+            w1 = sum(filtered_demands[0:7]) / 7.0
+            w2 = sum(filtered_demands[7:14]) / 7.0
+            w3 = sum(filtered_demands[14:30]) / 16.0
+            ads = (w1 * 0.5) + (w2 * 0.3) + (w3 * 0.2)
             
-        # Safety Stock Calculation
-        safety_stock = Z_SCORE * std_dev * math.sqrt(lead_time)
-        
-        # Calculate Target Stock
-        theoretical_target = (ads * lead_time) + safety_stock
-        
-        # Determine Final Target Stock with safer logic
-        if ads > 0:
-            # Active items: use statistical target but ensure a minimum of 2
-            target_stock = math.ceil(max(theoretical_target, 2))
+            # 3. Dynamic Lead Time & Safety multiplier
+            # We recalculate std_dev on FILTERED demands for stable safety stock
+            filtered_avg = sum(filtered_demands) / WINDOW_DAYS
+            std_filtered = math.sqrt(sum((x - filtered_avg)**2 for x in filtered_demands) / WINDOW_DAYS)
+            
+            cv = (std_filtered / filtered_avg) if filtered_avg > 0 else 1
+            safety_factor = 1.0 + min(cv, 1.0) 
+            
+            lead_time = 7 if ads < 1 else (10 if ads < 3 else 14)
+            prediction_base = ads * lead_time
+            
+            # Safety Stock with cap (should not exceed 100% of base unless ADS is very low)
+            raw_safety = Z_SCORE * std_filtered * math.sqrt(lead_time) * safety_factor
+            safety_stock = min(raw_safety, prediction_base * 2) if ads > 0.5 else raw_safety
+            
+            target_stock = math.ceil(prediction_base + safety_stock)
+            target_stock = max(target_stock, 4) 
         else:
-            # No sales history: 
-            # We don't want to guess 50% of stock (too aggressive)
-            # But we also don't want 0 (risk of rupture for new items)
-            # Use a conservative default (e.g., 2) or keep existing if reasonable
+            # B. Discovery Mode (New or Slow Items)
+            # No guesswork based on current stock. Use smart safe defaults.
+            ads = total_qty / WINDOW_DAYS
             existing_low = product.get("lowStockThreshold", 0)
-            if existing_low > 0:
-                # If they already have a threshold, don't zero it out, but cap it if it was wild
-                target_stock = min(existing_low, 5) 
+            
+            # If item is totally new/no sales: use 2 as safety.
+            # If item has some tiny activity but not enough for stats: use 3-5.
+            if total_qty == 0:
+                target_stock = min(existing_low, 5) if existing_low > 0 else 3
             else:
-                target_stock = 2
+                target_stock = 4
         
-        low_stock = target_stock
-        critical_stock = max(1, math.ceil(low_stock / 2))
+        # Logic: Low = Target, Critical = ~40% of Target
+        low_threshold = target_stock
+        critical_threshold = max(2, math.ceil(low_threshold * 0.4))
         
         results.append({
-            "id": product_id,
+            "id": pid,
             "name": pname,
+            "location": ploc,
             "ads": round(ads, 3),
-            "stdDev": round(std_dev, 2),
-            "safetyStock": math.ceil(safety_stock),
-            "lowStockThreshold": int(low_stock),
-            "criticalStockThreshold": int(critical_stock),
-            "targetStock": int(target_stock)
+            "targetStock": int(target_stock),
+            "lowStockThreshold": int(low_threshold),
+            "criticalStockThreshold": int(critical_threshold),
+            "mode": "statistical" if total_sales_count >= MIN_SALES_FOR_STATS else "discovery"
         })
         
     return results
-        
+
 if __name__ == "__main__":
     try:
-        # Read from stdin
         input_data = sys.stdin.read()
         if not input_data:
-             print(json.dumps({"error": "No input data provided"}))
-             sys.exit(1)
-             
+            print(json.dumps({"error": "No input"}))
+            sys.exit(1)
         data = json.loads(input_data)
         predictions = calculate_predictions(data)
-        
-        # Print JSON to stdout
         print(json.dumps({"success": True, "predictions": predictions}))
     except Exception as e:
-        print(json.dumps({"error": str(e)}))
+        print(json.dumps({"error": str(e), "success": False}))
         sys.exit(1)
