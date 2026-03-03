@@ -6,71 +6,95 @@ from datetime import datetime, timedelta
 def calculate_predictions(data):
     products = data.get("products", [])
     movements = data.get("movements", [])
+    sales = data.get("sales", [])
     
-    # 1. Map movements to calculate true variance and ADS
-    # We want to group by day to find standard deviation of daily demand
+    # 1. Map demand to calculate true variance and ADS
+    # We group by (productName, location) to find consumption per location
+    # We use both Sales and OUT movements, but avoid double counting
     movement_history = {}
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     
+    # Process Sales (Primary source of demand)
+    for sale in sales:
+        s_date_raw = sale.get("date")
+        if not s_date_raw:
+            continue
+            
+        pname = sale.get("productName", "Unknown").strip()
+        loc = sale.get("location") or "Principal"
+        qty = float(sale.get("quantity", 0))
+        
+        try:
+            s_date = datetime.fromisoformat(s_date_raw.replace("Z", "+00:00"))
+        except:
+            continue
+            
+        if s_date.replace(tzinfo=None) < thirty_days_ago:
+            continue
+            
+        day_key = s_date.strftime("%Y-%m-%d")
+        history_key = (pname, loc)
+        
+        if history_key not in movement_history:
+            movement_history[history_key] = {}
+        movement_history[history_key][day_key] = movement_history[history_key].get(day_key, 0) + qty
+
+    # Process Movements (Other OUT types like Adjustments, but skip Sale Pickups to avoid double count)
     for movement in movements:
         if movement.get("type") != "OUT":
             continue
             
+        # If the reason contains "Venda" or "Levantamento", we skip it as it's likely already in 'sales'
+        reason = movement.get("reason", "")
+        if "Venda" in reason or "Levantamento" in reason:
+            continue
+
         m_date_raw = movement.get("timestamp") or movement.get("date")
         if not m_date_raw:
             continue
             
-        pid = movement.get("productName", "Unknown")
+        pname = movement.get("productName", "Unknown").strip()
+        loc = movement.get("fromLocationId") or movement.get("location") or "Principal"
+        qty = abs(float(movement.get("quantity", 0)))
         
-        # Parse ISO date or simplify (fallback wrapper)
         try:
-            # If it's a dict like Firebase Timestamp {"seconds": ...}
             if isinstance(m_date_raw, dict) and "seconds" in m_date_raw:
                m_date = datetime.utcfromtimestamp(m_date_raw["seconds"])
+            elif isinstance(m_date_raw, (int, float)):
+               m_date = datetime.utcfromtimestamp(m_date_raw / 1000.0 if m_date_raw > 1e11 else m_date_raw)
             else:
-               # Try to parse string timestamp, taking only first 10 chars (YYYY-MM-DD)
-               # e.g. "2024-03-03T00:00:00.000Z" -> replace Z
                date_str = str(m_date_raw).strip()
                if "T" in date_str:
-                   date_str = date_str.replace("Z", "+00:00")
-                   m_date = datetime.fromisoformat(date_str)
+                   m_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
                else:
-                   # Maybe just a simple YYYY-MM-DD
                    m_date = datetime.strptime(date_str[:10], "%Y-%m-%d")
-        except Exception as e:
-            # Print to stderr for debugging
-            print(f"DEBUG: Skipping movement for {pid} due to date parse error on '{m_date_raw}': {e}", file=sys.stderr)
+        except:
             continue
             
         if m_date.replace(tzinfo=None) < thirty_days_ago:
             continue
             
-        if not pid:
-            continue
-            
         day_key = m_date.strftime("%Y-%m-%d")
-        qty = abs(float(movement.get("quantity", 0)))
+        history_key = (pname, loc)
         
-        if pid not in movement_history:
-            movement_history[pid] = {}
-        
-        movement_history[pid][day_key] = movement_history[pid].get(day_key, 0) + qty
+        if history_key not in movement_history:
+            movement_history[history_key] = {}
+        movement_history[history_key][day_key] = movement_history[history_key].get(day_key, 0) + qty
 
     # 2. Compute Target Stock 
-    # Formula: (Lead Time * ADS) + Safety Stock
-    # Safety Stock = Z * StdDev * sqrt(Lead Time)
-    # Z = 1.65 (95% Service Level)
-    
     Z_SCORE = 1.65
-    
     results = []
     
     for product in products:
         if product.get("thresholdMode") == "manual":
             continue
             
-        pid = product.get("name")
-        history = movement_history.get(pid, {})
+        pname = product.get("name", "").strip()
+        ploc = product.get("location") or "Principal"
+        product_id = product.get("id")
+        
+        # Get history for THIS product in THIS location
+        history = movement_history.get((pname, ploc), {})
         
         # Calculate daily demand array for the last 30 days
         daily_demands = []
@@ -89,9 +113,7 @@ def calculate_predictions(data):
             std_dev = 0
             
         # Dynamically classify lead time to represent 'days cover' logic 
-        # For items that move fast, we want longer cover time.
         if ads <= 0.5:
-            # Very slow: assume 7 days to restock
             lead_time = 7
         elif ads <= 2:
             lead_time = 10
@@ -106,35 +128,27 @@ def calculate_predictions(data):
         # Calculate Target Stock
         target_stock = math.ceil((ads * lead_time) + safety_stock)
         
-        # Ensure it doesn't recommend 0 for active catalogue items
-        # Minimum stock is always at least 1, or 2 if there's any movement at all.
+        # Hybrid logic for new or low-activity items
         if ads > 0:
-            minimum_safe = 2
-            target_stock = max(target_stock, minimum_safe)
+            # Minimum stock for active items
+            target_stock = max(target_stock, 2)
         else:
-            # HYBRID LOGIC: Se não há histórico de vendas (ads == 0),
-            # O nosso Target Inicial de Aviso será igual a 50% do stock real que está na prateleira hoje.
-            # Assume-se que a primeira encomenda representa a "Visão" do gestor, e o alerta deve disparar a meio.
+            # No sales history: use 50% of current available stock as starting point
             current_stock = product.get("stock", 0) - product.get("reservedStock", 0)
-            target_stock = max(1, math.ceil(current_stock / 2)) # Metade do stock atual como linha de alerta inicial
-        
-        
-        # Also assign low and critical based on safety/lead time ratio
-        # Low = Target Stock
-        # Critical = mathematically half the target
+            target_stock = max(1, math.ceil(current_stock / 2))
         
         low_stock = target_stock
         critical_stock = math.ceil(low_stock / 2)
         
         results.append({
-            "id": product.get("id"),
-            "name": pid,
-            "ads": ads,
+            "id": product_id,
+            "name": pname,
+            "ads": round(ads, 3),
             "stdDev": round(std_dev, 2),
             "safetyStock": math.ceil(safety_stock),
-            "lowStockThreshold": low_stock,
-            "criticalStockThreshold": critical_stock,
-            "targetStock": target_stock
+            "lowStockThreshold": int(low_stock),
+            "criticalStockThreshold": int(critical_stock),
+            "targetStock": int(target_stock)
         })
         
     return results

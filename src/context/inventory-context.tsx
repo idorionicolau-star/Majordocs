@@ -1441,6 +1441,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         guideNumber: guideNumberForOuterScope,
         location: locations.find(l => l.id === newSaleData.location)?.name || 'Principal',
       });
+
+      // Trigger stock alert check after sale
+      if (productDocRef) {
+        getDoc(productDocRef as DocumentReference).then(docSnap => {
+          if (docSnap.exists()) {
+            checkStockAndNotify(docSnap.data() as Product);
+          }
+        });
+      }
     }
 
     setLastSaleTimestamp(Date.now());
@@ -1631,6 +1640,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         guideNumber: guideNumberForOuterScope,
         location: locations.find(l => l.id === createdSalesForOuterScope[0].location)?.name || 'Principal',
       });
+
+      // Trigger stock alert checks for all items in bulk sale using fresh data
+      items.forEach(item => {
+        const targetLocation = item.location || (isMultiLocation && locations.length > 0 ? locations[0]?.id : 'Principal');
+        const pQuery = query(
+          productsCollectionRef,
+          where("name", "==", item.productName),
+          where("location", "==", targetLocation),
+          limit(1)
+        );
+        getDocs(pQuery).then(snap => {
+          if (!snap.empty) {
+            checkStockAndNotify(snap.docs[0].data() as Product);
+          }
+        });
+      });
     }
 
     setLastSaleTimestamp(Date.now());
@@ -1652,10 +1677,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Pass only recent OUT movements to save bandwidth and ensure logic applies
+    // Filter recent movements and sales for the API
     const recentMovements = stockMovementsData.filter(m => {
       if (m.type !== 'OUT') return false;
-      const ts = m.timestamp || m.date;
+      const ts = m.timestamp;
       let moveDate: Date | null = null;
       if (ts) {
         if (typeof (ts as any).toDate === 'function') {
@@ -1672,6 +1697,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       return moveDate >= thirtyDaysAgo;
     });
 
+    const recentSales = salesData?.filter(s => {
+      const saleDate = new Date(s.date);
+      return !isNaN(saleDate.getTime()) && saleDate >= thirtyDaysAgo;
+    }) || [];
+
     try {
       const response = await fetch('/api/predict-inventory', {
         method: 'POST',
@@ -1680,7 +1710,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         },
         body: JSON.stringify({
           products: productsData,
-          movements: recentMovements
+          movements: recentMovements,
+          sales: recentSales
         })
       });
 
