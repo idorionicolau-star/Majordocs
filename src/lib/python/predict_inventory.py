@@ -1,7 +1,7 @@
 import sys
 import json
 import math
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 def calculate_predictions(data):
     products = data.get("products", [])
@@ -16,7 +16,7 @@ def calculate_predictions(data):
     # 1. Map consumption per (productName, locationId)
     # We use a 30-day window
     consumption_history = {}
-    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     cutoff_date = today - timedelta(days=WINDOW_DAYS)
     
     # Helper to parse dates
@@ -24,9 +24,9 @@ def calculate_predictions(data):
         if not date_val: return None
         try:
             if isinstance(date_val, dict) and "seconds" in date_val:
-                return datetime.utcfromtimestamp(date_val["seconds"])
+                return datetime.fromtimestamp(date_val["seconds"], timezone.utc)
             if isinstance(date_val, (int, float)):
-                return datetime.utcfromtimestamp(date_val / 1000.0 if date_val > 1e11 else date_val)
+                return datetime.fromtimestamp(date_val / 1000.0 if date_val > 1e11 else date_val, timezone.utc)
             date_str = str(date_val).strip()
             if "T" in date_str:
                 return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
