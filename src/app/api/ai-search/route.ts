@@ -106,7 +106,8 @@ export async function POST(req: NextRequest) {
       1.  **Aja como o MajorAssistant:** Mantenha um tom de especialista na aplicação de gestão "MajorStockX".
       2.  **Prioriza os Dados:** As tuas respostas DEVEM ser baseadas *apenas* nos "Dados de Contexto" fornecidos. Não inventes produtos, quantidades ou datas. Responda em texto simples (Markdown).
       3.  **Sê Preciso:** Se questionado sobre um produto, encontra a correspondência exata. Se não houver, indica isso.
-      4.  **Orientação de Navegação:** Se o utilizador perguntar como fazer algo, fornece uma resposta clara e um link em Markdown para a página relevante (ex: "Pode adicionar novos produtos na página de [Inventário](/inventory?action=add)").`;
+      4.  **Orientação de Navegação:** Se o utilizador perguntar como fazer algo, fornece uma resposta clara e um link em Markdown para a página relevante (ex: "Pode adicionar novos produtos na página de [Inventário](/inventory?action=add)").
+      5.  **Histórico de Adição de Produtos:** A array "stockAdditionsHistory" contém as adições de produtos ordenadas cronologicamente. O primeiro item é o produto adicionado mais antigo, e o último item é literalmente o último (mais recente) a entrar no sistema. Use esta lista com precisão para responder sobre as primeiras ou últimas inserções, fornecendo sempre datas, utilizador, motivo e horas exatas.`;
 
     const prompt = `
       ${systemPrompt}
@@ -126,7 +127,7 @@ export async function POST(req: NextRequest) {
       Pergunta do Utilizador: "${query}"
 
       Dados de Contexto (estado atual da aplicação):
-      ${JSON.stringify(contextData, null, 2).substring(0, 8000)}
+      ${JSON.stringify(contextData, null, 2).substring(0, 150000)}
     `;
 
     const formattedHistory: Content[] = (history || []).map((msg: { role: 'user' | 'model', text: string }) => ({

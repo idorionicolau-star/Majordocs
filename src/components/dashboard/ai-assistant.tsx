@@ -20,6 +20,10 @@ import { useToast } from '@/hooks/use-toast';
 
 export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
   const {
+    chatHistory: messages,
+    setChatHistory: setMessages,
+    sales,
+    products,
     dashboardStats,
     stockMovements,
     firebaseUser,
@@ -79,8 +83,35 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
           contextData: {
             stats: dashboardStats,
             recentSales: sales?.slice(0, 10),
-            inventoryProducts: products,
-            stockMovements: stockMovements,
+            inventoryProducts: products?.map(p => ({
+              name: p.name,
+              stock: p.stock,
+              reservedStock: p.reservedStock,
+              price: p.price,
+              location: p.location
+            })),
+            stockAdditionsHistory: (() => {
+              if (!stockMovements) return [];
+              const sortedIn = stockMovements
+                .filter(m => m.type === 'IN')
+                .sort((a, b) => {
+                  const tA = a.timestamp?.seconds ? a.timestamp.seconds * 1000 : new Date(a.timestamp).getTime();
+                  const tB = b.timestamp?.seconds ? b.timestamp.seconds * 1000 : new Date(b.timestamp).getTime();
+                  return tA - tB;
+                })
+                .map(m => ({
+                  produto: m.productName,
+                  quantidade_adicionada: m.quantity,
+                  data_hora: m.timestamp?.seconds ? new Date(m.timestamp.seconds * 1000).toLocaleString('pt-PT') : new Date(m.timestamp).toLocaleString('pt-PT'),
+                  utilizador: m.userName,
+                  motivo: m.reason
+                }));
+
+              if (sortedIn.length > 100) {
+                return [...sortedIn.slice(0, 50), ...sortedIn.slice(-50)];
+              }
+              return sortedIn;
+            })(),
             companyId: contextCompanyId,
           }
         }),
