@@ -109,6 +109,7 @@ export default function POSPage() {
     const [checkoutVatPercentage, setCheckoutVatPercentage] = useState(17);
     const [checkoutDiscountType, setCheckoutDiscountType] = useState<'fixed' | 'percentage'>('fixed');
     const [checkoutDiscountValue, setCheckoutDiscountValue] = useState(0);
+    const [checkoutPendingPickup, setCheckoutPendingPickup] = useState(false);
     const [checkoutDate, setCheckoutDate] = useState<Date>(new Date());
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -315,6 +316,7 @@ export default function POSPage() {
                 discount: { type: checkoutDiscountType, value: checkoutDiscountValue },
                 applyVat: checkoutApplyVat,
                 vatPercentage: checkoutVatPercentage,
+                isPickedUp: !checkoutPendingPickup,
             });
 
             toast({
@@ -346,6 +348,7 @@ export default function POSPage() {
         setCheckoutVatPercentage(17);
         setCheckoutDiscountType('fixed');
         setCheckoutDiscountValue(0);
+        setCheckoutPendingPickup(false);
     };
 
     if (loading) {
@@ -689,6 +692,15 @@ export default function POSPage() {
                                     />
                                 </div>
                             )}
+
+                            {/* Pending Pickup Switch */}
+                            <div className="flex items-center justify-between rounded-lg border p-3">
+                                <div>
+                                    <Label>Agendar Levantamento</Label>
+                                    <p className="text-xs text-muted-foreground">Marcar como não levantado (entrega posterior)</p>
+                                </div>
+                                <Switch checked={checkoutPendingPickup} onCheckedChange={setCheckoutPendingPickup} />
+                            </div>
 
                             {/* Notes */}
                             <div className="space-y-2">

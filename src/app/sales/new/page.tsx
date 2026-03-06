@@ -78,6 +78,7 @@ const formSchema = z.object({
     customerId: z.string().optional(),
     notes: z.string().optional(),
     date: z.date(),
+    pendingPickup: z.boolean().default(false),
 });
 
 type AddSaleFormValues = z.infer<typeof formSchema>;
@@ -113,6 +114,7 @@ export default function NewSalePage() {
             customerId: '',
             notes: '',
             date: new Date(),
+            pendingPickup: false,
         },
     });
 
@@ -137,6 +139,7 @@ export default function NewSalePage() {
             customerId: '',
             notes: '',
             date: new Date(),
+            pendingPickup: false,
         });
     }, [form, locations]);
 
@@ -279,7 +282,7 @@ export default function NewSalePage() {
             totalValue: totalValue,
             amountPaid: totalValue,
             soldBy: user.username,
-            status: 'Pago',
+            status: values.documentType === 'Factura Proforma' ? 'Pendente' : (values.pendingPickup ? 'Pago' : 'Levantado'),
             location: values.location,
             documentType: values.documentType,
             clientName: values.clientName,
@@ -486,6 +489,24 @@ export default function NewSalePage() {
                                             setDate={field.onChange}
                                         />
                                         <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="pendingPickup"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm mt-4">
+                                        <div className="space-y-0.5">
+                                            <FormLabel className="cursor-pointer">Agendar Levantamento</FormLabel>
+                                            <p className="text-[11px] text-muted-foreground">Marcar produto como "Não Levantado" (para entrega posterior)</p>
+                                        </div>
+                                        <FormControl>
+                                            <Switch
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
                                     </FormItem>
                                 )}
                             />

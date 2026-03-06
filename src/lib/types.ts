@@ -369,6 +369,7 @@ export interface InventoryContextType {
       discount?: { type: 'fixed' | 'percentage'; value: number };
       applyVat: boolean;
       vatPercentage: number;
+      isPickedUp?: boolean;
     }
   ) => Promise<void>;
   confirmSalePickup: (sale: Sale) => void;

@@ -1579,6 +1579,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       discount?: { type: 'fixed' | 'percentage'; value: number };
       applyVat: boolean;
       vatPercentage: number;
+      isPickedUp?: boolean;
     }
   ) => {
     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
@@ -1708,7 +1709,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           totalValue: itemTotal,
           amountPaid: saleData.documentType !== 'Factura Proforma' ? itemTotal : 0,
           date: new Date().toISOString(),
-          status: saleData.documentType === 'Factura Proforma' ? 'Pendente' : 'Pago',
+          status: saleData.documentType === 'Factura Proforma' ? 'Pendente' : (saleData.isPickedUp === false ? 'Pago' : 'Levantado'),
           paymentMethod: 'Numerário',
           location: targetLocation,
           unit: item.unit || 'un',
