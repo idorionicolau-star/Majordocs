@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useStorage } from "@/firebase/provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -246,6 +247,8 @@ export default function SettingsPage() {
     address: '',
     taxId: '',
     logoUrl: '' as string,
+    signatureUrl: '' as string,
+    paymentInfo: '',
     businessType: 'manufacturer' as 'manufacturer' | 'reseller',
     notificationSettings: {
       emails: [] as {
@@ -304,6 +307,8 @@ export default function SettingsPage() {
         address: companyData.address || '',
         taxId: companyData.taxId || '',
         logoUrl: companyData.logoUrl || '',
+        signatureUrl: companyData.signatureUrl || '',
+        paymentInfo: companyData.paymentInfo || '',
         businessType: companyData.businessType || 'manufacturer',
         notificationSettings: {
           emails: companyData.notificationSettings?.emails || (
@@ -592,7 +597,65 @@ export default function SettingsPage() {
                             }}
                           />
                         </div>
-                        <p className="text-xs text-muted-foreground">PNG ou JPG, max. 200x60px recomendado. Aparecerá nos e-mails de notificação.</p>
+                        <p className="text-xs text-muted-foreground">PNG ou JPG, max. 200x60px recomendado. Aparecerá nos e-mails de notificação e cabeçalho dos documentos.</p>
+                      </div>
+
+                      {/* Signature Upload Section */}
+                      <div className="flex flex-col items-center gap-4 pb-6 border-b">
+                        <Label className="text-base font-semibold">Carimbo ou Assinatura Digital</Label>
+                        {companyDetails.signatureUrl ? (
+                          <div className="relative group">
+                            <img
+                              src={companyDetails.signatureUrl}
+                              alt="Carimbo / Assinatura"
+                              className="h-24 max-w-[200px] object-contain rounded-lg border bg-white p-2"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setCompanyDetails(prev => ({ ...prev, signatureUrl: '' }))}
+                              className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="h-24 w-48 rounded-lg border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-1 text-muted-foreground">
+                            <ImagePlus className="h-8 w-8" />
+                            <span className="text-xs">Sem Assinatura</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="signature-upload" className="cursor-pointer">
+                            <Button type="button" variant="outline" size="sm" asChild>
+                              <span>
+                                <ImagePlus className="mr-2 h-4 w-4" />
+                                {companyDetails.signatureUrl ? 'Alterar' : 'Carregar Assinatura/Carimbo'}
+                              </span>
+                            </Button>
+                          </Label>
+                          <input
+                            id="signature-upload"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                try {
+                                  toast({ title: "Carregando...", description: "A enviar a assinatura para a nuvem." });
+                                  const storageRef = ref(storage, `signatures/${Date.now()}_${file.name}`);
+                                  const snapshot = await uploadBytes(storageRef, file);
+                                  const url = await getDownloadURL(snapshot.ref);
+                                  setCompanyDetails(prev => ({ ...prev, signatureUrl: url }));
+                                  toast({ title: "Assinatura Carregada", description: "O carimbo/assinatura foi salvo com sucesso!" });
+                                } catch (error: any) {
+                                  toast({ variant: 'destructive', title: 'Erro no Upload', description: error.message });
+                                }
+                              }
+                            }}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">Recomendado enviar uma imagem com fundo transparente (.PNG). Aparecerá no rodapé dos documentos.</p>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -627,6 +690,17 @@ export default function SettingsPage() {
                         <div className="space-y-2 md:col-span-2">
                           <Label htmlFor="address">Endereço</Label>
                           <Input id="address" value={companyDetails.address} onChange={handleDetailChange} />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="paymentInfo">Informações de Pagamento (NIB, M-Pesa, Bancos)</Label>
+                          <Textarea
+                            id="paymentInfo"
+                            className="min-h-[100px]"
+                            placeholder="Descreva aqui as formas de pagamento. Ex:&#10;BCI: 1234 5678 9000&#10;M-Pesa: +258 84 000 0000"
+                            value={companyDetails.paymentInfo}
+                            onChange={(e) => setCompanyDetails(prev => ({ ...prev, paymentInfo: e.target.value }))}
+                          />
+                          <p className="text-xs text-muted-foreground">Esta informação aparecerá listada no final das suas Facturas e Recibos.</p>
                         </div>
                       </div>
 

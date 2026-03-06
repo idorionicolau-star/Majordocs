@@ -4,7 +4,7 @@ import autoTable from 'jspdf-autotable';
 import { Sale, Company } from './types';
 import { formatCurrency } from './utils';
 
-export const generateSalePDF = (sale: Sale, company: Company | null) => {
+export const generateSalePDF = async (sale: Sale, company: Company | null) => {
     const doc = new jsPDF();
 
     // Add company logo/header
@@ -67,6 +67,44 @@ export const generateSalePDF = (sale: Sale, company: Company | null) => {
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.text(`Total: ${formatCurrency(sale.totalValue)}`, 140, currentY + 5);
+
+    // Payment Info and Signature Area
+    let footerY = currentY + 20;
+
+    if (company?.paymentInfo) {
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text("Informações de Pagamento:", 14, footerY);
+        doc.setFont("helvetica", "normal");
+
+        const lines = doc.splitTextToSize(company.paymentInfo, 100);
+        doc.text(lines, 14, footerY + 6);
+    }
+
+    if (company?.signatureUrl) {
+        try {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.src = company.signatureUrl;
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = resolve; // Ignore errors to still generate the PDF
+            });
+            // Try to add the image if it loaded properly
+            if (img.complete && img.naturalHeight > 0) {
+                doc.addImage(img, 'PNG', 130, footerY - 5, 50, 20, undefined, 'FAST');
+            }
+        } catch (e) {
+            console.error("Erro ao carregar assinatura", e);
+        }
+    } else {
+        // Draw signature line if no image
+        doc.setLineWidth(0.5);
+        doc.line(130, footerY + 15, 180, footerY + 15);
+    }
+
+    doc.setFontSize(8);
+    doc.text("A Empresa / Assinatura", 155, footerY + 20, { align: 'center' });
 
     // Footer
     doc.setFontSize(8);

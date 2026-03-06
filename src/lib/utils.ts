@@ -203,8 +203,11 @@ export function downloadSaleDocument(saleOrSales: Sale | Sale[], companyData: Co
             margin-bottom: 2rem; 
           }
           .signature-box { text-align: center; }
+          .signature-image { max-height: 80px; object-fit: contain; margin-bottom: 0.5rem; }
           .signature-line { border-bottom: 1px solid var(--border); margin-bottom: 0.5rem; height: 40px; }
           .signature-label { font-size: 0.875rem; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.05em; }
+          .payment-info { margin-top: 1rem; padding: 1.5rem; background: #fafafa; border-radius: 8px; border: 1px solid var(--border); font-size: 0.875rem; color: #52525b; line-height: 1.6; }
+          .payment-info strong { color: var(--foreground); display: block; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75rem; }
           .footer { 
             text-align: center; 
             font-size: 0.875rem; 
@@ -327,10 +330,20 @@ export function downloadSaleDocument(saleOrSales: Sale | Sale[], companyData: Co
   totalsHtml += '</table></div>';
   printWindow.document.write(totalsHtml);
 
+  if (companyData?.paymentInfo) {
+    const formattedPaymentInfo = companyData.paymentInfo.replace(/\n/g, '<br/>');
+    printWindow.document.write(`
+      <div class="payment-info">
+        <strong>Informações de Pagamento</strong>
+        ${formattedPaymentInfo}
+      </div>
+    `);
+  }
+
   printWindow.document.write(`
     <div class="signatures">
         <div class="signature-box">
-            <div class="signature-line"></div>
+            ${companyData?.signatureUrl ? `<img src="${companyData.signatureUrl}" class="signature-image" alt="Assinatura" />` : '<div class="signature-line"></div>'}
             <span class="signature-label">A Empresa</span>
         </div>
         <div class="signature-box">

@@ -71,6 +71,8 @@ export type Company = {
   validUnits?: string[];
   validCategories?: string[]; // Also adding categories while we are at it, for future proofing or if we want to migrate catalogCategories to here.
   logoUrl?: string; // Base64 Data URL for the company logo, displayed in email headers
+  signatureUrl?: string; // Base64 Data URL or Firebase Storage URL for the signature/stamp
+  paymentInfo?: string; // Text containing bank accounts, M-Pesa, etc.
   status?: 'active' | 'trial' | 'inactive';
   trialEndsAt?: string;
   subscriptionEndsAt?: string;

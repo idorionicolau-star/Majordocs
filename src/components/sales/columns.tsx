@@ -93,7 +93,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
     };
 
     const handleDownload = async () => {
-        generateSalePDF(sale, companyData || null);
+        await generateSalePDF(sale, companyData || null);
     };
 
     const handlePrint = () => {
