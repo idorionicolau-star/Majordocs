@@ -181,13 +181,14 @@ export const useMessaging = (): Messaging | null => {
   return messaging;
 };
 
-type MemoFirebase<T> = T & { __memo?: boolean };
+export const memoizedRefs = new WeakSet<any>();
 
-export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
+export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
   const memoized = useMemo(factory, deps);
 
-  if (typeof memoized !== 'object' || memoized === null) return memoized;
-  (memoized as MemoFirebase<T>).__memo = true;
+  if (typeof memoized === 'object' && memoized !== null) {
+    memoizedRefs.add(memoized);
+  }
 
   return memoized;
 }

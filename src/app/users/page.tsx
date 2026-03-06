@@ -6,7 +6,7 @@ import { useState, useContext, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { UsersDataTable } from "@/components/users/data-table";
 import { columns } from "@/components/users/columns";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Users } from "lucide-react";
 import Link from 'next/link';
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,7 +40,7 @@ export default function UsersPage() {
     [firestore, companyId]
   );
 
-  const { data: employees, isLoading: employeesLoading } = useCollection<Employee>(employeesCollectionRef);
+  const { data: employees, isLoading: employeesLoading, error: employeesError } = useCollection<Employee>(employeesCollectionRef);
 
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
@@ -57,6 +57,25 @@ export default function UsersPage() {
         <Skeleton className="h-8 w-1/4" />
         <Skeleton className="h-64 w-full" />
       </div>
+    );
+  }
+
+  if (employeesError) {
+    return (
+      <Card className="p-12 text-center space-y-4 max-w-2xl mx-auto">
+        <div className="flex justify-center">
+          <div className="rounded-full bg-destructive/10 p-3 text-destructive">
+            <Users className="h-12 w-12" />
+          </div>
+        </div>
+        <h2 className="text-xl font-bold">Acesso Restrito</h2>
+        <p className="text-muted-foreground">
+          Ocorreu um problema ao carregar a lista de funcionários. Isto pode acontecer por falta de permissões ou erros de rede.
+        </p>
+        <p className="text-[10px] text-muted-foreground/50 border rounded p-2 text-left bg-muted/50 overflow-auto max-h-32">
+          {employeesError.message}
+        </p>
+      </Card>
     );
   }
 
