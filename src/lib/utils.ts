@@ -58,12 +58,12 @@ export function formatCompactNumber(value: number) {
   if (value >= 1000) {
     return `${(value / 1000).toLocaleString('pt-MZ', { maximumFractionDigits: 1 })}k`;
   }
-  return value.toLocaleString('pt-MZ');
+  return value.toLocaleString('pt-MZ', { maximumFractionDigits: 2 });
 }
 
 export function formatCurrency(value: number, options?: Intl.NumberFormatOptions & { compact?: boolean }) {
   if (options?.compact) {
-    return formatCompactNumber(value);
+    return `${formatCompactNumber(value)} MT`;
   }
 
   return new Intl.NumberFormat('pt-MZ', {
