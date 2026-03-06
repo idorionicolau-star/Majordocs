@@ -52,6 +52,8 @@ export const allPermissions: Readonly<{ id: ModulePermission; label: string; adm
   { id: "production", label: "Produção", adminOnly: false },
   { id: "raw-materials", label: "Matéria-Prima", adminOnly: false },
   { id: "orders", label: "Encomendas", adminOnly: false },
+  { id: "customers", label: "Clientes", adminOnly: false },
+  { id: "finance", label: "Financeiro", adminOnly: false },
   { id: "reports", label: "Relatórios", adminOnly: false },
   { id: "users", label: "Funcionários", adminOnly: true },
   { id: "settings", label: "Ajustes", adminOnly: false },
