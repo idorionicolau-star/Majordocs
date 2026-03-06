@@ -38,17 +38,7 @@ export default function CustomersPage() {
     const [viewingCustomer, setViewingCustomer] = useState<any>(null);
     const searchPlaceholder = useDynamicPlaceholder('person');
 
-    if (!canView('customers')) {
-        return <div className="p-8 text-center">Você não tem permissão para aceder a este módulo.</div>;
-    }
-
     const filteredCustomers = useFuse(customers, searchTerm, { keys: ['name', 'phone', 'email'] });
-
-
-
-    const getCustomerHistory = (customerId: string) => {
-        return sales.filter(s => s.customerId === customerId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    };
 
     // Compute customer stats from actual sales data
     const customerStats = useMemo(() => {
@@ -66,6 +56,14 @@ export default function CustomersPage() {
         }
         return stats;
     }, [sales]);
+
+    const getCustomerHistory = (customerId: string) => {
+        return sales.filter(s => s.customerId === customerId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    };
+
+    if (!canView('customers')) {
+        return <div className="p-8 text-center">Você não tem permissão para aceder a este módulo.</div>;
+    }
 
     return (
         <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">

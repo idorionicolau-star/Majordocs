@@ -50,6 +50,13 @@ export default function UsersPage() {
     // Removal disabled
   };
 
+  const tableColumns = useMemo(() => columns({
+    onDelete: (employee) => setEmployeeToDelete(employee),
+    currentUserId: user?.id,
+    isAdmin: isAdmin,
+    companyName: companyData?.name || null
+  }), [user?.id, isAdmin, companyData?.name]);
+
   if (loading || employeesLoading) {
     return (
       <div className="space-y-4">
@@ -78,13 +85,6 @@ export default function UsersPage() {
       </Card>
     );
   }
-
-  const tableColumns = useMemo(() => columns({
-    onDelete: (employee) => setEmployeeToDelete(employee),
-    currentUserId: user?.id,
-    isAdmin: isAdmin,
-    companyName: companyData?.name || null
-  }), [user?.id, isAdmin, companyData?.name]);
 
   return (
     <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
