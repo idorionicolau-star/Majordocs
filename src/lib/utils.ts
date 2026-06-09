@@ -313,8 +313,9 @@ export function downloadSaleDocument(saleOrSales: Sale | Sale[], companyData: Co
     totalSubtotals += s.subtotal;
     totalDiscounts += s.discount || 0;
     totalVats += s.vat || 0;
-    totalFinalValue += s.totalValue;
   });
+
+  totalFinalValue = totalSubtotals - totalDiscounts + totalVats;
 
   printWindow.document.write('</tbody></table>');
 
