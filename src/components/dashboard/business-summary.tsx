@@ -3,6 +3,7 @@
 import { useContext, useMemo, useState, useEffect, useCallback } from "react";
 import { InventoryContext } from "@/context/inventory-context";
 import { useAuth } from "@/firebase/provider";
+import { useCRM } from "@/context/crm-context";
 import { cn, formatCurrency } from "@/lib/utils";
 import {
     Package, ShoppingCart, AlertTriangle,
@@ -71,6 +72,8 @@ export const BusinessSummary = () => {
         };
     }, [sales, products, dashboardStats, loading]);
 
+    const { customers } = useCRM();
+
     const fetchInsights = useCallback(async (forceRefresh = false) => {
         if (insightsLoading) return;
 
@@ -94,43 +97,29 @@ export const BusinessSummary = () => {
 
         setInsightsLoading(true);
         try {
-            const fbToken = await auth.currentUser?.getIdToken();
-            const response = await fetch('/api/generate-insights', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${fbToken}`
-                },
-                body: JSON.stringify({
-                    sales: sales?.slice(0, 100),
-                    products: products,
-                    stats: dashboardStats,
-                    companyId: companyData?.id
-                }),
-            });
+            const { generateLocalInsights } = await import('@/lib/local-ai');
+            
+            // Simula processamento da IA Local
+            await new Promise(resolve => setTimeout(resolve, 800));
 
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || 'Falha ao gerar insights.');
-            }
+            const text = generateLocalInsights(sales || [], products || [], customers || [], companyData);
 
-            const data = await response.json();
             setIsFreshlyGenerated(true);
-            setInsights(data.text);
+            setInsights(text);
             setInsightsFetched(true);
 
             // Cache for the rest of the day
             localStorage.setItem(storageKey, JSON.stringify({
-                text: data.text,
+                text: text,
                 timestamp: new Date().toISOString()
             }));
         } catch (error: any) {
-            setInsights(`Não foi possível gerar os insights: ${error.message}`);
+            setInsights(`Não foi possível gerar os insights locais: ${error.message}`);
             setInsightsFetched(true);
         } finally {
             setInsightsLoading(false);
         }
-    }, [sales, products, dashboardStats, companyData, auth.currentUser?.uid]);
+    }, [sales, products, customers, companyData, auth.currentUser?.uid]);
 
     // Fetch insights when expanded for the first time
     useEffect(() => {

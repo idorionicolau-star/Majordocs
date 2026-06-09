@@ -200,28 +200,8 @@ export default function ReportsPage() {
     toast({ title: "A gerar PDF...", description: "O seu relatório está a ser preparado." });
 
     try {
-      const fbToken = await auth.currentUser?.getIdToken();
-      // Fetches AI summary from API (PDF generation is now client-side)
-      const response = await fetch('/api/generate-report', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${fbToken}`
-        },
-        body: JSON.stringify({
-          sales: salesForPeriod,
-          summary: reportSummary,
-          company: companyData,
-          date: selectedDate,
-          period,
-        }),
-      });
-
-      let aiSummary = "";
-      if (response.ok) {
-        const data = await response.json();
-        aiSummary = data.aiSummary;
-      }
+      const { generateLocalReportSummary } = await import('@/lib/local-ai');
+      const aiSummary = generateLocalReportSummary(salesForPeriod, companyData?.name || 'nossa empresa', getPeriodDescription());
 
       const { generateReportPDF } = await import('@/lib/pdf-generator');
       generateReportPDF(salesForPeriod, reportSummary, companyData, selectedDate, aiSummary, getPeriodDescription());
@@ -264,27 +244,8 @@ export default function ReportsPage() {
     toast({ title: "A preparar para partilhar...", description: "O seu relatório está a ser preparado." });
 
     try {
-      const fbToken = await auth.currentUser?.getIdToken();
-      const response = await fetch('/api/generate-report', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${fbToken}`
-        },
-        body: JSON.stringify({
-          sales: salesForPeriod,
-          summary: reportSummary,
-          company: companyData,
-          date: selectedDate,
-          period,
-        }),
-      });
-
-      let aiSummary = "";
-      if (response.ok) {
-        const data = await response.json();
-        aiSummary = data.aiSummary;
-      }
+      const { generateLocalReportSummary } = await import('@/lib/local-ai');
+      const aiSummary = generateLocalReportSummary(salesForPeriod, companyData?.name || 'nossa empresa', getPeriodDescription());
 
       const { generateReportPDF } = await import('@/lib/pdf-generator');
       // Generate blob for sharing

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useContext, useCallback } from 'react';
 import { useAuth } from '@/firebase/provider';
+import { useCRM } from '@/context/crm-context';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +27,7 @@ export const TacticalSummary = () => {
   const [isFreshlyGenerated, setIsFreshlyGenerated] = useState(false);
   const auth = useAuth();
   const { sales, products, dashboardStats, companyData } = useContext(InventoryContext) || {};
+  const { customers } = useCRM();
 
   const generateInsights = useCallback(async (forceRefresh = false) => {
     setIsLoading(true);
@@ -50,33 +52,19 @@ export const TacticalSummary = () => {
     }
 
     try {
-      const fbToken = await auth.currentUser?.getIdToken();
-      const response = await fetch('/api/generate-insights', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${fbToken}`
-        },
-        body: JSON.stringify({
-          sales: sales?.slice(0, 100),
-          products: products,
-          stats: dashboardStats,
-          companyId: companyData?.id
-        }),
-      });
+      const { generateLocalInsights } = await import('@/lib/local-ai');
+      
+      // Simula processamento da IA Local
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Falha ao gerar insights.');
-      }
+      const text = generateLocalInsights(sales || [], products || [], customers || [], companyData);
 
-      const data = await response.json();
       setIsFreshlyGenerated(true);
-      setInsights(data.text);
+      setInsights(text);
 
       try {
         localStorage.setItem(storageKey, JSON.stringify({
-          insights: data.text,
+          insights: text,
           timestamp: new Date().toISOString()
         }));
       } catch (error) {
@@ -84,11 +72,11 @@ export const TacticalSummary = () => {
       }
     } catch (error: any) {
       console.error(error);
-      setInsights(`Não foi possível gerar os insights táticos: ${error.message}`);
+      setInsights(`Não foi possível gerar os insights táticos locais: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
-  }, [sales, products, dashboardStats, companyData, auth.currentUser?.uid]);
+  }, [sales, products, customers, companyData, auth.currentUser?.uid]);
 
   useEffect(() => {
     if (sales && sales.length > 0 && dashboardStats) {
