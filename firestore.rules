@@ -52,13 +52,15 @@ service cloud.firestore {
     }
     
     function can(module, level) {
-      let hasUserMap = isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
-      let employeeData = hasUserMap ? getUserEmployeeData(request.auth.uid) : {};
-      let role = employeeData != null ? employeeData.get('role', '') : '';
-      let permissions = employeeData != null ? employeeData.get('permissions', {}) : {};
+      let hasMap = isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      let companyId = hasMap ? getUserCompanyId(request.auth.uid) : '';
+      let hasEmployee = hasMap && exists(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid));
+      let employeeData = hasEmployee ? get(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid)).data : {};
+      let role = employeeData.get('role', '');
+      let permissions = employeeData.get('permissions', {});
       let perm = permissions.get(module, '');
       return isSuperAdmin() || (
-        hasUserMap && (
+        hasEmployee && (
           (role == 'Admin' && module != 'companies') ||
           (role == 'Dono' && level == 'read') ||
           (level == 'write' && perm == 'write') ||

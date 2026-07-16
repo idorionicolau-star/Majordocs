@@ -44,6 +44,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   // Initialize notifications
   useNotifications();
 
+  const company = authContext?.companyData;
+  const { isReadOnly, isTrial, daysLeft } = useSubscriptionState(company);
+
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -121,8 +124,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const company = authContext?.companyData;
-  const { isReadOnly, isTrial, daysLeft } = useSubscriptionState(company);
+
 
   return (
     <>
