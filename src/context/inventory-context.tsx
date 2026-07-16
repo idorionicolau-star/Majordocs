@@ -63,6 +63,7 @@ import {
 } from '@/firebase/non-blocking-updates';
 import { PasswordConfirmationDialog } from '@/components/auth/password-confirmation-dialog';
 import { useSubscriptionState } from '@/hooks/useSubscriptionState';
+import { useNotifications } from '@/hooks/use-notifications';
 
 
 type CatalogProduct = Omit<
@@ -91,8 +92,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const wasSyncing = useRef(false);
   const [lastSaleTimestamp, setLastSaleTimestamp] = useState<number>(0);
 
+  // Initialize notifications
+  useNotifications();
+
   const [companyData, setCompanyData] = useState<Company | null>(null);
-  const { isReadOnly } = useSubscriptionState(companyData);
+  const { isReadOnly, isTrial, daysLeft } = useSubscriptionState(companyData);
 
   const locations = useMemo(() => companyData?.locations || [], [companyData]);
   const isMultiLocation = useMemo(() => !!companyData?.isMultiLocation, [companyData]);
@@ -3063,6 +3067,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     companyId,
     loading: isDataLoading,
     isReadOnly,
+    isTrial,
+    daysLeft,
     login,
     loginWithGoogle,
     logout,
@@ -3115,7 +3121,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     confirmAction,
   }), [
-    user, firebaseUser, companyId, isDataLoading, isReadOnly,
+    user, firebaseUser, companyId, isDataLoading, isReadOnly, isTrial, daysLeft,
     login, loginWithGoogle, logout, resetPassword, registerCompany, registerCompanyWithGoogle, profilePicture, handleSetProfilePicture,
     canView, canEdit,
     companyData, productsData, salesData, productionsData, ordersData, stockMovementsData, catalogProductsData, catalogCategoriesData,

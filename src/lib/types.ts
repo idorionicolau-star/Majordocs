@@ -305,6 +305,8 @@ export interface InventoryContextType {
   companyId: string | null;
   loading: boolean;
   isReadOnly: boolean;
+  isTrial: boolean;
+  daysLeft: number;
   login: (email: string, pass: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
   logout: () => void;
