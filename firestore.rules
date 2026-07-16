@@ -52,45 +52,19 @@ service cloud.firestore {
     }
     
     function can(module, level) {
-      // O Super Admin tem acesso total a tudo.
-      if (isSuperAdmin()) {
-        return true;
-      }
-      
-      // Se não for Super Admin, precisa de ter um mapeamento de utilizador.
-      if (!exists(/databases/$(database)/documents/users/$(request.auth.uid))) {
-        return false;
-      }
-      
-      let userCompanyId = getUserCompanyId(request.auth.uid);
-      let userRole = getUserEmployeeData(request.auth.uid).role;
-      
-      // O Admin da empresa tem acesso de escrita a todos os módulos da sua empresa.
-      if (userRole == 'Admin') {
-        // Apenas Super Admin pode listar/ver todas as empresas.
-        if (module == 'companies') return false;
-        return true;
-      }
-
-      // O Dono tem acesso de leitura a todos os módulos.
-      if (userRole == 'Dono') {
-        return level == 'read';
-      }
-      
-      // Para funcionários normais, verifica as permissões granulares no objeto 'permissions'.
-      let userPermissions = getUserEmployeeData(request.auth.uid).permissions;
-      let permissionLevel = userPermissions[module];
-
-      if (level == 'write') {
-        // Acesso de escrita SÓ é permitido se a permissão for explicitamente 'write'.
-        return permissionLevel == 'write';
-      }
-      if (level == 'read') {
-        // Acesso de leitura é permitido se a permissão for 'read' OU 'write'.
-        return permissionLevel == 'read' || permissionLevel == 'write';
-      }
-      
-      return false;
+      let hasUserMap = isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      let employeeData = hasUserMap ? getUserEmployeeData(request.auth.uid) : {};
+      let role = employeeData != null ? employeeData.get('role', '') : '';
+      let permissions = employeeData != null ? employeeData.get('permissions', {}) : {};
+      let perm = permissions.get(module, '');
+      return isSuperAdmin() || (
+        hasUserMap && (
+          (role == 'Admin' && module != 'companies') ||
+          (role == 'Dono' && level == 'read') ||
+          (level == 'write' && perm == 'write') ||
+          (level == 'read' && (perm == 'read' || perm == 'write'))
+        )
+      );
     }
 
     // --- Regras por Coleção ---

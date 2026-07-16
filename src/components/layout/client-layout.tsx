@@ -136,7 +136,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <div className="bg-gradient-to-r from-amber-600 to-rose-600 text-white text-center py-2.5 px-4 text-sm font-medium sticky top-0 z-[60] shadow-md flex flex-wrap justify-center items-center gap-3 animate-in slide-in-from-top duration-300">
             <span>Modo leitura — a sua assinatura não está activa. Contacte-nos para reactivar o acesso completo.</span>
             <a 
-              href="https://wa.me/258XXXXXXXXX"
+              href="https://wa.me/258843641708"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white text-rose-700 hover:bg-white/90 px-3 py-1 rounded-md text-xs font-bold transition-all shadow-sm flex items-center gap-1"
