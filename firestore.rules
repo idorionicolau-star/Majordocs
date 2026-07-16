@@ -16,6 +16,14 @@ service cloud.firestore {
       // Verifica o campo 'superAdmin' na coleção de mapeamento de utilizadores.
       return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserMapData(request.auth.uid).superAdmin == true;
     }
+
+    function isCompanySubscriptionActive(companyId) {
+      let company = get(/databases/$(database)/documents/companies/$(companyId)).data;
+      return company.status == 'active' ||
+        (company.status == 'trial' &&
+         company.trialEndsAt != null &&
+         request.time < timestamp.value(company.trialEndsAt));
+    }
     
     function getUserMapData(userId) {
       // Busca o mapeamento do utilizador na coleção de topo.
@@ -133,17 +141,17 @@ service cloud.firestore {
       
       match /catalogProducts/{productId} {
           allow get, list: if can('settings', 'read');
-          allow create, update, delete: if can('settings', 'write');
+          allow create, update, delete: if can('settings', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
       
       match /catalogCategories/{categoryId} {
           allow get, list: if can('settings', 'read');
-          allow create, update, delete: if can('settings', 'write');
+          allow create, update, delete: if can('settings', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
       
       match /products/{productId} {
         allow get, list: if can('inventory', 'read');
-        allow create, update, delete: if can('inventory', 'write');
+        allow create, update, delete: if can('inventory', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
 
       match /stockMovements/{movementId} {
@@ -155,27 +163,27 @@ service cloud.firestore {
       
       match /sales/{saleId} {
         allow get, list: if can('sales', 'read');
-        allow create, update, delete: if can('sales', 'write');
+        allow create, update, delete: if can('sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
       
       match /productions/{productionId} {
         allow get, list: if can('production', 'read');
-        allow create, update, delete: if can('production', 'write');
+        allow create, update, delete: if can('production', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
       
       match /rawMaterials/{materialId} {
         allow get, list: if can('raw-materials', 'read');
-        allow create, update, delete: if can('raw-materials', 'write');
+        allow create, update, delete: if can('raw-materials', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
       
       match /recipes/{recipeId} {
         allow get, list: if can('raw-materials', 'read');
-        allow create, update, delete: if can('raw-materials', 'write');
+        allow create, update, delete: if can('raw-materials', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
       
       match /orders/{orderId} {
         allow get, list: if can('orders', 'read');
-        allow create, update, delete: if can('orders', 'write');
+        allow create, update, delete: if can('orders', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
       
       match /reports/{reportId} {
