@@ -37,10 +37,11 @@ type AuditStockFormValues = z.infer<typeof formSchema>;
 interface AuditStockDialogProps {
   product: Product;
   trigger: 'icon' | 'button' | 'card-button';
+  disabled?: boolean;
 }
 
-function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProps, 'trigger'> & { setOpen: (open: boolean) => void }) {
-  const { auditStock } = useContext(InventoryContext) || {};
+function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProps, 'trigger' | 'disabled'> & { setOpen: (open: boolean) => void }) {
+  const { auditStock, isReadOnly } = useContext(InventoryContext) || {};
   const { toast } = useToast();
   const form = useForm<AuditStockFormValues>({
     resolver: zodResolver(formSchema),
@@ -54,6 +55,10 @@ function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProp
     console.log("AuditStockDialog onSubmit triggered", values);
     if (!auditStock) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Erro interno: Função de auditoria não encontrada.' });
+      return;
+    }
+    if (isReadOnly) {
+      toast({ variant: 'destructive', title: 'Acesso Restrito', description: 'Conta em modo leitura — contacte o suporte.' });
       return;
     }
     await auditStock(product, values.physicalCount, values.reason);
@@ -123,12 +128,12 @@ function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProp
 
 
 
-const AuditStockTrigger = ({ trigger }: { trigger: 'icon' | 'button' | 'card-button' }) => {
+const AuditStockTrigger = ({ trigger, disabled }: { trigger: 'icon' | 'button' | 'card-button'; disabled?: boolean }) => {
   const buttonClasses = "text-amber-500 hover:bg-amber-500/10 hover:text-amber-600 dark:text-yellow-500 dark:hover:bg-yellow-500/10 dark:hover:text-yellow-400";
   if (trigger === 'icon') {
     return (
       <TooltipTrigger asChild>
-        <Button variant="ghost" size="icon" className={`p-3 h-auto w-auto rounded-xl transition-all ${buttonClasses}`}>
+        <Button disabled={disabled} variant="ghost" size="icon" className={`p-3 h-auto w-auto rounded-xl transition-all ${buttonClasses}`}>
           <FileCheck className="h-4 w-4" />
           <span className="sr-only">Auditar Stock</span>
         </Button>
@@ -137,29 +142,33 @@ const AuditStockTrigger = ({ trigger }: { trigger: 'icon' | 'button' | 'card-but
   }
   return (
     <TooltipTrigger asChild>
-      <Button variant="outline" size="icon" className={`flex-1 h-8 sm:h-9 ${buttonClasses}`}>
+      <Button disabled={disabled} variant="outline" size="icon" className={`flex-1 h-8 sm:h-9 ${buttonClasses}`}>
         <FileCheck className="h-4 w-4" />
       </Button>
     </TooltipTrigger>
   )
 }
 
-export function AuditStockDialog({ product, trigger }: AuditStockDialogProps) {
+export function AuditStockDialog({ product, trigger, disabled }: AuditStockDialogProps) {
   const [open, setOpen] = useState(false);
 
   return (
     <TooltipProvider>
       <Tooltip>
-        <ResponsiveDialog
-          open={open}
-          onOpenChange={setOpen}
-          title={`Auditoria de Stock: ${product.name}`}
-          description="Insira a contagem física para ajustar o stock do sistema."
-          trigger={<AuditStockTrigger trigger={trigger} />}
-        >
-          <AuditStockDialogContent product={product} setOpen={setOpen} />
-        </ResponsiveDialog>
-        <TooltipContent><p>Auditar Stock</p></TooltipContent>
+        {disabled ? (
+          <AuditStockTrigger trigger={trigger} disabled={disabled} />
+        ) : (
+          <ResponsiveDialog
+            open={open}
+            onOpenChange={setOpen}
+            title={`Auditoria de Stock: ${product.name}`}
+            description="Insira a contagem física para ajustar o stock do sistema."
+            trigger={<AuditStockTrigger trigger={trigger} />}
+          >
+            <AuditStockDialogContent product={product} setOpen={setOpen} />
+          </ResponsiveDialog>
+        )}
+        <TooltipContent><p>{disabled ? "Indisponível em modo leitura" : "Auditar Stock"}</p></TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );

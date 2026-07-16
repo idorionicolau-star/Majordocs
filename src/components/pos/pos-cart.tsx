@@ -10,6 +10,7 @@ import { ShoppingCart, Trash2, X, Minus, Plus, CreditCard, AlertTriangle } from 
 import { formatCurrency } from '@/lib/utils';
 import type { CartItem } from '@/lib/types';
 import { useState, useEffect } from 'react';
+import { useInventory } from '@/context/inventory-context';
 
 // A local component to handle quantity input smoothly without losing cursor or decimal points
 function QuantityInput({
@@ -136,6 +137,7 @@ export function PosCart({
     onCheckout,
     className
 }: PosCartProps) {
+    const { isReadOnly } = useInventory();
     return (
         <Card className={`border-none shadow-sm h-full flex flex-col bg-card ${className}`}>
             <CardHeader className="pb-4 pt-6 px-6 flex-none">
@@ -154,6 +156,8 @@ export function PosCart({
                             variant="ghost"
                             size="sm"
                             onClick={onClearCart}
+                            disabled={isReadOnly}
+                            title={isReadOnly ? "Indisponível em modo leitura" : ""}
                             className="text-destructive hover:text-destructive hover:bg-destructive/10 -mr-2"
                         >
                             <Trash2 className="h-4 w-4 mr-2" />
@@ -294,6 +298,8 @@ export function PosCart({
                             className="w-full h-14 text-lg font-bold shadow-lg hover:shadow-xl transition-all active:scale-[0.99]"
                             size="lg"
                             onClick={onCheckout}
+                            disabled={isReadOnly}
+                            title={isReadOnly ? "Indisponível em modo leitura" : ""}
                         >
                             <CreditCard className="mr-2 h-5 w-5" />
                             Finalizar Venda

@@ -46,7 +46,7 @@ export default function OrdersPage() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { orders, companyId, loading: inventoryLoading, user, canEdit, addNotification, addProductionLog, deleteOrder, companyData, confirmAction } = inventoryContext || { orders: [], sales: [], companyId: null, loading: true, user: null, canEdit: () => false, addNotification: () => { }, addProductionLog: () => { }, deleteOrder: () => { }, companyData: null, confirmAction: () => { } };
+  const { orders, companyId, loading: inventoryLoading, user, canEdit, addNotification, addProductionLog, deleteOrder, companyData, confirmAction, isReadOnly } = inventoryContext || { orders: [], sales: [], companyId: null, loading: true, user: null, canEdit: () => false, addNotification: () => { }, addProductionLog: () => { }, deleteOrder: () => { }, companyData: null, confirmAction: () => { }, isReadOnly: false };
 
   const canEditOrders = canEdit('orders');
 
@@ -58,6 +58,10 @@ export default function OrdersPage() {
 
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: 'Pendente' | 'Em produção' | 'Concluída') => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId || !user) return;
 
     let orderToUpdate = orders.find(o => o.id === orderId);
@@ -466,16 +470,27 @@ export default function OrdersPage() {
 
       </div>
       {canEditOrders && (
-        <Button
-          asChild
-          className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
-          size="icon"
-        >
-          <Link href="/orders/new">
+        isReadOnly ? (
+          <Button
+            disabled
+            className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
+            size="icon"
+            title="Indisponível em modo leitura"
+          >
             <Plus className="h-6 w-6" />
-            <span className="sr-only">Adicionar Encomenda</span>
-          </Link>
-        </Button>
+          </Button>
+        ) : (
+          <Button
+            asChild
+            className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
+            size="icon"
+          >
+            <Link href="/orders/new">
+              <Plus className="h-6 w-6" />
+              <span className="sr-only">Adicionar Encomenda</span>
+            </Link>
+          </Button>
+        )
       )}
     </>
   );

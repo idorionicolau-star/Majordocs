@@ -62,6 +62,7 @@ import {
   deleteDocumentNonBlocking
 } from '@/firebase/non-blocking-updates';
 import { PasswordConfirmationDialog } from '@/components/auth/password-confirmation-dialog';
+import { useSubscriptionState } from '@/hooks/useSubscriptionState';
 
 
 type CatalogProduct = Omit<
@@ -91,6 +92,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [lastSaleTimestamp, setLastSaleTimestamp] = useState<number>(0);
 
   const [companyData, setCompanyData] = useState<Company | null>(null);
+  const { isReadOnly } = useSubscriptionState(companyData);
 
   const locations = useMemo(() => companyData?.locations || [], [companyData]);
   const isMultiLocation = useMemo(() => !!companyData?.isMultiLocation, [companyData]);
@@ -897,6 +899,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const addProduct = useCallback(
     (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock' | 'sourceIds'>) => {
+      if (isReadOnly) {
+        toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+        return Promise.resolve();
+      }
       if (!productsCollectionRef || !firestore || !user || !companyId) return Promise.resolve();
 
       const { name, location, stock: newStock } = newProductData;
@@ -1103,6 +1109,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, productsData, stockMovementsData, salesData, toast]);
 
   const updateProduct = useCallback(async (instanceId: string, updatedData: Partial<Product>) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!productsCollectionRef || !instanceId || !firestore) return;
 
     const productToUpdate = products.find(p => p.instanceId === instanceId);
@@ -1149,6 +1159,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [productsCollectionRef, products, checkStockAndNotify, firestore, syncSmartThresholds]);
 
   const deleteProduct = useCallback(async (instanceId: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!productsCollectionRef || !instanceId || !firestore || !user) return;
     const productToDelete = products.find(p => p.instanceId === instanceId);
     if (!productToDelete) return;
@@ -1219,6 +1233,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [productsCollectionRef, products, firestore, user, toast]);
 
   const auditStock = useCallback(async (product: Product, physicalCount: number, reason: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     console.log("auditStock called", { product, physicalCount, reason, firestore: !!firestore, companyId, user: !!user });
 
     if (!firestore) {
@@ -1293,6 +1311,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, user, toast, checkStockAndNotify]);
 
   const transferStock = useCallback(async (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId || !user) return;
 
     const fromProduct = products.find(p => p.name === productName && p.location === fromLocationId);
@@ -1379,6 +1401,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
 
   const updateProductStock = useCallback(async (productName: string, quantity: number, locationId?: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId || !user) return;
     const targetLocation = locationId || (isMultiLocation && locations.length > 0 ? locations[0].id : 'Principal');
     const catalogProduct = catalogProductsData?.find(p => p.name === productName);
@@ -1462,6 +1488,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [companyDocRef]);
 
   const addSale = useCallback(async (newSaleData: Omit<Sale, 'id' | 'guideNumber'>, reserveStock = true) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId || !productsCollectionRef) throw new Error("Firestore não está pronto.");
 
     const settings = companyData?.notificationSettings;
@@ -1582,6 +1612,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       isPickedUp?: boolean;
     }
   ) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
     if (!items || items.length === 0) throw new Error("O carrinho está vazio.");
 
@@ -1778,6 +1812,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
 
     const saleRef = doc(firestore, `companies/${companyId}/sales`, sale.id);
@@ -1900,6 +1938,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user, checkStockAndNotify, toast]);
 
   const addProduction = useCallback(async (prodData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId || !user) throw new Error("Contexto não pronto.");
 
     const { productName, quantity, location, orderId, unit } = prodData;
@@ -2321,6 +2363,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, productsData, toast]);
 
   const deleteProduction = useCallback((productionId: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!productionsCollectionRef) return;
     const docRef = doc(productionsCollectionRef, productionId);
     updateDocumentNonBlocking(docRef, { deletedAt: new Date().toISOString() });
@@ -2328,6 +2374,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [productionsCollectionRef, toast]);
 
   const updateProduction = useCallback((productionId: string, data: Partial<Production>) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!productionsCollectionRef) return;
     const docRef = doc(productionsCollectionRef, productionId);
     updateDocumentNonBlocking(docRef, data);
@@ -2335,6 +2385,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [productionsCollectionRef, toast]);
 
   const deleteOrder = useCallback(async (orderId: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!ordersCollectionRef || !firestore || !companyId) return;
 
     try {
@@ -2411,6 +2465,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [ordersCollectionRef, firestore, companyId, toast, user]);
 
   const finalizeOrder = useCallback(async (orderId: string, finalPayment: number) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId || !user) return;
 
     try {
@@ -2553,6 +2611,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, user, toast, isMultiLocation, locations]);
 
   const addRawMaterial = useCallback(async (material: Omit<RawMaterial, 'id'>) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!rawMaterialsCollectionRef) return;
     addDocumentNonBlocking(rawMaterialsCollectionRef, material);
     toast({ title: 'Matéria-Prima Adicionada' });
@@ -2572,6 +2634,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [rawMaterialsCollectionRef, toast]);
 
   const addRecipe = useCallback(async (recipe: Omit<Recipe, 'id'>) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!recipesCollectionRef) return;
     addDocumentNonBlocking(recipesCollectionRef, recipe);
     toast({ title: 'Receita Adicionada' });
@@ -2948,6 +3014,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     firebaseUser,
     companyId,
     loading: isDataLoading,
+    isReadOnly,
     login,
     loginWithGoogle,
     logout,
@@ -3000,7 +3067,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     confirmAction,
   }), [
-    user, firebaseUser, companyId, isDataLoading,
+    user, firebaseUser, companyId, isDataLoading, isReadOnly,
     login, loginWithGoogle, logout, resetPassword, registerCompany, registerCompanyWithGoogle, profilePicture, handleSetProfilePicture,
     canView, canEdit,
     companyData, productsData, salesData, productionsData, ordersData, stockMovementsData, catalogProductsData, catalogCategoriesData,

@@ -16,6 +16,7 @@ import { BottomNav } from './bottom-nav';
 
 import { LoadingBar } from './loading-bar';
 import { SubscriptionExpired } from './subscription-expired';
+import { useSubscriptionState } from '@/hooks/useSubscriptionState';
 import { differenceInDays } from 'date-fns';
 
 import { useSearchParams } from 'next/navigation';
@@ -121,27 +122,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   }
 
   const company = authContext?.companyData;
-  let isExpired = false;
-  let isTrial = false;
-  let daysLeft = 0;
-
-  if (company && company.status === 'trial' && company.trialEndsAt) {
-    isTrial = true;
-    const endDate = new Date(company.trialEndsAt);
-    const today = new Date();
-
-    if (today > endDate) {
-      isExpired = true;
-    } else {
-      daysLeft = differenceInDays(endDate, today);
-    }
-  } else if (company && company.status === 'inactive') {
-    isExpired = true;
-  }
-
-  if (isExpired) {
-    return <SubscriptionExpired />;
-  }
+  const { isReadOnly, isTrial, daysLeft } = useSubscriptionState(company);
 
   return (
     <>
@@ -150,6 +131,18 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <LoadingBar />
           <NavigationObserver onNavigate={handleNavigationTransition} />
         </Suspense>
+
+        {isReadOnly && (
+          <div className="bg-gradient-to-r from-amber-600 to-rose-600 text-white text-center py-2.5 px-4 text-sm font-medium sticky top-0 z-[60] shadow-md flex flex-wrap justify-center items-center gap-3 animate-in slide-in-from-top duration-300">
+            <span>Modo leitura — a sua assinatura não está activa. Contacte-nos para reactivar o acesso completo.</span>
+            <a 
+              href={`mailto:${company?.email || 'idorionicolau@gmail.com'}?subject=Reativacao%20de%20Conta%20-%20${encodeURIComponent(company?.name || '')}`}
+              className="bg-white text-rose-700 hover:bg-white/90 px-3 py-1 rounded-md text-xs font-bold transition-all shadow-sm flex items-center gap-1"
+            >
+              ✉️ Contactar Suporte
+            </a>
+          </div>
+        )}
 
         {isTrial && (
           <div className="bg-blue-600 text-white text-center py-2 px-4 text-sm font-medium sticky top-0 z-[60] shadow-md flex justify-center items-center gap-2">

@@ -73,7 +73,7 @@ export type Company = {
   logoUrl?: string; // Base64 Data URL for the company logo, displayed in email headers
   signatureUrl?: string; // Base64 Data URL or Firebase Storage URL for the signature/stamp
   paymentInfo?: string; // Text containing bank accounts, M-Pesa, etc.
-  status?: 'active' | 'trial' | 'inactive';
+  status?: 'active' | 'trial' | 'suspended';
   trialEndsAt?: string;
   subscriptionEndsAt?: string;
 };
@@ -304,6 +304,7 @@ export interface InventoryContextType {
   firebaseUser: any | null;
   companyId: string | null;
   loading: boolean;
+  isReadOnly: boolean;
   login: (email: string, pass: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
   logout: () => void;

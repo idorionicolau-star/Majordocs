@@ -27,6 +27,7 @@ interface ColumnsOptions {
   canEdit: boolean;
   isMultiLocation: boolean;
   locations: Location[];
+  isReadOnly?: boolean;
 }
 
 export const getStockStatus = (product: Product) => {
@@ -35,16 +36,16 @@ export const getStockStatus = (product: Product) => {
     return "sem-estoque";
   }
   if (availableStock <= product.criticalStockThreshold) {
-    return "crítico";
+    return "critico";
   }
   if (availableStock <= product.lowStockThreshold) {
     return "baixo";
   }
-  return "ok";
+  return "bom";
 };
 
 export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
-  const { canEdit, isMultiLocation, locations } = options;
+  const { canEdit, isMultiLocation, locations, isReadOnly } = options;
 
   const baseColumns: ColumnDef<Product>[] = [
     {
@@ -207,18 +208,25 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
             </Tooltip>
             {canEdit && (
               <>
-                <AuditStockDialog product={product} trigger="icon" />
+                <AuditStockDialog product={product} trigger="icon" disabled={isReadOnly} />
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button asChild variant="ghost" size="icon" className="p-3 h-auto w-auto text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all">
-                      <Link href={`/inventory/${product.instanceId || product.id}/edit`}>
+                    {isReadOnly ? (
+                      <Button disabled variant="ghost" size="icon" className="p-3 h-auto w-auto text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all">
                         <Edit2 className="h-4 w-4" />
                         <span className="sr-only">Editar</span>
-                      </Link>
-                    </Button>
+                      </Button>
+                    ) : (
+                      <Button asChild variant="ghost" size="icon" className="p-3 h-auto w-auto text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all">
+                        <Link href={`/inventory/${product.instanceId || product.id}/edit`}>
+                          <Edit2 className="h-4 w-4" />
+                          <span className="sr-only">Editar</span>
+                        </Link>
+                      </Button>
+                    )}
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Editar Produto</p>
+                    <p>{isReadOnly ? "Indisponível em modo leitura" : "Editar Produto"}</p>
                   </TooltipContent>
                 </Tooltip>
                 <Tooltip>
@@ -227,6 +235,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
                       variant="ghost"
                       size="icon"
                       onClick={() => options.onAttemptDelete(product)}
+                      disabled={isReadOnly}
                       className="p-3 h-auto w-auto text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -234,7 +243,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Apagar Produto</p>
+                    <p>{isReadOnly ? "Indisponível em modo leitura" : "Apagar Produto"}</p>
                   </TooltipContent>
                 </Tooltip>
               </>

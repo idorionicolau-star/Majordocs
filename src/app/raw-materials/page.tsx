@@ -95,7 +95,7 @@ type ProductionFormValues = z.infer<typeof productionSchema>;
 
 // Raw Materials Manager Component
 const RawMaterialsManager = () => {
-    const { rawMaterials, deleteRawMaterial, loading, companyData, confirmAction } = useContext(InventoryContext)!;
+    const { rawMaterials, deleteRawMaterial, loading, companyData, confirmAction, isReadOnly } = useContext(InventoryContext)!;
     const { toast } = useToast();
 
     const handlePrint = () => {
@@ -144,11 +144,17 @@ const RawMaterialsManager = () => {
             <CardContent>
                 <div className="flex flex-col sm:flex-row justify-between mb-6 gap-3 pt-2">
                     <div className="flex flex-col gap-2 w-full sm:w-auto">
-                        <Button asChild className="w-full sm:w-auto bg-primary text-white">
-                            <Link href="/raw-materials/new">
+                        {isReadOnly ? (
+                            <Button disabled className="w-full sm:w-auto bg-primary text-white" title="Indisponível em modo leitura">
                                 <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Matéria-Prima
-                            </Link>
-                        </Button>
+                            </Button>
+                        ) : (
+                            <Button asChild className="w-full sm:w-auto bg-primary text-white">
+                                <Link href="/raw-materials/new">
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Matéria-Prima
+                                </Link>
+                            </Button>
+                        )}
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
                         <Button onClick={handleDownload} variant="outline" size="sm" className="flex-1 sm:flex-none"><Download className="mr-2 h-4 w-4" /> PDF</Button>
@@ -177,14 +183,18 @@ const RawMaterialsManager = () => {
                                     <TableCell>{material.lowStockThreshold}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-1">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                                            <Button disabled={isReadOnly} title={isReadOnly ? "Indisponível em modo leitura" : ""} variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => {
                                                 confirmAction(async () => {
                                                     await deleteRawMaterial(material.id);
                                                 }, "Apagar Matéria-Prima", `Tem a certeza que deseja apagar "${material.name}"? Esta ação não pode ser desfeita.`);
                                             }}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8" asChild><Link href={`/raw-materials/${material.id}/edit`}><Edit className="h-4 w-4" /></Link></Button>
+                                            {isReadOnly ? (
+                                                <Button disabled variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" title="Indisponível em modo leitura"><Edit className="h-4 w-4" /></Button>
+                                            ) : (
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" asChild><Link href={`/raw-materials/${material.id}/edit`}><Edit className="h-4 w-4" /></Link></Button>
+                                            )}
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -216,18 +226,24 @@ const RawMaterialsManager = () => {
                                 </div>
                             </CardContent>
                             <CardFooter className="p-2 flex justify-end gap-2 bg-muted/20">
-                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                                <Button disabled={isReadOnly} title={isReadOnly ? "Indisponível em modo leitura" : ""} variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
                                     confirmAction(async () => {
                                         await deleteRawMaterial(material.id);
                                     }, "Apagar Matéria-Prima", `Tem a certeza que deseja apagar "${material.name}"? Esta ação não pode ser desfeita.`);
                                 }}>
                                     <Trash2 className="h-4 w-4 mr-2" /> Apagar
                                 </Button>
-                                <Button variant="ghost" size="sm" asChild>
-                                    <Link href={`/raw-materials/${material.id}/edit`}>
+                                {isReadOnly ? (
+                                    <Button disabled variant="ghost" size="sm" className="text-muted-foreground" title="Indisponível em modo leitura">
                                         <Edit className="h-4 w-4 mr-2" /> Editar
-                                    </Link>
-                                </Button>
+                                    </Button>
+                                ) : (
+                                    <Button variant="ghost" size="sm" asChild>
+                                        <Link href={`/raw-materials/${material.id}/edit`}>
+                                            <Edit className="h-4 w-4 mr-2" /> Editar
+                                        </Link>
+                                    </Button>
+                                )}
                             </CardFooter>
                         </Card>
                     )) : (
@@ -247,7 +263,7 @@ const RawMaterialsManager = () => {
 
 // Recipes Manager Component
 const RecipesManager = () => {
-    const { recipes, catalogProducts, rawMaterials, loading, companyData, confirmAction } = useContext(InventoryContext)!;
+    const { recipes, catalogProducts, rawMaterials, loading, companyData, confirmAction, isReadOnly } = useContext(InventoryContext)!;
     const { toast } = useToast();
 
     const handlePrint = () => {
@@ -289,11 +305,17 @@ const RecipesManager = () => {
             <CardHeader><CardTitle>Receitas de Produção</CardTitle><CardDescription>Defina os componentes para cada produto final.</CardDescription></CardHeader>
             <CardContent>
                 <div className="flex flex-col sm:flex-row justify-between mb-6 gap-3 pt-2">
-                    <Button asChild className="w-full sm:w-auto order-first sm:order-last bg-primary text-white">
-                        <Link href="/raw-materials/recipes/new">
+                    {isReadOnly ? (
+                        <Button disabled className="w-full sm:w-auto order-first sm:order-last bg-primary text-white" title="Indisponível em modo leitura">
                             <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Receita
-                        </Link>
-                    </Button>
+                        </Button>
+                    ) : (
+                        <Button asChild className="w-full sm:w-auto order-first sm:order-last bg-primary text-white">
+                            <Link href="/raw-materials/recipes/new">
+                                <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Receita
+                            </Link>
+                        </Button>
+                    )}
                     <div className="flex gap-2 w-full sm:w-auto">
                         <Button onClick={handleDownload} variant="outline" size="sm" className="flex-1 sm:flex-none"><Download className="mr-2 h-4 w-4" /> PDF</Button>
                         <Button onClick={handlePrint} variant="outline" size="sm" className="flex-1 sm:flex-none"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
@@ -321,11 +343,17 @@ const RecipesManager = () => {
                                 </ul>
                             </CardContent>
                             <CardFooter>
-                                <Button variant="ghost" size="icon" asChild>
-                                    <Link href={`/raw-materials/recipes/${recipe.id}/edit`}>
+                                {isReadOnly ? (
+                                    <Button disabled variant="ghost" size="icon" className="text-muted-foreground" title="Indisponível em modo leitura">
                                         <Edit className="h-4 w-4" />
-                                    </Link>
-                                </Button>
+                                    </Button>
+                                ) : (
+                                    <Button variant="ghost" size="icon" asChild>
+                                        <Link href={`/raw-materials/recipes/${recipe.id}/edit`}>
+                                            <Edit className="h-4 w-4" />
+                                        </Link>
+                                    </Button>
+                                )}
                             </CardFooter>
                         </Card>
                     ))}
@@ -337,7 +365,7 @@ const RecipesManager = () => {
 
 // Production From Recipe Component
 const ProductionFromRecipe = () => {
-    const { recipes, rawMaterials, addProduction, loading } = useContext(InventoryContext)!;
+    const { recipes, rawMaterials, addProduction, loading, isReadOnly } = useContext(InventoryContext)!;
     const { toast } = useToast();
     const form = useForm<ProductionFormValues>({
         resolver: zodResolver(productionSchema),
@@ -401,6 +429,10 @@ const ProductionFromRecipe = () => {
     const hasHighWaste = consumptionPreview.some(c => c.wastePercent > 30);
 
     const onSubmit = async (values: ProductionFormValues) => {
+        if (isReadOnly) {
+            toast({ variant: 'destructive', title: 'Conta em modo leitura', description: 'Modo leitura activo — contacte o suporte para reactivar o acesso completo.' });
+            return;
+        }
         try {
             const recipe = recipes.find(r => r.id === values.recipeId);
             if (!recipe) {
@@ -494,7 +526,7 @@ const ProductionFromRecipe = () => {
                             </div>
                         )}
 
-                        <Button type="submit" disabled={form.formState.isSubmitting || hasInsufficientMaterial} className="w-full border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))] hover:shadow-[2px_2px_0px_hsl(var(--foreground))] active:shadow-[1px_1px_0px_hsl(var(--foreground))] transition-all">Registrar Produção</Button>
+                        <Button type="submit" disabled={form.formState.isSubmitting || hasInsufficientMaterial || isReadOnly} title={isReadOnly ? "Indisponível em modo leitura" : ""} className="w-full border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))] hover:shadow-[2px_2px_0px_hsl(var(--foreground))] active:shadow-[1px_1px_0px_hsl(var(--foreground))] transition-all">Registrar Produção</Button>
                     </form>
                 </Form>
             </CardContent>

@@ -53,7 +53,7 @@ export default function ProductionPage() {
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const { productions, companyId, companyData, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation, deleteProduction, updateProduction, confirmAction } = inventoryContext || { productions: [], companyId: null, companyData: null, updateProductStock: () => { }, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false, deleteProduction: () => { }, updateProduction: () => { }, confirmAction: () => { } };
+  const { productions, companyId, companyData, updateProductStock, loading: inventoryLoading, user, canEdit, canView, locations, isMultiLocation, deleteProduction, updateProduction, confirmAction, isReadOnly } = inventoryContext || { productions: [], companyId: null, companyData: null, updateProductStock: () => { }, loading: true, user: null, canEdit: () => false, canView: () => false, locations: [], isMultiLocation: false, deleteProduction: () => { }, updateProduction: () => { }, confirmAction: () => { }, isReadOnly: false };
 
   const canEditProduction = canEdit('production');
   const canViewProduction = canView('production');
@@ -88,6 +88,10 @@ export default function ProductionPage() {
 
 
   const handleConfirmTransfer = async () => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!productionToTransfer || !firestore || !companyId) return;
 
     try {
@@ -452,6 +456,8 @@ export default function ProductionPage() {
           <>
             <Button
               onClick={() => router.push('/production/new')}
+              disabled={isReadOnly}
+              title={isReadOnly ? "Indisponível em modo leitura" : ""}
               className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
               size="icon"
             >

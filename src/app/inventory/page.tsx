@@ -67,6 +67,7 @@ export default function InventoryPage() {
     companyData,
     confirmAction,
     syncSmartThresholds,
+    isReadOnly,
   } = useInventory();
   const searchParams = useSearchParams();
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
@@ -813,7 +814,8 @@ export default function InventoryPage() {
               onProductUpdate: handleUpdateProduct,
               canEdit: canEditInventory,
               isMultiLocation: isMultiLocation,
-              locations: locations
+              locations: locations,
+              isReadOnly: isReadOnly
             })}
             data={filteredProducts}
             useVirtualization
@@ -882,6 +884,8 @@ export default function InventoryPage() {
               <Button
                 variant="destructive"
                 onClick={() => setShowClearConfirm(true)}
+                disabled={isReadOnly}
+                title={isReadOnly ? "Indisponível em modo leitura" : ""}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Limpar Todo o Inventário
@@ -891,16 +895,27 @@ export default function InventoryPage() {
         )}
       </div >
       {canEditInventory && (
-        <Button
-          asChild
-          className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
-          size="icon"
-        >
-          <Link href="/inventory/new">
+        isReadOnly ? (
+          <Button
+            disabled
+            className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
+            size="icon"
+            title="Indisponível em modo leitura"
+          >
             <Plus className="h-6 w-6" />
-            <span className="sr-only">Adicionar Produto</span>
-          </Link>
-        </Button>
+          </Button>
+        ) : (
+          <Button
+            asChild
+            className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
+            size="icon"
+          >
+            <Link href="/inventory/new">
+              <Plus className="h-6 w-6" />
+              <span className="sr-only">Adicionar Produto</span>
+            </Link>
+          </Button>
+        )
       )}
     </>
   );

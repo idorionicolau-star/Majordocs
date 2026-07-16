@@ -80,8 +80,8 @@ export default function NewOrderPage() {
     const inventoryContext = useContext(InventoryContext);
     const { customers, addCustomer } = useCRM();
 
-    const { catalogProducts, catalogCategories, locations, isMultiLocation, companyId, user, addNotification } = inventoryContext || {
-        catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false, companyId: null, user: null, addNotification: () => { }
+    const { catalogProducts, catalogCategories, locations, isMultiLocation, companyId, user, addNotification, isReadOnly } = inventoryContext || {
+        catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false, companyId: null, user: null, addNotification: () => { }, isReadOnly: false
     };
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -159,6 +159,10 @@ export default function NewOrderPage() {
     const balanceDue = totalValue - amountPaid;
 
     async function onSubmit(formData: AddOrderFormValues) {
+        if (isReadOnly) {
+            toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+            return;
+        }
         if (!firestore || !companyId || !user) return;
 
         if (isMultiLocation && !formData.location) {
@@ -562,7 +566,7 @@ export default function NewOrderPage() {
                             <Button type="button" variant="outline" className="w-full sm:w-auto h-12" onClick={() => router.push('/orders')}>
                                 Cancelar
                             </Button>
-                            <Button type="submit" className="w-full sm:w-auto h-12 px-8" disabled={isSubmitting}>
+                             <Button type="submit" className="w-full sm:w-auto h-12 px-8" disabled={isSubmitting || isReadOnly} title={isReadOnly ? "Indisponível em modo leitura" : ""}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 Registrar Encomenda
                             </Button>

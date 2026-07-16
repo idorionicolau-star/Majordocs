@@ -16,6 +16,8 @@ import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { useCRM } from '@/context/crm-context';
+import { generateLocalInsights } from '@/lib/local-ai';
 
 
 export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
@@ -27,7 +29,8 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     dashboardStats,
     stockMovements,
     firebaseUser,
-    companyId: contextCompanyId
+    companyId: contextCompanyId,
+    companyData
   } = useContext(InventoryContext) || {
     chatHistory: [],
     setChatHistory: () => { },
@@ -36,8 +39,11 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     stockMovements: [],
     dashboardStats: {},
     firebaseUser: null,
-    companyId: null
+    companyId: null,
+    companyData: null
   };
+
+  const { customers } = useCRM();
 
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -70,65 +76,67 @@ export function AIAssistant({ initialQuery }: { initialQuery?: string }) {
     setQuery('');
 
     try {
-      const fbToken = await firebaseUser?.getIdToken();
-      const response = await fetch('/api/ai-search', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${fbToken}`
-        },
-        body: JSON.stringify({
-          query: currentQuery,
-          history: messages,
-          contextData: {
-            stats: dashboardStats,
-            recentSales: sales?.slice(0, 10),
-            inventoryProducts: products?.map(p => ({
-              name: p.name,
-              stock: p.stock,
-              reservedStock: p.reservedStock,
-              price: p.price,
-              location: p.location
-            })),
-            stockAdditionsHistory: (() => {
-              if (!stockMovements) return [];
-              const sortedIn = stockMovements
-                .filter(m => m.type === 'IN')
-                .sort((a, b) => {
-                  const tA = a.timestamp?.seconds ? a.timestamp.seconds * 1000 : new Date(a.timestamp).getTime();
-                  const tB = b.timestamp?.seconds ? b.timestamp.seconds * 1000 : new Date(b.timestamp).getTime();
-                  return tA - tB;
-                })
-                .map(m => ({
-                  produto: m.productName,
-                  quantidade_adicionada: m.quantity,
-                  data_hora: m.timestamp?.seconds ? new Date(m.timestamp.seconds * 1000).toLocaleString('pt-PT') : new Date(m.timestamp).toLocaleString('pt-PT'),
-                  utilizador: m.userName,
-                  motivo: m.reason
-                }));
+      const q = currentQuery.toLowerCase().trim();
+      let responseText = '';
 
-              if (sortedIn.length > 100) {
-                return [...sortedIn.slice(0, 50), ...sortedIn.slice(-50)];
-              }
-              return sortedIn;
-            })(),
-            companyId: contextCompanyId,
+      const localInsights = generateLocalInsights(sales || [], products || [], customers || [], companyData || null);
+
+      if (q.includes('diagnóstico') || q.includes('saúde') || q.includes('health') || q.includes('geral') || q.includes('tudo') || q.includes('relatório')) {
+        responseText = localInsights;
+      } else if (q.includes('venda') || q.includes('fatura') || q.includes('receita') || q.includes('financeiro') || q.includes('dinheiro') || q.includes('crescimento') || q.includes('faturamento')) {
+        const salesSection = localInsights.split('#### 💵 Performance e Tendência Financeira')[1]?.split('####')[0];
+        responseText = salesSection 
+          ? `#### 💵 Performance e Tendência Financeira (Offline)\n${salesSection}`
+          : localInsights;
+      } else if (q.includes('stock') || q.includes('inventário') || q.includes('produto') || q.includes('artigo') || q.includes('ruptura') || q.includes('capital') || q.includes('insumo')) {
+        const inventorySection = localInsights.split('#### 📦 Gestão de Inventário e Capital Empatado')[1]?.split('####')[0];
+        responseText = inventorySection
+          ? `#### 📦 Gestão de Inventário e Capital Empatado (Offline)\n${inventorySection}`
+          : localInsights;
+      } else if (q.includes('cliente') || q.includes('crm') || q.includes('valioso') || q.includes('ausente') || q.includes('churn')) {
+        const crmSection = localInsights.split('#### 👥 Relacionamento com Clientes (CRM)')[1]?.split('####')[0];
+        responseText = crmSection
+          ? `#### 👥 Relacionamento com Clientes (CRM) (Offline)\n${crmSection}`
+          : localInsights;
+      } else if (q.includes('falha') || q.includes('erro') || q.includes('anomalia') || q.includes('dados') || q.includes('integridade')) {
+        const integritySection = localInsights.split('#### ⚙️ Integridade dos Lançamentos Operacionais')[1]?.split('####')[0];
+        responseText = integritySection
+          ? `#### ⚙️ Integridade dos Lançamentos Operacionais (Offline)\n${integritySection}`
+          : localInsights;
+      } else if (q.includes('ação') || q.includes('recomendação') || q.includes('sugestão') || q.includes('fazer') || q.includes('ia')) {
+        const recommendationsSection = localInsights.split('#### 💡 Ações Recomendadas da IA Local')[1];
+        responseText = recommendationsSection
+          ? `#### 💡 Ações Recomendadas da IA Local (Offline)\n${recommendationsSection}`
+          : localInsights;
+      } else {
+        // Navigation guidelines or default local analysis
+        if (q.includes('adicionar') || q.includes('criar') || q.includes('novo')) {
+          if (q.includes('produto') || q.includes('stock')) {
+            responseText = "Pode adicionar novos produtos diretamente na página de [Inventário](/inventory?action=add).";
+          } else if (q.includes('venda') || q.includes('pos')) {
+            responseText = "Pode registar novas vendas no [POS / Ponto de Venda](/pos) ou na página de [Vendas](/sales).";
+          } else if (q.includes('encomenda')) {
+            responseText = "Pode registar encomendas na página de [Encomendas](/orders/new).";
+          } else if (q.includes('produção')) {
+            responseText = "Pode lançar novas ordens de produção na página de [Produção](/production/new).";
+          } else {
+            responseText = "Para adicionar novos dados, aceda aos links rápidos:\n" +
+              "- [Novo Produto no Inventário](/inventory?action=add)\n" +
+              "- [Nova Venda no POS](/pos)\n" +
+              "- [Nova Encomenda](/orders/new)\n" +
+              "- [Nova Produção](/production/new)";
           }
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Falha ao comunicar com a API de pesquisa.');
+        } else {
+          responseText = `Olá! Sou o **MajorAssistant** local e estou a correr offline.\n\nCom base nos dados atuais da sua empresa, preparei um diagnóstico detalhado:\n\n${localInsights}`;
+        }
       }
 
-      const data = await response.json();
-
-      setMessages(prev => [...prev, { role: 'model', text: data.text }]);
-
+      // Simulate a slight typing latency so it feels interactive
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setMessages(prev => [...prev, { role: 'model', text: responseText }]);
     } catch (e: any) {
-      console.error("Erro na pesquisa com IA:", e);
-      setMessages(prev => [...prev, { role: 'model', text: `Erro: ${e.message || 'Não foi possível obter uma resposta. Tente novamente.'}` }]);
+      console.error("Erro na pesquisa local:", e);
+      setMessages(prev => [...prev, { role: 'model', text: `Erro no processamento local: ${e.message || 'Não foi possível processar offline.'}` }]);
     } finally {
       setIsLoading(false);
     }

@@ -51,7 +51,7 @@ export function CatalogManager() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { companyId, products: inventoryProducts, addCatalogProduct, addCatalogCategory, catalogCategories: contextCatalogCategories } = inventoryContext || {};
+  const { companyId, products: inventoryProducts, addCatalogProduct, addCatalogCategory, catalogCategories: contextCatalogCategories, isReadOnly } = inventoryContext || {};
 
   const [activeTab, setActiveTab] = useState("categories");
   const [highlightProductsTab, setHighlightProductsTab] = useState(false);
@@ -409,15 +409,21 @@ export function CatalogManager() {
                 <p className="text-sm text-muted-foreground">A gerir {products?.length || 0} produtos base do catálogo.</p>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleSyncMissingProducts} disabled={isSyncing}>
+                <Button variant="outline" size="sm" onClick={handleSyncMissingProducts} disabled={isSyncing || isReadOnly} title={isReadOnly ? "Indisponível em modo leitura" : ""}>
                   <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
                   {isSyncing ? "A Sincronizar..." : "Sincronizar Inventário"}
                 </Button>
-                <AddCatalogProductDialog
-                  categories={categories?.map(c => c.name) || []}
-                  units={inventoryContext?.availableUnits || []}
-                  onAdd={handleAddProduct}
-                />
+                {isReadOnly ? (
+                  <Button disabled size="sm" title="Indisponível em modo leitura" className="bg-primary text-white">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Produto
+                  </Button>
+                ) : (
+                  <AddCatalogProductDialog
+                    categories={categories?.map(c => c.name) || []}
+                    units={inventoryContext?.availableUnits || []}
+                    onAdd={handleAddProduct}
+                  />
+                )}
               </div>
             </div>
             <div className="rounded-md border">
@@ -457,12 +463,18 @@ export function CatalogManager() {
                       <TableCell>{product.category}</TableCell>
                       <TableCell className="text-right">{product.price.toFixed(2)} MT</TableCell>
                       <TableCell className="text-right flex items-center justify-end gap-2">
-                        <EditCatalogProductDialog
-                          product={product}
-                          categories={categories?.map(c => c.name) || []}
-                          units={inventoryContext?.availableUnits || []}
-                          onUpdate={handleUpdateProduct}
-                        />
+                        {isReadOnly ? (
+                          <Button disabled variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" title="Indisponível em modo leitura">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <EditCatalogProductDialog
+                            product={product}
+                            categories={categories?.map(c => c.name) || []}
+                            units={inventoryContext?.availableUnits || []}
+                            onUpdate={handleUpdateProduct}
+                          />
+                        )}
                       </TableCell>
                     </TableRow>
                   )) : (
@@ -514,6 +526,8 @@ export function CatalogManager() {
               <Button
                 size="sm"
                 onClick={() => setShowAddCategoryDialog(true)}
+                disabled={isReadOnly}
+                title={isReadOnly ? "Indisponível em modo leitura" : ""}
                 className={cn((!categories || categories.length === 0) && "animate-shake")}
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -553,7 +567,7 @@ export function CatalogManager() {
                       </TableCell>
                       <TableCell className="font-medium">{category.name}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditingCategory(category)}>
+                        <Button disabled={isReadOnly} title={isReadOnly ? "Indisponível em modo leitura" : ""} variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditingCategory(category)}>
                           <Edit className="h-4 w-4 text-muted-foreground" />
                         </Button>
                       </TableCell>
