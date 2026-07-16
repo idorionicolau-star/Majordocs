@@ -2195,6 +2195,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
 
   const addCatalogProduct = useCallback(async (productData: Omit<CatalogProduct, 'id'>) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!catalogProductsCollectionRef) {
       throw new Error("Referência da coleção do catálogo não disponível.");
     }
@@ -2207,6 +2211,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [catalogProductsCollectionRef]);
 
   const addCatalogCategory = useCallback(async (categoryName: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!catalogCategoriesCollectionRef || !catalogCategoriesData) return;
     const trimmedName = categoryName.trim();
     if (!trimmedName) return;
@@ -2225,6 +2233,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [catalogCategoriesCollectionRef, catalogCategoriesData]);
 
   const deleteSale = useCallback(async (saleId: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId || !productsCollectionRef || !user) {
       toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta.' });
       return;
@@ -2661,6 +2673,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
 
   const restoreItem = useCallback(async (collectionName: string, id: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId) return;
     const docRef = doc(firestore, `companies/${companyId}/${collectionName}`, id);
 
@@ -2675,6 +2691,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, toast]);
 
   const hardDelete = useCallback(async (collectionName: string, id: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId) return;
     try {
       const docRef = doc(firestore, `companies/${companyId}/${collectionName}`, id);
@@ -2724,6 +2744,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [companyData, productsData, rawMaterialsData]);
 
   const addUnit = useCallback(async (unit: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId) return;
     try {
       const companyRef = doc(firestore, 'companies', companyId);
@@ -2738,6 +2762,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, toast]);
 
   const editUnit = useCallback(async (oldUnit: string, newUnit: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId || !oldUnit || !newUnit) return;
     try {
       const batch = writeBatch(firestore);
@@ -2772,6 +2800,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, toast, companyData, productsData, rawMaterialsData]);
 
   const removeUnit = useCallback(async (unit: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId || !unit) return;
     try {
       const companyRef = doc(firestore, 'companies', companyId);
@@ -2795,6 +2827,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [catalogCategoriesData, companyData, productsData]);
 
   const addCategory = useCallback(async (category: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId) return;
     try {
       // We update company-specific categories to keep it clean
@@ -2810,6 +2846,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, toast]);
 
   const editCategory = useCallback(async (oldCategory: string, newCategory: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId || !oldCategory || !newCategory) return;
     try {
       const batch = writeBatch(firestore);
@@ -2857,6 +2897,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, toast, companyData, productsData, catalogProductsData, catalogCategoriesData]);
 
   const removeCategory = useCallback(async (category: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!firestore || !companyId || !category) return;
     try {
       const companyRef = doc(firestore, 'companies', companyId);
@@ -2872,6 +2916,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   // Products Merge Tool
   const mergeProducts = useCallback(async (targetProductId: string, sourceProductIds: string[]) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     if (!productsCollectionRef || !firestore || !companyId) return;
 
     try {

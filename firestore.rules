@@ -107,7 +107,8 @@ service cloud.firestore {
       allow create: if isSignedIn(); // Qualquer pessoa autenticada pode registar uma nova empresa.
       allow get: if isEmployeeOf(companyId);
       allow list: if isSuperAdmin();
-      allow update, delete: if isAdminOf(companyId);
+      allow update: if isSuperAdmin() || (isAdminOf(companyId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'trialEndsAt', 'subscriptionEndsAt']));
+      allow delete: if isSuperAdmin();
 
       // Regras para as subcoleções de cada empresa.
       // O acesso é sempre verificado pela função can(módulo, nível).
