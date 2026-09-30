@@ -217,7 +217,10 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                     category: existingProduct.category || 'Geral',
                     unit: existingProduct.unit || 'un',
                     price: existingProduct.price.toString(),
-                    stock: existingProduct.stock.toString(),
+                    cost: (existingProduct.cost || 0).toString(),
+                    // Quantity to ADD — addProduct sums it to the existing stock.
+                    // (Pre-filling the current stock here used to double it on save.)
+                    stock: '0',
                     minStock: existingProduct.lowStockThreshold?.toString() || '0',
                     location: existingProduct.location || row.location,
                 }, true);
@@ -354,7 +357,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
             }
         },
         { key: 'price', name: 'Venda (MTn)', renderEditCell: textEditor, width: isMobile ? 110 : 120 },
-        { key: 'stock', name: 'Físico', renderEditCell: textEditor, width: isMobile ? 90 : 100 },
+        { key: 'stock', name: 'Qtd. a entrar', renderEditCell: textEditor, width: isMobile ? 90 : 100 },
         { key: 'minStock', name: 'Mínimo', renderEditCell: textEditor, width: isMobile ? 90 : 100 },
     ];
 
