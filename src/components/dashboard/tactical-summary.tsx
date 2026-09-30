@@ -19,14 +19,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const STORAGE_KEY = 'majorstockx-tactical-insights';
+const STORAGE_KEY = 'majorstockx-tactical-insights-v2';
 
 export const TacticalSummary = () => {
   const [insights, setInsights] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFreshlyGenerated, setIsFreshlyGenerated] = useState(false);
   const auth = useAuth();
-  const { sales, products, dashboardStats, companyData } = useContext(InventoryContext) || {};
+  const inv = useContext(InventoryContext);
+  const { sales, products, dashboardStats, companyData } = inv || {};
   const { customers } = useCRM();
 
   const generateInsights = useCallback(async (forceRefresh = false) => {
@@ -52,12 +53,9 @@ export const TacticalSummary = () => {
     }
 
     try {
-      const { generateLocalInsights } = await import('@/lib/local-ai');
-      
-      // Simula processamento da IA Local
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const { analyzeBusiness, analysisToMarkdown } = await import('@/lib/business-analysis');
 
-      const text = generateLocalInsights(sales || [], products || [], customers || [], companyData);
+      const text = analysisToMarkdown(analyzeBusiness({ products: products || [], sales: sales || [], customers: customers || [], orders: (inv as any)?.orders || [], productions: (inv as any)?.productions || [], stockMovements: (inv as any)?.stockMovements || [] }));
 
       setIsFreshlyGenerated(true);
       setInsights(text);

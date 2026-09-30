@@ -26,8 +26,11 @@ export function StockAlerts({ className }: { className?: string }) {
 
         const productSalesVelocity = new Map<string, number>();
         sales.forEach(s => {
-            const saleDate = (s.timestamp as any)?.toDate ? (s.timestamp as any).toDate() : new Date(s.timestamp as any);
-            if (saleDate >= thirtyDaysAgo) {
+            // As vendas guardam a data em `date` (ISO). Antes lia-se `timestamp`, que não existe,
+            // por isso nenhuma venda contava e TODOS os itens apareciam como "Sem giro recente".
+            const raw: any = (s as any).date ?? (s as any).timestamp;
+            const saleDate = raw?.toDate ? raw.toDate() : new Date(raw);
+            if (!isNaN(saleDate.getTime()) && saleDate >= thirtyDaysAgo && s.documentType !== 'Factura Proforma') {
                 const current = productSalesVelocity.get(s.productName) || 0;
                 productSalesVelocity.set(s.productName, current + (s.quantity || 0));
             }
@@ -50,7 +53,8 @@ export function StockAlerts({ className }: { className?: string }) {
                     daysOfStock
                 };
             })
-            .sort((a, b) => a.daysOfStock - b.daysOfStock);
+            // Primeiro os que acabam mais depressa; depois os esgotados; por fim os sem vendas.
+            .sort((a, b) => (a.daysOfStock - b.daysOfStock) || ((a.stock - a.reservedStock) - (b.stock - b.reservedStock)));
 
     }, [products, sales]);
 
@@ -173,14 +177,18 @@ export function StockAlerts({ className }: { className?: string }) {
                             <div className="flex items-center justify-between p-3 rounded-xl bg-white/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 group-hover:border-red-500/30 transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/60 shadow-sm dark:shadow-none">
                                 <div className="flex flex-col min-w-0">
                                     <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-foreground transition-colors truncate mr-2">{product.name}</span>
-                                    <span className="text-[10px] text-red-500 font-bold uppercase tracking-wider mt-0.5">
-                                        {product.daysOfStock === Infinity ? "Sem Giro Recente" : `Acaba em aprox. ${product.daysOfStock} dias`}
+                                    <span className={cn("text-[10px] font-semibold mt-0.5", availableStock <= 0 ? "text-red-500" : product.daysOfStock !== Infinity ? "text-amber-500" : "text-muted-foreground")}>
+                                        {availableStock <= 0
+                                            ? "Esgotado — produzir ou dar entrada"
+                                            : product.daysOfStock !== Infinity
+                                                ? `Acaba em ~${product.daysOfStock} dias ao ritmo actual`
+                                                : "Abaixo do mínimo · sem vendas registadas em 30 dias"}
                                     </span>
                                 </div>
                                 <div className="text-right flex items-center gap-2 shrink-0">
                                     <span className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_5px_currentColor]" />
                                     <span className="text-sm font-bold text-red-600 dark:text-red-400">
-                                        {Math.floor(Math.max(0, availableStock))} <span className="text-[10px] text-muted-foreground font-normal">{product.unit || 'un'}</span>
+                                        {Number.isInteger(availableStock) ? Math.max(0, availableStock) : Math.max(0, availableStock).toFixed(1)} <span className="text-[10px] text-muted-foreground font-normal">{product.unit || 'un'}</span>
                                     </span>
                                 </div>
                             </div>

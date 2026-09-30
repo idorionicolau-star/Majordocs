@@ -31,8 +31,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { InventoryContext } from "@/context/inventory-context";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { getFirestoreInstance } from "@/firebase/provider";
+import { answerOffline, ASSISTANT_SUGGESTIONS } from "@/lib/offline-assistant";
+import { CRMContext } from "@/context/crm-context";
 
 type Message = {
     id: string;
@@ -49,7 +49,7 @@ type ChatInterfaceProps = {
     setInput: (value: string) => void;
     handleSend: (customMessage?: string) => void;
     isLoading: boolean;
-    scrollRef: React.RefObject<HTMLDivElement>;
+    scrollRef: React.RefObject<HTMLDivElement | null>;
     setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
 };
 
@@ -80,8 +80,8 @@ const ChatInterface = ({ messages, input, setInput, handleSend, isLoading, scrol
                 <div>
                     <h3 className="font-semibold text-base leading-none">Major Assistant</h3>
                     <div className="flex items-center gap-1.5 mt-1">
-                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Online</span>
+                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Funciona sem internet</span>
                     </div>
                 </div>
             </div>
@@ -93,29 +93,18 @@ const ChatInterface = ({ messages, input, setInput, handleSend, isLoading, scrol
                     <div className="space-y-4 mt-2">
                         <div className="p-3 rounded-xl bg-muted/50 border border-border text-center">
                             <p className="text-sm text-muted-foreground italic">
-                                "Olá. Sou o Major Assistant. Como posso ser útil hoje?"
+                                "Olá! Sou o Major Assistant. Respondo na hora, mesmo sem internet, com os dados do seu negócio."
                             </p>
                         </div>
-                        <div className="grid grid-cols-1 gap-2">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase px-1">Sugestões</p>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="justify-start gap-2 h-auto py-2 text-xs"
-                                onClick={() => handleSend("Resumo do stock atual")}
-                            >
-                                <Package className="h-3 w-3 text-amber-500" />
-                                Resumo de Stock
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="justify-start gap-2 h-auto py-2 text-xs"
-                                onClick={() => handleSend("Alertas críticos?")}
-                            >
-                                <AlertCircle className="h-3 w-3 text-red-500" />
-                                Alertas Críticos
-                            </Button>
+                        <div className="space-y-2">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase px-1">Pergunte, por exemplo</p>
+                            <div className="flex flex-wrap gap-2">
+                                {ASSISTANT_SUGGESTIONS.map((sug) => (
+                                    <Button key={sug} variant="outline" size="sm" className="h-auto py-1.5 text-xs rounded-full" onClick={() => handleSend(sug)}>
+                                        {sug}
+                                    </Button>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 )}
@@ -200,7 +189,7 @@ export function MajorAssistant({ variant = 'sheet', className }: { variant?: 'sh
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
-    const db = getFirestoreInstance();
+    const crm = useContext(CRMContext);
 
     // Auto-scroll logic
     useEffect(() => {
@@ -225,156 +214,33 @@ export function MajorAssistant({ variant = 'sheet', className }: { variant?: 'sh
         setIsLoading(true);
 
         try {
-            // Build comprehensive business context
-            const now = new Date();
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            const allSales = context?.sales || [];
-            const allProducts = context?.products || [];
-            const allOrders = context?.orders || [];
-
-            const todaySales = allSales.filter((s: any) => {
-                if (s.documentType === 'Factura Proforma') return false;
-                const d = new Date(s.date);
-                return d.toDateString() === now.toDateString();
+            // 100% offline: responde com os dados que já estão no aparelho (cache local do Firestore).
+            // Sem internet, sem chave de API, sem custo — e instantâneo.
+            await new Promise((r) => setTimeout(r, 250)); // pequena pausa para a resposta não "saltar"
+            const text = answerOffline(textToSend, {
+                products: context?.products || [],
+                sales: context?.sales || [],
+                orders: context?.orders || [],
+                productions: context?.productions || [],
+                customers: crm?.customers || [],
+                stockMovements: context?.stockMovements || [],
+                locations: context?.locations || [],
+                companyName: context?.companyData?.name,
+                userName: context?.user?.username,
             });
-            const monthSales = allSales.filter((s: any) => {
-                if (s.documentType === 'Factura Proforma') return false;
-                return new Date(s.date) >= startOfMonth;
-            });
-
-            const revenueToday = todaySales.reduce((sum: number, s: any) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);
-            const revenueMonth = monthSales.reduce((sum: number, s: any) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);
-
-            // Top products by revenue this month
-            const productRevenueMap = new Map<string, { name: string; qty: number; revenue: number }>();
-            monthSales.forEach((s: any) => {
-                const existing = productRevenueMap.get(s.productId) || { name: s.productName, qty: 0, revenue: 0 };
-                existing.qty += s.quantity;
-                existing.revenue += (s.amountPaid ?? s.totalValue ?? 0);
-                productRevenueMap.set(s.productId, existing);
-            });
-            const topProducts = Array.from(productRevenueMap.values())
-                .sort((a, b) => b.revenue - a.revenue)
-                .slice(0, 10);
-
-            const globalContext = {
-                company: {
-                    name: context?.companyData?.name,
-                    businessType: context?.companyData?.businessType,
-                    taxId: context?.companyData?.taxId,
-                    email: context?.companyData?.email,
-                    phone: context?.companyData?.phone,
-                },
-                summary: {
-                    totalProducts: allProducts.length,
-                    totalSales: allSales.length,
-                    salesToday: todaySales.length,
-                    revenueToday: Math.round(revenueToday),
-                    salesThisMonth: monthSales.length,
-                    revenueThisMonth: Math.round(revenueMonth),
-                    inventoryValue: context?.dashboardStats?.totalInventoryValue || 0,
-                    pendingOrders: allOrders.filter((o: any) => o.status !== 'Concluída').length,
-                    totalCustomers: (context as any)?.customers?.length || 0,
-                },
-                inventory: allProducts.map((p: any) => ({
-                    name: p.name,
-                    stock: p.stock,
-                    price: p.price,
-                    cost: p.cost || 0,
-                    category: p.category || 'Sem categoria',
-                    unit: p.unit || 'un',
-                    alertThreshold: p.criticalStockThreshold || p.lowStockThreshold || 0,
-                    reserved: p.reservedStock || 0,
-                })),
-                alerts: allProducts
-                    .filter((p: any) => p.stock <= (p.lowStockThreshold || p.criticalStockThreshold || 0))
-                    .map((p: any) => ({
-                        product: p.name,
-                        status: p.stock === 0 ? 'ESGOTADO' : 'STOCK BAIXO',
-                        current: p.stock,
-                        threshold: p.lowStockThreshold || p.criticalStockThreshold || 0,
-                    })),
-                topProducts,
-                recentSales: allSales.slice(0, 50).map((s: any) => ({
-                    date: s.date,
-                    product: s.productName,
-                    qty: s.quantity,
-                    total: s.totalValue,
-                    paid: s.amountPaid,
-                    type: s.documentType,
-                    client: s.clientName || 'Avulso',
-                    seller: s.soldBy,
-                })),
-                customers: ((context as any)?.customers || []).slice(0, 30).map((c: any) => ({
-                    name: c.name,
-                    phone: c.phone,
-                    totalPurchases: c.totalPurchases || 0,
-                })),
-                orders: allOrders
-                    .filter((o: any) => o.status !== 'Concluída')
-                    .slice(0, 20)
-                    .map((o: any) => ({
-                        product: o.productName,
-                        qty: o.quantity,
-                        status: o.status,
-                        client: o.customerName || 'N/D',
-                        date: o.createdAt,
-                    })),
-                currentScreen: {
-                    path: pathname,
-                },
-            };
-
-            const fbToken = await context?.firebaseUser?.getIdToken();
-            const response = await fetch('/api/assistant', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${fbToken}`
-                },
-                body: JSON.stringify({
-                    messages: [...messages, userMsg],
-                    context: globalContext,
-                    userId: context?.firebaseUser?.uid,
-                    companyId: context?.companyId
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.error) throw new Error(data.error);
-
-            const aiMsg: Message = {
+            setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: data.text,
+                content: text,
                 timestamp: new Date(),
                 isNew: true
-            };
-
-            setMessages(prev => [...prev, aiMsg]);
-
-            // Persist to Firestore
-            if (context?.firebaseUser?.uid) {
-                await addDoc(collection(db, "assistant_logs"), {
-                    userId: context.firebaseUser.uid,
-                    userName: context.firebaseUser.displayName || "Usuário",
-                    userEmail: context.firebaseUser.email,
-                    userMessage: textToSend,
-                    aiResponse: data.text,
-                    screenContext: pathname,
-                    timestamp: serverTimestamp()
-                });
-            }
-
+            }]);
         } catch (error: any) {
             console.error("Assistant Error:", error);
             setMessages(prev => [...prev, {
                 id: 'err-' + Date.now(),
                 role: 'assistant',
-                content: error.message === "API_ERROR"
-                    ? "Tive um problema ao contactar o meu cérebro (Gemini). Verifique se a sua API Key é válida."
-                    : "Peço desculpa, tive um pequeno curto-circuito. Detalhe: " + (error.message || "Erro desconhecido"),
+                content: "Não consegui responder a isso. Tente: **\"O que devo fazer hoje?\"** ou **\"Stock de bloco 15\"**.",
                 timestamp: new Date()
             }]);
         } finally {

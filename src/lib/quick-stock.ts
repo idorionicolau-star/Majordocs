@@ -25,6 +25,8 @@ export type QuickLine = {
     qty: number;
     isNew?: boolean;
     price?: number;
+    /** When the product already exists in another location: copy its data instead of creating a bare one. */
+    template?: Pick<Product, "category" | "price" | "cost" | "unit" | "lowStockThreshold" | "criticalStockThreshold" | "imageUrl">;
 };
 
 export const lineKey = (name: string, location: string) =>
@@ -158,17 +160,19 @@ export async function commitQuickStock({ firestore, companyId, user, mode, lines
             const b = next(2);
             const ref = doc(productsRef);
             const stock = mode === "out" ? 0 : line.qty;
+            const t = line.template;
             b.set(ref, {
                 name: line.name.trim(),
-                category: "Geral",
-                price: line.price || 0,
-                cost: 0,
-                unit: line.unit || "un",
+                category: t?.category || "Geral",
+                price: line.price || t?.price || 0,
+                cost: t?.cost || 0,
+                unit: t?.unit || line.unit || "un",
                 stock,
                 reservedStock: 0,
                 location: line.location || "",
-                lowStockThreshold: 0,
-                criticalStockThreshold: 0,
+                lowStockThreshold: t?.lowStockThreshold || 0,
+                criticalStockThreshold: t?.criticalStockThreshold || 0,
+                ...(t?.imageUrl ? { imageUrl: t.imageUrl } : {}),
                 lastUpdated: now,
             });
             const movement: Omit<StockMovement, "id" | "timestamp"> = {
@@ -177,7 +181,7 @@ export async function commitQuickStock({ firestore, companyId, user, mode, lines
                 type: "IN",
                 quantity: stock,
                 toLocationId: line.location || "",
-                reason: `${reason} (novo produto)`,
+                reason: t ? `${reason} (primeira vez nesta localização)` : `${reason} (novo produto)`,
                 userId: user.id,
                 userName: user.username,
             };

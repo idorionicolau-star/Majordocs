@@ -1,243 +1,318 @@
-
 "use client";
 
-import { useContext, useMemo, Suspense } from 'react';
-import { InventoryContext } from '@/context/inventory-context';
-import { subDays, isAfter } from 'date-fns';
-import { Skeleton } from '@/components/ui/skeleton';
-import { StockHealthScore } from '@/components/diagnostico/stock-health-score';
-import { InsightCard } from '@/components/diagnostico/insight-card';
-import { AlertTriangle, TrendingUp, CircleDollarSign, Package, Activity, ShieldCheck, Box, Redo } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { formatCurrency } from '@/lib/utils';
-import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
+import { useContext, useMemo } from "react";
+import Link from "next/link";
+import {
+  AlertTriangle, ArrowRight, CheckCircle2, CircleDollarSign, ClipboardCheck, Info,
+  Package, ShieldAlert, ShoppingCart, TrendingDown, TrendingUp, Truck, Users, WifiOff,
+} from "lucide-react";
+import { InventoryContext } from "@/context/inventory-context";
+import { CRMContext } from "@/context/crm-context";
+import { analyzeBusiness, type Alert, type Severity } from "@/lib/business-analysis";
+import { StockHealthScore } from "@/components/diagnostico/stock-health-score";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn, formatCurrency } from "@/lib/utils";
 
-export default function DiagnosticoPageWrapper() {
-  return (
-    <Suspense fallback={<LoadingSkeleton />}>
-      <DiagnosticoPage />
-    </Suspense>
-  );
-}
+const SEV: Record<Severity, { box: string; icon: React.ElementType; iconColor: string; label: string }> = {
+  critical: { box: "border-red-500/30 bg-red-500/5", icon: ShieldAlert, iconColor: "text-red-500", label: "Urgente" },
+  warning: { box: "border-amber-500/30 bg-amber-500/5", icon: AlertTriangle, iconColor: "text-amber-500", label: "Atenção" },
+  info: { box: "border-sky-500/30 bg-sky-500/5", icon: Info, iconColor: "text-sky-500", label: "Sugestão" },
+  good: { box: "border-emerald-500/30 bg-emerald-500/5", icon: CheckCircle2, iconColor: "text-emerald-500", label: "Tudo bem" },
+};
 
-function DiagnosticoPage() {
-  const { products, sales, dashboardStats, loading: contextLoading } = useContext(InventoryContext) || { products: [], sales: [], dashboardStats: null, loading: true };
+const qty = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
+const fmtDate = (d: Date | null) => (d ? d.toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" }) : "—");
 
-  const loading = contextLoading || !products || !sales || !dashboardStats;
+export default function DiagnosticoPage() {
+  const inv = useContext(InventoryContext);
+  const crm = useContext(CRMContext);
 
-  const healthStats = useMemo(() => {
-    if (!products || products.length === 0) return { score: 0, optimizedCount: 0, excessCount: 0, criticalCount: 0 };
+  const a = useMemo(() => {
+    if (!inv || inv.loading) return null;
+    return analyzeBusiness({
+      products: inv.products,
+      sales: inv.sales,
+      orders: inv.orders,
+      productions: inv.productions,
+      customers: crm?.customers || [],
+      stockMovements: inv.stockMovements,
+    });
+  }, [inv, crm?.customers]);
 
-    const activeProducts = products.filter(p => (p.stock - p.reservedStock) > 0);
-    if (activeProducts.length === 0) return { score: 100, optimizedCount: 0, excessCount: 0, criticalCount: 0 };
+  if (!a) return <LoadingSkeleton />;
 
-    const optimizedProducts = activeProducts.filter(p => (p.stock - p.reservedStock) > p.lowStockThreshold);
-    const criticalProducts = activeProducts.filter(p => (p.stock - p.reservedStock) <= p.criticalStockThreshold);
-
-    const ninetyDaysAgo = subDays(new Date(), 90);
-    const recentSaleNames = new Set(sales.filter(s => s.date && isAfter(new Date(s.date), ninetyDaysAgo)).map(s => s.productName));
-    const excessProducts = activeProducts.filter(p => !recentSaleNames.has(p.name));
-
-    const score = (optimizedProducts.length / activeProducts.length) * 100;
-
-    return {
-      score: Math.round(score),
-      optimizedCount: optimizedProducts.length,
-      excessCount: excessProducts.length,
-      criticalCount: criticalProducts.length,
-    };
-  }, [products, sales]);
-
-  const deadStock = useMemo(() => {
-    if (loading || !dashboardStats) return { totalValue: 0, items: [], percentageOfInventory: 0 };
-
-    const ninetyDaysAgo = subDays(new Date(), 90);
-    const recentSaleNames = new Set(sales.filter(s => s.date && isAfter(new Date(s.date), ninetyDaysAgo)).map(s => s.productName));
-    const deadItems = products.filter(p => !recentSaleNames.has(p.name) && (p.stock - p.reservedStock) > 0);
-    const totalValue = deadItems.reduce((sum, item) => sum + ((item.stock - item.reservedStock) * (item.price || 0)), 0);
-    const percentage = dashboardStats.totalInventoryValue > 0 ? (totalValue / dashboardStats.totalInventoryValue) * 100 : 0;
-
-    return {
-      totalValue,
-      items: deadItems.map(p => p.name),
-      percentageOfInventory: Math.round(percentage),
-    };
-  }, [products, sales, loading, dashboardStats]);
-
-  const imminentStockouts = useMemo(() => {
-    if (loading) return [];
-    const thirtyDaysAgo = subDays(new Date(), 30);
-    const relevantSales = sales.filter(s => s.date && isAfter(new Date(s.date), thirtyDaysAgo));
-    const salesVelocity = relevantSales.reduce((acc, sale) => {
-      acc[sale.productName] = (acc[sale.productName] || 0) + sale.quantity;
-      return acc;
-    }, {} as Record<string, number>);
-
-    return products
-      .map(product => {
-        const dailyAvgSale = (salesVelocity[product.name] || 0) / 30;
-        if (dailyAvgSale <= 0) return null;
-
-        const availableStock = product.stock - product.reservedStock;
-        const daysLeft = availableStock / dailyAvgSale;
-
-        if (daysLeft > 0 && daysLeft <= 14) { // Increased to 14 days to have more items
-          return {
-            name: product.name,
-            daysLeft: Math.floor(daysLeft),
-          };
-        }
-        return null;
-      })
-      .filter(Boolean)
-      .sort((a, b) => a!.daysLeft - b!.daysLeft)
-      .slice(0, 5); // Limit to 5
-  }, [products, sales, loading]);
-
-  const topMovers = useMemo(() => {
-    if (loading) return [];
-    const sevenDaysAgo = subDays(new Date(), 7);
-    const recentSales = sales.filter(s => s.date && isAfter(new Date(s.date), sevenDaysAgo));
-    const productSales = recentSales.reduce((acc, sale) => {
-      acc[sale.productName] = (acc[sale.productName] || 0) + sale.quantity;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const sorted = Object.entries(productSales)
-      .map(([name, quantity]) => ({ name, quantity }))
-      .sort((a, b) => b.quantity - a.quantity);
-
-    const topSellerQuantity = sorted[0]?.quantity || 1;
-
-    return sorted.slice(0, 5).map(item => ({
-      ...item,
-      percentage: (item.quantity / topSellerQuantity) * 100
-    }));
-  }, [sales, loading]);
-
-  if (loading) {
-    return <LoadingSkeleton />;
-  }
+  const salesStale = a.sales.daysSinceLastSale === null || a.sales.daysSinceLastSale > 7;
+  const openTasks = a.quality.tasks.filter((t) => !t.done);
 
   return (
-    <div className="bg-slate-50 dark:bg-slate-950 -m-4 sm:-m-6 md:-m-8 p-4 sm:p-6 md:p-8 min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold font-headline tracking-tight text-slate-900 dark:text-slate-100">Diagnóstico Tático</h1>
-          <p className="text-slate-500 dark:text-slate-400">Painel de controle executivo para decisões rápidas.</p>
-        </header>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 pb-24">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl md:text-3xl font-headline font-bold">Diagnóstico do Negócio</h1>
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <WifiOff className="h-3.5 w-3.5" /> Calculado agora no seu aparelho, com os dados registados — funciona sem internet.
+        </p>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-          <InsightCard title="Saúde do Stock" icon={ShieldCheck} alertType="success">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <StockHealthScore score={healthStats.score} />
-              <div className="flex-1 space-y-3">
-                <div className='flex items-center gap-2'>
-                  <span className='h-2 w-2 rounded-full bg-emerald-500'></span>
-                  <span className='text-sm text-slate-600 dark:text-slate-300'>{healthStats.optimizedCount} Itens Otimizados</span>
-                </div>
-                <div className='flex items-center gap-2'>
-                  <span className='h-2 w-2 rounded-full bg-amber-500'></span>
-                  <span className='text-sm text-slate-600 dark:text-slate-300'>{healthStats.excessCount} Itens em Excesso (sem vendas)</span>
-                </div>
-                <div className='flex items-center gap-2'>
-                  <span className='h-2 w-2 rounded-full bg-rose-500'></span>
-                  <span className='text-sm text-slate-600 dark:text-slate-300'>{healthStats.criticalCount} Itens em Nível Crítico</span>
-                </div>
-              </div>
-            </div>
-          </InsightCard>
-
-          <InsightCard title="Capital Parado (Oportunidade)" icon={CircleDollarSign} alertType="warning" className="bg-amber-50/50 dark:bg-amber-900/10">
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <p className="text-2xl md:text-5xl font-mono font-bold text-amber-600 dark:text-amber-400">{formatCurrency(deadStock.totalValue)}</p>
-              <p className="text-sm mt-1 text-slate-600 dark:text-slate-400">em {deadStock.items.length} itens sem vendas há +90 dias.</p>
-              <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">Representa {deadStock.percentageOfInventory}% do valor total em armazém.</p>
-              <Button variant="outline" size="sm" asChild className="mt-4 bg-amber-500/10 dark:bg-amber-500/10 border-amber-500/20 dark:border-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 dark:hover:bg-amber-500/20 hover:text-amber-800 dark:hover:text-amber-200 hover:shadow-[0_0_10px_rgba(251,191,36,0.3)] transition-all">
-                <Link href="/inventory">Ver itens para liquidar</Link>
-              </Button>
-            </div>
-          </InsightCard>
-
-          <InsightCard title="Risco de Rutura de Stock" icon={AlertTriangle} fullHeight alertType="critical">
-            <div className="flex flex-col h-full">
-              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                {imminentStockouts.length > 0
-                  ? `Atenção: ${imminentStockouts.length} iten(s) podem esgotar nos próximos 14 dias.`
-                  : `Nenhum item com risco iminente de rutura de stock.`
-                }
-              </p>
-              <div className="space-y-4 flex-1">
-                {imminentStockouts.map(item => {
-                  if (!item) return null;
-                  const isUrgent = item.daysLeft <= 3;
-                  const progressValue = 100 - (item.daysLeft / 14 * 100);
-                  return (
-                    <div key={item.name} className="flex items-center gap-4">
-                      <div className="flex-1">
-                        <div className="flex justify-between items-baseline mb-1">
-                          <p className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{item.name}</p>
-                          <p className={cn("text-xs font-mono font-bold", isUrgent ? 'text-rose-500 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400')}>
-                            ~{item.daysLeft} dia(s)
-                          </p>
-                        </div>
-                        <Progress value={progressValue} className={cn("h-1.5 bg-slate-200 dark:bg-slate-800", isUrgent ? '[&>div]:bg-rose-500' : '[&>div]:bg-amber-500', isUrgent && "animate-pulse")} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              <Button variant="destructive" className="w-full mt-4 bg-rose-500/80 hover:bg-rose-500" asChild>
-                <Link href="/inventory">Reabastecer Agora</Link>
-              </Button>
-            </div>
-          </InsightCard>
-
-          <InsightCard title="Campeões de Venda (Última Semana)" icon={TrendingUp} alertType="info">
-            <div className="space-y-3">
-              {topMovers.length > 0 ? (
-                topMovers.map((item, index) => (
-                  <div key={item.name}>
-                    <div className="flex justify-between items-baseline text-sm mb-1">
-                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate">{item.name}</span>
-                      <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400">{item.quantity} un.</span>
-                    </div>
-                    <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-cyan-500 dark:bg-cyan-400"
-                        style={{ width: `${item.percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                ))
-              ) : <p className="text-center py-4 text-slate-500 dark:text-slate-500">Sem vendas na última semana.</p>}
-            </div>
-          </InsightCard>
+      {/* Headline — the one thing to know */}
+      {a.headline.length > 0 && (
+        <div className={cn("rounded-2xl border p-4 md:p-5", salesStale ? SEV.critical.box : "border-border bg-muted/30")}>
+          <p className={cn("text-base md:text-lg font-semibold", salesStale && "text-red-600 dark:text-red-400")}>{a.headline[0]}</p>
+          {a.headline.slice(1).map((h) => (
+            <p key={h} className="mt-1 text-sm text-muted-foreground">{h}</p>
+          ))}
+          {salesStale && (
+            <Button asChild className="mt-3 bg-red-600 text-white hover:bg-red-700">
+              <Link href="/pos">Registar vendas agora <ArrowRight className="ml-2 h-4 w-4" /></Link>
+            </Button>
+          )}
         </div>
+      )}
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kpi label="Vendas este mês" value={formatCurrency(a.sales.month)} sub={`${a.sales.monthTickets} vendas · mês passado ${formatCurrency(a.sales.lastMonth)}`} icon={ShoppingCart} />
+        <Kpi
+          label="Últimos 30 dias"
+          value={formatCurrency(a.sales.last30)}
+          sub={a.sales.growth30 === null ? "sem base de comparação" : `${a.sales.growth30 >= 0 ? "+" : ""}${a.sales.growth30.toFixed(0)}% vs. 30 dias antes`}
+          icon={a.sales.growth30 !== null && a.sales.growth30 < 0 ? TrendingDown : TrendingUp}
+          tone={a.sales.growth30 === null ? undefined : a.sales.growth30 >= 0 ? "good" : "bad"}
+        />
+        <Kpi label="Valor em stock" value={formatCurrency(a.stock.valueAtPrice)} sub={`${a.stock.productCount} produtos (a preço de venda)`} icon={Package} />
+        <Kpi label="Por receber" value={formatCurrency(a.sales.receivables)} sub={`${a.sales.receivablesList.length} venda(s) com saldo em falta`} icon={CircleDollarSign} tone={a.sales.receivables > 0 ? "bad" : "good"} />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-5">
+        {/* Data quality — pushes the user to register what is missing */}
+        <Card className="min-w-0 rounded-2xl lg:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg"><ClipboardCheck className="h-5 w-5 text-primary" /> Confiança dos números</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {openTasks.length === 0
+                ? "Os dados estão completos — as análises abaixo são fiáveis."
+                : `Faltam ${openTasks.length} passo(s) para as análises serem fiáveis. Cada um leva poucos minutos.`}
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex justify-center"><StockHealthScore score={a.quality.score} label="DADOS COMPLETOS" /></div>
+            <ul className="space-y-2">
+              {a.quality.tasks.map((t) => (
+                <li key={t.id} className={cn("rounded-xl border p-3", t.done ? "border-emerald-500/20 bg-emerald-500/5" : "border-border")}>
+                  <div className="flex flex-wrap items-start gap-2">
+                    {t.done ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" /> : <span className="mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 border-muted-foreground/40" />}
+                    <div className="min-w-[13rem] flex-1">
+                      <p className="text-sm font-semibold">{t.label}</p>
+                      <p className="text-xs text-muted-foreground">{t.detail}</p>
+                    </div>
+                    {!t.done && t.action && (
+                      <Button asChild size="sm" variant="outline" className="ml-6 h-8 shrink-0 text-xs sm:ml-0">
+                        <Link href={t.action.href}>{t.action.label}</Link>
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+
+        {/* Alerts */}
+        <div className="flex min-w-0 flex-col gap-3 lg:col-span-3">
+          <h2 className="flex items-center gap-2 text-lg font-semibold"><AlertTriangle className="h-5 w-5 text-amber-500" /> Alertas principais</h2>
+          {a.alerts.map((al) => <AlertCard key={al.id} alert={al} />)}
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Stock */}
+        <Card className="min-w-0 rounded-2xl">
+          <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-lg"><Package className="h-5 w-5 text-primary" /> Stock</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <Stat n={a.stock.outOfStock.length} label="Esgotados" tone="bad" />
+              <Stat n={a.stock.critical.length} label="Críticos" tone="warn" />
+              <Stat n={a.stock.low.length} label="Baixos" />
+            </div>
+            <Section title="Vão esgotar em ≤ 14 dias">
+              {salesStale ? (
+                <Empty>Sem vendas recentes registadas não dá para prever. Registe as vendas e esta lista passa a funcionar.</Empty>
+              ) : a.stock.runout.length ? (
+                a.stock.runout.slice(0, 6).map((r) => (
+                  <Row key={`${r.name}${r.location}`} left={r.name} right={`~${r.daysLeft} dias · ${qty(r.available)} ${r.unit}`} tone={r.daysLeft <= 5 ? "bad" : "warn"} />
+                ))
+              ) : <Empty>Nada em risco ao ritmo actual de vendas. 👍</Empty>}
+            </Section>
+            <Section title="Stock parado (90 dias sem vendas)">
+              {salesStale ? (
+                <Empty>Parece tudo parado porque as vendas não estão a ser registadas — não é sinal para liquidar stock.</Empty>
+              ) : a.stock.dead.count ? (
+                <p className="text-sm"><b>{formatCurrency(a.stock.dead.value)}</b> em {a.stock.dead.count} produtos ({a.stock.dead.pctOfValue}% do valor). Ex.: {a.stock.dead.examples.slice(0, 3).join(", ")}.</p>
+              ) : <Empty>Todo o stock teve vendas nos últimos 90 dias.</Empty>}
+            </Section>
+            <p className="text-xs text-muted-foreground">Última contagem física: <b>{a.stock.lastCountDate ? fmtDate(a.stock.lastCountDate) : "nunca feita no sistema"}</b>.{" "}
+              <Link className="underline" href="/inventory/quick?modo=contagem">Fazer contagem</Link></p>
+          </CardContent>
+        </Card>
+
+        {/* Sales */}
+        <Card className="min-w-0 rounded-2xl">
+          <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-lg"><TrendingUp className="h-5 w-5 text-primary" /> Vendas</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-2">
+              <MiniKpi label="Hoje" value={formatCurrency(a.sales.today)} sub={`${a.sales.todayTickets} venda(s)`} />
+              <MiniKpi label="Valor médio por venda" value={a.sales.avgTicket30 ? formatCurrency(a.sales.avgTicket30) : "—"} sub="30 dias" />
+              <MiniKpi label="Margem bruta" value={a.sales.marginPct30 !== null ? `${a.sales.marginPct30.toFixed(0)}%` : "—"} sub={a.sales.marginPct30 !== null ? "produtos com custo" : `${a.quality.missingCost.length} produtos sem custo`} />
+              <MiniKpi label="Última venda" value={fmtDate(a.sales.lastSaleDate)} sub={a.sales.daysSinceLastSale !== null ? `há ${a.sales.daysSinceLastSale} dias` : "nenhuma"} tone={salesStale ? "bad" : undefined} />
+            </div>
+            <Section title="Mais vendidos (30 dias)">
+              {a.sales.topProducts30.length ? a.sales.topProducts30.map((t, i) => (
+                <Row key={t.name} left={`${i + 1}. ${t.name}`} right={`${qty(t.qty)} ${t.unit} · ${formatCurrency(t.revenue)}`} />
+              )) : <Empty>Sem vendas registadas nos últimos 30 dias.</Empty>}
+            </Section>
+            {a.sales.topSellers30.length > 0 && (
+              <Section title="Por funcionário (30 dias)">
+                {a.sales.topSellers30.map((s) => <Row key={s.name} left={s.name} right={`${formatCurrency(s.revenue)} · ${s.tickets} venda(s)`} />)}
+              </Section>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Orders & pickups */}
+        <Card className="min-w-0 rounded-2xl">
+          <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-lg"><Truck className="h-5 w-5 text-primary" /> Encomendas e levantamentos</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <Stat n={a.orders.open.length} label="Em aberto" />
+              <Stat n={a.orders.overdue.length} label="Atrasadas" tone={a.orders.overdue.length ? "bad" : undefined} />
+              <Stat n={a.orders.readyForPickup.length + a.stock.pendingPickups.length} label="Por levantar" tone="warn" />
+            </div>
+            {a.orders.readyForPickup.length > 0 && (
+              <Section title="Encomendas prontas — avise o cliente">
+                {a.orders.readyForPickup.slice(0, 5).map((o) => <Row key={o.id} left={o.productName} right={o.clientName || "cliente"} />)}
+              </Section>
+            )}
+            {a.stock.pendingPickups.length > 0 && (
+              <Section title="Vendas pagas ainda não levantadas">
+                {a.stock.pendingPickups.slice(0, 5).map((p) => <Row key={p.sale.id} left={`${p.sale.productName} × ${qty(p.sale.quantity)}`} right={`${p.sale.clientName || "cliente"} · ${p.days} dias`} tone={p.days > 7 ? "warn" : undefined} />)}
+              </Section>
+            )}
+            {!a.orders.open.length && !a.stock.pendingPickups.length && <Empty>Nada pendente.</Empty>}
+          </CardContent>
+        </Card>
+
+        {/* Customers */}
+        <Card className="min-w-0 rounded-2xl">
+          <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-lg"><Users className="h-5 w-5 text-primary" /> Clientes</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <Stat n={a.customers.total} label="Registados" />
+              <Stat n={a.customers.missingContact} label="Sem contacto" tone={a.customers.missingContact ? "warn" : undefined} />
+              <Stat n={a.customers.anonymousSalesPct ?? 0} suffix="%" label="Vendas sem nome" tone={(a.customers.anonymousSalesPct || 0) > 50 ? "warn" : undefined} />
+            </div>
+            {(a.customers.anonymousSalesPct || 0) > 50 && (
+              <p className="text-sm text-muted-foreground">Escreva o nome do cliente na venda — assim sabe quem compra mais e quem deixou de vir.</p>
+            )}
+            <Section title="Bons clientes que não voltam há +45 dias">
+              {a.customers.inactive.length ? a.customers.inactive.slice(0, 5).map((c) => (
+                <Row key={c.id} left={c.name} right={`${formatCurrency(c.totalPurchases || 0)}${c.phone ? ` · ${c.phone}` : ""}`} />
+              )) : <Empty>{a.customers.total ? "Nenhum cliente importante afastado." : "Registe clientes nas vendas para ver esta lista."}</Empty>}
+            </Section>
+            <Button asChild variant="outline" size="sm"><Link href="/customers">Ver clientes</Link></Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
 
+function AlertCard({ alert }: { alert: Alert }) {
+  const s = SEV[alert.severity];
+  const Icon = s.icon;
+  return (
+    <div className={cn("rounded-2xl border p-4", s.box)}>
+      <div className="flex flex-wrap items-start gap-3">
+        <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", s.iconColor)} />
+        <div className="min-w-[13rem] flex-1">
+          <p className="font-semibold leading-snug">{alert.title}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{alert.detail}</p>
+          {alert.items && alert.items.length > 0 && (
+            <ul className="mt-2 space-y-0.5 text-sm">
+              {alert.items.map((i) => <li key={i} className="truncate">• {i}</li>)}
+            </ul>
+          )}
+        </div>
+        {alert.action && (
+          <Button asChild size="sm" variant="ghost" className="ml-8 shrink-0 text-xs sm:ml-0">
+            <Link href={alert.action.href}>{alert.action.label} <ArrowRight className="ml-1 h-3 w-3" /></Link>
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Kpi({ label, value, sub, icon: Icon, tone }: { label: string; value: string; sub: string; icon: React.ElementType; tone?: "good" | "bad" }) {
+  return (
+    <Card className="min-w-0 rounded-2xl">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}<Icon className="h-4 w-4" /></div>
+        <p className="mt-2 text-xl md:text-2xl font-bold tabular-nums">{value}</p>
+        <p className={cn("mt-1 text-xs text-muted-foreground", tone === "good" && "text-emerald-600", tone === "bad" && "text-red-500")}>{sub}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MiniKpi({ label, value, sub, tone }: { label: string; value: string; sub: string; tone?: "bad" }) {
+  return (
+    <div className="rounded-xl border p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={cn("mt-1 font-bold tabular-nums", tone === "bad" && "text-red-500")}>{value}</p>
+      <p className="text-[11px] text-muted-foreground">{sub}</p>
+    </div>
+  );
+}
+
+function Stat({ n, label, tone, suffix = "" }: { n: number; label: string; tone?: "bad" | "warn"; suffix?: string }) {
+  return (
+    <div className="rounded-xl bg-muted/40 p-3">
+      <p className={cn("text-2xl font-bold tabular-nums", tone === "bad" && n > 0 && "text-red-500", tone === "warn" && n > 0 && "text-amber-500")}>{n}{suffix}</p>
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+      <div className="space-y-1">{children}</div>
+    </div>
+  );
+}
+
+function Row({ left, right, tone }: { left: string; right: string; tone?: "bad" | "warn" }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-muted/40">
+      <span className="min-w-0 truncate">{left}</span>
+      <span className={cn("shrink-0 tabular-nums text-muted-foreground", tone === "bad" && "text-red-500 font-semibold", tone === "warn" && "text-amber-500 font-semibold")}>{right}</span>
+    </div>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return <p className="text-sm text-muted-foreground">{children}</p>;
+}
 
 function LoadingSkeleton() {
   return (
-    <div className="bg-slate-50 dark:bg-slate-950 -m-4 sm:-m-6 md:-m-8 p-4 sm:p-6 md:p-8 min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        <header className="mb-8">
-          <Skeleton className="h-9 w-1/3 bg-slate-200 dark:bg-slate-700" />
-          <Skeleton className="h-4 w-1/2 mt-2 bg-slate-200 dark:bg-slate-700" />
-        </header>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-64 rounded-2xl bg-slate-100 dark:bg-slate-800" />
-          <Skeleton className="h-64 rounded-2xl bg-slate-100 dark:bg-slate-800" />
-          <Skeleton className="h-80 rounded-2xl bg-slate-100 dark:bg-slate-800" />
-          <Skeleton className="h-80 rounded-2xl bg-slate-100 dark:bg-slate-800" />
-        </div>
-      </div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <Skeleton className="h-10 w-72" />
+      <Skeleton className="h-24 w-full rounded-2xl" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}</div>
+      <Skeleton className="h-96 w-full rounded-2xl" />
     </div>
   );
 }

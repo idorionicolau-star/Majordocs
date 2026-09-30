@@ -544,7 +544,7 @@ export default function InventoryPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação é irreversível e irá apagar permanentemente **todos** os produtos do seu inventário.
+              Esta ação é irreversível e irá apagar permanentemente <strong>todos</strong> os produtos do seu inventário.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -559,7 +559,7 @@ export default function InventoryPage() {
       <div className="flex flex-col gap-4">
         {/* Report Actions */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2 w-full sm:w-auto">
             {canEditInventory && (
               <Button variant="default" className="h-12 w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white" asChild>
                 <Link href="/inventory/quick">
@@ -619,7 +619,7 @@ export default function InventoryPage() {
           </div>
 
           {/* Filters Grid (Mobile) / Flex (Desktop) */}
-          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2 w-full">
             <div className="w-full sm:w-auto">
               <DatePicker date={dateFilter} setDate={setDateFilter} />
             </div>
@@ -874,25 +874,7 @@ export default function InventoryPage() {
 
         {/* Pagination buttons - Removed in favor of Virtualization */}
 
-        {isAdmin && (
-          <Card className="mt-8">
-            <div className="p-6 flex flex-col items-center text-center">
-              <h3 className="font-semibold mb-2">Zona de Administrador</h3>
-              <p className="text-sm text-muted-foreground mb-4 max-w-md">
-                Esta ação é irreversível e irá apagar permanentemente **todos** os produtos do seu inventário.
-              </p>
-              <Button
-                variant="destructive"
-                onClick={() => setShowClearConfirm(true)}
-                disabled={isReadOnly}
-                title={isReadOnly ? "Indisponível em modo leitura" : ""}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Limpar Todo o Inventário
-              </Button>
-            </div>
-          </Card>
-        )}
+        {/* "Limpar todo o inventário" fica só em Ajustes — não num ecrã de uso diário. */}
       </div >
       {canEditInventory && (
         isReadOnly ? (

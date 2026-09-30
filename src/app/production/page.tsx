@@ -1,4 +1,5 @@
 "use client";
+import { isProductionInStock } from "@/lib/production";
 
 import { useState, useEffect, useMemo, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
@@ -93,6 +94,10 @@ export default function ProductionPage() {
       return;
     }
     if (!productionToTransfer || !firestore || !companyId) return;
+    if (isProductionInStock(productionToTransfer)) {
+      toast({ title: "Já está no inventário", description: "Esta produção entrou no stock no momento do registo." });
+      return;
+    }
 
     try {
       await updateProductStock(productionToTransfer.productName, productionToTransfer.quantity, productionToTransfer.location);

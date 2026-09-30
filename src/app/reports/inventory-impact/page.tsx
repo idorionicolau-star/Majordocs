@@ -69,7 +69,7 @@ export default function InventoryImpactPage() {
         const soldProductNames = new Set();
 
         sales.forEach(s => {
-            const saleDate = (s.timestamp as any)?.toDate ? (s.timestamp as any).toDate() : new Date(s.timestamp || s.date);
+            const rawDate: any = (s as any).date ?? (s as any).timestamp; const saleDate = rawDate?.toDate ? rawDate.toDate() : new Date(rawDate);
             if (saleDate >= thirtyDaysAgo) {
                 soldProductNames.add(s.productName);
             }

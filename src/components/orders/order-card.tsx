@@ -1,6 +1,7 @@
 "use client";
 
-import type { Order } from "@/lib/types";
+import type { Order, Sale } from "@/lib/types";
+import { FinalizeOrderDialog } from "./finalize-order-dialog";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, User, Play, Check, CircleHelp, TrendingUp, Trash2 } from "lucide-react";
@@ -16,6 +17,7 @@ interface OrderCardProps {
     onUpdateStatus: (orderId: string, newStatus: 'Pendente' | 'Em produção' | 'Concluída') => void;
     onAddProductionLog: (orderId: string, logData: { quantity: number; notes?: string; }) => void;
     onDeleteOrder: (orderId: string) => void;
+    associatedSale?: Sale;
     canEdit: boolean;
 }
 
@@ -38,7 +40,7 @@ const statusConfig = {
     }
 };
 
-export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteOrder, canEdit }: OrderCardProps) {
+export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteOrder, canEdit, associatedSale }: OrderCardProps) {
     const { icon: StatusIcon, color: statusColor } = statusConfig[order.status];
     const progress = order.quantity > 0 ? (order.quantityProduced / order.quantity) * 100 : 0;
     const remainingQuantity = order.quantity - order.quantityProduced;
@@ -151,7 +153,19 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
                     </>
                 )}
                 {order.status === 'Concluída' && (
-                    <p className="text-sm text-muted-foreground">Esta encomenda foi finalizada.</p>
+                    // Produção pronta: falta o cliente levantar. Este botão entrega, recebe o resto do
+                    // pagamento, tira do stock e liberta a reserva. (Antes não havia botão nenhum aqui.)
+                    <div className="w-full space-y-2">
+                        <p className="text-center text-sm text-muted-foreground">Produção pronta — à espera do cliente.</p>
+                        <FinalizeOrderDialog
+                            order={order}
+                            saleAmountPaid={associatedSale?.amountPaid ?? 0}
+                            saleTotal={associatedSale?.totalValue ?? order.totalValue ?? 0}
+                        />
+                    </div>
+                )}
+                {order.status === 'Entregue' && (
+                    <p className="w-full text-center text-sm font-semibold text-emerald-600">Encomenda entregue ao cliente.</p>
                 )}
             </CardFooter>}
         </Card>

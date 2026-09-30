@@ -447,7 +447,7 @@ export default function SettingsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação é irreversível e irá apagar permanentemente **todos** os produtos do seu inventário no Firestore. Não será possível recuperar estes dados.
+              Esta ação é irreversível e irá apagar permanentemente <strong>todos</strong> os produtos do seu inventário no Firestore. Não será possível recuperar estes dados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
