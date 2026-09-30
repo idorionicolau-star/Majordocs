@@ -41,9 +41,8 @@ export async function POST(req: Request) {
             body: JSON.stringify({
                 amount: plan.amount.toFixed(2),
                 reference,
-                description: `MajorStockX — ${plan.label} — ${company.get('name') || companyId}`,
+                description: `MajorStockX — ${plan.label} — ${company.get('name') || companyId}`.slice(0, 125),
                 return_url: `${origin}/billing?ref=${reference}`,
-                callback_url: `${origin}/api/billing/webhook`,
                 webhook_url: `${origin}/api/billing/webhook`,
             }),
         });

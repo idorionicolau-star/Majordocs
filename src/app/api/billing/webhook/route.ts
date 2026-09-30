@@ -23,15 +23,17 @@ export async function POST(req: Request) {
         if (evt.event === 'payment.success') {
             // Defence in depth: confirm with PaySuite that it is really paid.
             let confirmed = true;
+            let transactionId: string | undefined = data.transaction_id;
             if (data.id) {
                 try {
-                    const r = await paysuite<{ data: { status?: string } }>(`/payments/${data.id}`);
+                    const r = await paysuite<{ data: { status?: string; transaction?: { transaction_id?: string } } }>(`/payments/${data.id}`);
                     const st = String(r?.data?.status || '').toLowerCase();
+                    transactionId = r?.data?.transaction?.transaction_id || transactionId;
                     confirmed = ['paid', 'success', 'completed', 'successful'].includes(st);
                 } catch { confirmed = true; /* signature already verified; API hiccup shouldn't lose a payment */ }
             }
             if (!confirmed) return NextResponse.json({ ok: false, reason: 'not confirmed' });
-            const r = await applyPaidPayment(reference, { paysuiteId: data.id, transactionId: data.transaction_id, amount: data.amount !== undefined ? Number(data.amount) : undefined });
+            const r = await applyPaidPayment(reference, { paysuiteId: data.id, transactionId, amount: data.amount !== undefined ? Number(data.amount) : undefined });
             return NextResponse.json(r);
         }
         if (evt.event === 'payment.failed') {

@@ -20,10 +20,10 @@ export async function GET(req: Request) {
 
     if (p.status === 'pending' && p.paysuiteId) {
         try {
-            const r = await paysuite<{ data: { status?: string; transaction_id?: string; amount?: number } }>(`/payments/${p.paysuiteId}`);
+            const r = await paysuite<{ data: { status?: string; amount?: number; transaction?: { transaction_id?: string } } }>(`/payments/${p.paysuiteId}`);
             const st = String(r?.data?.status || '').toLowerCase();
             if (['paid', 'success', 'completed', 'successful'].includes(st)) {
-                await applyPaidPayment(reference, { paysuiteId: p.paysuiteId, transactionId: r.data.transaction_id, amount: r.data.amount });
+                await applyPaidPayment(reference, { paysuiteId: p.paysuiteId, transactionId: r.data.transaction?.transaction_id, amount: r.data.amount });
             } else if (['failed', 'cancelled', 'canceled', 'expired'].includes(st)) {
                 await pRef.update({ status: 'failed' });
             }
