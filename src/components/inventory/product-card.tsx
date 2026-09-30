@@ -1,4 +1,5 @@
 "use client";
+import { ProductPhoto } from "@/components/ui/product-photo";
 
 import type { Product, Location } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,9 +39,9 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
     const status = getStockStatus(product);
 
     const statusInfo = {
-        ok: "text-[hsl(var(--chart-2))]",
+        bom: "text-[hsl(var(--chart-2))]",
         baixo: "text-[hsl(var(--chart-4))]",
-        crítico: "text-destructive",
+        critico: "text-destructive",
         'sem-estoque': "text-destructive",
     }
 
@@ -49,20 +50,7 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
 
     return (
         <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 shadow-sm">
-            {product.imageUrl ? (
-                <div className="w-full h-32 mb-2 overflow-hidden rounded-md bg-slate-100 dark:bg-slate-800 shrink-0">
-                    <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                    />
-                </div>
-            ) : (
-                <div className="w-full h-32 mb-2 flex flex-col items-center justify-center rounded-md bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700/80 shrink-0">
-                    <PackageCheck className="h-8 w-8 text-slate-400 dark:text-slate-500" />
-                    <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-wider">Sem Foto</span>
-                </div>
-            )}
+            <ProductPhoto src={product.imageUrl} alt={product.name} className="w-full h-32 mb-2 rounded-md shrink-0" />
             <CardHeader className="p-1 sm:p-2">
                 <CardTitle className="text-xs font-bold truncate leading-tight">{product.name}</CardTitle>
                 <div className={cn("mt-1", isCondensed && "hidden")}>
@@ -109,14 +97,14 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                         </div>
                     )}
                 </div>
-                {status !== 'ok' && !isCondensed && (
+                {status !== 'bom' && !isCondensed && (
                     <div className={cn(
                         "inline-flex items-center justify-center w-full gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border",
                         status === 'baixo' && 'text-[hsl(var(--chart-4))] bg-[hsl(var(--chart-4))]/10 border-[hsl(var(--chart-4))]/20',
-                        (status === 'crítico' || status === 'sem-estoque') && 'text-destructive bg-destructive/10 border-destructive/20'
+                        (status === 'critico' || status === 'sem-estoque') && 'text-destructive bg-destructive/10 border-destructive/20'
                     )}>
                         <AlertCircle size={12} strokeWidth={3} />
-                        {status === 'sem-estoque' ? 'Esgotado' : status === 'crítico' ? 'Crítico' : 'Baixo'}
+                        {status === 'sem-estoque' ? 'Esgotado' : status === 'critico' ? 'Crítico' : 'Baixo'}
                     </div>
                 )}
             </CardContent>

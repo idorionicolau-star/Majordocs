@@ -33,8 +33,8 @@ const initialRows: RowData[] = Array.from({ length: 5 }, () => ({
     unit: 'un',
     price: '',
     cost: '',
-    stock: '0',
-    minStock: '0',
+    stock: '',
+    minStock: '',
     location: '',
 }));
 
@@ -220,8 +220,8 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                     cost: (existingProduct.cost || 0).toString(),
                     // Quantity to ADD — addProduct sums it to the existing stock.
                     // (Pre-filling the current stock here used to double it on save.)
-                    stock: '0',
-                    minStock: existingProduct.lowStockThreshold?.toString() || '0',
+                    stock: '',
+                    minStock: existingProduct.lowStockThreshold ? existingProduct.lowStockThreshold.toString() : '',
                     location: existingProduct.location || row.location,
                 }, true);
             } else {
@@ -362,7 +362,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     ];
 
     const handleAddRow = () => {
-        setRows([...rows, { name: '', category: '', unit: 'un', price: '', cost: '', stock: '0', minStock: '0', location: companyData?.locations?.[0]?.id || '' }]);
+        setRows([...rows, { name: '', category: '', unit: 'un', price: '', cost: '', stock: '', minStock: '', location: companyData?.locations?.[0]?.id || '' }]);
     };
 
     const handleSave = async () => {
@@ -371,7 +371,6 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
             row.category.trim() !== '' &&
             row.price.trim() !== '' &&
             row.cost.trim() !== '' &&
-            row.stock.trim() !== '' &&
             row.location.trim() !== ''
         );
 
@@ -459,7 +458,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
 
         // Reset keeping 5 rows
         setRows(Array.from({ length: 5 }, () => ({
-            name: '', category: '', unit: 'un', price: '', cost: '', stock: '0', minStock: '0', location: companyData?.locations?.[0]?.id || ''
+            name: '', category: '', unit: 'un', price: '', cost: '', stock: '', minStock: '', location: companyData?.locations?.[0]?.id || ''
         })));
     };
 
@@ -562,7 +561,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
                             price: '',
                             cost: '',
                             stock: item.quantity.toString(),
-                            minStock: '0',
+                            minStock: '',
                             location: dLoc
                         });
                     }
@@ -571,7 +570,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
 
             // Ensure at least 5 rows
             while (newRows.length < 5) {
-                newRows.push({ name: '', category: '', unit: 'un', price: '', cost: '', stock: '0', minStock: '0', location: dLoc });
+                newRows.push({ name: '', category: '', unit: 'un', price: '', cost: '', stock: '', minStock: '', location: dLoc });
             }
 
             setRows(newRows);

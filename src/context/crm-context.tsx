@@ -17,12 +17,14 @@ interface CRMContextType {
 const CRMContext = createContext<CRMContextType | undefined>(undefined);
 
 export function CRMProvider({ children }: { children: ReactNode }) {
-    const { companyId, user } = useInventory();
+    const { companyId, user, canView } = useInventory();
+    // Só quem usa clientes (Clientes, Vendas, Encomendas, Dashboard) precisa de os carregar.
+    const allowed = !!user && (canView('customers') || canView('sales') || canView('orders') || canView('dashboard'));
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!companyId) {
+        if (!companyId || !allowed) {
             setCustomers([]);
             setLoading(false);
             return;
@@ -40,6 +42,11 @@ export function CRMProvider({ children }: { children: ReactNode }) {
             setLoading(false);
         }, (error) => {
             console.error("Error fetching customers:", error);
+            // Sem permissão não é um problema de ligação — não assustar o utilizador.
+            if ((error as { code?: string }).code === 'permission-denied') {
+                setLoading(false);
+                return;
+            }
             toast({
                 variant: "destructive",
                 title: "Erro ao carregar clientes",
@@ -49,7 +56,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         });
 
         return () => unsubscribe();
-    }, [companyId]);
+    }, [companyId, allowed]);
 
     const addCustomer = async (customerData: Omit<Customer, 'id' | 'totalPurchases' | 'lastVisit'>): Promise<string | undefined> => {
         if (!companyId || !user) return undefined;

@@ -1,4 +1,5 @@
 "use client";
+import { ProductPhoto } from "@/components/ui/product-photo";
 
 import React, { useState, useContext, useMemo, useCallback, useEffect } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
@@ -454,20 +455,7 @@ export default function POSPage() {
                                         }
                   `}
                                 >
-                                    {product.imageUrl ? (
-                                        <div className="w-full h-32 overflow-hidden bg-slate-100 dark:bg-slate-800 rounded-t-xl">
-                                            <img
-                                                src={product.imageUrl}
-                                                alt={product.name}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
-                                    ) : (
-                                        <div className="w-full h-32 flex flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700/80 rounded-t-xl">
-                                            <Package className="h-10 w-10 text-slate-400 dark:text-slate-500" />
-                                            <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-wider">Sem Foto</span>
-                                        </div>
-                                    )}
+                                    <ProductPhoto src={product.imageUrl} alt={product.name} className="w-full h-32 rounded-t-xl" />
                                     <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
                                         {inCart && (
                                             <div className="absolute -top-3 -right-3 bg-primary text-primary-foreground rounded-full min-w-[24px] h-6 px-1 flex items-center justify-center text-xs font-bold shadow-lg z-10 ring-2 ring-background">
