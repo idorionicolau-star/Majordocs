@@ -63,7 +63,6 @@ import {
 } from '@/firebase/non-blocking-updates';
 import { PasswordConfirmationDialog } from '@/components/auth/password-confirmation-dialog';
 import { useSubscriptionState } from '@/hooks/useSubscriptionState';
-import { useNotifications } from '@/hooks/use-notifications';
 
 
 type CatalogProduct = Omit<
@@ -92,8 +91,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const wasSyncing = useRef(false);
   const [lastSaleTimestamp, setLastSaleTimestamp] = useState<number>(0);
 
-  // Initialize notifications
-  useNotifications();
+  // Push notifications: see <PushPrompt /> in the client layout (needs a tap to ask permission).
 
   const [companyData, setCompanyData] = useState<Company | null>(null);
   const { isReadOnly, isTrial, daysLeft } = useSubscriptionState(companyData);
@@ -145,8 +143,36 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [firestore, user, toast]);
 
+  // Push to the company's phones (other users). Fire-and-forget: never blocks or breaks a sale.
+  const sendPush = useCallback((msg: { title: string; body: string; link?: string; tag?: string }) => {
+    if (!companyId || typeof window === 'undefined') return;
+    (async () => {
+      try {
+        const fbToken = await auth.currentUser?.getIdToken();
+        if (!fbToken) return;
+        await fetch('/api/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${fbToken}` },
+          body: JSON.stringify({ companyId, ...msg }),
+        });
+      } catch (e) {
+        console.warn('[Push] envio falhou', e);
+      }
+    })();
+  }, [companyId, auth]);
+
   const triggerEmailAlert = useCallback(async (payload: any) => {
     const settings = companyData?.notificationSettings;
+
+    if (payload.type === 'SALE') {
+      const who = payload.soldBy ? ` · por ${payload.soldBy}` : '';
+      const client = payload.clientName ? ` · ${payload.clientName}` : '';
+      sendPush({
+        title: `💰 Nova venda — ${formatCurrency(Number(payload.totalValue) || 0)}`,
+        body: `${payload.productName || 'Venda'}${client}${who}`,
+        link: '/sales',
+      });
+    }
 
     // Normalize emails list, handling both new format and legacy format
     const targetEmails: NotificationEmail[] = [];
@@ -231,7 +257,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         duration: 8000,
       });
     }
-  }, [companyData, addNotification, toast, auth]);
+  }, [companyData, addNotification, toast, auth, sendPush]);
 
   const logout = useCallback(async () => {
     try {
@@ -874,6 +900,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    sendPush({
+      title: `⚠️ Stock crítico: ${product.name}`,
+      body: `Restam ${availableStock} ${product.unit || 'un'} · ${locations.find(l => l.id === product.location)?.name || 'Principal'}`,
+      link: '/inventory',
+      tag: `critical-${product.name}`,
+    });
+
     // Handle legacy settings and new multi-email configuration
     let hasCriticalEmailConfigured = false;
 
@@ -884,11 +917,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
 
     if (!hasCriticalEmailConfigured) {
-      toast({
-        variant: "destructive",
-        title: "E-mail de Notificação em Falta",
-        description: `O produto ${product.name} está com stock crítico, mas não há um e-mail configurado para alertas críticos nos Ajustes.`,
-      });
+      // Sem e-mail configurado: o alerta segue por notificação push (acima). Não incomodar com um aviso.
       return;
     }
 
@@ -899,7 +928,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       location: locations.find(l => l.id === product.location)?.name || 'Principal',
       threshold: product.criticalStockThreshold,
     });
-  }, [companyData, locations, triggerEmailAlert, toast]);
+  }, [companyData, locations, triggerEmailAlert, toast, sendPush]);
 
   const addProduct = useCallback(
     (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock' | 'sourceIds'>) => {

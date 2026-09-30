@@ -1,64 +1,88 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getToken, onMessage } from 'firebase/messaging';
-import { useMessaging, useFirebaseApp } from '@/firebase/provider';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { useFirestore, useMessaging } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
 
-export function useNotifications() {
+export type PushStatus = 'unsupported' | 'no-key' | 'default' | 'denied' | 'enabled' | 'error';
+
+const VAPID = process.env.NEXT_PUBLIC_VAPID_KEY;
+
+/**
+ * Push notifications for this device.
+ * - Never asks for permission on its own: Chrome on Android silently blocks prompts that don't
+ *   come from a tap. `enable()` must be called from a button.
+ * - Once allowed, the device token is saved in companies/{companyId}/pushTokens/{token} so the
+ *   server (/api/push) knows where to send alerts. (Before, the token was obtained and thrown away.)
+ */
+export function usePushNotifications(companyId: string | null | undefined, user: { id: string; username: string } | null | undefined, opts: { listen?: boolean } = {}) {
+    const listen = !!opts.listen;
     const messaging = useMessaging();
-    const firebaseApp = useFirebaseApp();
+    const firestore = useFirestore();
     const { toast } = useToast();
-    const [fcmToken, setFcmToken] = useState<string | null>(null);
+    const [status, setStatus] = useState<PushStatus>('default');
+    const [busy, setBusy] = useState(false);
 
-    const requestPermission = useCallback(async () => {
-        if (!messaging) return;
+    const register = useCallback(async (): Promise<boolean> => {
+        if (!messaging || !companyId || !user || !VAPID) return false;
+        const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        const token = await getToken(messaging, { vapidKey: VAPID, serviceWorkerRegistration: swReg });
+        if (!token) return false;
+        await setDoc(doc(firestore, `companies/${companyId}/pushTokens/${token}`), {
+            userId: user.id,
+            userName: user.username,
+            userAgent: navigator.userAgent.slice(0, 200),
+            updatedAt: serverTimestamp(),
+        }, { merge: true });
+        return true;
+    }, [messaging, companyId, user, firestore]);
 
+    // Work out the current state; if already allowed, refresh the token silently.
+    useEffect(() => {
+        if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
+            setStatus('unsupported');
+            return;
+        }
+        if (!VAPID) { setStatus('no-key'); return; }
+        if (Notification.permission === 'denied') { setStatus('denied'); return; }
+        if (Notification.permission !== 'granted') { setStatus('default'); return; }
+        if (!messaging || !companyId || !user) return;
+        register().then((ok) => setStatus(ok ? 'enabled' : 'error')).catch((e) => {
+            console.warn('[Push] Falha ao renovar o token:', e);
+            setStatus('error');
+        });
+    }, [messaging, companyId, user, register]);
+
+    // App open: show the message as a toast (the system notification only shows in background).
+    useEffect(() => {
+        if (!messaging || !listen) return; // only one instance (the layout banner) shows foreground toasts
+        return onMessage(messaging, (payload) => {
+            const d = payload.data || {};
+            toast({ title: d.title || payload.notification?.title || 'Nova notificação', description: d.body || payload.notification?.body || '' });
+        });
+    }, [messaging, toast, listen]);
+
+    const enable = useCallback(async () => {
+        if (status === 'unsupported' || status === 'no-key') return;
+        setBusy(true);
         try {
             const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                if (!process.env.NEXT_PUBLIC_VAPID_KEY) {
-                    console.warn('[Notifications] NEXT_PUBLIC_VAPID_KEY não configurada no .env.local — notificações push desativadas.');
-                    return;
-                }
-                try {
-                    const token = await getToken(messaging, {
-                        vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY,
-                    });
-                    if (token) {
-                        setFcmToken(token);
-                        console.log('[Notifications] FCM Token registado com sucesso.');
-                    } else {
-                        console.warn('[Notifications] Nenhum token FCM disponível.');
-                    }
-                } catch (tokenErr) {
-                    // getToken can fail if the service worker isn't registered or VAPID key is invalid.
-                    // We catch it here to prevent it from breaking other app functionality.
-                    console.warn('[Notifications] Falha ao registar service worker do FCM — notificações push indisponíveis.', tokenErr);
-                }
-            } else {
-                console.log('[Notifications] Permissão de notificação negada pelo utilizador.');
+            if (permission !== 'granted') {
+                setStatus(permission === 'denied' ? 'denied' : 'default');
+                return;
             }
-        } catch (err) {
-            console.warn('[Notifications] Erro ao solicitar permissão de notificação:', err);
+            const ok = await register();
+            setStatus(ok ? 'enabled' : 'error');
+            if (ok) toast({ title: 'Notificações activadas', description: 'Este aparelho vai receber alertas de vendas e stock.' });
+        } catch (e) {
+            console.warn('[Push] Erro ao activar:', e);
+            setStatus('error');
+        } finally {
+            setBusy(false);
         }
-    }, [messaging]);
+    }, [status, register, toast]);
 
-    useEffect(() => {
-        if (messaging) {
-            requestPermission();
-
-            const unsubscribe = onMessage(messaging, (payload) => {
-                console.log('Message received. ', payload);
-                toast({
-                    title: payload.notification?.title || 'Nova Notificação',
-                    description: payload.notification?.body || '',
-                });
-            });
-
-            return () => unsubscribe();
-        }
-    }, [messaging, requestPermission, toast]);
-
-    return { fcmToken, requestPermission };
+    return { status, enable, busy };
 }

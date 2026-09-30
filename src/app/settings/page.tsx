@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PushSettingsCard } from "@/components/push-notifications";
 import {
   Dialog,
   DialogContent,
@@ -496,7 +497,8 @@ export default function SettingsPage() {
             </DropdownMenu>
           </div>
 
-          <TabsContent value="profile">
+          <TabsContent value="profile" className="space-y-4">
+            <PushSettingsCard />
             <ProfileTab />
           </TabsContent>
 
