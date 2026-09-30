@@ -57,7 +57,9 @@ export function parseQuickInput(
     // e.g. "Bloco 15" or "Bloco 15x40", it is a name — not name + quantity.
     const norm = normalizeString(text);
     const esc = norm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const boundary = new RegExp(`(^|\\s)${esc}(\\s|$)`);
+    // Word start only: "cimento 32" is the start of "Cimento 32.5N" → it is a name, not 32 bags.
+    // A wrong quantity is worse than asking for it, so ambiguity resolves to "name".
+    const boundary = new RegExp(`(^|\\s)${esc}`);
     if (productNames.some((n) => boundary.test(normalizeString(n)))) return { term: text, qty: null };
 
     // Explicit multiplier: "nome x 20", "nome *20", "20x nome"

@@ -1630,6 +1630,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       applyVat: boolean;
       vatPercentage: number;
       isPickedUp?: boolean;
+      /** ISO date for sales registered late (defaults to now) */
+      date?: string;
+      /** Numerário, M-Pesa, e-Mola, Transferência, POS… (defaults to Numerário) */
+      paymentMethod?: string;
+      /** Amount received now; less than the total leaves the rest as debt (defaults to full) */
+      amountPaid?: number;
     }
   ) => {
     if (isReadOnly) {
@@ -1653,6 +1659,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const totalAfterDiscount = Math.max(0, cartSubtotal - totalDiscountAmount);
     const totalVatAmount = saleData.applyVat ? totalAfterDiscount * (saleData.vatPercentage / 100) : 0;
     const cartTotal = totalAfterDiscount + totalVatAmount;
+    // Parte paga agora (venda a crédito / sinal). Sem valor = pago na totalidade.
+    const paidRatio = saleData.amountPaid === undefined || cartTotal <= 0 ? 1 : Math.max(0, Math.min(1, saleData.amountPaid / cartTotal));
 
     // To deduct across multiple source documents, we need all relevant products.
     // We already have `products` aggregated from the query. Let's just use the sourceIds!
@@ -1763,10 +1771,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           discount: itemDiscount,
           vat: itemVat,
           totalValue: itemTotal,
-          amountPaid: saleData.documentType !== 'Factura Proforma' ? itemTotal : 0,
-          date: new Date().toISOString(),
+          amountPaid: saleData.documentType !== 'Factura Proforma' ? Math.round(itemTotal * paidRatio * 100) / 100 : 0,
+          date: saleData.date || new Date().toISOString(),
           status: saleData.documentType === 'Factura Proforma' ? 'Pendente' : (saleData.isPickedUp === false ? 'Pago' : 'Levantado'),
-          paymentMethod: 'Numerário',
+          paymentMethod: saleData.paymentMethod || 'Numerário',
           location: targetLocation,
           unit: item.unit || 'un',
           soldBy: user.username,
