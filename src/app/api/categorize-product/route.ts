@@ -22,8 +22,10 @@ export async function POST(req: Request) {
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({
-            model: "models/gemini-3-flash-preview",
+        // O nome do modelo "preview" deixa de existir sem aviso; tenta alternativas estáveis.
+        const MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-3-flash-preview"];
+        const build = (name: string) => genAI.getGenerativeModel({
+            model: name,
             systemInstruction: `Você é um Assistente de Categorização de Frota de Produtos (Data Custodian). O seu objetivo é limpar os dados do cliente e classificar itens rigorosamente.
 Regras:
 1. O utilizador fornecerá o 'Nome do Produto' e uma lista de 'Categorias Existentes'.
@@ -38,9 +40,14 @@ Regras:
             },
         });
 
-        const prompt = `Categorias Existentes: ${existingCategories.length > 0 ? existingCategories.join(', ') : 'Nenhuma (base de dados limpa)'}\nNome do Produto: ${productName}`;
+        const prompt = `Categorias Existentes: ${Array.isArray(existingCategories) && existingCategories.length > 0 ? existingCategories.join(', ') : 'Nenhuma (base de dados limpa)'}\nNome do Produto: ${productName}`;
 
-        const result = await model.generateContent(prompt);
+        let result;
+        let lastErr: unknown;
+        for (const name of MODELS) {
+            try { result = await build(name).generateContent(prompt); break; } catch (e) { lastErr = e; }
+        }
+        if (!result) throw lastErr;
         const response = await result.response;
         // Clean up the output to ensure it's just the trimmed string
         const category = response.text().replace(/\n/g, '').replace(/\./g, '').trim();

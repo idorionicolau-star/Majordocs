@@ -579,9 +579,7 @@ export default function InventoryPage() {
             {canEditInventory && isAdmin && (
               <Button
                 onClick={async () => {
-                  toast({ title: "A calcular...", description: "A gerar sugestões com base no histórico recente." });
-                  await syncSmartThresholds(true);
-                  toast({ title: "Sucesso", description: "Quantidades mínimas recomendadas foram atualizadas." });
+                  await syncSmartThresholds(true); // mostra o resultado real (actualizados / já óptimos / erro)
                 }}
                 variant="outline"
                 className="h-12 w-full sm:w-auto border-purple-600 text-purple-600 hover:bg-purple-50"

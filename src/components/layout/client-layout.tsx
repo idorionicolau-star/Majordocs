@@ -45,6 +45,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   const isReadOnly = authContext?.isReadOnly ?? false;
   const isTrial = authContext?.isTrial ?? false;
+  const renewInDays = authContext?.renewInDays ?? null;
   const daysLeft = authContext?.daysLeft ?? 0;
 
   useEffect(() => {
@@ -136,9 +137,15 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
         {isReadOnly && (
           <div className="bg-gradient-to-r from-amber-600 to-rose-600 text-white text-center py-2.5 px-4 text-sm font-medium sticky top-0 z-[60] shadow-md flex flex-wrap justify-center items-center gap-3 animate-in slide-in-from-top duration-300">
-            <span>Modo leitura — a sua assinatura não está activa. Contacte-nos para reactivar o acesso completo.</span>
+            <span>Modo leitura — a sua assinatura não está activa. Pague para voltar a ter acesso completo na hora.</span>
+            <a
+              href="/billing"
+              className="bg-white text-rose-700 hover:bg-white/90 px-3 py-1 rounded-md text-xs font-bold transition-all shadow-sm flex items-center gap-1"
+            >
+              💳 Pagar agora
+            </a>
             <a 
-              href="https://wa.me/258843641708"
+              href="https://wa.me/258843427497"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white text-rose-700 hover:bg-white/90 px-3 py-1 rounded-md text-xs font-bold transition-all shadow-sm flex items-center gap-1"
@@ -152,6 +159,14 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <div className="bg-blue-600 text-white text-center py-2 px-4 text-sm font-medium sticky top-0 z-[60] shadow-md flex justify-center items-center gap-2">
             <span>Você está no período de teste gratuito do MajorStockX.</span>
             <span className="bg-white/20 px-2 py-0.5 rounded text-xs font-bold">Lhe restam {daysLeft} dias</span>
+            <a href="/billing" className="rounded bg-white px-2 py-0.5 text-xs font-bold text-blue-700 hover:bg-white/90">Assinar</a>
+          </div>
+        )}
+
+        {!isReadOnly && !isTrial && typeof renewInDays === 'number' && (
+          <div className="bg-amber-500 text-white text-center py-2 px-4 text-sm font-medium sticky top-0 z-[60] shadow-md flex flex-wrap justify-center items-center gap-2">
+            <span>{renewInDays > 0 ? `A sua subscrição termina em ${renewInDays} dia(s).` : 'A sua subscrição terminou — está no período de tolerância.'}</span>
+            <a href="/billing" className="rounded bg-white px-2 py-0.5 text-xs font-bold text-amber-700 hover:bg-white/90">Renovar</a>
           </div>
         )}
 

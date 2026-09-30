@@ -16,6 +16,7 @@ import {
   Book,
   Zap,
   TrendingDown,
+  CreditCard,
 } from 'lucide-react';
 
 export const mainNavItems: NavItem[] = [
@@ -43,6 +44,7 @@ export const mainNavItems: NavItem[] = [
   { title: 'Impacto de Auditoria', href: '/reports/inventory-impact', id: 'reports', isSubItem: true, icon: TrendingDown },
   { title: 'Funcionários', href: '/users', id: 'users', icon: Users, adminOnly: true },
   { title: 'Ajustes', href: '/settings', id: 'settings', icon: Settings },
+  { title: 'Subscrição', href: '/billing', id: 'settings', icon: CreditCard, adminOnly: true },
 ];
 
 export const allPermissions: Readonly<{ id: ModulePermission; label: string; adminOnly: boolean; }[]> = [
