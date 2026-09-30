@@ -58,7 +58,11 @@ export async function POST(req: Request) {
         });
         await Promise.allSettled(dead);
 
-        return NextResponse.json({ sent: res.successCount, failed: res.failureCount, removed: dead.length });
+        const firstError = res.responses.find((r) => r.error)?.error;
+        return NextResponse.json({
+            sent: res.successCount, failed: res.failureCount, removed: dead.length, devices: snap.size,
+            ...(firstError ? { errorCode: firstError.code, errorMessage: firstError.message?.slice(0, 200) } : {}),
+        });
     } catch (error: any) {
         console.error('Push error:', error);
         return NextResponse.json({ error: 'Falha ao enviar notificação.', details: error?.message }, { status: 500 });

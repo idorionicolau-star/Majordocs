@@ -55,7 +55,7 @@ function useFeed() {
     }, [firestore, companyId, user]);
 
     const visible = useMemo(
-        () => items.filter((n) => n.actorId !== user?.id && (n.audience !== "managers" || isManager)),
+        () => items.filter((n) => (n.actorId !== user?.id || n.type === "stock") && (n.audience !== "managers" || isManager)),
         [items, user?.id, isManager]
     );
     const isUnread = (n: FeedItem) => !!user && !(n.readBy || []).includes(user.id);
