@@ -191,6 +191,14 @@ service cloud.firestore {
         allow read: if false;
       }
 
+      // Central de notificações (estilo Facebook): todos os funcionários vêem; cada um só marca como lida.
+      match /notifications/{notificationId} {
+        allow get, list: if isEmployeeOf(companyId);
+        allow create: if isEmployeeOf(companyId) && request.resource.data.actorId == request.auth.uid;
+        allow update: if isEmployeeOf(companyId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']);
+        allow delete: if false;
+      }
+
       // Preços de venda diferentes do habitual, à espera da decisão do gestor.
       // O vendedor cria-os ao vender; só o gestor (Admin) lê e decide.
       match /priceReviews/{reviewId} {
