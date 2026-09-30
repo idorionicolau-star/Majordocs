@@ -22,6 +22,8 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     const allowed = !!user && (canView('customers') || canView('sales') || canView('orders') || canView('dashboard'));
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
+    // Um erro desliga o onSnapshot para sempre; este contador volta a ligá-lo.
+    const [retry, setRetry] = useState(0);
 
     useEffect(() => {
         if (!companyId || !allowed) {
@@ -30,6 +32,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
             return;
         }
 
+        let retryTimer: ReturnType<typeof setTimeout> | undefined;
         const customersRef = collection(db, `companies/${companyId}/customers`);
         const q = query(customersRef, orderBy('name'));
 
@@ -38,10 +41,14 @@ export function CRMProvider({ children }: { children: ReactNode }) {
                 id: doc.id,
                 ...doc.data()
             })) as Customer[];
+            // Ordem alfabética sem distinguir maiúsculas/acentos ("sdf…" não vai para o fim).
+            customersList.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt', { sensitivity: 'base' }));
             setCustomers(customersList);
             setLoading(false);
         }, (error) => {
             console.error("Error fetching customers:", error);
+            // Tentar de novo (ex.: regras acabadas de publicar, ligação que voltou).
+            retryTimer = setTimeout(() => setRetry((r) => r + 1), 15000);
             // Sem permissão não é um problema de ligação — não assustar o utilizador.
             if ((error as { code?: string }).code === 'permission-denied') {
                 setLoading(false);
@@ -55,8 +62,8 @@ export function CRMProvider({ children }: { children: ReactNode }) {
             setLoading(false);
         });
 
-        return () => unsubscribe();
-    }, [companyId, allowed]);
+        return () => { unsubscribe(); if (retryTimer) clearTimeout(retryTimer); };
+    }, [companyId, allowed, retry]);
 
     const addCustomer = async (customerData: Omit<Customer, 'id' | 'totalPurchases' | 'lastVisit'>): Promise<string | undefined> => {
         if (!companyId || !user) return undefined;
