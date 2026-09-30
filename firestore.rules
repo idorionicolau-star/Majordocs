@@ -24,12 +24,16 @@ service cloud.firestore {
       let company = get(/databases/$(database)/documents/companies/$(companyId)).data;
       let status = company.get('status', 'active');
       let ends = company.get('trialEndsAt', null);
+      // paidUntilMs: fim da subscrição paga (+ dias de tolerância), gravado só pelo servidor (PaySuite).
+      let paid = company.get('paidUntilMs', null);
       return !(status in ['suspended', 'inactive']) && (
         status != 'trial' ||
         ends == null ||
         (ends is string && string(request.time) < ends) ||
         (ends is int && request.time < timestamp.value(ends)) ||
         (ends is timestamp && request.time < ends)
+      ) && (
+        status != 'active' || paid == null || !(paid is int) || request.time < timestamp.value(paid)
       );
     }
     
@@ -85,6 +89,11 @@ service cloud.firestore {
       allow get, list: if isSuperAdmin();
     }
 
+    // Referências de pagamento PaySuite → empresa. Só o servidor (Admin SDK) acede.
+    match /billingRefs/{ref} {
+      allow read, write: if false;
+    }
+
     // Coleção de mapeamento de utilizadores
     match /users/{userId} {
       // Um utilizador só pode ler o seu próprio mapa. Admins não podem ler mapas de outros.
@@ -105,7 +114,13 @@ service cloud.firestore {
       allow create: if isSignedIn(); // Qualquer pessoa autenticada pode registar uma nova empresa.
       allow get: if isEmployeeOf(companyId);
       allow list: if isSuperAdmin();
-      allow update: if isSuperAdmin() || (isAdminOf(companyId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'trialEndsAt', 'subscriptionEndsAt']));
+      allow update: if isSuperAdmin() || (isAdminOf(companyId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'trialEndsAt', 'subscriptionEndsAt', 'paidUntilMs', 'plan']));
+
+      // Pagamentos da subscrição (PaySuite): só o servidor escreve; o admin vê o histórico.
+      match /payments/{paymentId} {
+        allow get, list: if isAdminOf(companyId);
+        allow write: if false;
+      }
       allow delete: if isSuperAdmin();
 
       // Regras para as subcoleções de cada empresa.

@@ -76,6 +76,9 @@ export type Company = {
   status?: 'active' | 'trial' | 'suspended';
   trialEndsAt?: string;
   subscriptionEndsAt?: string;
+  /** Numeric copy (end + grace) used by Firestore rules */
+  paidUntilMs?: number;
+  plan?: string;
 };
 
 export type Location = {
@@ -307,6 +310,8 @@ export interface InventoryContextType {
   isReadOnly: boolean;
   isTrial: boolean;
   daysLeft: number;
+  renewInDays?: number | null;
+  subscriptionReason?: 'trial_expired' | 'suspended' | 'expired' | null;
   login: (email: string, pass: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
   logout: () => void;

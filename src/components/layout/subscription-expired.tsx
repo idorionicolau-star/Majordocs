@@ -26,7 +26,11 @@ export function SubscriptionExpired() {
                     </div>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-3">
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={() => window.location.href = 'mailto:suporte@majorstockx.com?subject=Renovação%20de%20Assinatura'}>
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={() => window.location.href = '/billing'}>
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Pagar subscrição (M-Pesa, e-Mola, cartão)
+                    </Button>
+                    <Button variant="outline" className="w-full" onClick={() => window.location.href = 'mailto:suporte@majorstockx.com?subject=Renovação%20de%20Assinatura'}>
                         <Mail className="w-4 h-4 mr-2" />
                         Contactar Suporte / Vendas
                     </Button>

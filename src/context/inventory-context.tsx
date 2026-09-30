@@ -94,7 +94,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   // Push notifications: see <PushPrompt /> in the client layout (needs a tap to ask permission).
 
   const [companyData, setCompanyData] = useState<Company | null>(null);
-  const { isReadOnly, isTrial, daysLeft } = useSubscriptionState(companyData);
+  const { isReadOnly, isTrial, daysLeft, renewInDays, reason: subscriptionReason } = useSubscriptionState(companyData);
 
   const locations = useMemo(() => companyData?.locations || [], [companyData]);
   const isMultiLocation = useMemo(() => !!companyData?.isMultiLocation, [companyData]);
@@ -3320,6 +3320,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     isReadOnly,
     isTrial,
     daysLeft,
+    renewInDays,
+    subscriptionReason,
     login,
     loginWithGoogle,
     logout,
@@ -3373,7 +3375,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     confirmAction,
     notifyManagers,
   }), [
-    user, firebaseUser, companyId, isDataLoading, isReadOnly, isTrial, daysLeft,
+    user, firebaseUser, companyId, isDataLoading, isReadOnly, isTrial, daysLeft, renewInDays, subscriptionReason,
     login, loginWithGoogle, logout, resetPassword, registerCompany, registerCompanyWithGoogle, profilePicture, handleSetProfilePicture,
     canView, canEdit,
     companyData, productsData, salesData, productionsData, ordersData, stockMovementsData, catalogProductsData, catalogCategoriesData,

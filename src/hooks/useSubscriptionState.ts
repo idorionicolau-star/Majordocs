@@ -1,12 +1,16 @@
 import { useMemo } from 'react';
 import { differenceInDays, startOfDay } from 'date-fns';
 import type { Company } from '@/lib/types';
+import { GRACE_DAYS } from '@/lib/plans';
 
 export type SubscriptionState = {
   isReadOnly: boolean;
   isTrial: boolean;
   daysLeft: number;
-  reason: 'trial_expired' | 'suspended' | null;
+  reason: 'trial_expired' | 'suspended' | 'expired' | null;
+  /** Active subscription ending within 7 days (or in the grace period): days left, else null */
+  renewInDays?: number | null;
+  subscriptionEndsAt?: string | null;
 };
 
 export function useSubscriptionState(companyData: Company | null): SubscriptionState {
@@ -17,7 +21,19 @@ export function useSubscriptionState(companyData: Company | null): SubscriptionS
 
     const status = companyData.status;
 
-    if (status === 'active') {
+    if (status === 'active' || !status) {
+      // Paid period: read-only only after the end date + GRACE_DAYS. Without an end date it never expires.
+      const endsAt = companyData.subscriptionEndsAt;
+      if (endsAt) {
+        const end = new Date(endsAt);
+        if (!isNaN(end.getTime())) {
+          const now = new Date();
+          const graceEnd = new Date(end.getTime() + GRACE_DAYS * 86_400_000);
+          if (now > graceEnd) return { isReadOnly: true, isTrial: false, daysLeft: 0, reason: 'expired', renewInDays: null, subscriptionEndsAt: endsAt };
+          const days = differenceInDays(startOfDay(end), startOfDay(now));
+          return { isReadOnly: false, isTrial: false, daysLeft: Math.max(0, days), reason: null, renewInDays: days <= 7 ? days : null, subscriptionEndsAt: endsAt };
+        }
+      }
       return { isReadOnly: false, isTrial: false, daysLeft: 0, reason: null };
     }
 
