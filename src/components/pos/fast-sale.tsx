@@ -23,6 +23,8 @@ type Line = {
     cost: number;
     available: number;
     location: string;
+    /** Habitual price when added — a different price will need the manager's confirmation */
+    ref?: number;
 };
 
 const PAYMENTS = ["Numerário", "M-Pesa", "e-Mola", "Transferência", "POS / Cartão"];
@@ -141,7 +143,7 @@ export function FastSale() {
             if (cur) return prev.map((l) => (l.key === key ? { ...l, qty: qty != null && qty > 0 ? qty : l.qty + 1 } : l));
             return [
                 ...prev,
-                { key, productId: p.sourceIds?.[0] || p.id || "", name: p.name, unit: p.unit || "un", qty: q, price: priceOf(p), cost: p.cost || 0, available: a, location: p.location || "" },
+                { key, productId: p.sourceIds?.[0] || p.id || "", name: p.name, unit: p.unit || "un", qty: q, price: priceOf(p), cost: p.cost || 0, available: a, location: p.location || "", ref: p.price || 0 },
             ];
         });
         setText("");
@@ -362,6 +364,10 @@ export function FastSale() {
                                     </div>
                                     {over && <p className="mt-1 text-xs font-semibold text-red-600">Só há {fmtQ(l.available)} {l.unit} disponíveis.</p>}
                                     {!(l.price > 0) && <p className="mt-1 text-xs font-semibold text-red-600">Indique o preço.</p>}
+                                    {!!l.ref && l.price > 0 && Math.abs(l.price - l.ref) >= 0.01 && user?.role !== "Admin" && user?.role !== "Dono" && (
+                                        <p className="mt-1 text-xs font-semibold text-amber-600">Preço habitual {formatCurrency(l.ref)} — o gestor vai ser avisado para confirmar.</p>
+                                    )}
+                                    {l.ref === 0 && l.price > 0 && <p className="mt-1 text-xs text-muted-foreground">Produto sem preço — este passa a ser o preço dele.</p>}
                                 </div>
                             );
                         })}

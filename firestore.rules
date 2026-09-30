@@ -191,6 +191,14 @@ service cloud.firestore {
         allow read: if false;
       }
 
+      // Preços de venda diferentes do habitual, à espera da decisão do gestor.
+      // O vendedor cria-os ao vender; só o gestor (Admin) lê e decide.
+      match /priceReviews/{reviewId} {
+        allow create: if can('sales', 'write');
+        allow get, list, update: if isAdminOf(companyId);
+        allow delete: if false;
+      }
+
       // Despesas (módulo Financeiro).
       match /expenses/{expenseId} {
         allow get, list: if can('finance', 'read');
