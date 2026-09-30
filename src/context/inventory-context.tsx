@@ -188,6 +188,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     })();
   }, [companyId, auth, postFeed]);
 
+  // Anti-roubo: avisos para o gestor (feed + push só para Admin/Dono).
+  // Acções do próprio gestor não geram alerta.
+  const isManagerUser = !!user && (user.role === 'Admin' || user.role === 'Dono');
+  const notifyManagers = useCallback((msg: { title: string; body: string; link?: string; type?: string; dedupeId?: string; always?: boolean }) => {
+    if (isManagerUser && !msg.always) return;
+    sendPush({ type: msg.type || 'security', audience: 'managers', title: msg.title, body: msg.body, link: msg.link, dedupeId: msg.dedupeId, tag: msg.dedupeId });
+  }, [sendPush, isManagerUser]);
+
   const triggerEmailAlert = useCallback(async (payload: any) => {
     const settings = companyData?.notificationSettings;
 
@@ -1187,6 +1195,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       batch.update(docRef, { ...safeData, lastUpdated: new Date().toISOString() });
     });
 
+    const stockChanged = stock !== undefined && Math.abs(Number(stock) - (productToUpdate.stock || 0)) > 0.0001;
+    if (stockChanged && user && companyId) {
+      // Alteração de stock à mão também fica no histórico (e aparece em Perdas se for para menos).
+      const delta = Number(stock) - (productToUpdate.stock || 0);
+      batch.set(doc(collection(firestore, `companies/${companyId}/stockMovements`)), {
+        productId: productToUpdate.sourceIds[0], productName: productToUpdate.name, type: 'ADJUSTMENT', quantity: delta,
+        toLocationId: productToUpdate.location || '', reason: 'Stock alterado à mão (editar produto)',
+        userId: user.id, userName: user.username, systemCountBefore: productToUpdate.stock || 0, physicalCount: Number(stock),
+        timestamp: serverTimestamp(),
+      });
+    }
+
     if (stock !== undefined) {
       const firstDocRef = doc(productsCollectionRef as CollectionReference, productToUpdate.sourceIds[0]);
       batch.update(firstDocRef, { stock });
@@ -1199,6 +1219,24 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     await batch.commit();
 
+    if (stockChanged) {
+      const delta = Number(stock) - (productToUpdate.stock || 0);
+      notifyManagers({
+        type: 'security',
+        title: `✏️ Stock alterado à mão: ${productToUpdate.name}`,
+        body: `${user?.username || '—'} mudou de ${productToUpdate.stock} para ${stock} ${productToUpdate.unit || 'un'} (${delta > 0 ? '+' : ''}${delta}) · ${formatCurrency(Math.abs(delta) * (productToUpdate.price || 0))}`,
+        link: '/inventory/perdas',
+      });
+    }
+    if (updatedData.price !== undefined && Math.abs(Number(updatedData.price) - (productToUpdate.price || 0)) >= 0.01) {
+      notifyManagers({
+        type: 'price',
+        title: `💲 Preço alterado: ${productToUpdate.name}`,
+        body: `${user?.username || '—'}: ${formatCurrency(productToUpdate.price || 0)} → ${formatCurrency(Number(updatedData.price))}`,
+        link: '/inventory',
+      });
+    }
+
     // Trigger immediate AI sync if switched to 'auto' mode
     if (updatedData.thresholdMode === 'auto') {
       syncSmartThresholds(true);
@@ -1209,7 +1247,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const productForNotification = { ...fullProduct, ...updatedData };
       checkStockAndNotify(productForNotification);
     }
-  }, [productsCollectionRef, products, checkStockAndNotify, firestore, syncSmartThresholds]);
+  }, [productsCollectionRef, products, checkStockAndNotify, firestore, syncSmartThresholds, user, companyId, notifyManagers]);
 
   const deleteProduct = useCallback(async (instanceId: string) => {
     if (isReadOnly) {
@@ -1355,13 +1393,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       });
 
       toast({ title: 'Auditoria Concluída', description: `O stock de ${product.name} foi ajustado.` });
+      if (physicalCount < (product.stock || 0)) {
+        const missing = (product.stock || 0) - physicalCount;
+        notifyManagers({
+          type: 'security', always: true,
+          title: `🔎 Contagem: ${product.name} com falta de ${missing} ${product.unit || 'un'}`,
+          body: `${user.username} · ${formatCurrency(missing * (product.price || 0))} · ${reason}`,
+          link: '/inventory/perdas',
+        });
+      }
 
     } catch (error) {
       console.error('Audit transaction failed: ', error);
       toast({ variant: 'destructive', title: 'Erro na Auditoria', description: (error as Error).message });
     }
 
-  }, [firestore, companyId, user, toast, checkStockAndNotify]);
+  }, [firestore, companyId, user, toast, checkStockAndNotify, notifyManagers]);
 
   const transferStock = useCallback(async (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => {
     if (isReadOnly) {
@@ -1935,6 +1982,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       });
     });
 
+    // Desconto grande (≥ 10%) → avisar o gestor.
+    if (cartSubtotal > 0 && totalDiscountAmount / cartSubtotal >= 0.1) {
+      notifyManagers({
+        type: 'security',
+        title: `🏷️ Desconto de ${Math.round((totalDiscountAmount / cartSubtotal) * 100)}% numa venda`,
+        body: `${user.username} · ${formatCurrency(totalDiscountAmount)} de desconto em ${formatCurrency(cartSubtotal)}${saleData.clientName ? ` · ${saleData.clientName}` : ''}`,
+        link: '/sales',
+      });
+    }
+
     // Preço diferente do habitual → avisar o gestor (push) para confirmar.
     if (pendingPriceReviews.length) {
       const first = pendingPriceReviews[0];
@@ -1985,7 +2042,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
 
     setLastSaleTimestamp(Date.now());
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, products, toast, triggerEmailAlert, sendPush, user]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, products, toast, triggerEmailAlert, sendPush, user, notifyManagers]);
 
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
@@ -2488,12 +2545,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       });
 
       toast({ title: 'Venda enviada para Lixeira', description: 'O stock foi reposto.' });
+      notifyManagers({
+        type: 'security',
+        title: `🗑️ Venda ${saleData.guideNumber || ''} apagada`,
+        body: `${user.username} · ${saleData.productName} × ${saleData.quantity} · ${formatCurrency(saleData.totalValue || 0)}${saleData.clientName ? ` · ${saleData.clientName}` : ''}`,
+        link: '/sales',
+      });
 
     } catch (error: any) {
       console.error("Error deleting sale: ", error);
       toast({ variant: 'destructive', title: 'Erro ao Apagar Venda', description: error.message });
     }
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, toast, user]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, toast, user, notifyManagers]);
 
   const recalculateReservedStock = useCallback(async () => {
     if (!firestore || !companyId || !productsData) {
@@ -3308,6 +3371,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     availableCategories, addCategory, editCategory, removeCategory,
 
     confirmAction,
+    notifyManagers,
   }), [
     user, firebaseUser, companyId, isDataLoading, isReadOnly, isTrial, daysLeft,
     login, loginWithGoogle, logout, resetPassword, registerCompany, registerCompanyWithGoogle, profilePicture, handleSetProfilePicture,
@@ -3335,6 +3399,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     availableCategories, addCategory,
     syncSmartThresholds,
     confirmAction,
+    notifyManagers,
   ]);
 
   return (

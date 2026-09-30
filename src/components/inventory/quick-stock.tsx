@@ -68,7 +68,8 @@ function saveDraft(key: string, draft: Draft) {
 }
 
 export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) {
-    const { products, locations, isMultiLocation, companyId, user, isReadOnly } = useInventory();
+    const { products, locations, isMultiLocation, companyId, user, isReadOnly, notifyManagers } = useInventory();
+    const isManager = !!user && (user.role === "Admin" || user.role === "Dono");
     const firestore = useFirestore();
     const { toast } = useToast();
 
@@ -97,6 +98,8 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const countInputs = useRef<Map<string, HTMLInputElement>>(new Map());
 
     const current = MODES.find((m) => m.id === mode)!;
+    // Contagem cega: quem conta (funcionário) não vê o stock do sistema — conta o que está lá de verdade.
+    const blind = mode === "count" && !isManager;
     const draftKey = (m: QuickMode) => `majorstockx-quick-${companyId}-${m}`;
 
     // Default location: last used, else first one.
@@ -282,6 +285,29 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                 lines: lineList,
                 note,
             });
+            // Anti-roubo: faltas na contagem e saídas por perda/quebra avisam o gestor com o valor.
+            if (mode === "count") {
+                const short = lineList.filter((l) => l.systemStock - l.qty > 0.0001);
+                if (short.length) {
+                    const value = short.reduce((t, l) => t + (l.systemStock - l.qty) * (l.price || 0), 0);
+                    const top = [...short].sort((a, b) => (b.systemStock - b.qty) * (b.price || 0) - (a.systemStock - a.qty) * (a.price || 0)).slice(0, 3);
+                    notifyManagers({
+                        type: "security",
+                        always: true,
+                        title: `🔎 Contagem: ${short.length} produto(s) em falta — ${value.toLocaleString("pt-PT", { maximumFractionDigits: 0 })} MT`,
+                        body: `${user.username}${isMultiLocation && location ? ` · ${locations.find((l) => l.id === location)?.name || ""}` : ""} · ${top.map((l) => `${l.name} −${fmt(l.systemStock - l.qty)}`).join(", ")}`,
+                        link: "/inventory/perdas",
+                    });
+                }
+            } else if (mode === "out") {
+                const value = lineList.reduce((t, l) => t + l.qty * (l.price || 0), 0);
+                notifyManagers({
+                    type: "security",
+                    title: `📤 Saída de stock (${note.trim() || "sem motivo"}) — ${value.toLocaleString("pt-PT", { maximumFractionDigits: 0 })} MT`,
+                    body: `${user.username} · ${lineList.slice(0, 3).map((l) => `${l.name} ×${fmt(l.qty)}`).join(", ")}${lineList.length > 3 ? "…" : ""}`,
+                    link: "/inventory/perdas",
+                });
+            }
             toast({
                 title: `${current.label} registada`,
                 description: confirmed
@@ -403,7 +429,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                             <p className="truncate text-base font-semibold text-foreground">{picked.product?.name || picked.newName}</p>
                             <p className="text-xs text-muted-foreground">
                                 {picked.product
-                                    ? `Stock actual: ${fmt(picked.product.stock || 0)} ${picked.product.unit || "un"}`
+                                    ? (blind ? `Conte e escreva a quantidade que está lá (${picked.product.unit || "un"})` : `Stock actual: ${fmt(picked.product.stock || 0)} ${picked.product.unit || "un"}`)
                                     : picked.from
                                         ? `Primeira entrada nesta localização — preço, unidade e categoria copiados de ${locName(picked.from.location || "")}`
                                         : "Produto novo — pode completar preço e categoria depois"}
@@ -534,19 +560,21 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                                     <div className="min-w-0 flex-1">
                                         <p className="truncate text-sm font-medium">{p.name}</p>
                                         <p className="text-xs text-muted-foreground">
-                                            Sistema: {fmt(p.stock || 0)} {p.unit || "un"}
-                                            {line && diff !== 0 && (
+                                            {blind ? (line ? `Contado: ${fmt(line.qty)} ${p.unit || "un"}` : `Contar em ${p.unit || "un"}`) : `Sistema: ${fmt(p.stock || 0)} ${p.unit || "un"}`}
+                                            {!blind && line && diff !== 0 && (
                                                 <span className={cn("ml-2 font-semibold", diff > 0 ? "text-emerald-600" : "text-red-600")}>
                                                     {diff > 0 ? "+" : ""}{fmt(diff)}
                                                 </span>
                                             )}
-                                            {line && diff === 0 && <span className="ml-2 font-semibold text-emerald-600">✓ certo</span>}
+                                            {!blind && line && diff === 0 && <span className="ml-2 font-semibold text-emerald-600">✓ certo</span>}
                                         </p>
                                     </div>
+                                    {!blind && (
                                     <button type="button" title="Igual ao sistema" onClick={() => { addLine(lineFromProduct(p, p.stock || 0), true); focusNextCount(key); }}
                                         className="h-10 shrink-0 rounded-lg border px-2 text-xs text-muted-foreground">
                                         = {fmt(p.stock || 0)}
                                     </button>
+                                    )}
                                     <input
                                         ref={(el) => { if (el) countInputs.current.set(key, el); else countInputs.current.delete(key); }}
                                         inputMode="decimal"

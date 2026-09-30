@@ -1,4 +1,5 @@
 "use client";
+import { formatCurrency } from "@/lib/utils";
 
 import { useState, useEffect, useMemo, useContext } from "react";
 import { useSearchParams } from 'next/navigation';
@@ -120,6 +121,25 @@ export default function SalesPage() {
   }
 
   const handleUpdateSale = (updatedSale: Sale) => {
+    // Anti-roubo: alterações a valores de uma venda já feita avisam o gestor.
+    const before = (contextSales || []).find((s: Sale) => s.id === updatedSale.id);
+    if (before && inventoryContext?.notifyManagers) {
+      const changes: string[] = [];
+      const fmt = (n: number) => formatCurrency(Number(n) || 0);
+      if (before.quantity !== updatedSale.quantity) changes.push(`qtd ${before.quantity} → ${updatedSale.quantity}`);
+      if (before.unitPrice !== updatedSale.unitPrice) changes.push(`preço ${fmt(before.unitPrice)} → ${fmt(updatedSale.unitPrice)}`);
+      if (before.totalValue !== updatedSale.totalValue) changes.push(`total ${fmt(before.totalValue)} → ${fmt(updatedSale.totalValue)}`);
+      if ((before.amountPaid ?? 0) !== (updatedSale.amountPaid ?? 0)) changes.push(`pago ${fmt(before.amountPaid ?? 0)} → ${fmt(updatedSale.amountPaid ?? 0)}`);
+      if (before.productName !== updatedSale.productName) changes.push(`produto ${before.productName} → ${updatedSale.productName}`);
+      if (changes.length) {
+        inventoryContext.notifyManagers({
+          type: 'security',
+          title: `✏️ Venda ${before.guideNumber || ''} alterada`,
+          body: `${user?.username || '—'} · ${changes.join(' · ')}`,
+          link: '/sales',
+        });
+      }
+    }
     if (updatedSale.id && firestore && companyId) {
       const saleDocRef = doc(firestore, `companies/${companyId}/sales`, updatedSale.id);
       updateDoc(saleDocRef, updatedSale as any);
