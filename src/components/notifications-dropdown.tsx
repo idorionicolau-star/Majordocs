@@ -6,7 +6,7 @@ import Link from "next/link";
 import { arrayUnion, collection, doc, limit, onSnapshot, orderBy, query, updateDoc, writeBatch, type Timestamp } from "firebase/firestore";
 import { formatDistanceToNowStrict } from "date-fns";
 import { pt } from "date-fns/locale";
-import { AlertTriangle, Bell, BellOff, BellRing, CircleDollarSign, ClipboardList, Hammer, Info, Package, ShoppingCart } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, BellRing, CircleDollarSign, ClipboardList, Hammer, Info, Package, ShieldAlert, ShoppingCart } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
@@ -34,6 +34,7 @@ const TYPE: Record<string, { icon: React.ElementType; bg: string }> = {
     production: { icon: Hammer, bg: "bg-indigo-500" },
     order: { icon: ClipboardList, bg: "bg-sky-500" },
     inventory: { icon: Package, bg: "bg-violet-500" },
+    security: { icon: ShieldAlert, bg: "bg-rose-600" },
     info: { icon: Info, bg: "bg-slate-500" },
 };
 

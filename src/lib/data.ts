@@ -24,6 +24,7 @@ export const mainNavItems: NavItem[] = [
   { title: 'Inventário', href: '/inventory', id: 'inventory', icon: Box },
   { title: 'Histórico', href: '/inventory/history', id: 'inventory', isSubItem: true, icon: History },
   { title: 'Stock Rápido', href: '/inventory/quick', id: 'inventory', isSubItem: true, icon: ClipboardList },
+  { title: 'Perdas', href: '/inventory/perdas', id: 'inventory', isSubItem: true, icon: TrendingDown },
   { title: 'Venda Rápida', href: '/pos', id: 'sales', icon: Zap },
   { title: 'Histórico de Vendas', href: '/sales', id: 'sales', icon: ShoppingCart },
   { title: 'Emitir Documento', href: '/documents/new', id: 'sales', icon: FileText },
