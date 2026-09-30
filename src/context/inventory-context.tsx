@@ -1558,12 +1558,28 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           unitCost = productData.cost || 0;
 
           if (shouldReserveStock) {
-            const availableStock = productData.stock - productData.reservedStock;
+            const availableStock = (productData.stock || 0) - (productData.reservedStock || 0);
             if (availableStock < newSaleData.quantity) {
               throw new Error(`Estoque insuficiente. Disponível: ${availableStock}.`);
             }
-            const newReservedStock = productData.reservedStock + newSaleData.quantity;
-            transaction.update(productDoc.ref, { reservedStock: newReservedStock });
+            if (finalStatus === 'Levantado') {
+              // Levantado na hora: o material sai do stock já. Nada fica reservado.
+              transaction.update(productDoc.ref, { stock: (productData.stock || 0) - newSaleData.quantity, lastUpdated: new Date().toISOString() });
+              const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+                productId: productDoc.id,
+                productName: newSaleData.productName,
+                type: 'OUT',
+                quantity: -newSaleData.quantity,
+                fromLocationId: productData.location,
+                reason: 'Venda levantada no acto',
+                userId: user?.id || 'unknown',
+                userName: user?.username || 'Sistema',
+              };
+              transaction.set(doc(collection(firestore, `companies/${companyId}/stockMovements`)), { ...movement, timestamp: serverTimestamp() });
+            } else {
+              // Pago mas por levantar: reservar.
+              transaction.update(productDoc.ref, { reservedStock: (productData.reservedStock || 0) + newSaleData.quantity });
+            }
           }
         }
       }
@@ -1601,7 +1617,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
 
     setLastSaleTimestamp(Date.now());
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, toast, triggerEmailAlert]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, toast, triggerEmailAlert, user]);
 
   const addBulkSale = useCallback(async (
     items: CartItem[],
@@ -1684,6 +1700,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       const salesToCreate: Sale[] = [];
       const productUpdates: { ref: DocumentReference; data: any }[] = [];
+      const stockOutMovements: { productId: string; productName: string; quantity: number; location?: string }[] = [];
 
       items.forEach((item, index) => {
         const isProforma = saleData.documentType === 'Factura Proforma';
@@ -1702,26 +1719,27 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           throw new Error(`Stock insuficiente para "${item.productName}". Disponível: ${totalAvailableStock}.`);
         }
 
+        // Levantado no acto => sai do stock já; por levantar => fica reservado.
+        const pickedUpNow = !isProforma && saleData.isPickedUp !== false;
+
         if (!isProforma) {
-          // Deduct from sources
           for (const source of availableSources) {
             if (remainingQuantityToDeduct <= 0) break;
-            const availableInSource = source.data.stock - source.data.reservedStock;
+            const availableInSource = (source.data.stock || 0) - (source.data.reservedStock || 0);
             if (availableInSource > 0) {
               const deductAmount = Math.min(availableInSource, remainingQuantityToDeduct);
-              source.data.reservedStock += deductAmount; // update local memory for subsequent items just in case
+              if (pickedUpNow) {
+                source.data.stock = (source.data.stock || 0) - deductAmount;
+                stockOutMovements.push({ productId: source.ref.id, productName: item.productName, quantity: deductAmount, location: source.data.location });
+              } else {
+                source.data.reservedStock = (source.data.reservedStock || 0) + deductAmount;
+              }
               remainingQuantityToDeduct -= deductAmount;
 
-              // We might push multiple updates for the same ref if we are not careful
+              const data = { stock: source.data.stock || 0, reservedStock: source.data.reservedStock || 0, lastUpdated: new Date().toISOString() };
               const existingUpdate = productUpdates.find(u => u.ref.id === source.ref.id);
-              if (existingUpdate) {
-                existingUpdate.data.reservedStock = source.data.reservedStock;
-              } else {
-                productUpdates.push({
-                  ref: source.ref,
-                  data: { reservedStock: source.data.reservedStock, lastUpdated: new Date().toISOString() }
-                });
-              }
+              if (existingUpdate) existingUpdate.data = data;
+              else productUpdates.push({ ref: source.ref, data });
             }
           }
         }
@@ -1770,6 +1788,21 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       productUpdates.forEach(update => {
         transaction.update(update.ref, update.data);
+      });
+
+      const bulkMovementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+      stockOutMovements.forEach(m => {
+        const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
+          productId: m.productId,
+          productName: m.productName,
+          type: 'OUT',
+          quantity: -m.quantity,
+          fromLocationId: m.location,
+          reason: `Venda ${guideNumber} (levantada no acto)`,
+          userId: user.id,
+          userName: user.username,
+        };
+        transaction.set(doc(bulkMovementsRef), { ...movement, timestamp: serverTimestamp() });
       });
 
       salesToCreate.forEach(sale => {
@@ -1831,22 +1864,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const freshSale = saleSnap.data() as Sale;
 
     if (freshSale.status === 'Levantado') {
-      toast({
-        title: "Já Levantado",
-        description: "Esta venda já foi marcada como levantada. O stock não foi alterado.",
-      });
-      return;
+      throw new Error("Esta venda já foi marcada como levantada. O stock não foi alterado.");
+    }
+
+    // Vendas de encomenda são levantadas em Encomendas → "Finalizar / Levantar",
+    // que também regista a produção. Levantar aqui descontava o stock duas vezes.
+    if (freshSale.orderId || freshSale.documentType === 'Encomenda') {
+      throw new Error("Esta venda pertence a uma encomenda. Use Encomendas → Finalizar / Levantar.");
     }
 
     const amountPaid = freshSale.amountPaid ?? 0;
     if ((freshSale.totalValue - amountPaid) > 0.5) {
-      toast({
-        variant: "destructive",
-        title: 'Pagamento Incompleto',
-        description: `Não é possível confirmar o levantamento. O cliente ainda precisa de pagar ${formatCurrency(freshSale.totalValue - amountPaid)}.`,
-        duration: 6000,
-      });
-      return;
+      throw new Error(`Pagamento incompleto. O cliente ainda precisa de pagar ${formatCurrency(freshSale.totalValue - amountPaid)}.`);
     }
 
     const targetLocation = freshSale.location || (isMultiLocation ? locations[0]?.id : 'Principal');
@@ -1898,22 +1927,24 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       let remainingToDeduct = freshSale.quantity;
       const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
+      // Libertar a reserva onde ela está (pode estar num documento diferente do que tem o stock).
+      let reservedToRelease = freshSale.quantity;
+      const next = new Map(loadedProducts.map(p => [p.ref.id, { stock: p.data.stock || 0, reserved: p.data.reservedStock || 0 }]));
+      for (const source of loadedProducts) {
+        if (reservedToRelease <= 0) break;
+        const st = next.get(source.ref.id)!;
+        const release = Math.min(st.reserved, reservedToRelease);
+        st.reserved -= release;
+        reservedToRelease -= release;
+      }
+
       for (const source of loadedProducts) {
         if (remainingToDeduct <= 0) break;
 
-        // Prefer deducting from products that have reserved stock first
-        const availableInSource = source.data.stock;
-        if (availableInSource > 0) {
-          const deductAmount = Math.min(availableInSource, remainingToDeduct);
-
-          let newStock = source.data.stock - deductAmount;
-          let newReservedStock = source.data.reservedStock - deductAmount;
-
-          if (newReservedStock < 0) {
-            newReservedStock = 0;
-          }
-
-          transaction.update(source.ref, { stock: newStock, reservedStock: newReservedStock, lastUpdated: new Date().toISOString() });
+        const st = next.get(source.ref.id)!;
+        if (st.stock > 0) {
+          const deductAmount = Math.min(st.stock, remainingToDeduct);
+          st.stock -= deductAmount;
 
           // Movement log per document modified
           const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
@@ -1929,6 +1960,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           transaction.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
 
           remainingToDeduct -= deductAmount;
+        }
+      }
+
+      // Uma única escrita por documento (stock e reserva já calculados)
+      for (const source of loadedProducts) {
+        const st = next.get(source.ref.id)!;
+        if (st.stock !== (source.data.stock || 0) || st.reserved !== (source.data.reservedStock || 0)) {
+          transaction.update(source.ref, { stock: st.stock, reservedStock: st.reserved, lastUpdated: new Date().toISOString() });
         }
       }
 
@@ -2328,7 +2367,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       // 1. Fetch all 'Paid' and 'Pending' sales directly from Firestore
       const salesRef = collection(firestore, `companies/${companyId}/sales`);
       // We use "in" query to get both Paid and Pending
-      const q = query(salesRef, where("status", "in", ["Pago", "Pendente"]));
+      // Só vendas pagas e ainda por levantar reservam stock (proformas "Pendente" não reservam).
+      const q = query(salesRef, where("status", "==", "Pago"));
       const salesSnapshot = await getDocs(q);
       const sales = salesSnapshot.docs.map(doc => doc.data() as Sale);
 
@@ -2352,10 +2392,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const batch = writeBatch(firestore);
       let updatesCount = 0;
 
+      // Produtos duplicados (mesmo nome + local) são somados na app: a reserva fica toda no 1.º documento.
+      const seenKeys = new Set<string>();
       productsData.forEach(product => {
+        if (product.deletedAt) return;
         const locationKey = product.location || '';
         const key = `${product.name}|${locationKey}`;
-        const correctReserved = correctReservedMap.get(key) || 0;
+        const correctReserved = seenKeys.has(key) ? 0 : (correctReservedMap.get(key) || 0);
+        seenKeys.add(key);
 
         if (product.reservedStock !== correctReserved) {
           const productRef = doc(firestore, `companies/${companyId}/products`, product.id);
@@ -2494,6 +2538,25 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const salesSnap = await getDocs(q);
       const saleDoc = salesSnap.docs[0];
 
+      // O productId de encomendas antigas pode ser o NOME do produto — resolver o documento real.
+      const orderPre = ordersData?.find(o => o.id === orderId);
+      let resolvedProductRef: DocumentReference | null = null;
+      if (orderPre?.productId) {
+        const directRef = doc(firestore, `companies/${companyId}/products`, orderPre.productId);
+        if ((await getDoc(directRef)).exists()) {
+          resolvedProductRef = directRef;
+        } else {
+          const targetLoc = orderPre.location || (isMultiLocation ? locations[0]?.id : 'Principal');
+          const pSnap = await getDocs(query(
+            collection(firestore, `companies/${companyId}/products`),
+            where('name', '==', orderPre.productName),
+            where('location', '==', targetLoc || ''),
+            limit(1)
+          ));
+          if (!pSnap.empty) resolvedProductRef = pSnap.docs[0].ref;
+        }
+      }
+
       await runTransaction(firestore, async (transaction) => {
         // --- READS ---
 
@@ -2502,6 +2565,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         const orderSnap = await transaction.get(orderRef);
         if (!orderSnap.exists()) throw new Error("Encomenda não encontrada.");
         const orderData = orderSnap.data() as Order;
+        if (orderData.status === 'Entregue') throw new Error("Esta encomenda já foi entregue.");
 
         // 2. Get Sale (if exists)
         let freshSaleData: Sale | null = null;
@@ -2516,14 +2580,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
         // 3. Get Product (if exists)
         let freshProductData: Product | null = null;
-        let productRef: DocumentReference | null = null;
-        if (orderData.productId) {
-          productRef = doc(firestore, `companies/${companyId}/products`, orderData.productId);
+        let productRef: DocumentReference | null = resolvedProductRef;
+        if (productRef) {
           const productSnap = await transaction.get(productRef);
           if (productSnap.exists()) {
             freshProductData = productSnap.data() as Product;
           }
         }
+        // Se a venda já foi levantada pelo ecrã de Vendas, o stock já saiu — não descontar outra vez.
+        const stockAlreadyOut = freshSaleData?.status === 'Levantado';
 
         // --- WRITES ---
 
@@ -2545,76 +2610,59 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           const locationToUse = orderData.location || (isMultiLocation ? locations[0]?.id : 'Principal');
           const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
-          // Only create production record and IN movement if order was NOT already completed
-          // (confirmAutoProduction or addProductionLog already handled stock IN)
-          const alreadyProduced = orderData.status === 'Concluída';
+          // Parte já produzida (registos de produção / conclusão) JÁ entrou no stock.
+          // Só a parte em falta é produzida agora.
+          const alreadyInStock = Math.min(Number(orderData.quantityProduced) || 0, orderData.quantity);
+          const missing = Math.max(0, orderData.quantity - alreadyInStock);
 
-          if (!alreadyProduced) {
-            // 6a. Add to 'productions'
+          if (missing > 0) {
             const productionsRef = collection(firestore, `companies/${companyId}/productions`);
-            const newProduction = {
+            transaction.set(doc(productionsRef), {
               date: new Date().toISOString().split('T')[0],
               productName: orderData.productName || 'Produto Desconhecido',
-              quantity: Number(orderData.quantity) || 0,
+              quantity: missing,
               unit: orderData.unit || 'un',
               registeredBy: user.username || 'Sistema',
               status: 'Concluído',
               location: locationToUse,
               orderId: orderId
-            };
-            transaction.set(doc(productionsRef), newProduction);
-
-            // 6b-IN. Register Stock Movement IN (Production)
-            const movementIn = {
+            });
+            transaction.set(doc(movementsRef), {
               productId: productRef.id,
               productName: orderData.productName,
               type: 'IN',
-              quantity: orderData.quantity,
+              quantity: missing,
               toLocationId: locationToUse,
-              reason: `Produção (Encomenda #${orderId.slice(-6).toUpperCase()}): ${orderData.quantity} ${orderData.unit || 'un'}`,
+              reason: `Produção (Encomenda #${orderId.slice(-6).toUpperCase()}): ${missing} ${orderData.unit || 'un'}`,
               userId: user.id,
               userName: user.username,
               timestamp: serverTimestamp()
-            };
-            transaction.set(doc(movementsRef), movementIn);
-          }
-
-          // 6b-OUT. Always register the delivery OUT movement
-          const movementOut = {
-            productId: productRef.id,
-            productName: orderData.productName,
-            type: 'OUT',
-            quantity: orderData.quantity,
-            fromLocationId: locationToUse,
-            reason: `Venda (Levantamento Encomenda #${orderId.slice(-6).toUpperCase()}): ${orderData.quantity} ${orderData.unit || 'un'}`,
-            userId: user.id,
-            userName: user.username,
-            saleId: saleRef ? saleRef.id : undefined,
-            timestamp: serverTimestamp()
-          };
-          transaction.set(doc(movementsRef), movementOut);
-
-          // 6c. Update stock and deduct reservation
-          // If already produced: stock already has the units, just deduct stock + reserved
-          // If not produced: +stock (production) -stock (delivery) = net 0 change to stock, just deduct reserved
-          let newReserved = (freshProductData.reservedStock || 0) - orderData.quantity;
-          if (newReserved < 0) newReserved = 0;
-
-          if (alreadyProduced) {
-            // Stock was already added by confirmAutoProduction/addProductionLog, now deduct for delivery
-            const newStock = (freshProductData.stock || 0) - orderData.quantity;
-            transaction.update(productRef, {
-              stock: Math.max(0, newStock),
-              reservedStock: newReserved,
-              lastUpdated: new Date().toISOString()
-            });
-          } else {
-            // Net stock change is 0 (+prod -delivery), just clear reservation
-            transaction.update(productRef, {
-              reservedStock: newReserved,
-              lastUpdated: new Date().toISOString()
             });
           }
+
+          if (!stockAlreadyOut) {
+            transaction.set(doc(movementsRef), {
+              productId: productRef.id,
+              productName: orderData.productName,
+              type: 'OUT',
+              quantity: -orderData.quantity,
+              fromLocationId: locationToUse,
+              reason: `Venda (Levantamento Encomenda #${orderId.slice(-6).toUpperCase()}): ${orderData.quantity} ${orderData.unit || 'un'}`,
+              userId: user.id,
+              userName: user.username,
+              ...(saleRef ? { saleId: saleRef.id } : {}),
+              timestamp: serverTimestamp()
+            });
+          }
+
+          // Stock: + parte produzida agora − entregue (se ainda não saiu). Reserva: libertada.
+          const newStock = (freshProductData.stock || 0) + missing - (stockAlreadyOut ? 0 : orderData.quantity);
+          const newReserved = stockAlreadyOut ? (freshProductData.reservedStock || 0) : Math.max(0, (freshProductData.reservedStock || 0) - orderData.quantity);
+          transaction.update(productRef, {
+            stock: Math.max(0, newStock),
+            reservedStock: newReserved,
+            lastUpdated: new Date().toISOString()
+          });
         }
       });
 
@@ -2624,7 +2672,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       console.error("Error finalizing order:", e);
       toast({ variant: 'destructive', title: 'Erro ao Finalizar', description: e.message });
     }
-  }, [firestore, companyId, user, toast, isMultiLocation, locations]);
+  }, [firestore, companyId, user, toast, isMultiLocation, locations, ordersData]);
 
   const addRawMaterial = useCallback(async (material: Omit<RawMaterial, 'id'>) => {
     if (isReadOnly) {

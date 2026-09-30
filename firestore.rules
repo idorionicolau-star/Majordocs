@@ -71,6 +71,12 @@ service cloud.firestore {
 
     // --- Regras por Coleção ---
 
+    // Registo das conversas com o assistente (só escrita pelo próprio; leitura só Super Admin)
+    match /assistant_logs/{logId} {
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow get, list: if isSuperAdmin();
+    }
+
     // Coleção de mapeamento de utilizadores
     match /users/{userId} {
       // Um utilizador só pode ler o seu próprio mapa. Admins não podem ler mapas de outros.
@@ -162,6 +168,19 @@ service cloud.firestore {
         allow create, update, delete: if can('orders', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
       
+      // Clientes: usados em Clientes, Vendas, Encomendas e no Dashboard.
+      match /customers/{customerId} {
+        allow get, list: if can('customers', 'read') || can('sales', 'read') || can('orders', 'read') || can('dashboard', 'read');
+        allow create, update: if (can('customers', 'write') || can('sales', 'write') || can('orders', 'write')) && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+        allow delete: if can('customers', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+      }
+
+      // Despesas (módulo Financeiro).
+      match /expenses/{expenseId} {
+        allow get, list: if can('finance', 'read');
+        allow create, update, delete: if can('finance', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+      }
+
       match /reports/{reportId} {
         // Relatórios são tipicamente apenas de leitura para a maioria dos papéis.
         allow get, list: if can('reports', 'read');

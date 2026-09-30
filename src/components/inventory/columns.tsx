@@ -114,7 +114,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
         return (
           <div className="text-center">
             <span className={cn("text-base font-black",
-              status === 'crítico' || status === 'sem-estoque' ? 'text-destructive' :
+              status === 'critico' || status === 'sem-estoque' ? 'text-destructive' :
                 status === 'baixo' ? 'text-[hsl(var(--chart-4))]' :
                   'text-foreground'
             )}>
@@ -172,7 +172,7 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
       header: "Estado",
       cell: ({ row }) => {
         const status = getStockStatus(row.original);
-        if (status === 'crítico' || status === 'sem-estoque') {
+        if (status === 'critico' || status === 'sem-estoque') {
           return <div className="inline-flex items-center gap-2 text-destructive bg-destructive/10 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-destructive/20">
             <AlertCircle size={14} strokeWidth={3} /> {status === 'sem-estoque' ? 'Esgotado' : 'Crítico'}
           </div>

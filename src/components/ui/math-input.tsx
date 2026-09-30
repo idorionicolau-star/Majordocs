@@ -17,11 +17,11 @@ interface MathInputProps extends React.ComponentProps<typeof Input> {
 
 export const MathInput = React.forwardRef<HTMLInputElement, MathInputProps>(
     ({ className, onValueChange, onBlur, onKeyDown, allowNegative = false, ...props }, ref) => {
-        const [localValue, setLocalValue] = React.useState<string>(props.value?.toString() || "");
+        const [localValue, setLocalValue] = React.useState<string>(props.value == null || Number(props.value) === 0 ? "" : props.value.toString());
         const [open, setOpen] = React.useState(false);
 
         React.useEffect(() => {
-            setLocalValue(props.value?.toString() || "");
+            setLocalValue(props.value == null || Number(props.value) === 0 ? "" : props.value.toString());
         }, [props.value]);
 
         const evaluateExpression = (expression: string): number | null => {
@@ -76,7 +76,7 @@ export const MathInput = React.forwardRef<HTMLInputElement, MathInputProps>(
             } else if (key === 'backspace') {
                 setLocalValue(prev => prev.slice(0, -1));
             } else {
-                setLocalValue(prev => prev + key);
+                setLocalValue(prev => (prev === "0" && /[0-9]/.test(key) ? key : prev + key));
             }
         };
 
@@ -102,6 +102,7 @@ export const MathInput = React.forwardRef<HTMLInputElement, MathInputProps>(
                     onBlur={handleBlur}
                     onKeyDown={handleKeyDown}
                     className={cn("pr-10", className)}
+                    placeholder={props.placeholder ?? "0"}
                     autoComplete="off"
                 />
                 <div className="absolute right-0 top-0 h-full flex items-center pr-2">

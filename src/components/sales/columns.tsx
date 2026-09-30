@@ -123,7 +123,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
                 </Tooltip>
             </TooltipProvider>
 
-            {sale.status === 'Pago' && canEdit && (
+            {sale.status === 'Pago' && canEdit && !sale.orderId && sale.documentType !== 'Encomenda' && (
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -171,7 +171,8 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-amber-600"
-                                onClick={() => options.onUpdateSale({ ...sale, amountPaid: sale.totalValue, status: 'Pago' })}
+                                onClick={() => options.onUpdateSale({ ...sale, amountPaid: sale.totalValue, // Não voltar a pôr 'Pago' numa venda já levantada — isso fazia o botão de levantar reaparecer e descontar o stock outra vez
+                                    status: sale.status === 'Levantado' ? 'Levantado' : 'Pago' })}
                             >
                                 <DollarSign className="h-4 w-4" />
                                 <span className="sr-only">Confirmar Pagamento Total</span>
