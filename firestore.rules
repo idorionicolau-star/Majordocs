@@ -183,6 +183,22 @@ service cloud.firestore {
         allow delete: if can('customers', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
 
+      // Aparelhos que recebem notificações push (o ID do documento é o token FCM).
+      // Cada utilizador só grava/apaga o seu; só o servidor (Admin SDK) lê para enviar.
+      match /pushTokens/{token} {
+        allow create, update: if isEmployeeOf(companyId) && request.resource.data.userId == request.auth.uid;
+        allow delete: if isEmployeeOf(companyId) && resource.data.userId == request.auth.uid;
+        allow read: if false;
+      }
+
+      // Preços de venda diferentes do habitual, à espera da decisão do gestor.
+      // O vendedor cria-os ao vender; só o gestor (Admin) lê e decide.
+      match /priceReviews/{reviewId} {
+        allow create: if can('sales', 'write');
+        allow get, list, update: if isAdminOf(companyId);
+        allow delete: if false;
+      }
+
       // Despesas (módulo Financeiro).
       match /expenses/{expenseId} {
         allow get, list: if can('finance', 'read');

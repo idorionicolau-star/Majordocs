@@ -13,6 +13,8 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { MobileNav } from './mobile-nav';
 
 import { BottomNav } from './bottom-nav';
+import { PushPrompt } from '@/components/push-notifications';
+import { PriceReviewBanner } from '@/components/price-reviews';
 
 import { LoadingBar } from './loading-bar';
 import { SubscriptionExpired } from './subscription-expired';
@@ -159,6 +161,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             <Header onSearchClick={() => setOpenCommandMenu(true)} />
             <main className="flex-1 relative">
               <div className="p-4 sm:p-6 md:p-8 pb-24 md:pb-8 main-content">
+                <PushPrompt />
+                <PriceReviewBanner />
                 <Suspense fallback={
                   <div className="flex h-full w-full items-center justify-center">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>

@@ -23,7 +23,8 @@ export const metadata: Metadata = {
   description: 'Sistema de gestão de estoque e produção para materiais de construção.',
   manifest: '/manifest.json',
   icons: {
-    icon: '/logo.svg',
+    icon: [{ url: '/icon-192.png', sizes: '192x192', type: 'image/png' }, { url: '/logo.svg', type: 'image/svg+xml' }],
+    apple: '/icon-192.png',
   },
 };
 

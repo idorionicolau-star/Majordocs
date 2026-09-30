@@ -63,7 +63,6 @@ import {
 } from '@/firebase/non-blocking-updates';
 import { PasswordConfirmationDialog } from '@/components/auth/password-confirmation-dialog';
 import { useSubscriptionState } from '@/hooks/useSubscriptionState';
-import { useNotifications } from '@/hooks/use-notifications';
 
 
 type CatalogProduct = Omit<
@@ -92,8 +91,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const wasSyncing = useRef(false);
   const [lastSaleTimestamp, setLastSaleTimestamp] = useState<number>(0);
 
-  // Initialize notifications
-  useNotifications();
+  // Push notifications: see <PushPrompt /> in the client layout (needs a tap to ask permission).
 
   const [companyData, setCompanyData] = useState<Company | null>(null);
   const { isReadOnly, isTrial, daysLeft } = useSubscriptionState(companyData);
@@ -145,8 +143,36 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [firestore, user, toast]);
 
+  // Push to the company's phones (other users). Fire-and-forget: never blocks or breaks a sale.
+  const sendPush = useCallback((msg: { title: string; body: string; link?: string; tag?: string }) => {
+    if (!companyId || typeof window === 'undefined') return;
+    (async () => {
+      try {
+        const fbToken = await auth.currentUser?.getIdToken();
+        if (!fbToken) return;
+        await fetch('/api/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${fbToken}` },
+          body: JSON.stringify({ companyId, ...msg }),
+        });
+      } catch (e) {
+        console.warn('[Push] envio falhou', e);
+      }
+    })();
+  }, [companyId, auth]);
+
   const triggerEmailAlert = useCallback(async (payload: any) => {
     const settings = companyData?.notificationSettings;
+
+    if (payload.type === 'SALE') {
+      const who = payload.soldBy ? ` · por ${payload.soldBy}` : '';
+      const client = payload.clientName ? ` · ${payload.clientName}` : '';
+      sendPush({
+        title: `💰 Nova venda — ${formatCurrency(Number(payload.totalValue) || 0)}`,
+        body: `${payload.productName || 'Venda'}${client}${who}`,
+        link: '/sales',
+      });
+    }
 
     // Normalize emails list, handling both new format and legacy format
     const targetEmails: NotificationEmail[] = [];
@@ -231,7 +257,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         duration: 8000,
       });
     }
-  }, [companyData, addNotification, toast, auth]);
+  }, [companyData, addNotification, toast, auth, sendPush]);
 
   const logout = useCallback(async () => {
     try {
@@ -874,6 +900,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    sendPush({
+      title: `⚠️ Stock crítico: ${product.name}`,
+      body: `Restam ${availableStock} ${product.unit || 'un'} · ${locations.find(l => l.id === product.location)?.name || 'Principal'}`,
+      link: '/inventory',
+      tag: `critical-${product.name}`,
+    });
+
     // Handle legacy settings and new multi-email configuration
     let hasCriticalEmailConfigured = false;
 
@@ -884,11 +917,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
 
     if (!hasCriticalEmailConfigured) {
-      toast({
-        variant: "destructive",
-        title: "E-mail de Notificação em Falta",
-        description: `O produto ${product.name} está com stock crítico, mas não há um e-mail configurado para alertas críticos nos Ajustes.`,
-      });
+      // Sem e-mail configurado: o alerta segue por notificação push (acima). Não incomodar com um aviso.
       return;
     }
 
@@ -899,7 +928,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       location: locations.find(l => l.id === product.location)?.name || 'Principal',
       threshold: product.criticalStockThreshold,
     });
-  }, [companyData, locations, triggerEmailAlert, toast]);
+  }, [companyData, locations, triggerEmailAlert, toast, sendPush]);
 
   const addProduct = useCallback(
     (newProductData: Omit<Product, 'id' | 'lastUpdated' | 'instanceId' | 'reservedStock' | 'sourceIds'>) => {
@@ -1518,6 +1547,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const companyDocRef = doc(firestore, `companies/${companyId}`);
 
     let guideNumberForOuterScope: string | null = null;
+    let referencePriceForReview = 0;
+    let reviewForPush: Record<string, any> | null = null;
 
     const isProforma = newSaleData.documentType === 'Factura Proforma';
     const shouldReserveStock = reserveStock && !isProforma;
@@ -1556,6 +1587,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         if (productDoc.exists()) {
           const productData = productDoc.data() as Product;
           unitCost = productData.cost || 0;
+          referencePriceForReview = Number(productData.price) || 0;
 
           if (shouldReserveStock) {
             const availableStock = (productData.stock || 0) - (productData.reservedStock || 0);
@@ -1589,7 +1621,34 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         ...(typeConfig && typeConfig.prefix ? { [`documentNumbering.${newSaleData.documentType}.nextNumber`]: (typeConfig.nextNumber || 1) + 1 } : {})
       });
       transaction.set(newSaleRef, { ...newSaleData, status: finalStatus, guideNumber, unitCost });
+
+      // Preço de venda: aprende se o produto não tem preço; se é diferente do habitual, pede confirmação ao gestor.
+      const soldPrice = Number(newSaleData.unitPrice) || 0;
+      if (!isProforma && productDocRef && soldPrice > 0) {
+        if (referencePriceForReview <= 0) {
+          transaction.update(productDocRef as DocumentReference, { price: soldPrice });
+        } else if (Math.abs(soldPrice - referencePriceForReview) >= 0.01 && user?.role !== 'Admin' && user?.role !== 'Dono') {
+          reviewForPush = {
+            productName: newSaleData.productName, productIds: [(productDocRef as DocumentReference).id],
+            location: newSaleData.location || '', unit: newSaleData.unit || 'un',
+            referencePrice: referencePriceForReview, soldPrice, quantity: newSaleData.quantity,
+            saleId: newSaleRef.id, guideNumber, clientName: newSaleData.clientName || '',
+            soldBy: user?.username || '', soldById: user?.id || '', status: 'pending', createdAt: new Date().toISOString(),
+          };
+          transaction.set(doc(collection(firestore, `companies/${companyId}/priceReviews`)), reviewForPush);
+        }
+      }
     });
+
+    if (reviewForPush) {
+      const r = reviewForPush as Record<string, any>;
+      sendPush({
+        title: `💲 Preço diferente numa venda — confirmar`,
+        body: `${r.productName}: vendido a ${formatCurrency(r.soldPrice)} (habitual ${formatCurrency(r.referencePrice)}) por ${r.soldBy}`,
+        link: '/sales/precos',
+        tag: 'price-review',
+      });
+    }
 
     if (guideNumberForOuterScope) {
       const createdSale: Sale = {
@@ -1617,7 +1676,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
 
     setLastSaleTimestamp(Date.now());
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, toast, triggerEmailAlert, user]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, toast, triggerEmailAlert, user, sendPush]);
 
   const addBulkSale = useCallback(async (
     items: CartItem[],
@@ -1650,6 +1709,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     let guideNumberForOuterScope: string | null = null;
     let createdSalesForOuterScope: Sale[] = [];
+    let pendingPriceReviews: Record<string, any>[] = [];
 
     // Calculate totals for proportional distribution
     const cartSubtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
@@ -1709,6 +1769,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const salesToCreate: Sale[] = [];
       const productUpdates: { ref: DocumentReference; data: any }[] = [];
       const stockOutMovements: { productId: string; productName: string; quantity: number; location?: string }[] = [];
+      // Preço de venda: a venda ensina o preço a produtos sem preço; preço diferente do habitual → pedido de confirmação ao gestor.
+      const priceReviews: Record<string, any>[] = [];
 
       items.forEach((item, index) => {
         const isProforma = saleData.documentType === 'Factura Proforma';
@@ -1786,9 +1848,42 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
         salesToCreate.push(sale);
         createdSalesForOuterScope.push(sale);
+
+        if (!isProforma && availableSources.length > 0 && item.unitPrice > 0) {
+          const reference = Number(availableSources[0].data.price) || 0;
+          if (reference <= 0) {
+            // Produto sem preço: aprende com esta venda.
+            availableSources.forEach(src => {
+              const existing = productUpdates.find(u => u.ref.id === src.ref.id);
+              if (existing) existing.data.price = item.unitPrice;
+              else productUpdates.push({ ref: src.ref, data: { price: item.unitPrice, lastUpdated: new Date().toISOString() } });
+            });
+          } else if (Math.abs(item.unitPrice - reference) >= 0.01 && user.role !== 'Admin' && user.role !== 'Dono') {
+            // (O gestor a vender com outro preço já decidiu — não precisa de se confirmar a si próprio.)
+            priceReviews.push({
+              productName: item.productName,
+              productIds: availableSources.map(src => src.ref.id),
+              location: targetLocation || '',
+              unit: item.unit || 'un',
+              referencePrice: reference,
+              soldPrice: item.unitPrice,
+              quantity: item.quantity,
+              saleId: sale.id,
+              guideNumber,
+              clientName: saleData.clientName || '',
+              soldBy: user.username,
+              soldById: user.id,
+              status: 'pending',
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
       });
 
       // 3. WRITES
+      const priceReviewsRef = collection(firestore, `companies/${companyId}/priceReviews`);
+      priceReviews.forEach(r => transaction.set(doc(priceReviewsRef), r));
+      pendingPriceReviews = priceReviews;
       transaction.update(companyDocRef, {
         saleCounter: newSaleCounter,
         ...(bulkTypeConfig && bulkTypeConfig.prefix ? { [`documentNumbering.${saleData.documentType}.nextNumber`]: (bulkTypeConfig.nextNumber || 1) + 1 } : {})
@@ -1817,6 +1912,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         transaction.set(doc(salesCollectionRef, sale.id), sale);
       });
     });
+
+    // Preço diferente do habitual → avisar o gestor (push) para confirmar.
+    if (pendingPriceReviews.length) {
+      const first = pendingPriceReviews[0];
+      sendPush({
+        title: `💲 Preço diferente numa venda — confirmar`,
+        body: pendingPriceReviews.length === 1
+          ? `${first.productName}: vendido a ${formatCurrency(first.soldPrice)} (habitual ${formatCurrency(first.referencePrice)}) por ${first.soldBy}`
+          : `${pendingPriceReviews.length} produtos vendidos com preço diferente do habitual por ${first.soldBy}`,
+        link: '/sales/precos',
+        tag: 'price-review',
+      });
+    }
 
     // Post-transaction UI/Notifications
     if (guideNumberForOuterScope && createdSalesForOuterScope.length > 0) {
@@ -1853,7 +1961,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
 
     setLastSaleTimestamp(Date.now());
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, products, toast, triggerEmailAlert]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, products, toast, triggerEmailAlert, sendPush, user]);
 
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {

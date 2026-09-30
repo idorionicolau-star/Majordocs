@@ -1,0 +1,59 @@
+export const dynamic = 'force-dynamic';
+
+import { NextResponse } from 'next/server';
+import { initializeAdmin, verifyIdToken } from '@/lib/firebase-admin';
+
+/**
+ * Sends a push notification to the devices registered for a company
+ * (companies/{companyId}/pushTokens). FCM is free, also on the Spark plan.
+ *
+ * Body: { companyId, title, body, link?, tag?, includeSelf? }
+ * By default the person who triggered the event is not notified (they already know);
+ * `includeSelf: true` is used by the "test" button.
+ */
+export async function POST(req: Request) {
+    const decoded = await verifyIdToken(req);
+    if (!decoded) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
+
+    const { companyId, title, body, link, tag, includeSelf } = await req.json();
+    if (!companyId || !title) return NextResponse.json({ error: 'Dados em falta.' }, { status: 400 });
+    if (!(decoded as any).superAdmin && companyId !== (decoded as any).companyId) {
+        return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
+    }
+
+    try {
+        const admin = initializeAdmin();
+        const snap = await admin.firestore().collection(`companies/${companyId}/pushTokens`).get();
+        const targets = snap.docs.filter((d) => includeSelf || d.get('userId') !== decoded.uid);
+        if (!targets.length) return NextResponse.json({ sent: 0, devices: snap.size });
+
+        const tokens = targets.map((d) => d.id);
+        const data: Record<string, string> = {
+            title: String(title).slice(0, 120),
+            body: String(body || '').slice(0, 400),
+            link: typeof link === 'string' && link.startsWith('/') ? link : '/dashboard',
+            ...(tag ? { tag: String(tag).slice(0, 60) } : {}),
+        };
+
+        const res = await admin.messaging().sendEachForMulticast({
+            tokens,
+            data, // data-only: the service worker builds the notification (icon, link) itself
+            webpush: { headers: { Urgency: 'high', TTL: '86400' } },
+        });
+
+        // Clean up devices that uninstalled the app or revoked permission
+        const dead: Promise<unknown>[] = [];
+        res.responses.forEach((r, i) => {
+            const code = r.error?.code || '';
+            if (code.includes('registration-token-not-registered') || code.includes('invalid-registration-token') || code.includes('invalid-argument')) {
+                dead.push(targets[i].ref.delete());
+            }
+        });
+        await Promise.allSettled(dead);
+
+        return NextResponse.json({ sent: res.successCount, failed: res.failureCount, removed: dead.length });
+    } catch (error: any) {
+        console.error('Push error:', error);
+        return NextResponse.json({ error: 'Falha ao enviar notificação.', details: error?.message }, { status: 500 });
+    }
+}
