@@ -26,7 +26,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Location, Product } from '@/lib/types';
 import { useInventory } from "@/context/inventory-context";
-import { compressImage, extensionFor } from '@/lib/image-compress';
+import { uploadProductImage } from '@/lib/upload-product-image';
+import { getFirebaseAuth } from '@/firebase/provider';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useStorage } from "@/firebase/provider";
 import Link from 'next/link';
@@ -75,7 +76,7 @@ type EditProductFormValues = z.infer<typeof formSchema>;
 export default function EditInventoryProductPage() {
     const { id } = useParams() as { id: string };
     const router = useRouter();
-    const { products, availableUnits, locations, isMultiLocation, updateProduct, catalogCategories, addCatalogCategory, categorizeProductWithAI } = useInventory();
+    const { products, availableUnits, locations, isMultiLocation, updateProduct, catalogCategories, addCatalogCategory, categorizeProductWithAI, companyId: companyIdForUpload } = useInventory();
     const storage = useStorage();
     const { toast } = useToast();
 
@@ -133,10 +134,7 @@ export default function EditInventoryProductPage() {
         try {
             if (imageFile) {
                 try {
-                    const compressed = await compressImage(imageFile);
-                const storageRef = ref(storage, `product-images/${Date.now()}_${imageFile.name.replace(/\.[^.]+$/, '')}.${extensionFor(compressed)}`);
-                    const snapshot = await uploadBytes(storageRef, compressed, { contentType: compressed.type || imageFile.type, cacheControl: 'public, max-age=31536000' });
-                    imageUrl = await getDownloadURL(snapshot.ref);
+                    imageUrl = await uploadProductImage(imageFile, getFirebaseAuth(), companyIdForUpload || "");
                 } catch (error: any) {
                     console.error("Error uploading image:", error);
                     toast({
