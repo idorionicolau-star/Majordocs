@@ -39,7 +39,8 @@ import { calculateSimilarity } from '@/lib/utils';
 import { CatalogProductSelector } from '@/components/catalog/catalog-product-selector';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, AlertTriangle, Image as ImageIcon, Loader2, ArrowLeft } from 'lucide-react';
-import { compressImage, extensionFor } from '@/lib/image-compress';
+import { uploadProductImage } from '@/lib/upload-product-image';
+import { getFirebaseAuth } from '@/firebase/provider';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useStorage } from '@/firebase/provider';
 import { Card } from "@/components/ui/card";
@@ -190,10 +191,7 @@ export default function NewInventoryProductPage() {
         let imageUrl: string | null = null;
         if (imageFile) {
             try {
-                const compressed = await compressImage(imageFile);
-                const storageRef = ref(storage, `product-images/${Date.now()}_${imageFile.name.replace(/\.[^.]+$/, '')}.${extensionFor(compressed)}`);
-                const snapshot = await uploadBytes(storageRef, compressed, { contentType: compressed.type || imageFile.type, cacheControl: 'public, max-age=31536000' });
-                imageUrl = await getDownloadURL(snapshot.ref);
+                imageUrl = await uploadProductImage(imageFile, getFirebaseAuth(), inventoryContext?.companyId || "");
             } catch (error) {
                 console.error("Error uploading image:", error);
                 toast({
