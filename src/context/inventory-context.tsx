@@ -171,7 +171,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, user, toast]);
 
   // Feed + push to the company's phones (other users). Fire-and-forget: never blocks or breaks a sale.
-  const sendPush = useCallback((msg: { title: string; body: string; link?: string; tag?: string; type?: string; audience?: 'all' | 'managers'; dedupeId?: string }) => {
+  const sendPush = useCallback((msg: { title: string; body: string; link?: string; tag?: string; type?: string; audience?: 'all' | 'managers'; dedupeId?: string; includeSelf?: boolean }) => {
     if (!companyId || typeof window === 'undefined') return;
     (async () => {
       try {
@@ -939,6 +939,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       link: '/inventory',
       tag: `critical-${product.name}`,
       type: 'stock',
+      includeSelf: true, // alerta de stock não é "acção de outra pessoa": chega também a quem vendeu
       dedupeId: `critical-${product.name}-${product.location || ''}-${new Date().toISOString().slice(0, 10)}`,
     });
 

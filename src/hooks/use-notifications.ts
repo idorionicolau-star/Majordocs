@@ -24,6 +24,7 @@ export function usePushNotifications(companyId: string | null | undefined, user:
     const { toast } = useToast();
     const [status, setStatus] = useState<PushStatus>('default');
     const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const register = useCallback(async (): Promise<boolean> => {
         if (!messaging || !companyId || !user || !VAPID) return false;
@@ -49,8 +50,9 @@ export function usePushNotifications(companyId: string | null | undefined, user:
         if (Notification.permission === 'denied') { setStatus('denied'); return; }
         if (Notification.permission !== 'granted') { setStatus('default'); return; }
         if (!messaging || !companyId || !user) return;
-        register().then((ok) => setStatus(ok ? 'enabled' : 'error')).catch((e) => {
+        register().then((ok) => { setStatus(ok ? 'enabled' : 'error'); if (!ok) setError('Não foi possível obter o código do aparelho.'); }).catch((e) => {
             console.warn('[Push] Falha ao renovar o token:', e);
+            setError(String(e?.code || e?.message || e).slice(0, 160));
             setStatus('error');
         });
     }, [messaging, companyId, user, register]);
@@ -78,11 +80,12 @@ export function usePushNotifications(companyId: string | null | undefined, user:
             if (ok) toast({ title: 'Notificações activadas', description: 'Este aparelho vai receber alertas de vendas e stock.' });
         } catch (e) {
             console.warn('[Push] Erro ao activar:', e);
+            setError(String((e as any)?.code || (e as any)?.message || e).slice(0, 160));
             setStatus('error');
         } finally {
             setBusy(false);
         }
     }, [status, register, toast]);
 
-    return { status, enable, busy };
+    return { status, enable, busy, error };
 }

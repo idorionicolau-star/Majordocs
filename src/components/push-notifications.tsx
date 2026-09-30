@@ -43,7 +43,7 @@ export function PushPrompt() {
 /** Settings card: current state on this device + how to fix it. */
 export function PushSettingsCard() {
     const { companyId, user } = useInventory();
-    const { status, enable, busy } = usePushNotifications(companyId, user);
+    const { status, enable, busy, error } = usePushNotifications(companyId, user);
     const auth = useAuth();
     const { toast } = useToast();
     const [testing, setTesting] = useState(false);
@@ -59,7 +59,13 @@ export function PushSettingsCard() {
             });
             const j = await r.json();
             if (!r.ok) throw new Error(j.details || j.error);
-            toast({ title: "Teste enviado", description: `Enviado para ${j.sent} aparelho(s). Se a app estiver aberta, aparece aqui; fechada, aparece na barra do telemóvel.` });
+            if (!j.devices) {
+                toast({ variant: "destructive", title: "Nenhum aparelho registado", description: "Este telemóvel ainda não está ligado aos alertas. Toque em Activar, aceite o pedido do navegador e repita o teste." });
+            } else if (!j.sent) {
+                toast({ variant: "destructive", title: "O envio falhou", description: `${j.errorCode || "erro"}: ${j.errorMessage || "o Firebase recusou a mensagem"}` });
+            } else {
+                toast({ title: "Teste enviado", description: `Enviado para ${j.sent} aparelho(s). Se a app estiver aberta, aparece aqui; fechada, aparece na barra do telemóvel.` });
+            }
         } catch (e) {
             toast({ variant: "destructive", title: "O teste falhou", description: e instanceof Error ? e.message : "Erro desconhecido" });
         } finally {
@@ -73,7 +79,7 @@ export function PushSettingsCard() {
         denied: { icon: BellOff, tone: "text-red-500", title: "Bloqueadas pelo navegador", text: "No Android: toque no cadeado ao lado do endereço (ou mantenha o ícone da app premido → Info da app) → Notificações → Permitir. Depois volte aqui." },
         unsupported: { icon: BellOff, tone: "text-muted-foreground", title: "Este navegador não suporta", text: "Use o Chrome no Android. No iPhone é preciso instalar a app no ecrã principal (iOS 16.4 ou mais recente)." },
         "no-key": { icon: BellOff, tone: "text-amber-600", title: "Falta configurar o servidor", text: "A chave VAPID (NEXT_PUBLIC_VAPID_KEY) não está definida na Vercel." },
-        error: { icon: BellOff, tone: "text-amber-600", title: "Não foi possível activar", text: "Verifique a ligação à internet e tente de novo." },
+        error: { icon: BellOff, tone: "text-amber-600", title: "Não foi possível activar", text: `Verifique a ligação à internet e tente de novo.${error ? ` (motivo: ${error})` : ""}` },
     };
     const s = info[status] || info.default;
     const Icon = s.icon;
