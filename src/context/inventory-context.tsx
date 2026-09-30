@@ -99,7 +99,32 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const locations = useMemo(() => companyData?.locations || [], [companyData]);
   const isMultiLocation = useMemo(() => !!companyData?.isMultiLocation, [companyData]);
 
+  // Shared activity feed (Facebook-style): companies/{id}/notifications, visible on every device in real time.
+  // `dedupeId` makes the doc id fixed so the same alert (e.g. critical stock of a product today) is only posted once.
+  const postFeed = useCallback(async (n: { type: string; title: string; body?: string; link?: string; audience?: 'all' | 'managers'; dedupeId?: string }): Promise<boolean> => {
+    if (!firestore || !companyId || !user) return false;
+    const col = collection(firestore, `companies/${companyId}/notifications`);
+    const ref = n.dedupeId ? doc(col, n.dedupeId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 140)) : doc(col);
+    try {
+      await setDoc(ref, {
+        type: n.type,
+        title: n.title,
+        body: n.body || '',
+        link: n.link || '/dashboard',
+        audience: n.audience || 'all',
+        actorId: user.id,
+        actorName: user.username,
+        createdAt: serverTimestamp(),
+        readBy: [user.id],
+      });
+      return true;
+    } catch {
+      return false; // dedupe doc already exists (update not allowed) or offline error
+    }
+  }, [firestore, companyId, user]);
+
   const addNotification = useCallback((notification: Omit<AppNotification, 'id' | 'date' | 'read'>) => {
+    postFeed({ type: notification.type, title: notification.message, link: notification.href });
     setNotifications(prev => [
       {
         id: `notif-${Date.now()}`,
@@ -143,11 +168,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [firestore, user, toast]);
 
-  // Push to the company's phones (other users). Fire-and-forget: never blocks or breaks a sale.
-  const sendPush = useCallback((msg: { title: string; body: string; link?: string; tag?: string }) => {
+  // Feed + push to the company's phones (other users). Fire-and-forget: never blocks or breaks a sale.
+  const sendPush = useCallback((msg: { title: string; body: string; link?: string; tag?: string; type?: string; audience?: 'all' | 'managers'; dedupeId?: string }) => {
     if (!companyId || typeof window === 'undefined') return;
     (async () => {
       try {
+        const posted = await postFeed({ type: msg.type || 'info', title: msg.title, body: msg.body, link: msg.link, audience: msg.audience, dedupeId: msg.dedupeId });
+        if (!posted && msg.dedupeId) return; // already notified (e.g. same critical product today)
         const fbToken = await auth.currentUser?.getIdToken();
         if (!fbToken) return;
         await fetch('/api/push', {
@@ -159,7 +186,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         console.warn('[Push] envio falhou', e);
       }
     })();
-  }, [companyId, auth]);
+  }, [companyId, auth, postFeed]);
 
   const triggerEmailAlert = useCallback(async (payload: any) => {
     const settings = companyData?.notificationSettings;
@@ -168,6 +195,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const who = payload.soldBy ? ` · por ${payload.soldBy}` : '';
       const client = payload.clientName ? ` · ${payload.clientName}` : '';
       sendPush({
+        type: 'sale',
         title: `💰 Nova venda — ${formatCurrency(Number(payload.totalValue) || 0)}`,
         body: `${payload.productName || 'Venda'}${client}${who}`,
         link: '/sales',
@@ -204,20 +232,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       subject = `🚨 ALERTA: ${payload.productName} com stock baixo!`;
       notificationHref = '/inventory';
       notificationType = 'stock';
-      addNotification({
-        type: notificationType,
-        message: `Stock crítico para ${payload.productName}! Quantidade: ${payload.quantity}`,
-        href: notificationHref,
-      });
     } else if (isSaleEvent) {
       subject = `✅ Nova Venda: ${payload.productName}`;
       notificationHref = '/sales';
       notificationType = 'sale';
-      addNotification({
-        type: notificationType,
-        message: `Nova venda de ${payload.productName} registada.`,
-        href: notificationHref,
-      });
     }
 
     try {
@@ -905,6 +923,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       body: `Restam ${availableStock} ${product.unit || 'un'} · ${locations.find(l => l.id === product.location)?.name || 'Principal'}`,
       link: '/inventory',
       tag: `critical-${product.name}`,
+      type: 'stock',
+      dedupeId: `critical-${product.name}-${product.location || ''}-${new Date().toISOString().slice(0, 10)}`,
     });
 
     // Handle legacy settings and new multi-email configuration
@@ -1647,6 +1667,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         body: `${r.productName}: vendido a ${formatCurrency(r.soldPrice)} (habitual ${formatCurrency(r.referencePrice)}) por ${r.soldBy}`,
         link: '/sales/precos',
         tag: 'price-review',
+        type: 'price',
+        audience: 'managers',
       });
     }
 
@@ -1923,6 +1945,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           : `${pendingPriceReviews.length} produtos vendidos com preço diferente do habitual por ${first.soldBy}`,
         link: '/sales/precos',
         tag: 'price-review',
+        type: 'price',
+        audience: 'managers',
       });
     }
 

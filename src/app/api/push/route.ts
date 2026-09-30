@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     const decoded = await verifyIdToken(req);
     if (!decoded) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
 
-    const { companyId, title, body, link, tag, includeSelf } = await req.json();
+    const { companyId, title, body, link, tag, includeSelf, audience } = await req.json();
     if (!companyId || !title) return NextResponse.json({ error: 'Dados em falta.' }, { status: 400 });
     if (!(decoded as any).superAdmin && companyId !== (decoded as any).companyId) {
         return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
@@ -24,7 +24,14 @@ export async function POST(req: Request) {
     try {
         const admin = initializeAdmin();
         const snap = await admin.firestore().collection(`companies/${companyId}/pushTokens`).get();
-        const targets = snap.docs.filter((d) => includeSelf || d.get('userId') !== decoded.uid);
+        let targets = snap.docs.filter((d) => includeSelf || d.get('userId') !== decoded.uid);
+        if (audience === 'managers') {
+            // Só gestores (Admin/Dono) recebem, p.ex., pedidos de confirmação de preço.
+            const ids = Array.from(new Set(targets.map((d) => d.get('userId') as string).filter(Boolean)));
+            const emps = await Promise.all(ids.map((id) => admin.firestore().doc(`companies/${companyId}/employees/${id}`).get()));
+            const managers = new Set(emps.filter((e) => ['Admin', 'Dono'].includes(e.get('role'))).map((e) => e.id));
+            targets = targets.filter((d) => managers.has(d.get('userId')));
+        }
         if (!targets.length) return NextResponse.json({ sent: 0, devices: snap.size });
 
         const tokens = targets.map((d) => d.id);
