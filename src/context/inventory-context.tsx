@@ -52,6 +52,8 @@ import {
   arrayRemove,
 } from 'firebase/firestore';
 import { allPermissions } from '@/lib/data';
+import { computeSmartThresholds } from '@/lib/smart-thresholds';
+import { categorizeLocally } from '@/lib/categorize-local';
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
 import { format, eachMonthOfInterval, subMonths } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -820,11 +822,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const categorizeProductWithAI = async (productName: string): Promise<string | null> => {
     if (!productName || productName.trim().length === 0) return null;
 
+    const existingCategories = catalogCategoriesData?.map(c => c.name) || [];
+
+    // 1.º: sugestão local (produtos parecidos + palavras-chave) — instantânea, offline e sem custos.
+    const local = categorizeLocally(productName, existingCategories, (productsData || []) as { name?: string; category?: string }[]);
+    if (local) return local.category;
+
+    // 2.º: só se não houver nenhuma pista local, pergunta ao Gemini (pode falhar — então não sugere nada).
     try {
       const fbToken = await auth.currentUser?.getIdToken();
       if (!fbToken) return null;
-
-      const existingCategories = catalogCategoriesData?.map(c => c.name) || [];
 
       const response = await fetch('/api/categorize-product', {
         method: 'POST',
@@ -1060,10 +1067,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     [productsCollectionRef, firestore, user, companyId, addNotification, toast]
   );
 
-  const syncSmartThresholds = useCallback(async (isManual = false) => {
+  const syncSmartThresholds = useCallback(async (mode: boolean | 'silent' = false) => {
     if (!firestore || !companyId || !productsData || !stockMovementsData) return;
+    const isManual = mode === true; // só o botão mostra avisos
+    const force = mode !== false;
 
-    if (!isManual) {
+    if (!force) {
       const lastSync = localStorage.getItem(`majorstockx_last_smart_sync_${companyId}`);
       if (lastSync) {
         const _1dayInMs = 1 * 24 * 60 * 60 * 1000;
@@ -1074,9 +1083,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
 
     const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 90);
 
-    // Filter recent movements and sales for the API
+    // Movimentos e vendas dos últimos 90 dias
     const recentMovements = stockMovementsData.filter(m => {
       if (m.type !== 'OUT') return false;
       const ts = m.timestamp;
@@ -1102,28 +1111,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }) || [];
 
     try {
-      const response = await fetch('/api/predict-inventory', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          products: productsData,
-          movements: recentMovements,
-          sales: recentSales
-        })
+      // Cálculo local (sem servidor): antes chamava um script Python que o Vercel não corre.
+      const predictions = computeSmartThresholds({
+        products: productsData as any[],
+        movements: recentMovements as any[],
+        sales: recentSales as any[],
       });
-
-      if (!response.ok) {
-        throw new Error("Erro de resposta do servidor da API Preditiva.");
-      }
-
-      const { success, predictions, error } = await response.json();
-
-      if (!success || !predictions) {
-        console.error("AI Prediction failed:", error);
-        return;
-      }
 
       const batch = writeBatch(firestore);
       let updatesCount = 0;
@@ -3287,8 +3280,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     // Wait 5 seconds to ensure Firebase snapshot is complete, then force a sync (true)
     const timer = setTimeout(() => {
-      syncSmartThresholds(true);
-      console.log("Triggered Smart Threshold Sync after POS sale.");
+      syncSmartThresholds('silent');
     }, 5000);
 
     return () => clearTimeout(timer);

@@ -432,7 +432,7 @@ export interface InventoryContextType {
   addCategory: (category: string) => Promise<void>;
   editCategory: (oldCategory: string, newCategory: string) => Promise<void>;
   removeCategory: (category: string) => Promise<void>;
-  syncSmartThresholds: (isManual?: boolean) => Promise<void>;
+  syncSmartThresholds: (mode?: boolean | 'silent') => Promise<void>;
   confirmAction: (action: () => Promise<void>, title?: string, message?: string) => void;
 }
 
