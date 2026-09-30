@@ -562,15 +562,15 @@ export default function InventoryPage() {
           <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
             {canEditInventory && (
               <Button variant="default" className="h-12 w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white" asChild>
-                <Link href="/inventory/fast-entry">
+                <Link href="/inventory/quick">
                   <LayoutGrid className="mr-2 h-4 w-4" />
-                  <span>Entrada Rápida</span>
+                  <span>Stock Rápido</span>
                 </Link>
               </Button>
             )}
             {canEditInventory && (
               <Button variant="outline" className="h-12 w-full sm:w-auto border-blue-600 text-blue-600 hover:bg-blue-50" asChild>
-                <Link href="/inventory/fast-count">
+                <Link href="/inventory/quick?modo=contagem">
                   <ClipboardList className="mr-2 h-4 w-4" />
                   <span>Contagem Rápida</span>
                 </Link>
