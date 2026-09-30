@@ -64,7 +64,7 @@ export function TacticalInsights({ className }: { className?: string }) {
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             const productSalesVelocity = new Map<string, number>();
             sales.forEach(s => {
-                const saleDate = (s.timestamp as any)?.toDate ? (s.timestamp as any).toDate() : new Date(s.timestamp as any);
+                const rawDate: any = (s as any).date ?? (s as any).timestamp; const saleDate = rawDate?.toDate ? rawDate.toDate() : new Date(rawDate);
                 if (saleDate >= thirtyDaysAgo) {
                     const current = productSalesVelocity.get(s.productName) || 0;
                     productSalesVelocity.set(s.productName, current + (s.quantity || 0));

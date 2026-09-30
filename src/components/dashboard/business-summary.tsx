@@ -18,7 +18,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTypingEffect } from "@/hooks/use-typing-effect";
 
-const INSIGHTS_STORAGE_KEY = 'majorstockx-daily-insights';
+const INSIGHTS_STORAGE_KEY = 'majorstockx-daily-insights-v2';
 
 export const BusinessSummary = () => {
     const context = useContext(InventoryContext);
@@ -32,6 +32,7 @@ export const BusinessSummary = () => {
     if (!context) return null;
 
     const { sales, products, dashboardStats, companyData, loading } = context;
+    const inv = context;
 
     const summary = useMemo(() => {
         if (loading || !sales || !products || !dashboardStats) return null;
@@ -97,12 +98,9 @@ export const BusinessSummary = () => {
 
         setInsightsLoading(true);
         try {
-            const { generateLocalInsights } = await import('@/lib/local-ai');
-            
-            // Simula processamento da IA Local
-            await new Promise(resolve => setTimeout(resolve, 800));
+            const { analyzeBusiness, analysisToMarkdown } = await import('@/lib/business-analysis');
 
-            const text = generateLocalInsights(sales || [], products || [], customers || [], companyData);
+            const text = analysisToMarkdown(analyzeBusiness({ products: products || [], sales: sales || [], customers: customers || [], orders: (inv as any)?.orders || [], productions: (inv as any)?.productions || [], stockMovements: (inv as any)?.stockMovements || [] }));
 
             setIsFreshlyGenerated(true);
             setInsights(text);

@@ -46,7 +46,7 @@ export default function OrdersPage() {
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
 
-  const { orders, companyId, loading: inventoryLoading, user, canEdit, addNotification, addProductionLog, deleteOrder, companyData, confirmAction, isReadOnly } = inventoryContext || { orders: [], sales: [], companyId: null, loading: true, user: null, canEdit: () => false, addNotification: () => { }, addProductionLog: () => { }, deleteOrder: () => { }, companyData: null, confirmAction: () => { }, isReadOnly: false };
+  const { orders, sales, companyId, loading: inventoryLoading, user, canEdit, addNotification, addProductionLog, deleteOrder, companyData, confirmAction, isReadOnly } = inventoryContext || { orders: [], sales: [], companyId: null, loading: true, user: null, canEdit: () => false, addNotification: () => { }, addProductionLog: () => { }, deleteOrder: () => { }, companyData: null, confirmAction: () => { }, isReadOnly: false };
 
   const canEditOrders = canEdit('orders');
 
@@ -56,6 +56,12 @@ export default function OrdersPage() {
 
 
 
+
+  const salesByOrder = useMemo(() => {
+    const m = new Map<string, any>();
+    (sales || []).forEach((s: any) => { if (s.orderId) m.set(s.orderId, s); });
+    return m;
+  }, [sales]);
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: 'Pendente' | 'Em produção' | 'Concluída') => {
     if (isReadOnly) {
@@ -458,6 +464,7 @@ export default function OrdersPage() {
                   onAddProductionLog={addProductionLog}
                   onDeleteOrder={handleDeleteOrder}
                   canEdit={canEditOrders}
+                  associatedSale={salesByOrder.get(order.id)}
                 />
               )}
             />

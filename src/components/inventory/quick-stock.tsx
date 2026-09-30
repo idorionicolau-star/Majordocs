@@ -76,7 +76,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const [location, setLocation] = useState<string>("");
     const [text, setText] = useState("");
     const [highlight, setHighlight] = useState(0);
-    const [picked, setPicked] = useState<{ product?: Product; newName?: string } | null>(null);
+    const [picked, setPicked] = useState<{ product?: Product; newName?: string; from?: Product } | null>(null);
     const [qtyText, setQtyText] = useState("");
     const [newPrice, setNewPrice] = useState("");
     const [drafts, setDrafts] = useState<Record<QuickMode, Draft>>({ in: {}, out: {}, count: {} });
@@ -138,7 +138,22 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const parsed = useMemo(() => parseQuickInput(text, names), [text, names]);
     const results = useMemo(() => searchProducts(scoped, parsed.term, 8), [scoped, parsed.term]);
     const exactExists = results.some((p) => p.name.trim().toLowerCase() === parsed.term.trim().toLowerCase());
-    const canCreate = mode === "in" && parsed.term.trim().length >= 2 && !exactExists;
+    // Products that exist in OTHER locations but not here — offer to bring them here with the same data.
+    const elsewhere = useMemo(() => {
+        if (!isMultiLocation || mode === "out" || !parsed.term) return [] as Product[];
+        const here = new Set(scoped.map((p) => p.name.trim().toLowerCase()));
+        const seen = new Set<string>();
+        return searchProducts(products.filter((p) => !p.deletedAt), parsed.term, 20)
+            .filter((p) => {
+                const k = p.name.trim().toLowerCase();
+                if (here.has(k) || seen.has(k)) return false;
+                seen.add(k);
+                return true;
+            })
+            .slice(0, 4);
+    }, [isMultiLocation, mode, parsed.term, scoped, products]);
+    const elsewhereExact = elsewhere.some((p) => p.name.trim().toLowerCase() === parsed.term.trim().toLowerCase());
+    const canCreate = mode === "in" && !elsewhereExact && parsed.term.trim().length >= 2 && !exactExists;
 
     useEffect(() => setHighlight(0), [parsed.term]);
 
@@ -175,17 +190,32 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
         requestAnimationFrame(() => qtyRef.current?.focus());
     };
 
-    const newLine = (name: string, qty: number, price?: number): QuickLine => ({
+    const newLine = (name: string, qty: number, price?: number, from?: Product): QuickLine => ({
         key: lineKey(name, location),
-        name: name.trim().charAt(0).toUpperCase() + name.trim().slice(1),
+        name: from ? from.name : name.trim().charAt(0).toUpperCase() + name.trim().slice(1),
         location,
         sourceIds: [],
         systemStock: 0,
-        unit: "un",
+        unit: from?.unit || "un",
         qty,
         isNew: true,
-        price,
+        price: price ?? from?.price,
+        ...(from ? { template: { category: from.category, price: from.price, cost: from.cost, unit: from.unit, lowStockThreshold: from.lowStockThreshold, criticalStockThreshold: from.criticalStockThreshold, imageUrl: from.imageUrl } } : {}),
     });
+
+    // A product from another location becomes a new line here, carrying its data.
+    const pickElsewhere = (p: Product, presetQty?: number | null) => {
+        if (presetQty != null && presetQty >= 0) {
+            addLine(newLine(p.name, presetQty, undefined, p));
+            setText("");
+            setPicked(null);
+            focusSearch();
+            return;
+        }
+        setPicked({ newName: p.name, from: p });
+        setQtyText("");
+        requestAnimationFrame(() => qtyRef.current?.focus());
+    };
 
     // Buttons next to the quantity field must not steal focus (keeps Enter working and the phone keyboard open).
     const keepFocus = (e: React.MouseEvent) => e.preventDefault();
@@ -198,14 +228,14 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             return;
         }
         if (picked.product) addLine(lineFromProduct(picked.product, q), mode === "count");
-        else if (picked.newName) addLine(newLine(picked.newName, q, toNumber(newPrice) || undefined));
+        else if (picked.newName) addLine(newLine(picked.newName, q, toNumber(newPrice) || undefined, picked.from));
         setPicked(null);
         setText("");
         focusSearch();
     };
 
     const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        const total = results.length + (canCreate ? 1 : 0);
+        const total = results.length + elsewhere.length + (canCreate ? 1 : 0);
         if (e.key === "ArrowDown") {
             e.preventDefault();
             setHighlight((h) => Math.min(h + 1, Math.max(total - 1, 0)));
@@ -220,7 +250,9 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                 return;
             }
             if (highlight < results.length && results[highlight]) pick(results[highlight], undefined, parsed.qty);
+            else if (highlight < results.length + elsewhere.length) pickElsewhere(elsewhere[highlight - results.length], parsed.qty);
             else if (canCreate) pick(undefined, parsed.term, parsed.qty);
+            else if (elsewhere[0]) pickElsewhere(elsewhere[0], parsed.qty);
         } else if (e.key === "Escape") {
             setText("");
         }
@@ -372,7 +404,9 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                             <p className="text-xs text-muted-foreground">
                                 {picked.product
                                     ? `Stock actual: ${fmt(picked.product.stock || 0)} ${picked.product.unit || "un"}`
-                                    : "Produto novo — pode completar preço e categoria depois"}
+                                    : picked.from
+                                        ? `Primeira entrada nesta localização — preço, unidade e categoria copiados de ${locName(picked.from.location || "")}`
+                                        : "Produto novo — pode completar preço e categoria depois"}
                             </p>
                         </div>
                         <button type="button" aria-label="Cancelar" onClick={() => { setPicked(null); focusSearch(); }} className="text-muted-foreground">
@@ -416,7 +450,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                         </div>
                     )}
 
-                    {picked.newName && (
+                    {picked.newName && !picked.from && (
                         <Input value={newPrice} onChange={(e) => setNewPrice(e.target.value)} inputMode="decimal"
                             placeholder="Preço de venda (opcional)" className="mt-2 h-11 rounded-xl"
                             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); confirmPicked(); } }} />
@@ -450,14 +484,25 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                             </button>
                         );
                     })}
+                    {elsewhere.map((p, i) => (
+                        <button key={`else-${p.instanceId}`} type="button" onClick={() => pickElsewhere(p, parsed.qty)}
+                            onMouseEnter={() => setHighlight(results.length + i)}
+                            className={cn("flex w-full items-center justify-between gap-3 border-b px-4 py-3 text-left", highlight === results.length + i && "bg-muted")}>
+                            <div className="min-w-0">
+                                <p className="truncate font-medium">{p.name}</p>
+                                <p className="text-xs text-amber-600">Ainda não existe nesta localização · existe em {locName(p.location || "")}</p>
+                            </div>
+                            <span className="shrink-0 text-xs font-semibold text-primary">Trazer para aqui</span>
+                        </button>
+                    ))}
                     {canCreate && (
                         <button type="button" onClick={() => pick(undefined, parsed.term, parsed.qty)}
-                            onMouseEnter={() => setHighlight(results.length)}
-                            className={cn("flex w-full items-center gap-2 px-4 py-3 text-left text-sm", highlight === results.length && "bg-muted")}>
+                            onMouseEnter={() => setHighlight(results.length + elsewhere.length)}
+                            className={cn("flex w-full items-center gap-2 px-4 py-3 text-left text-sm", highlight === results.length + elsewhere.length && "bg-muted")}>
                             <Sparkles className="h-4 w-4 text-primary" /> Criar produto novo <b>“{parsed.term}”</b>
                         </button>
                     )}
-                    {results.length === 0 && !canCreate && <p className="px-4 py-3 text-sm text-muted-foreground">Nenhum artigo encontrado.</p>}
+                    {results.length === 0 && !canCreate && elsewhere.length === 0 && <p className="px-4 py-3 text-sm text-muted-foreground">Nenhum artigo encontrado.</p>}
                 </div>
             )}
 

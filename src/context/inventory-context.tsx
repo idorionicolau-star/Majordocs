@@ -2082,7 +2082,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           quantity: Number(quantity) || 0,
           unit: unit || 'un',
           registeredBy: user.username || 'Desconhecido',
-          status: 'Concluído',
+          status: 'Transferido', // já entrou no stock nesta mesma transacção
           location: targetLocation || 'Principal',
         };
 

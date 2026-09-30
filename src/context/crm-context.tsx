@@ -14,7 +14,7 @@ interface CRMContextType {
     loading: boolean;
 }
 
-const CRMContext = createContext<CRMContextType | undefined>(undefined);
+export const CRMContext = createContext<CRMContextType | undefined>(undefined);
 
 export function CRMProvider({ children }: { children: ReactNode }) {
     const { companyId, user, canView } = useInventory();

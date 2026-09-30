@@ -1,4 +1,5 @@
 "use client";
+import { isProductionInStock } from "@/lib/production";
 
 import type { Production } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +34,7 @@ interface ProductionCardProps {
 
 export function ProductionCard({ production, onTransfer, onDelete, onUpdate, viewMode = 'normal', canEdit, locationName }: ProductionCardProps) {
     const isCondensed = viewMode === 'condensed';
-    const isTransferred = production.status === 'Transferido';
+    const isTransferred = isProductionInStock(production);
     return (
         <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 relative shadow-sm">
             <CardHeader className="p-1 sm:p-2">

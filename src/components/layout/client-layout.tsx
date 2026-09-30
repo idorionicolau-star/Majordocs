@@ -155,7 +155,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
         <div className={`flex min-h-screen w-full bg-transparent ${isTrial ? 'pt-0' : ''}`}>
           <Sidebar />
-          <div className="flex flex-col flex-1 min-h-screen transition-[margin,width] duration-300 ease-in-out md:ml-64">
+          <div className="flex flex-col flex-1 min-w-0 min-h-screen transition-[margin,width] duration-300 ease-in-out md:ml-64">
             <Header onSearchClick={() => setOpenCommandMenu(true)} />
             <main className="flex-1 relative">
               <div className="p-4 sm:p-6 md:p-8 pb-24 md:pb-8 main-content">
