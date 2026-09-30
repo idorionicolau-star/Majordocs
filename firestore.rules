@@ -17,12 +17,20 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserMapData(request.auth.uid).superAdmin == true;
     }
 
+    // Igual à app (useSubscriptionState): só bloqueia empresas suspensas/inactivas ou trial expirado.
+    // Antes: empresa SEM campo 'status' (criada antes das subscrições) era recusada em tudo,
+    // e 'trialEndsAt' (texto ISO) passado a timestamp.value() dava erro → trial também recusado.
     function isCompanySubscriptionActive(companyId) {
       let company = get(/databases/$(database)/documents/companies/$(companyId)).data;
-      return company.status == 'active' ||
-        (company.status == 'trial' &&
-         company.trialEndsAt != null &&
-         request.time < timestamp.value(company.trialEndsAt));
+      let status = company.get('status', 'active');
+      let ends = company.get('trialEndsAt', null);
+      return !(status in ['suspended', 'inactive']) && (
+        status != 'trial' ||
+        ends == null ||
+        (ends is string && string(request.time) < ends) ||
+        (ends is int && request.time < timestamp.value(ends)) ||
+        (ends is timestamp && request.time < ends)
+      );
     }
     
     function getUserMapData(userId) {

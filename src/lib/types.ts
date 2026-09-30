@@ -375,6 +375,12 @@ export interface InventoryContextType {
       applyVat: boolean;
       vatPercentage: number;
       isPickedUp?: boolean;
+      /** ISO date for sales registered late (defaults to now) */
+      date?: string;
+      /** Numerário, M-Pesa, e-Mola, Transferência, POS… (defaults to Numerário) */
+      paymentMethod?: string;
+      /** Amount received now; less than the total leaves the rest as debt (defaults to full) */
+      amountPaid?: number;
     }
   ) => Promise<void>;
   confirmSalePickup: (sale: Sale) => void;
