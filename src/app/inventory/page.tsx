@@ -658,7 +658,7 @@ export default function InventoryPage() {
             />
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+          <div className="flex items-center gap-2 overflow-x-auto overflow-y-hidden pb-1 -mx-1 px-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="h-10 shrink-0 gap-1.5 px-3">
@@ -791,6 +791,8 @@ export default function InventoryPage() {
               <Virtuoso
                 useWindowScroll
                 increaseViewportBy={500}
+                // Desenha logo as primeiras linhas, sem esperar pela medição do ecrã.
+                initialItemCount={Math.min(20, filteredProducts.length)}
                 data={filteredProducts}
                 itemContent={(index, product) => (
                   <ProductRow

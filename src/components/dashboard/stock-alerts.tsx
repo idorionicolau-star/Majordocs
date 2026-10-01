@@ -165,7 +165,7 @@ export function StockAlerts({ className }: { className?: string }) {
                     </TooltipProvider>
                 </div>
             </CardHeader>
-            <CardContent className="space-y-4 flex-grow overflow-auto">
+            <CardContent className="space-y-4 flex-grow md:overflow-auto">
                 {displayProducts.map(product => {
                     const availableStock = product.stock - product.reservedStock;
 
