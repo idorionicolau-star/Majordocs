@@ -16,6 +16,7 @@ export const PRODUCT_PROBLEMS = {
   negativo: { label: 'Stock negativo', hint: 'Saiu mais do que entrou — registe a entrada que falta ou faça uma contagem.', test: (p: Product) => (p.stock || 0) < 0 },
   reservado: { label: 'Mais reservado do que em stock', hint: 'Normalmente são reservas antigas presas.', test: (p: Product) => (p.reservedStock || 0) > (p.stock || 0) && (p.reservedStock || 0) > 0 },
   unidades: { label: "Em 'un' com decimais", hint: 'Provavelmente a unidade certa é m², m ou kg.', test: (p: Product) => (p.unit || 'un') === 'un' && !Number.isInteger(p.stock || 0) },
+  'limites-manuais': { label: 'Limites de stock fixos (manuais)', hint: 'Estes não se ajustam às vendas. Ponha-os em automático para o alerta baixo e crítico acompanharem o que sai.', test: (p: Product) => p.thresholdMode === 'manual' },
   'sem-categoria': { label: 'Sem categoria', hint: 'Escolha a categoria certa.', test: (p: Product) => !p.category || p.category === 'Geral' },
 } as const;
 

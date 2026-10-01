@@ -257,6 +257,25 @@ export function useProductActions(core: InventoryCore) {
   }, [firestore, companyId, productsData, stockMovementsData, salesData, toast]);
 
 
+  /** Põe vários produtos em limites automáticos e recalcula logo. */
+  const setAutoThresholds = useCallback(async (list: Product[]) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
+    if (!firestore || !companyId || list.length === 0) return;
+    // um produto juntado (vários locais/duplicados) tem vários documentos
+    const ids = Array.from(new Set(list.flatMap(p => p.sourceIds?.length ? p.sourceIds : (p.id ? [p.id] : []))));
+    for (let i = 0; i < ids.length; i += 400) {
+      const batch = writeBatch(firestore);
+      ids.slice(i, i + 400).forEach(id => batch.update(doc(firestore, 'companies', companyId, 'products', id), { thresholdMode: 'auto' }));
+      await batch.commit();
+    }
+    toast({ title: 'Limites automáticos', description: `${list.length === 1 ? '1 produto passa' : `${list.length} produtos passam`} a ajustar o alerta baixo e crítico às vendas.` });
+    // dá tempo ao snapshot de trazer o novo modo antes de recalcular
+    setTimeout(() => { syncSmartThresholds('silent'); }, 3000);
+  }, [isReadOnly, firestore, companyId, toast, syncSmartThresholds]);
+
   const updateProduct = useCallback(async (instanceId: string, updatedData: Partial<Product>) => {
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
@@ -676,7 +695,7 @@ export function useProductActions(core: InventoryCore) {
       href: '/production',
     });
   }, [firestore, companyId, products, catalogProductsData, isMultiLocation, locations, toast, user, checkStockAndNotify, addNotification]);
-  return { checkStockAndNotify, addProduct, syncSmartThresholds, updateProduct, deleteProduct, clearProductsCollection, auditStock, transferStock, updateProductStock };
+  return { checkStockAndNotify, addProduct, syncSmartThresholds, setAutoThresholds, updateProduct, deleteProduct, clearProductsCollection, auditStock, transferStock, updateProductStock };
 }
 
 export type ProductActions = ReturnType<typeof useProductActions>;

@@ -124,7 +124,8 @@ export default function EditInventoryProductPage() {
                     lowStockThreshold: found.lowStockThreshold,
                     criticalStockThreshold: found.criticalStockThreshold,
                     location: found.location || '',
-                    thresholdMode: found.thresholdMode || 'manual',
+                    // Sem modo gravado = automático (é assim que o cálculo dos limites o trata).
+                    thresholdMode: found.thresholdMode || 'auto',
                 });
                 setPreviewUrl(found.imageUrl || null);
             }
