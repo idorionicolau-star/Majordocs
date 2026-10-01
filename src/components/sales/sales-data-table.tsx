@@ -63,7 +63,7 @@ export function SalesDataTable<TData extends Sale, TValue>({
         <Card className="glass-card shadow-sm overflow-hidden border-0 bg-transparent sm:bg-card sm:border">
             <CardContent className="p-0">
                 {/* Desktop Table View */}
-                <div className="hidden md:block overflow-x-auto">
+                <div className="hidden md:block overflow-x-auto overflow-y-hidden">
                     <Table>
                         <TableHeader>
                             {table.getHeaderGroups().map((headerGroup) => (

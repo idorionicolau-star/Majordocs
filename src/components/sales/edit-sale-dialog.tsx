@@ -457,7 +457,7 @@ export function EditSaleDialog(props: EditSaleDialogProps) {
       title={`Editar ${props.sale.documentType} #${props.sale.guideNumber}`}
       description="Ajuste os detalhes do documento. A edição não afeta o stock já movimentado."
     >
-      <div className="max-h-[85vh] overflow-y-auto pr-2">
+      <div className="md:max-h-[85vh] md:overflow-y-auto md:pr-2">
         <EditSaleDialogContent {...props} />
       </div>
     </ResponsiveDialog>

@@ -231,7 +231,7 @@ export function AddCatalogProductDialog({ categories, units, onAdd }: AddCatalog
       description="Crie um novo produto base que poderá ser usado no inventário."
       trigger={trigger}
     >
-      <div className="max-h-[85vh] overflow-y-auto pr-2">
+      <div className="md:max-h-[85vh] md:overflow-y-auto md:pr-2">
         <AddCatalogProductForm
           categories={categories}
           units={units}

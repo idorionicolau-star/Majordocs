@@ -140,7 +140,7 @@ function AddEmployeeDialogContent({ onAddEmployee, setOpen }: AddEmployeeDialogP
           Crie uma conta interna para um novo membro da equipe e defina as suas permissões de acesso.
         </DialogDescription>
       </DialogHeader>
-      <ScrollArea className="max-h-[70vh] -mr-3 pr-3">
+      <ScrollArea className="md:max-h-[70vh] md:-mr-3 md:pr-3">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
             <FormField

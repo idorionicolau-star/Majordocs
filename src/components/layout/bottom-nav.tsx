@@ -14,6 +14,7 @@ import {
 import { useContext } from "react";
 import { InventoryContext } from "@/context/inventory-context";
 import type { ModulePermission } from "@/lib/types";
+import { useKeyboardInset } from "@/hooks/use-keyboard-inset";
 
 interface BottomNavProps {
   onMenuClick: () => void;
@@ -21,6 +22,8 @@ interface BottomNavProps {
 
 export function BottomNav({ onMenuClick }: BottomNavProps) {
   const pathname = usePathname();
+  // Com o teclado aberto a barra de baixo só ocupa espaço — esconde-se.
+  const keyboardOpen = useKeyboardInset() > 0;
   const { canView, companyData } = useContext(InventoryContext) || {
     canView: () => false,
     companyData: null
@@ -76,6 +79,8 @@ export function BottomNav({ onMenuClick }: BottomNavProps) {
   if (fourthItem) {
     items.push(fourthItem);
   }
+
+  if (keyboardOpen) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 md:hidden pb-safe touch-none select-none">

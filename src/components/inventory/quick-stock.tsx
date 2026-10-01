@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useInventory } from "@/context/inventory-context";
 import { useFirestore } from "@/firebase/provider";
 import { useToast } from "@/hooks/use-toast";
+import { useKeepFocusedAboveBar, useKeyboardInset } from "@/hooks/use-keyboard-inset";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { cn, plural } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 import { NewProductFields } from "@/components/inventory/new-product-fields";
 import { cleanProductName, findNameMatches, guessUnit, planCatalogWrites, suggestCategory, type NameMatch } from "@/lib/new-product";
@@ -81,6 +82,9 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const isManager = !!user && (user.role === "Admin" || user.role === "Dono");
     const firestore = useFirestore();
     const { toast } = useToast();
+    // Teclado aberto no telemóvel: a barra de confirmar sobe e fica por cima dele.
+    const keyboardInset = useKeyboardInset();
+    useKeepFocusedAboveBar(keyboardInset, 96);
 
     const [mode, setMode] = useState<QuickMode>(initialMode);
     const [location, setLocation] = useState<string>("");
@@ -451,8 +455,8 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             toast({
                 title: `${current.label} registada`,
                 description: confirmed
-                    ? `${lineList.length} artigo(s) actualizados.`
-                    : `${lineList.length} artigo(s) guardados no telemóvel — sincronizam quando houver internet.`,
+                    ? `${plural(lineList.length, "artigo actualizado", "artigos actualizados")}.`
+                    : `${plural(lineList.length, "artigo guardado", "artigos guardados")} no telemóvel — sincronizam quando houver internet.`,
             });
             setLines({});
             setNote("");
@@ -846,10 +850,10 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
 
             {/* Sticky confirm bar */}
             {lineList.length > 0 && (
-                <div className="fixed inset-x-0 bottom-16 z-40 border-t bg-background/95 p-3 backdrop-blur md:bottom-0 md:left-64">
+                <div className={cn("fixed inset-x-0 z-40 border-t bg-background/95 p-3 backdrop-blur md:bottom-0 md:left-64", !keyboardInset && "bottom-16")} style={keyboardInset ? { bottom: keyboardInset } : undefined}>
                     <div className="mx-auto flex max-w-3xl flex-col gap-2">
                         {mode === "out" && (
-                            <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+                            <div className="flex gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5">
                                 {OUT_REASONS.map((r) => (
                                     <button key={r} type="button" onClick={() => setNote(note === r ? "" : r)}
                                         className={cn("h-8 shrink-0 rounded-full border px-3 text-xs", note === r ? "border-orange-600 bg-orange-600 text-white" : "bg-muted/50")}>
@@ -869,7 +873,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                             </Button>
                         </div>
                         {problems.length > 0 && (
-                            <p className="text-xs font-medium text-red-600">Há {problems.length} artigo(s) com saída maior que o stock. Corrija antes de confirmar.</p>
+                            <p className="text-xs font-medium text-red-600">Há {plural(problems.length, "artigo", "artigos")} com saída maior que o stock. Corrija antes de confirmar.</p>
                         )}
                     </div>
                 </div>

@@ -201,7 +201,7 @@ export function EditProductionDialog({ production, onUpdate, trigger = 'icon' }:
       description="Atualize os detalhes deste registo de produção."
       trigger={triggerElement}
     >
-      <div className="max-h-[85vh] overflow-y-auto pr-2">
+      <div className="md:max-h-[85vh] md:overflow-y-auto md:pr-2">
         <EditProductionDialogContent production={production} onUpdate={onUpdate} setOpen={setOpen} />
       </div>
     </ResponsiveDialog>
