@@ -7,7 +7,7 @@ import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Lock, Truck, History, Trash2, PlusCircle, Plus, FileCheck, ChevronsUpDown, Printer, Download, ChevronLeft, ChevronRight, ScanBarcode, Mail, ClipboardList, WandSparkles } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, History, Plus, ChevronsUpDown, Printer, Download, ScanBarcode, ClipboardList, WandSparkles, MoreHorizontal, TrendingDown } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +23,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -30,19 +31,19 @@ import {
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ProductCard } from "@/components/inventory/product-card";
+import { ProductRow } from "@/components/inventory/product-row";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
 import { useInventory } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { DatePicker } from "@/components/ui/date-picker";
 import { isSameDay } from "date-fns";
 import { Card } from "@/components/ui/card";
-import { formatCurrency, normalizeString } from "@/lib/utils";
+import { formatCurrency, plural } from "@/lib/utils";
 import { generateInventoryReportPDF } from "@/lib/pdf-generator";
 import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
 import { forwardRef } from 'react';
@@ -51,6 +52,15 @@ import { forwardRef } from 'react';
 import { useFuse } from "@/hooks/use-fuse";
 import { DeepLinkBanner } from "@/components/deep-link-banner";
 import { parseInventoryFocus, applyInventoryFocus, hasInventoryFocus, inventoryFocusTitle } from "@/lib/deep-links";
+
+type SortKey = 'stock_desc' | 'stock_asc' | 'name_asc' | 'date_desc';
+
+const SORT_LABELS: Record<SortKey, string> = {
+  stock_desc: 'Maior stock',
+  stock_asc: 'Menor stock',
+  name_asc: 'Nome (A-Z)',
+  date_desc: 'Mais recentes',
+};
 
 export default function InventoryPage() {
   const {
@@ -80,7 +90,8 @@ export default function InventoryPage() {
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [dateFilter, setDateFilter] = useState<Date | undefined>();
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
-  const [view, setView] = useState<'list' | 'grid'>('grid');
+  // null = ainda não escolhido: decide-se pela quantidade de produtos com foto.
+  const [view, setView] = useState<'list' | 'grid' | null>(null);
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(60);
@@ -96,7 +107,8 @@ export default function InventoryPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  const [sortBy, setSortBy] = useState<'stock_desc' | 'stock_asc' | 'name_asc' | 'date_desc'>('stock_desc');
+  const [sortBy, setSortBy] = useState<SortKey>('stock_desc');
+  const isDesktop = useMediaQuery('(min-width: 768px)');
   const { toast } = useToast();
 
 
@@ -366,6 +378,14 @@ export default function InventoryPage() {
     }
   };
 
+  // Sem fotos, os cartões são quase todos "Sem foto" — a lista mostra muito mais por ecrã.
+  const currentView = useMemo<'list' | 'grid'>(() => {
+    if (view) return view;
+    if (products.length === 0) return 'grid';
+    const withPhoto = products.filter(p => p.imageUrl).length;
+    return withPhoto / products.length >= 0.3 ? 'grid' : 'list';
+  }, [view, products]);
+
   const categories = useMemo(() => {
     const categorySet = new Set(products.map(p => p.category));
     return Array.from(categorySet);
@@ -566,252 +586,198 @@ export default function InventoryPage() {
       </AlertDialog>
 
       <div className="flex flex-col gap-4">
-        {/* Report Actions */}
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2 w-full sm:w-auto">
-            {canEditInventory && (
-              <Button variant="default" className="h-12 w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white" asChild>
-                <Link href="/inventory/quick">
-                  <LayoutGrid className="mr-2 h-4 w-4" />
-                  <span>Stock Rápido</span>
-                </Link>
-              </Button>
-            )}
-            {canEditInventory && (
-              <Button variant="outline" className="h-12 w-full sm:w-auto border-blue-600 text-blue-600 hover:bg-blue-50" asChild>
-                <Link href="/inventory/quick?modo=contagem">
-                  <ClipboardList className="mr-2 h-4 w-4" />
-                  <span>Contagem Rápida</span>
-                </Link>
-              </Button>
-            )}
-            {canEditInventory && isAdmin && (
-              <Button
-                onClick={async () => {
-                  await syncSmartThresholds(true); // mostra o resultado real (actualizados / já óptimos / erro)
-                }}
-                variant="outline"
-                className="h-12 w-full sm:w-auto border-purple-600 text-purple-600 hover:bg-purple-50"
-              >
-                <WandSparkles className="mr-2 h-4 w-4" />
-                <span>Atualizar Sugestões</span>
-              </Button>
-            )}
-            <Button onClick={handleDownloadPdfReport} variant="outline" className="h-12 w-full sm:w-auto">
-              <Download className="mr-2 h-4 w-4" />
-              <span className="truncate">PDF</span>
+        {/* Acções principais — só o que se usa todos os dias fica à vista */}
+        <div className="flex items-center gap-2">
+          {canEditInventory && (
+            <Button variant="default" className="h-12 flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white" asChild>
+              <Link href="/inventory/quick">
+                <LayoutGrid className="mr-2 h-4 w-4" />
+                <span>Stock Rápido</span>
+              </Link>
             </Button>
-            <Button onClick={handlePrintReport} variant="outline" className="h-12 w-full sm:w-auto">
-              <Printer className="mr-2 h-4 w-4" />
-              <span className="truncate">Imprimir</span>
+          )}
+          {canEditInventory && (
+            <Button variant="outline" className="h-12 flex-1 sm:flex-none border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30" asChild>
+              <Link href="/inventory/quick?modo=contagem">
+                <ClipboardList className="mr-2 h-4 w-4" />
+                <span>Contagem</span>
+              </Link>
             </Button>
-            <Button onClick={() => toast({ title: "Em breve", description: "Envio por e-mail será ativado na próxima atualização." })} variant="outline" className="h-12 hidden sm:flex">
-              <Mail className="mr-2 h-4 w-4" />
-              Enviar por Email
-            </Button>
-          </div>
+          )}
+          {isMultiLocation && canEditInventory && (
+            <TransferStockDialog onTransfer={handleTransferStock} />
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="h-12 px-3 shrink-0 sm:ml-auto" aria-label="Mais opções">
+                <MoreHorizontal className="h-5 w-5" />
+                <span className="ml-2 hidden sm:inline">Mais</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60">
+              <DropdownMenuItem asChild>
+                <Link href="/inventory/history"><History className="mr-2 h-4 w-4" /> Histórico de movimentos</Link>
+              </DropdownMenuItem>
+              {canViewInventory && (
+                <DropdownMenuItem asChild>
+                  <Link href="/inventory/perdas"><TrendingDown className="mr-2 h-4 w-4" /> Perdas e quebras</Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Imprimir / exportar (lista filtrada)</DropdownMenuLabel>
+              <DropdownMenuItem onClick={handleDownloadPdfReport}>
+                <Download className="mr-2 h-4 w-4" /> Descarregar PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handlePrintReport}>
+                <Printer className="mr-2 h-4 w-4" /> Imprimir relatório
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handlePrintCountForm}>
+                <FileText className="mr-2 h-4 w-4" /> Folha de contagem em papel
+              </DropdownMenuItem>
+              {canEditInventory && isAdmin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={async () => { await syncSmartThresholds(true); }}>
+                    <WandSparkles className="mr-2 h-4 w-4" /> Recalcular mínimos de stock
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        {/* Filters & Search */}
-        <div className="w-full space-y-3">
-          {/* Search Bar */}
+        {/* Pesquisa e filtros */}
+        <div className="w-full space-y-2">
           <div className="relative w-full">
             <ScanBarcode className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Filtrar nome ou código..."
+              placeholder="Procurar por nome ou código..."
               value={nameFilter}
               onChange={(event) => setNameFilter(event.target.value)}
               className="w-full shadow-sm h-12 text-sm pr-10"
             />
           </div>
 
-          {/* Filters Grid (Mobile) / Flex (Desktop) */}
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2 w-full">
-            <div className="w-full sm:w-auto">
-              <DatePicker date={dateFilter} setDate={setDateFilter} />
-            </div>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full justify-between sm:w-auto h-12 px-3">
-                  <div className="flex items-center truncate">
-                    <ChevronsUpDown className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">Ordenar</span>
-                  </div>
+                <Button variant="outline" className="h-10 shrink-0 gap-1.5 px-3">
+                  <ListFilter className="h-4 w-4" />
+                  <span>Categoria</span>
+                  {categoryFilter.length > 0 && (
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs text-primary-foreground">
+                      {categoryFilter.length > 9 ? '9+' : categoryFilter.length}
+                    </span>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuRadioGroup value={sortBy} onValueChange={(value) => setSortBy(value as 'stock_desc' | 'stock_asc' | 'name_asc' | 'date_desc')}>
-                  <DropdownMenuRadioItem value="stock_desc">Maior Stock</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="stock_asc">Menor Stock</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="name_asc">Ordem Alfabética (A-Z)</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="date_desc">Atualizados Recentemente</DropdownMenuRadioItem>
+              <DropdownMenuContent align="start">
+                <ScrollArea className="h-48">
+                  {categoryFilter.length > 0 && (
+                    <>
+                      <DropdownMenuItem onClick={() => setCategoryFilter([])}>Limpar filtro</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  {categories.map((category) => (
+                    <DropdownMenuCheckboxItem
+                      key={category}
+                      className="capitalize"
+                      checked={categoryFilter.includes(category)}
+                      onCheckedChange={(value) => {
+                        if (value) setCategoryFilter([...categoryFilter, category]);
+                        else setCategoryFilter(categoryFilter.filter(c => c !== category));
+                      }}
+                    >
+                      {category}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </ScrollArea>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {isMultiLocation && canViewInventory && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className={cn("h-10 shrink-0 gap-1.5 px-3", selectedLocation !== 'all' && "border-primary text-primary")}>
+                    <MapPin className="h-4 w-4" />
+                    <span className="max-w-[8rem] truncate">{selectedLocation === 'all' ? 'Local' : (locations.find(l => l.id === selectedLocation)?.name || 'Local')}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <ScrollArea className="h-[200px]">
+                    <DropdownMenuCheckboxItem checked={selectedLocation === 'all'} onCheckedChange={() => setSelectedLocation('all')}>
+                      Todas as localizações
+                    </DropdownMenuCheckboxItem>
+                    {locations.map(location => (
+                      <DropdownMenuCheckboxItem
+                        key={location.id}
+                        checked={selectedLocation === location.id}
+                        onCheckedChange={() => setSelectedLocation(location.id)}
+                      >
+                        {location.name}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </ScrollArea>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-10 shrink-0 gap-1.5 px-3">
+                  <ChevronsUpDown className="h-4 w-4" />
+                  <span>{SORT_LABELS[sortBy]}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuRadioGroup value={sortBy} onValueChange={(value) => setSortBy(value as SortKey)}>
+                  {(Object.keys(SORT_LABELS) as SortKey[]).map(k => (
+                    <DropdownMenuRadioItem key={k} value={k}>{SORT_LABELS[k]}</DropdownMenuRadioItem>
+                  ))}
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
 
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="hidden md:flex items-center gap-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant={view === 'list' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('list')} className="h-12 w-12">
-                      <List className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Vista de Lista</p></TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => handleSetView('grid')} className="h-12 w-12">
-                      <LayoutGrid className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Vista de Grelha</p></TooltipContent>
-                </Tooltip>
-                {view === 'grid' && (
-                  <div className="hidden md:flex">
-                    <DropdownMenu>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="h-12 w-28 gap-2">
-                              <span>{gridCols} Colunas</span>
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Número de colunas</p></TooltipContent>
-                      </Tooltip>
-                      <DropdownMenuContent>
-                        <DropdownMenuRadioGroup value={gridCols} onValueChange={(value) => handleSetGridCols(value as '3' | '4' | '5')}>
-                          <DropdownMenuRadioItem value="3">3 Colunas</DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="4">4 Colunas</DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="5">5 Colunas</DropdownMenuRadioItem>
-                        </DropdownMenuRadioGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                )}
-              </TooltipProvider>
+            <div className="shrink-0">
+              <DatePicker date={dateFilter} setDate={setDateFilter} />
             </div>
 
-            <ScrollArea
-              className="w-full md:w-auto pb-2"
-              onTouchStart={e => e.stopPropagation()}
-              onTouchMove={e => e.stopPropagation()}
-              onTouchEnd={e => e.stopPropagation()}
-            >
-              <div className="flex items-center gap-2 justify-center sm:justify-start">
-                <TooltipProvider>
-                  {isMultiLocation && canEditInventory && (
-                    <TransferStockDialog
-                      onTransfer={handleTransferStock}
-                    />
-                  )}
-                  {isMultiLocation && canViewInventory && (
-                    <DropdownMenu>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="icon" className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0">
-                              <MapPin className="h-5 w-5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Filtrar por Localização</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      <DropdownMenuContent align="end">
-                        <ScrollArea className="h-[200px]">
-                          <DropdownMenuLabel>Filtrar por Localização</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuCheckboxItem
-                            checked={selectedLocation === 'all'}
-                            onCheckedChange={() => setSelectedLocation('all')}
-                          >
-                            Todas as Localizações
-                          </DropdownMenuCheckboxItem>
-                          {locations.map(location => (
-                            <DropdownMenuCheckboxItem
-                              key={location.id}
-                              checked={selectedLocation === location.id}
-                              onCheckedChange={() => setSelectedLocation(location.id)}
-                            >
-                              {location.name}
-                            </DropdownMenuCheckboxItem>
-                          ))}
-                        </ScrollArea>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                  <DropdownMenu>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="icon" className="shadow-sm relative h-12 w-12 rounded-2xl flex-shrink-0">
-                            <ListFilter className="h-5 w-5" />
-                            {categoryFilter.length > 0 && (
-                              <span className="absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs px-1">
-                                {categoryFilter.length > 9 ? '9+' : categoryFilter.length}
-                              </span>
-                            )}
-                          </Button>
-                        </DropdownMenuTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Filtrar por Categoria</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <DropdownMenuContent align="end">
-                      <ScrollArea className="h-48">
-                        {categories.map((category) => {
-                          return (
-                            <DropdownMenuCheckboxItem
-                              key={category}
-                              className="capitalize"
-                              checked={categoryFilter.includes(category)}
-                              onCheckedChange={(value) => {
-                                if (value) {
-                                  setCategoryFilter([...categoryFilter, category]);
-                                } else {
-                                  setCategoryFilter(categoryFilter.filter(c => c !== category));
-                                }
-                              }}
-                            >
-                              {category}
-                            </DropdownMenuCheckboxItem>
-                          )
-                        })}
-                      </ScrollArea>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" asChild className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0">
-                        <Link href="/inventory/history"><History className="h-5 w-5" /></Link>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Ver Histórico de Movimentos</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" onClick={handlePrintCountForm} className="shadow-sm h-12 w-12 rounded-2xl flex-shrink-0">
-                        <FileText className="h-5 w-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Imprimir Formulário de Contagem</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+            {/* Lista / Cartões — também no telemóvel */}
+            <div className="ml-auto flex shrink-0 items-center rounded-lg border p-0.5">
+              <Button variant={currentView === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => handleSetView('list')} className="h-9 px-2.5" aria-label="Vista de lista">
+                <List className="h-4 w-4" />
+                <span className="ml-1.5 hidden sm:inline">Lista</span>
+              </Button>
+              <Button variant={currentView === 'grid' ? 'default' : 'ghost'} size="sm" onClick={() => handleSetView('grid')} className="h-9 px-2.5" aria-label="Vista de cartões">
+                <LayoutGrid className="h-4 w-4" />
+                <span className="ml-1.5 hidden sm:inline">Cartões</span>
+              </Button>
+            </div>
+            {currentView === 'grid' && (
+              <div className="hidden md:block shrink-0">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="h-10 gap-2">
+                      <span>{gridCols} colunas</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuRadioGroup value={gridCols} onValueChange={(value) => handleSetGridCols(value as '3' | '4' | '5')}>
+                      <DropdownMenuRadioItem value="3">3 colunas</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="4">4 colunas</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="5">5 colunas</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-              <ScrollBar orientation="horizontal" className="md:hidden" />
-            </ScrollArea>
+            )}
           </div>
+          <p className="text-xs text-muted-foreground">
+            {plural(filteredProducts.length, 'produto', 'produtos')}
+            {filteredProducts.length !== products.length && ` de ${products.length}`}
+          </p>
         </div>
 
         {hasInventoryFocus(focus) && (() => {
@@ -819,7 +785,29 @@ export default function InventoryPage() {
           return <DeepLinkBanner title={t.title} hint={t.hint} count={filteredProducts.length} onClear={() => router.replace('/inventory')} />;
         })()}
 
-        {view === 'list' ? (
+        {currentView === 'list' && !isDesktop ? (
+          filteredProducts.length > 0 ? (
+            <div className="overflow-hidden rounded-xl border bg-card pb-0 mb-20">
+              <Virtuoso
+                useWindowScroll
+                increaseViewportBy={500}
+                data={filteredProducts}
+                itemContent={(index, product) => (
+                  <ProductRow
+                    key={product.instanceId}
+                    product={product}
+                    canEdit={canEditInventory}
+                    locationName={isMultiLocation ? locations.find(l => l.id === product.location)?.name : undefined}
+                  />
+                )}
+              />
+            </div>
+          ) : (
+            <Card className="text-center py-12 text-muted-foreground">
+              <p>Nenhum produto encontrado com os filtros atuais.</p>
+            </Card>
+          )
+        ) : currentView === 'list' ? (
           <InventoryDataTable
             columns={columns({
               onAttemptDelete: handleConfirmDeleteProduct,

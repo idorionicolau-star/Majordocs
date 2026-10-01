@@ -3,7 +3,7 @@
  * the dashboard insights and the Major Assistant. Pure functions, no network.
  */
 import type { Customer, Order, Product, Production, Sale, StockMovement } from "@/lib/types";
-import { formatCurrency, normalizeString } from "@/lib/utils";
+import { daysAgo, formatCurrency, normalizeString, plural } from "@/lib/utils";
 import { links } from "@/lib/deep-links";
 
 export type Severity = "critical" | "warning" | "info" | "good";
@@ -79,7 +79,6 @@ const safeDate = (v: unknown): Date | null => {
 const revenueOf = (s: Sale) => Number(s.amountPaid ?? s.totalValue ?? 0) || 0;
 const available = (p: Product) => (p.stock || 0) - (p.reservedStock || 0);
 const key = (name: string) => normalizeString((name || "").trim());
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 const fmtQty = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
 export function analyzeBusiness(input: {
@@ -257,7 +256,7 @@ export function analyzeBusiness(input: {
             id: "count", weight: 20,
             label: "Stock contado nos últimos 30 dias",
             done: daysSinceCount !== null && daysSinceCount <= 30,
-            detail: daysSinceCount === null ? "Nunca foi feita uma contagem pelo sistema. Os números do stock não foram confirmados." : daysSinceCount <= 30 ? `Última contagem há ${daysSinceCount} dias.` : `Última contagem há ${daysSinceCount} dias.`,
+            detail: daysSinceCount === null ? "Nunca foi feita uma contagem pelo sistema. Os números do stock não foram confirmados." : `Última contagem ${daysAgo(daysSinceCount)}.`,
             action: { label: "Fazer contagem", href: "/inventory/quick?modo=contagem" },
         },
         {
@@ -288,7 +287,7 @@ export function analyzeBusiness(input: {
             id: "production", weight: 15,
             label: "Produção registada",
             done: daysSinceProd !== null && daysSinceProd <= 14,
-            detail: daysSinceProd === null ? "Sem produção registada." : daysSinceProd <= 14 ? `Última produção há ${daysSinceProd} dias.` : `A última produção registada foi há ${daysSinceProd} dias. O que foi fabricado depois não está no stock.`,
+            detail: daysSinceProd === null ? "Sem produção registada." : daysSinceProd <= 14 ? `Última produção ${daysAgo(daysSinceProd)}.` : `A última produção registada foi há ${daysSinceProd} dias. O que foi fabricado depois não está no stock.`,
             action: { label: "Registar produção", href: "/production" },
         });
     }

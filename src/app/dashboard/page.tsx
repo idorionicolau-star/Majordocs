@@ -14,7 +14,6 @@ import { MonthlySalesChart } from "@/components/dashboard/monthly-sales-chart";
 import { FinancialHealthChart } from "@/components/dashboard/financial-health-chart";
 import { TopSales } from "@/components/dashboard/top-sales";
 import { StockAlerts } from "@/components/dashboard/stock-alerts";
-import { DeadStock } from "@/components/dashboard/dead-stock";
 import { EmptyStateWelcome } from "@/components/dashboard/empty-state";
 import { MajorAssistant } from "@/components/assistant/major-assistant";
 
@@ -48,12 +47,13 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-4 animate-in fade-in duration-700 pb-10 main-content">
 
-      {/* 1. Business Summary (Top Row) */}
+      {/* 1. Hoje · Atalhos · Atenção — o que se precisa ao abrir a app */}
       <BusinessSummary />
 
       {isPrivilegedUser ? (
         <>
-          {/* 2. Key Performance Indicators */}
+          {/* 2. Análise detalhada — para quem quer ir mais fundo */}
+          <h2 className="mt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Números e gráficos</h2>
           <PrimaryKPIs />
 
 
@@ -90,7 +90,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <p className="text-base text-slate-500 max-w-md text-center">
-              As estatísticas avançadas e o dashboard financeiro estão disponíveis apenas para usuários com perfil de Administrador.
+              As estatísticas avançadas e o dashboard financeiro estão disponíveis apenas para o Dono ou Administrador.
             </p>
           </CardContent>
         </Card>
