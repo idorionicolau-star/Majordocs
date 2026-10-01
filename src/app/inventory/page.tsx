@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
@@ -45,8 +45,7 @@ import { isSameDay } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { formatCurrency, plural } from "@/lib/utils";
 import { generateInventoryReportPDF } from "@/lib/pdf-generator";
-import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
-import { forwardRef } from 'react';
+import { Virtuoso } from 'react-virtuoso';
 
 
 import { useFuse } from "@/hooks/use-fuse";
@@ -439,6 +438,21 @@ export default function InventoryPage() {
 
     return result;
   }, [searchedProducts, sortBy]);
+
+  // Cartões: mostra 48 e vai juntando mais quando se chega perto do fim.
+  const GRID_PAGE = 48;
+  const [gridLimit, setGridLimit] = useState(GRID_PAGE);
+  const gridSentinel = useRef<HTMLDivElement | null>(null);
+  useEffect(() => { setGridLimit(GRID_PAGE); }, [filteredProducts]);
+  useEffect(() => {
+    const el = gridSentinel.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some(e => e.isIntersecting)) setGridLimit(l => l + GRID_PAGE);
+    }, { rootMargin: '800px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [gridLimit, currentView, filteredProducts.length]);
 
   // Reset scroll when filters change - Optional with Virtuoso Window Scroll
   useEffect(() => {
@@ -833,48 +847,32 @@ export default function InventoryPage() {
           />
         ) : (
           filteredProducts.length > 0 ? (
-            <VirtuosoGrid
-              useWindowScroll
-              increaseViewportBy={500}
-              data={filteredProducts}
-              totalCount={filteredProducts.length}
-              components={{
-                List: (() => {
-                  const List = forwardRef<HTMLDivElement>((props, ref) => (
-                    <div
-                      {...props}
-                      ref={ref}
-                      className={cn(
-                        "grid gap-2 sm:gap-4 pb-20",
-                        gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
-                        gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
-                        gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
-                      )}
-                    />
-                  ));
-                  List.displayName = 'InventoryVirtuosoList';
-                  return List;
-                })(),
-                Item: (() => {
-                  const Item = forwardRef<HTMLDivElement>((props, ref) => <div {...props} ref={ref} className="h-full" />);
-                  Item.displayName = 'InventoryVirtuosoItem';
-                  return Item;
-                })()
-              }}
-              itemContent={(index, product) => (
-                <ProductCard
-                  key={product.instanceId}
-                  product={product}
-                  onProductUpdate={handleUpdateProduct}
-                  onAttemptDelete={handleConfirmDeleteProduct}
-                  viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
-                  canEdit={canEditInventory}
-                  locations={locations}
-                  isMultiLocation={isMultiLocation}
-                  locationName={locations.find(l => l.id === product.location)?.name}
-                />
-              )}
-            />
+            // Grelha normal, carregada aos poucos: a grelha virtual re-media os cartões (com e sem
+            // foto têm alturas diferentes) a meio do scroll e a página tremia.
+            <>
+              <div className={cn(
+                "grid gap-2 sm:gap-4",
+                gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
+                gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
+                gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
+              )}>
+                {filteredProducts.slice(0, gridLimit).map(product => (
+                  <ProductCard
+                    key={product.instanceId}
+                    product={product}
+                    onProductUpdate={handleUpdateProduct}
+                    onAttemptDelete={handleConfirmDeleteProduct}
+                    viewMode={gridCols === '5' || gridCols === '4' ? 'condensed' : 'normal'}
+                    canEdit={canEditInventory}
+                    locations={locations}
+                    isMultiLocation={isMultiLocation}
+                    locationName={locations.find(l => l.id === product.location)?.name}
+                  />
+                ))}
+              </div>
+              {gridLimit < filteredProducts.length && <div ref={gridSentinel} className="h-24" aria-hidden />}
+              <div className="pb-20" />
+            </>
           ) : (
             <Card className="text-center py-12 text-muted-foreground">
               <p>Nenhum produto encontrado com os filtros atuais.</p>
