@@ -39,11 +39,14 @@ export default function DiagnosticoPage() {
       productions: inv.productions,
       customers: crm?.customers || [],
       stockMovements: inv.stockMovements,
+      businessType: inv.companyData?.businessType,
     });
   }, [inv, crm?.customers]);
 
   if (!a) return <LoadingSkeleton />;
 
+  // Comércio de revenda: sem encomendas nem produção.
+  const reseller = inv?.companyData?.businessType === "reseller";
   const salesStale = a.sales.daysSinceLastSale === null || a.sales.daysSinceLastSale > 7;
   const openTasks = a.quality.tasks.filter((t) => !t.done);
 
@@ -182,11 +185,11 @@ export default function DiagnosticoPage() {
 
         {/* Orders & pickups */}
         <Card className="min-w-0 rounded-2xl">
-          <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-lg"><Truck className="h-5 w-5 text-primary" /> Encomendas e levantamentos</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-lg"><Truck className="h-5 w-5 text-primary" /> {reseller ? "Levantamentos" : "Encomendas e levantamentos"}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <Stat n={a.orders.open.length} label="Em aberto" />
-              <Stat n={a.orders.overdue.length} label="Atrasadas" tone={a.orders.overdue.length ? "bad" : undefined} href="/orders" />
+            <div className={cn("grid gap-2 text-center", reseller ? "grid-cols-1" : "grid-cols-3")}>
+              {!reseller && <Stat n={a.orders.open.length} label="Em aberto" />}
+              {!reseller && <Stat n={a.orders.overdue.length} label="Atrasadas" tone={a.orders.overdue.length ? "bad" : undefined} href="/orders" />}
               <Stat n={a.orders.readyForPickup.length + a.stock.pendingPickups.length} label="Por levantar" tone="warn" />
             </div>
             {a.orders.readyForPickup.length > 0 && (
