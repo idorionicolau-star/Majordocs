@@ -61,7 +61,7 @@ export function OfflineBanner() {
         <div role="status" className="mb-3 flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
             <WifiOff className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
             <p className="min-w-0 flex-1">
-                <b>Sem internet.</b> Pode continuar a trabalhar: vendas e movimentos ficam guardados neste aparelho e seguem quando a ligação voltar. Não feche a sessão nem limpe os dados do navegador até sincronizar.
+                <b>Sem internet.</b> Pode consultar stock, vendas e clientes, e registar entradas e contagens no Stock Rápido (ficam guardadas e seguem quando a ligação voltar). Vender, levantar e transferir precisam de internet, para não gastar stock que já não existe. Não limpe os dados do navegador até sincronizar.
             </p>
         </div>
     );
