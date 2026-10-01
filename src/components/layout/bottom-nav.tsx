@@ -53,7 +53,7 @@ export function BottomNav({ onMenuClick }: BottomNavProps) {
 
   const items = [
     {
-      title: "Dash",
+      title: "Início",
       href: "/dashboard",
       icon: LayoutDashboard,
       id: "dashboard"

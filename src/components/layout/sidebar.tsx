@@ -4,11 +4,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useContext } from "react";
-import { mainNavItems } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
-import type { ModulePermission } from "@/lib/types";
-import { usePathname } from "next/navigation";
+import { useNavGroups } from "./use-nav-groups";
 import { LogOut, Settings, User as UserIcon } from "lucide-react";
 import {
     DropdownMenu,
@@ -20,22 +18,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function Sidebar() {
-    const pathname = usePathname();
-    const { canView, companyData, user, logout } = useContext(InventoryContext) || { canView: () => false, companyData: null, user: null, logout: async () => { } };
+    const { user, logout } = useContext(InventoryContext) || { user: null, logout: async () => { } };
 
-    const navItems = mainNavItems.filter(item => {
-        if (!canView(item.id as ModulePermission)) return false;
-        if (item.isSubItem) return false;
-        if (companyData?.businessType === 'reseller' && (item.id === 'production' || item.id === 'orders' || item.id === 'raw-materials')) {
-            return false;
-        }
-        return true;
-    });
+    const { groups, isActive } = useNavGroups();
 
     return (
         <aside className="hidden md:flex flex-col py-6 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 z-50 fixed inset-y-0 left-0 w-64 h-screen transition-all duration-300">
             {/* Logo Area */}
-            <div className="h-12 w-full flex items-center px-6 mb-8 cursor-pointer hover:scale-105 transition-transform group">
+            <div className="h-12 w-full flex items-center px-6 mb-6 cursor-pointer hover:scale-105 transition-transform group">
                 <Link href="/dashboard" className="flex items-center gap-3 w-full h-full">
                     <div className="relative w-10 h-10 shrink-0">
                         <Image
@@ -50,63 +40,44 @@ export function Sidebar() {
                 </Link>
             </div>
 
-            {/* Navigation */}
-            <nav className="flex-1 flex flex-col gap-1 w-full px-4 overflow-y-auto scrollbar-none">
-                {navItems.map(item => {
-                    const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-                    const subItems = mainNavItems.filter(sub => sub.isSubItem && sub.id === item.id);
-
-                    return (
-                        <div key={item.href} className="flex flex-col gap-1">
-                            <Link
-                                href={item.href}
-                                onClick={() => window.dispatchEvent(new CustomEvent('navigation-start'))}
-                                className={cn(
-                                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative",
-                                    isActive
-                                        ? "bg-primary/10 text-primary font-bold shadow-sm"
-                                        : "text-slate-500 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                                )}
-                            >
-                                <item.icon className={cn(
-                                    "h-5 w-5 shrink-0 transition-transform duration-200",
-                                    isActive ? "text-primary scale-110" : "group-hover:text-primary group-hover:scale-110"
-                                )} />
-
-                                <span className={cn(
-                                    "font-medium text-sm transition-colors duration-200",
-                                    isActive ? "text-primary font-bold" : "group-hover:text-primary"
-                                )}>
-                                    {item.title}
-                                </span>
-                            </Link>
-
-                            {/* Sub-items rendering */}
-                            {isActive && subItems.length > 0 && (
-                                <div className="flex flex-col gap-1 ml-9 pl-4 border-l-2 border-primary/20 mt-1 mb-2 animate-in slide-in-from-left-2 duration-300">
-                                    {subItems.map(sub => (
-                                        <Link
-                                            key={sub.href}
-                                            href={sub.href}
-                                            className={cn(
-                                                "py-2 text-xs transition-colors px-2 rounded-lg",
-                                                pathname === sub.href
-                                                    ? "text-primary font-bold bg-primary/5"
-                                                    : "text-slate-400 hover:text-primary hover:bg-slate-50"
-                                            )}
-                                        >
-                                            {sub.title}
-                                        </Link>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )
-                })}
+            {/* Navigation — agrupada por tarefa */}
+            <nav className="flex-1 flex flex-col gap-4 w-full px-4 overflow-y-auto scrollbar-none">
+                {groups.map(group => (
+                    <div key={group.id} className="flex flex-col gap-0.5">
+                        {group.id !== 'inicio' && (
+                            <p className="px-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">{group.label}</p>
+                        )}
+                        {group.items.map(item => {
+                            const active = isActive(item);
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    onClick={() => window.dispatchEvent(new CustomEvent('navigation-start'))}
+                                    className={cn(
+                                        "flex items-center gap-3 rounded-xl transition-all duration-200 group relative",
+                                        item.isSubItem ? "pl-11 pr-4 py-1.5 text-xs" : "px-4 py-2.5 text-sm",
+                                        active
+                                            ? "bg-primary/10 text-primary font-bold shadow-sm"
+                                            : "text-slate-500 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                                    )}
+                                >
+                                    {!item.isSubItem && (
+                                        <item.icon className={cn(
+                                            "h-5 w-5 shrink-0 transition-transform duration-200",
+                                            active ? "text-primary scale-110" : "group-hover:text-primary group-hover:scale-110"
+                                        )} />
+                                    )}
+                                    <span className="font-medium transition-colors duration-200">{item.title}</span>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                ))}
             </nav>
 
             {/* Bottom Actions / User */}
-            <div className="flex flex-col mt-auto px-4 pb-6 w-full">
+            <div className="flex flex-col mt-auto px-4 pt-4 pb-6 w-full">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors group outline-none">

@@ -280,7 +280,11 @@ export type NavItem = {
   disabled?: boolean;
   adminOnly?: boolean;
   isSubItem?: boolean;
+  /** Secção do menu (por tarefa). */
+  group?: NavGroup;
 };
+
+export type NavGroup = 'inicio' | 'vender' | 'stock' | 'pessoas' | 'dinheiro' | 'ajustes';
 
 export type InitialCatalog = {
   [category: string]: {

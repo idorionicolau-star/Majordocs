@@ -1,5 +1,5 @@
 
-import type { NavItem, Order, Sale, Production, AppNotification, Product, InitialCatalog, ModulePermission } from './types';
+import type { NavItem, NavGroup, Order, Sale, Production, AppNotification, Product, InitialCatalog, ModulePermission } from './types';
 import {
   LayoutDashboard,
   Box,
@@ -21,32 +21,48 @@ import {
 } from 'lucide-react';
 
 export const mainNavItems: NavItem[] = [
-  { title: 'Dashboard', href: '/dashboard', id: 'dashboard', icon: LayoutDashboard },
-  { title: 'Diagnóstico', href: '/diagnostico', id: 'diagnostico', icon: BrainCircuit },
-  { title: 'Inventário', href: '/inventory', id: 'inventory', icon: Box },
-  { title: 'Histórico', href: '/inventory/history', id: 'inventory', isSubItem: true, icon: History },
-  { title: 'Stock Rápido', href: '/inventory/quick', id: 'inventory', isSubItem: true, icon: ClipboardList },
-  { title: 'Perdas', href: '/inventory/perdas', id: 'inventory', isSubItem: true, icon: TrendingDown },
-  { title: 'Venda Rápida', href: '/pos', id: 'sales', icon: Zap },
-  { title: 'Histórico de Vendas', href: '/sales', id: 'sales', icon: ShoppingCart },
-  { title: 'Lista de Carga', href: '/sales/carga', id: 'sales', isSubItem: true, icon: Truck },
-  { title: 'Emitir Documento', href: '/documents/new', id: 'sales', icon: FileText },
-  { title: 'Clientes', href: '/customers', id: 'customers', icon: Users },
-  { title: 'Matéria-Prima', href: '/raw-materials', id: 'raw-materials', icon: Layers },
+  // Início
+  { title: 'Dashboard', href: '/dashboard', id: 'dashboard', icon: LayoutDashboard, group: 'inicio' },
+  { title: 'Diagnóstico', href: '/diagnostico', id: 'diagnostico', icon: BrainCircuit, group: 'inicio' },
+  // Vender
+  { title: 'Venda Rápida', href: '/pos', id: 'sales', icon: Zap, group: 'vender' },
+  { title: 'Histórico de Vendas', href: '/sales', id: 'sales', icon: ShoppingCart, group: 'vender' },
+  { title: 'Lista de Carga', href: '/sales/carga', id: 'sales', isSubItem: true, icon: Truck, group: 'vender' },
+  { title: 'Emitir Documento', href: '/documents/new', id: 'sales', icon: FileText, group: 'vender' },
+  { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList, group: 'vender' },
+  // Stock
+  { title: 'Inventário', href: '/inventory', id: 'inventory', icon: Box, group: 'stock' },
+  { title: 'Stock Rápido', href: '/inventory/quick', id: 'inventory', isSubItem: true, icon: ClipboardList, group: 'stock' },
+  { title: 'Histórico', href: '/inventory/history', id: 'inventory', isSubItem: true, icon: History, group: 'stock' },
+  { title: 'Perdas', href: '/inventory/perdas', id: 'inventory', isSubItem: true, icon: TrendingDown, group: 'stock' },
+  { title: 'Produção', href: '/production', id: 'production', icon: Hammer, group: 'stock' },
+  { title: 'Matéria-Prima', href: '/raw-materials', id: 'raw-materials', icon: Layers, group: 'stock' },
   {
     title: "Catálogo",
     id: "settings", // Using 'settings' permission for now as it was part of settings
     href: "/catalog",
     icon: Book,
+    group: 'stock',
   },
-  { title: 'Produção', href: '/production', id: 'production', icon: Hammer },
-  { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList },
-  { title: 'Financeiro', href: '/finance', id: 'finance', icon: Banknote },
-  { title: 'Relatórios', href: '/reports', id: 'reports', icon: FileText },
-  { title: 'Impacto de Auditoria', href: '/reports/inventory-impact', id: 'reports', isSubItem: true, icon: TrendingDown },
-  { title: 'Funcionários', href: '/users', id: 'users', icon: Users, adminOnly: true },
-  { title: 'Ajustes', href: '/settings', id: 'settings', icon: Settings },
-  { title: 'Subscrição', href: '/billing', id: 'settings', icon: CreditCard, adminOnly: true },
+  // Pessoas
+  { title: 'Clientes', href: '/customers', id: 'customers', icon: Users, group: 'pessoas' },
+  { title: 'Funcionários', href: '/users', id: 'users', icon: Users, adminOnly: true, group: 'pessoas' },
+  // Dinheiro
+  { title: 'Financeiro', href: '/finance', id: 'finance', icon: Banknote, group: 'dinheiro' },
+  { title: 'Relatórios', href: '/reports', id: 'reports', icon: FileText, group: 'dinheiro' },
+  { title: 'Impacto de Auditoria', href: '/reports/inventory-impact', id: 'reports', isSubItem: true, icon: TrendingDown, group: 'dinheiro' },
+  // Ajustes
+  { title: 'Ajustes', href: '/settings', id: 'settings', icon: Settings, group: 'ajustes' },
+  { title: 'Subscrição', href: '/billing', id: 'settings', icon: CreditCard, adminOnly: true, group: 'ajustes' },
+];
+
+export const NAV_GROUPS: { id: NavGroup; label: string }[] = [
+  { id: 'inicio', label: 'Início' },
+  { id: 'vender', label: 'Vender' },
+  { id: 'stock', label: 'Stock' },
+  { id: 'pessoas', label: 'Pessoas' },
+  { id: 'dinheiro', label: 'Dinheiro' },
+  { id: 'ajustes', label: 'Ajustes' },
 ];
 
 export const allPermissions: Readonly<{ id: ModulePermission; label: string; adminOnly: boolean; }[]> = [

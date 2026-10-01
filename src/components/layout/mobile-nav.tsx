@@ -4,11 +4,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useContext } from "react";
-import { mainNavItems } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
-import type { ModulePermission } from "@/lib/types";
-import { usePathname } from "next/navigation";
+import { useNavGroups } from "./use-nav-groups";
 import { LogOut, Settings, User as UserIcon } from "lucide-react";
 import {
     DropdownMenu,
@@ -24,8 +22,7 @@ interface MobileNavProps {
 }
 
 export function MobileNav({ onLinkClick }: MobileNavProps) {
-    const pathname = usePathname();
-    const { canView, companyData, user, logout } = useContext(InventoryContext) || { canView: () => false, companyData: null, user: null, logout: async () => { } };
+    const { user, logout } = useContext(InventoryContext) || { user: null, logout: async () => { } };
 
     const handleLinkClick = () => {
         // Dispatch custom event for loading bar
@@ -33,14 +30,7 @@ export function MobileNav({ onLinkClick }: MobileNavProps) {
         onLinkClick();
     };
 
-    const navItems = mainNavItems.filter(item => {
-        if (!canView(item.id as ModulePermission)) return false;
-        if (item.isSubItem) return false;
-        if (companyData?.businessType === 'reseller' && (item.id === 'production' || item.id === 'orders' || item.id === 'raw-materials')) {
-            return false;
-        }
-        return true;
-    });
+    const { groups, isActive } = useNavGroups();
 
     return (
         <aside className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
@@ -60,29 +50,35 @@ export function MobileNav({ onLinkClick }: MobileNavProps) {
                     <span className="ml-3 text-xl font-headline font-bold text-slate-800 dark:text-white">MajorStockX</span>
                 </Link>
             </div>
-            <nav className="flex-1 flex flex-col gap-2 p-4 overflow-y-auto">
-                {navItems.map(item => {
-                    const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-                    return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={handleLinkClick}
-                            className={cn(
-                                "flex items-center gap-4 rounded-xl px-4 py-3.5 transition-all text-base font-medium",
-                                isActive
-                                    ? "bg-slate-100 dark:bg-slate-800 text-primary shadow-sm"
-                                    : "text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                            )}
-                        >
-                            <item.icon className={cn("h-6 w-6", isActive ? "text-primary" : "text-slate-400 group-hover:text-primary")} />
-                            <span className="flex-1">{item.title}</span>
-                            {isActive && (
-                                <div className="h-2 w-2 rounded-full bg-primary shadow-neon-emerald" />
-                            )}
-                        </Link>
-                    )
-                })}
+            <nav className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto">
+                {groups.map(group => (
+                    <div key={group.id} className="flex flex-col gap-1">
+                        {group.id !== 'inicio' && (
+                            <p className="px-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">{group.label}</p>
+                        )}
+                        {group.items.map(item => {
+                            const active = isActive(item);
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    onClick={handleLinkClick}
+                                    className={cn(
+                                        "flex items-center gap-4 rounded-xl transition-all font-medium",
+                                        item.isSubItem ? "pl-14 pr-4 py-2 text-sm" : "px-4 py-3 text-base",
+                                        active
+                                            ? "bg-slate-100 dark:bg-slate-800 text-primary shadow-sm"
+                                            : "text-slate-500 dark:text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                                    )}
+                                >
+                                    {!item.isSubItem && <item.icon className={cn("h-6 w-6", active ? "text-primary" : "text-slate-400")} />}
+                                    <span className="flex-1">{item.title}</span>
+                                    {active && <div className="h-2 w-2 rounded-full bg-primary shadow-neon-emerald" />}
+                                </Link>
+                            );
+                        })}
+                    </div>
+                ))}
             </nav>
 
             {/* User Section */}
