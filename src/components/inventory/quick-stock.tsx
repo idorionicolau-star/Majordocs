@@ -24,8 +24,14 @@ import {
     type QuickMode,
 } from "@/lib/quick-stock";
 import { links } from "@/lib/deep-links";
+import { BarcodeScanner } from "@/components/scan/barcode-scanner";
+import { VoiceButton } from "@/components/scan/voice-button";
+import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode";
+import { parseVoice } from "@/lib/voice-parse";
+import { useBarcodeLink } from "@/hooks/use-barcode-link";
 import {
     ArrowDownToLine,
+    ScanBarcode,
     ArrowUpFromLine,
     Check,
     ClipboardCheck,
@@ -90,6 +96,10 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const [newUnit, setNewUnit] = useState("un");
     const [unitTouched, setUnitTouched] = useState(false);
     const [ackDuplicate, setAckDuplicate] = useState(false);
+    const [scanOpen, setScanOpen] = useState(false);
+    const [pendingCode, setPendingCode] = useState<string | null>(null);
+    const [listening, setListening] = useState("");
+    const { link: linkBarcode, canLink } = useBarcodeLink();
     const [drafts, setDrafts] = useState<Record<QuickMode, Draft>>({ in: {}, out: {}, count: {} });
     const [draftsLoaded, setDraftsLoaded] = useState(false);
     const lines = drafts[mode];
@@ -209,6 +219,12 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     );
 
     const pick = (product?: Product, wantedName?: string, presetQty?: number | null) => {
+        // código lido que ainda não tinha produto: o produto escolhido fica com ele
+        if (product && pendingCode) {
+            const ok = linkBarcode(product, pendingCode);
+            toast({ title: ok ? `Código ligado a ${product.name}` : "Não foi possível guardar o código", description: ok ? "Da próxima vez basta ler." : "Sem permissão para editar produtos — o registo continua." });
+            setPendingCode(null);
+        }
         if (presetQty != null && presetQty >= 0) {
             // Everything typed in one go ("bloco x 200") — add straight away,
             // excepto produto novo parecido com outro: aí mostra primeiro o aviso.
@@ -288,6 +304,48 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
         requestAnimationFrame(() => qtyRef.current?.focus());
     };
 
+    /** Código lido (câmara ou leitor): +1 ao produto, ou guarda o código para o próximo produto escolhido. */
+    const handleCode = (raw: string, fromCamera = false): string | undefined => {
+        const code = normalizeBarcode(raw);
+        const p = findByBarcode(liveProducts, code, location);
+        if (p) {
+            if (isMultiLocation && (p.location || "") !== location) {
+                if (fromCamera) setScanOpen(false);
+                pickElsewhere(p, null);
+                return `${p.name} — está noutra localização`;
+            }
+            const have = lines[lineKey(p.name, p.location || "")]?.qty || 0;
+            addLine(lineFromProduct(p, have + 1), true);
+            setText("");
+            return `✓ ${p.name} × ${fmt(have + 1)}`;
+        }
+        setPendingCode(code);
+        setText("");
+        if (fromCamera) setScanOpen(false);
+        toast({ title: "Código novo", description: canLink ? "Ainda não está ligado a nenhum produto. Escreva o nome e toque no produto certo para o associar." : "Ainda não está ligado a nenhum produto." });
+        focusSearch();
+        return undefined;
+    };
+
+    const handleVoice = (transcript: string) => {
+        setListening("");
+        const items = parseVoice(transcript);
+        if (!items.length) return;
+        const done: string[] = [];
+        const missed: string[] = [];
+        for (const it of items) {
+            const hit = searchProducts(scoped, it.term, 1)[0];
+            if (!hit) { missed.push(it.term); continue; }
+            addLine(lineFromProduct(hit, it.qty ?? 1));
+            done.push(`${fmt(it.qty ?? 1)} × ${hit.name}`);
+        }
+        toast({
+            variant: missed.length && !done.length ? "destructive" : undefined,
+            title: done.length ? `Juntei: ${done.join(", ")}` : "Não encontrei esse produto",
+            description: missed.length ? `Não encontrei: ${missed.join(", ")}. Para criar um produto novo, escreva o nome.` : undefined,
+        });
+    };
+
     // Buttons next to the quantity field must not steal focus (keeps Enter working and the phone keyboard open).
     const keepFocus = (e: React.MouseEvent) => e.preventDefault();
 
@@ -327,6 +385,8 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             setHighlight((h) => Math.max(h - 1, 0));
         } else if (e.key === "Enter") {
             e.preventDefault();
+            // leitor USB/Bluetooth: escreve o código e carrega Enter
+            if (looksLikeBarcode(text)) { handleCode(text); return; }
             if (mode === "count" && parsed.qty == null) {
                 const first = countRows[0];
                 if (first) countInputs.current.get(lineKey(first.name, first.location || ""))?.focus();
@@ -433,6 +493,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     // ---------- Render ----------
     return (
         <div className="mx-auto w-full max-w-3xl pb-40">
+            <BarcodeScanner open={scanOpen} onClose={() => { setScanOpen(false); focusSearch(); }} onScan={(c) => handleCode(c, true)} />
             {/* Mode switch */}
             <div className="grid grid-cols-3 gap-2 rounded-2xl bg-muted p-1.5">
                 {MODES.map((m) => {
@@ -473,7 +534,8 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
 
             {/* Search */}
             <div className="sticky top-0 z-20 -mx-4 mt-3 bg-background/95 px-4 py-2 backdrop-blur">
-                <div className="relative">
+                <div className="flex items-center gap-2">
+                <div className="relative min-w-0 flex-1">
                     <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         ref={searchRef}
@@ -494,6 +556,24 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                         </button>
                     )}
                 </div>
+                <button
+                    type="button"
+                    aria-label="Ler código de barras com a câmara"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setScanOpen(true)}
+                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border bg-card text-muted-foreground hover:text-foreground"
+                >
+                    <ScanBarcode className="h-6 w-6" />
+                </button>
+                <VoiceButton className="h-14 w-14" onInterim={setListening} onResult={handleVoice} onProblem={(m) => { setListening(""); toast({ variant: "destructive", title: "Ditado", description: m }); }} />
+                </div>
+                {listening && <p className="mt-1.5 px-1 text-sm italic text-muted-foreground">🎙 {listening}</p>}
+                {pendingCode && (
+                    <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-sm">
+                        <span>Código <b className="tabular-nums">{pendingCode}</b> ainda sem produto — {canLink ? "escreva o nome e toque no produto certo para o associar." : "peça a quem gere o inventário para o associar."}</span>
+                        <button type="button" aria-label="Cancelar" onClick={() => setPendingCode(null)} className="shrink-0 text-muted-foreground"><X className="h-4 w-4" /></button>
+                    </div>
+                )}
                 {parsed.qty != null && parsed.term && (
                     <p className="mt-1.5 px-1 text-xs text-muted-foreground">
                         Enter adiciona <b className="text-foreground">{fmt(parsed.qty)}</b> × {results[highlight]?.name || parsed.term}

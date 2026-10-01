@@ -36,7 +36,9 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Loader2, Image as ImageIcon, X, ArrowLeft, AlertTriangle, BrainCircuit, Info } from "lucide-react";
+import { Loader2, Image as ImageIcon, X, ArrowLeft, AlertTriangle, BrainCircuit, Info, ScanBarcode } from "lucide-react";
+import { BarcodeScanner } from "@/components/scan/barcode-scanner";
+import { findByBarcode, normalizeBarcode } from "@/lib/barcode";
 
 const formSchema = z.object({
     name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -57,6 +59,7 @@ const formSchema = z.object({
         return isNaN(num) ? 0 : num;
     }, z.number().min(0, { message: "O estoque não pode ser negativo." })),
     unit: z.string().default('un'),
+    barcode: z.string().optional(),
     lowStockThreshold: z.preprocess((val) => {
         if (val === undefined || val === "" || val === null) return 0;
         const num = Number(val);
@@ -83,6 +86,7 @@ export default function EditInventoryProductPage() {
     const [product, setProduct] = useState<Product | null>(null);
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [scanBarcode, setScanBarcode] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCreatingCategory, setIsCreatingCategory] = useState(false);
     const [isCategorizing, setIsCategorizing] = useState(false);
@@ -96,6 +100,7 @@ export default function EditInventoryProductPage() {
             cost: 0,
             stock: 0,
             unit: 'un',
+            barcode: '',
             lowStockThreshold: 10,
             criticalStockThreshold: 5,
             location: '',
@@ -115,6 +120,7 @@ export default function EditInventoryProductPage() {
                     cost: found.cost || 0,
                     stock: found.stock,
                     unit: found.unit || 'un',
+                    barcode: found.barcode || '',
                     lowStockThreshold: found.lowStockThreshold,
                     criticalStockThreshold: found.criticalStockThreshold,
                     location: found.location || '',
@@ -466,6 +472,29 @@ export default function EditInventoryProductPage() {
                                 )}
                             />
                         </div>
+
+                        <FormField
+                            control={form.control}
+                            name="barcode"
+                            render={({ field }) => {
+                                const code = normalizeBarcode(field.value || '');
+                                const other = code ? findByBarcode(products.filter((p) => p.id !== product?.id && p.name !== product?.name), code) : undefined;
+                                return (
+                                    <FormItem className="mb-6">
+                                        <FormLabel>Código de barras (opcional)</FormLabel>
+                                        <div className="flex gap-2">
+                                            <FormControl>
+                                                <Input {...field} value={field.value || ''} inputMode="numeric" placeholder="Leia com a câmara ou escreva" autoComplete="off" />
+                                            </FormControl>
+                                            <Button type="button" variant="outline" onClick={() => setScanBarcode(true)} aria-label="Ler com a câmara"><ScanBarcode className="h-5 w-5" /></Button>
+                                        </div>
+                                        {other && <p className="text-xs font-semibold text-amber-600">Atenção: este código já está em “{other.name}”.</p>}
+                                        <FormMessage />
+                                    </FormItem>
+                                );
+                            }}
+                        />
+                        <BarcodeScanner open={scanBarcode} onClose={() => setScanBarcode(false)} title="Ler o código deste produto" onScan={(c) => { form.setValue('barcode', normalizeBarcode(c), { shouldDirty: true }); setScanBarcode(false); }} />
 
                         <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10 mb-6 group transition-all hover:bg-primary/10">
                             <FormField
