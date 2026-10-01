@@ -35,7 +35,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Product, Location } from '@/lib/types';
 import { InventoryContext } from '@/context/inventory-context';
-import { calculateSimilarity } from '@/lib/utils';
+import { findNameMatches } from '@/lib/new-product';
 import { CatalogProductSelector } from '@/components/catalog/catalog-product-selector';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, AlertTriangle, Image as ImageIcon, Loader2, ArrowLeft } from 'lucide-react';
@@ -256,18 +256,9 @@ export default function NewInventoryProductPage() {
                                     }
 
                                     const handler = setTimeout(() => {
-                                        let maxSim = 0;
-                                        let bestMatch = null;
-
-                                        for (const p of products) {
-                                            const sim = calculateSimilarity(field.value, p.name);
-                                            if (sim > 0.8 && sim < 1.0) {
-                                                if (sim > maxSim) {
-                                                    maxSim = sim;
-                                                    bestMatch = p;
-                                                }
-                                            }
-                                        }
+                                        const best = findNameMatches(field.value, { inventory: products, catalog: [] }, { minScore: 0.7, limit: 1 })[0];
+                                        const bestMatch = best && best.name !== field.value ? best : null;
+                                        const maxSim = bestMatch?.score ?? 0;
 
                                         if (bestMatch) {
                                             setSimilarProduct({ name: bestMatch.name, match: maxSim });

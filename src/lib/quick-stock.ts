@@ -25,6 +25,12 @@ export type QuickLine = {
     qty: number;
     isNew?: boolean;
     price?: number;
+    /** Categoria escolhida para um produto novo (a sugerida pelo nome, ou a que a pessoa escolheu). */
+    category?: string;
+    /** Produto novo: acrescentar também ao catálogo (para aparecer em vendas, produção, etc.). */
+    addToCatalog?: boolean;
+    /** A categoria ainda não existe no catálogo: criá-la. */
+    addCategory?: boolean;
     /** When the product already exists in another location: copy its data instead of creating a bare one. */
     template?: Pick<Product, "category" | "price" | "cost" | "unit" | "lowStockThreshold" | "criticalStockThreshold" | "imageUrl">;
 };
@@ -165,7 +171,7 @@ export async function commitQuickStock({ firestore, companyId, user, mode, lines
             const t = line.template;
             b.set(ref, {
                 name: line.name.trim(),
-                category: t?.category || "Geral",
+                category: line.category || t?.category || "Geral",
                 price: line.price || t?.price || 0,
                 cost: t?.cost || 0,
                 unit: t?.unit || line.unit || "un",
@@ -227,6 +233,36 @@ export async function commitQuickStock({ firestore, companyId, user, mode, lines
             };
         }
         b.set(doc(movementsRef), { ...movement, timestamp: serverTimestamp() });
+    }
+
+    // Catálogo: produto novo e categoria nova. Fica num lote à parte: quem só tem permissão de inventário
+    // não pode escrever no catálogo, e isso nunca deve impedir a entrada de stock.
+    const catalogBatch = writeBatch(firestore);
+    let catalogOps = 0;
+    const newCategories = new Set<string>();
+    for (const line of lines) {
+        if (!line.isNew || !(line.qty >= 0)) continue;
+        const category = line.category || line.template?.category || "Geral";
+        if (line.addToCatalog) {
+            const t = line.template;
+            catalogBatch.set(doc(collection(firestore, `companies/${companyId}/catalogProducts`)), {
+                name: line.name.trim(),
+                category,
+                price: line.price || t?.price || 0,
+                unit: t?.unit || line.unit || "un",
+                lowStockThreshold: t?.lowStockThreshold || 0,
+                criticalStockThreshold: t?.criticalStockThreshold || 0,
+            });
+            catalogOps++;
+        }
+        if (line.addCategory && !newCategories.has(category.toLowerCase())) {
+            newCategories.add(category.toLowerCase());
+            catalogBatch.set(doc(collection(firestore, `companies/${companyId}/catalogCategories`)), { name: category });
+            catalogOps++;
+        }
+    }
+    if (catalogOps) {
+        catalogBatch.commit().catch((e) => console.warn("Catálogo não actualizado (sem permissão?):", e));
     }
 
     // With the persistent local cache the writes are applied locally at once;
