@@ -86,9 +86,11 @@ export function computeSmartThresholds({ products, movements, sales, now = new D
 
         if (days30 >= MIN_DAYS_STATS) {
             // Estatístico: corta picos, média ponderada (recente pesa mais), stock de segurança
-            const avg = mean(d30);
-            const sd = std(d30, avg);
-            const cap = sd > 0 ? avg + 2.5 * sd : Infinity;
+            // O corte usa a mediana dos dias com venda: um pico (obra grande, venda única) infla a média
+            // e o desvio-padrão e passava pelo corte antigo (média + 2,5 desvios), inflacionando o limite.
+            const active = d30.filter((x) => x > 0).sort((a, b) => a - b);
+            const median = active[Math.floor(active.length / 2)];
+            const cap = median * 4;
             const f = d30.map((x) => Math.min(x, cap));
             ads = (mean(f.slice(0, 7)) * 0.5) + (mean(f.slice(7, 14)) * 0.3) + (mean(f.slice(14, 30)) * 0.2);
             const fAvg = mean(f);

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
+import { reportError } from "@/lib/report-error";
 
 export default function Error({
     error,
@@ -13,6 +14,7 @@ export default function Error({
 }) {
     useEffect(() => {
         console.error("Application error:", error);
+        reportError(error, "react");
     }, [error]);
 
     return (

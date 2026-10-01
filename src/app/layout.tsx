@@ -5,6 +5,7 @@ import type { Metadata, Viewport } from 'next';
 import { PT_Sans, Space_Grotesk } from 'next/font/google';
 import { Toaster } from "@/components/ui/toaster";
 import { PwaRegister } from "@/components/pwa-register";
+import { ErrorReporter } from "@/components/error-reporter";
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -55,6 +56,7 @@ export default function RootLayout({
         <AppProviders>{children}</AppProviders>
         <Toaster />
         <PwaRegister />
+        <ErrorReporter />
       </body>
     </html>
   );

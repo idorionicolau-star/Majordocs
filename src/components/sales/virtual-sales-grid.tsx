@@ -31,7 +31,7 @@ export function VirtualSalesGrid({ // Keeping name to avoid breaking import imme
             data={sales}
             totalCount={sales.length}
             components={{
-                List: forwardRef((props, ref) => (
+                List: forwardRef<HTMLDivElement, any>(function SalesGridList(props, ref) { return (
                     <div
                         {...props}
                         ref={ref}
@@ -42,8 +42,8 @@ export function VirtualSalesGrid({ // Keeping name to avoid breaking import imme
                             gridCols === '5' && "grid-cols-1 sm:grid-cols-3 lg:grid-cols-5"
                         )}
                     />
-                )),
-                Item: forwardRef((props, ref) => <div {...props} ref={ref} className="h-full" />)
+                ); }),
+                Item: forwardRef<HTMLDivElement, any>(function SalesGridItem(props, ref) { return <div {...props} ref={ref} className="h-full" />; })
             }}
             itemContent={(index, sale) => (
                 <SaleCard
