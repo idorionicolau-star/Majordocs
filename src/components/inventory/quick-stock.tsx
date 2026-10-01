@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/lib/types";
+import { NewProductFields } from "@/components/inventory/new-product-fields";
+import { cleanProductName, findNameMatches, guessUnit, planCatalogWrites, suggestCategory, type NameMatch } from "@/lib/new-product";
 import {
     commitQuickStock,
     lineFromProduct,
@@ -68,7 +70,7 @@ function saveDraft(key: string, draft: Draft) {
 }
 
 export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) {
-    const { products, locations, isMultiLocation, companyId, user, isReadOnly, notifyManagers } = useInventory();
+    const { products, locations, isMultiLocation, companyId, user, isReadOnly, notifyManagers, catalogProducts, catalogCategories, availableCategories, availableUnits } = useInventory();
     const isManager = !!user && (user.role === "Admin" || user.role === "Dono");
     const firestore = useFirestore();
     const { toast } = useToast();
@@ -80,6 +82,13 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const [picked, setPicked] = useState<{ product?: Product; newName?: string; from?: Product } | null>(null);
     const [qtyText, setQtyText] = useState("");
     const [newPrice, setNewPrice] = useState("");
+    // Produto novo: o que a pessoa vê e pode corrigir antes de criar
+    const [newName, setNewName] = useState("");
+    const [newCategory, setNewCategory] = useState("");
+    const [categoryTouched, setCategoryTouched] = useState(false);
+    const [newUnit, setNewUnit] = useState("un");
+    const [unitTouched, setUnitTouched] = useState(false);
+    const [ackDuplicate, setAckDuplicate] = useState(false);
     const [drafts, setDrafts] = useState<Record<QuickMode, Draft>>({ in: {}, out: {}, count: {} });
     const [draftsLoaded, setDraftsLoaded] = useState(false);
     const lines = drafts[mode];
@@ -158,6 +167,28 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const elsewhereExact = elsewhere.some((p) => p.name.trim().toLowerCase() === parsed.term.trim().toLowerCase());
     const canCreate = mode === "in" && !elsewhereExact && parsed.term.trim().length >= 2 && !exactExists;
 
+    // ---------- Produto novo: parecidos, categoria sugerida, o que falta no catálogo ----------
+    const liveProducts = useMemo(() => products.filter((p) => !p.deletedAt), [products]);
+    const categoryNames = useMemo(() => Array.from(new Set([...(availableCategories || []), ...(catalogCategories || []).map((c) => c.name)])), [availableCategories, catalogCategories]);
+    const unitNames = useMemo(() => (availableUnits && availableUnits.length ? availableUnits : ["un", "saco", "m", "m²", "m³", "kg", "L"]), [availableUnits]);
+    const creating = !!picked && !!picked.newName && !picked.from && !picked.product;
+    const matches = useMemo(
+        () => (creating ? findNameMatches(newName, { inventory: liveProducts, catalog: catalogProducts || [] }) : []),
+        [creating, newName, liveProducts, catalogProducts]
+    );
+    const suggestion = useMemo(() => suggestCategory(newName, categoryNames, liveProducts), [newName, categoryNames, liveProducts]);
+
+    // Enquanto a pessoa não mexer, a categoria e a unidade seguem o nome que vai escrevendo.
+    useEffect(() => { if (creating && !categoryTouched) setNewCategory(suggestion.category); }, [creating, categoryTouched, suggestion.category]);
+    useEffect(() => { if (creating && !unitTouched) setNewUnit(guessUnit(newName, unitNames)); }, [creating, unitTouched, newName, unitNames]);
+
+    const openNewProduct = (name: string) => {
+        setNewName(cleanProductName(name));
+        setCategoryTouched(false);
+        setUnitTouched(false);
+        setAckDuplicate(false);
+    };
+
     useEffect(() => setHighlight(0), [parsed.term]);
 
     const lineList = useMemo(() => Object.values(lines), [lines]);
@@ -176,35 +207,71 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
         [setLines, mode]
     );
 
-    const pick = (product?: Product, newName?: string, presetQty?: number | null) => {
+    const pick = (product?: Product, wantedName?: string, presetQty?: number | null) => {
         if (presetQty != null && presetQty >= 0) {
-            // Everything typed in one go ("bloco x 200") — add straight away.
-            if (product) addLine(lineFromProduct(product, presetQty));
-            else if (newName) addLine(newLine(newName, presetQty));
-            setText("");
-            setPicked(null);
-            focusSearch();
-            return;
+            // Everything typed in one go ("bloco x 200") — add straight away,
+            // excepto produto novo parecido com outro: aí mostra primeiro o aviso.
+            const similar = wantedName ? findNameMatches(cleanProductName(wantedName), { inventory: liveProducts, catalog: catalogProducts || [] }) : [];
+            if (!(wantedName && similar.length)) {
+                if (product) addLine(lineFromProduct(product, presetQty));
+                else if (wantedName) {
+                    const clean = cleanProductName(wantedName);
+                    const sug = suggestCategory(clean, categoryNames, liveProducts);
+                    addLine(newLine(clean, presetQty, undefined, undefined, { category: sug.category, unit: guessUnit(clean, unitNames) }));
+                }
+                setText("");
+                setPicked(null);
+                focusSearch();
+                return;
+            }
+            setQtyText(fmt(presetQty));
         }
-        setPicked({ product, newName });
+        if (wantedName) openNewProduct(wantedName);
+        setPicked({ product, newName: wantedName });
         const existing = product ? lines[lineKey(product.name, product.location || "")] : undefined;
-        setQtyText(mode === "count" && existing ? fmt(existing.qty) : "");
+        if (!(presetQty != null && presetQty >= 0)) setQtyText(mode === "count" && existing ? fmt(existing.qty) : "");
         setNewPrice("");
         requestAnimationFrame(() => qtyRef.current?.focus());
     };
 
-    const newLine = (name: string, qty: number, price?: number, from?: Product): QuickLine => ({
-        key: lineKey(name, location),
-        name: from ? from.name : name.trim().charAt(0).toUpperCase() + name.trim().slice(1),
-        location,
-        sourceIds: [],
-        systemStock: 0,
-        unit: from?.unit || "un",
-        qty,
-        isNew: true,
-        price: price ?? from?.price,
-        ...(from ? { template: { category: from.category, price: from.price, cost: from.cost, unit: from.unit, lowStockThreshold: from.lowStockThreshold, criticalStockThreshold: from.criticalStockThreshold, imageUrl: from.imageUrl } } : {}),
-    });
+    const newLine = (name: string, qty: number, price?: number, from?: Product, extra?: { category?: string; unit?: string }): QuickLine => {
+        const finalName = from ? from.name : cleanProductName(name);
+        const category = from?.category || extra?.category || "Geral";
+        const plan = planCatalogWrites({ name: finalName, category, catalogProducts: catalogProducts || [], catalogCategories: (catalogCategories || []).map((c) => c.name) });
+        return {
+            key: lineKey(finalName, location),
+            name: finalName,
+            location,
+            sourceIds: [],
+            systemStock: 0,
+            unit: from?.unit || extra?.unit || "un",
+            qty,
+            isNew: true,
+            price: price ?? from?.price,
+            category: plan.category,
+            addToCatalog: plan.addProduct,
+            addCategory: plan.addCategory,
+            ...(from ? { template: { category: from.category, price: from.price, cost: from.cost, unit: from.unit, lowStockThreshold: from.lowStockThreshold, criticalStockThreshold: from.criticalStockThreshold, imageUrl: from.imageUrl } } : {}),
+        };
+    };
+
+    // "É este": usa o produto que já existe em vez de criar outro
+    const useMatch = (m: NameMatch) => {
+        if (m.source === "inventory") {
+            const found = liveProducts.find((p) => p.name === m.name && (p.location || "") === (m.location || ""));
+            if (!found) return;
+            const here = !isMultiLocation || (found.location || "") === location;
+            if (here) pick(found, undefined, null);
+            else pickElsewhere(found, null);
+            return;
+        }
+        // só no catálogo: aproveita os dados do catálogo (nome, categoria, unidade, preço)
+        setNewName(m.name);
+        if (m.category) { setNewCategory(m.category); setCategoryTouched(true); }
+        if (m.unit) { setNewUnit(m.unit); setUnitTouched(true); }
+        if (m.price) setNewPrice(String(m.price));
+        setAckDuplicate(true);
+    };
 
     // A product from another location becomes a new line here, carrying its data.
     const pickElsewhere = (p: Product, presetQty?: number | null) => {
@@ -231,7 +298,19 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             return;
         }
         if (picked.product) addLine(lineFromProduct(picked.product, q), mode === "count");
-        else if (picked.newName) addLine(newLine(picked.newName, q, toNumber(newPrice) || undefined, picked.from));
+        else if (picked.newName) {
+            if (!picked.from) {
+                const clean = cleanProductName(newName);
+                if (clean.length < 2) return;
+                if (matches.some((m) => m.kind === "exact") && !ackDuplicate) {
+                    toast({ variant: "destructive", title: "Este produto já existe", description: "Escolha “É este” ou confirme que é diferente." });
+                    return;
+                }
+                addLine(newLine(clean, q, toNumber(newPrice) || undefined, undefined, { category: newCategory.trim() || "Geral", unit: newUnit }));
+            } else {
+                addLine(newLine(picked.newName, q, toNumber(newPrice) || undefined, picked.from));
+            }
+        }
         setPicked(null);
         setText("");
         focusSearch();
@@ -432,13 +511,33 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                                     ? (blind ? `Conte e escreva a quantidade que está lá (${picked.product.unit || "un"})` : `Stock actual: ${fmt(picked.product.stock || 0)} ${picked.product.unit || "un"}`)
                                     : picked.from
                                         ? `Primeira entrada nesta localização — preço, unidade e categoria copiados de ${locName(picked.from.location || "")}`
-                                        : "Produto novo — pode completar preço e categoria depois"}
+                                        : "Produto novo — confirme o nome, a categoria e a unidade"}
                             </p>
                         </div>
                         <button type="button" aria-label="Cancelar" onClick={() => { setPicked(null); focusSearch(); }} className="text-muted-foreground">
                             <X className="h-5 w-5" />
                         </button>
                     </div>
+
+                    {creating && (
+                        <NewProductFields
+                            name={newName}
+                            onName={(v) => { setNewName(v); setAckDuplicate(false); }}
+                            matches={matches}
+                            onUseMatch={useMatch}
+                            ackDuplicate={ackDuplicate}
+                            onAckDuplicate={setAckDuplicate}
+                            category={newCategory}
+                            onCategory={(v) => { setNewCategory(v); setCategoryTouched(true); }}
+                            suggestion={suggestion}
+                            categories={categoryNames}
+                            unit={newUnit}
+                            onUnit={(v) => { setNewUnit(v); setUnitTouched(true); }}
+                            units={unitNames}
+                            locName={locName}
+                            onEnter={() => qtyRef.current?.focus()}
+                        />
+                    )}
 
                     <div className="mt-3 flex items-center gap-2">
                         {mode !== "count" && (
@@ -525,7 +624,8 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                         <button type="button" onClick={() => pick(undefined, parsed.term, parsed.qty)}
                             onMouseEnter={() => setHighlight(results.length + elsewhere.length)}
                             className={cn("flex w-full items-center gap-2 px-4 py-3 text-left text-sm", highlight === results.length + elsewhere.length && "bg-muted")}>
-                            <Sparkles className="h-4 w-4 text-primary" /> Criar produto novo <b>“{parsed.term}”</b>
+                            <Sparkles className="h-4 w-4 text-primary" /> Criar produto novo <b>“{cleanProductName(parsed.term)}”</b>
+                            {(() => { const sg = suggestCategory(parsed.term, categoryNames, liveProducts); return sg.source !== "none" ? <span className="text-xs text-muted-foreground">· {sg.category}</span> : null; })()}
                         </button>
                     )}
                     {results.length === 0 && !canCreate && elsewhere.length === 0 && <p className="px-4 py-3 text-sm text-muted-foreground">Nenhum artigo encontrado.</p>}

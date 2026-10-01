@@ -154,13 +154,17 @@ service cloud.firestore {
       }
       
       match /catalogProducts/{productId} {
-          allow get, list: if can('settings', 'read');
-          allow create, update, delete: if can('settings', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+          allow get, list: if can('settings', 'read') || can('inventory', 'read') || can('sales', 'read');
+          // Quem cria um produto novo (Stock Rápido, Inventário) acrescenta-o ao catálogo; alterar/apagar fica para as Definições.
+          allow create: if (can('settings', 'write') || can('inventory', 'write')) && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+          allow update, delete: if can('settings', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
       
       match /catalogCategories/{categoryId} {
-          allow get, list: if can('settings', 'read');
-          allow create, update, delete: if can('settings', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+          allow get, list: if can('settings', 'read') || can('inventory', 'read') || can('sales', 'read');
+          // Quem cria um produto novo (Stock Rápido, Inventário) acrescenta-o ao catálogo; alterar/apagar fica para as Definições.
+          allow create: if (can('settings', 'write') || can('inventory', 'write')) && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+          allow update, delete: if can('settings', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
       
       match /products/{productId} {
