@@ -58,6 +58,8 @@ export type Company = {
   taxId?: string;
   email?: string;
   businessType: 'manufacturer' | 'reseller';
+  /** Dias que o produto fica a secar antes de se poder carregar (betão: 3). 0 = não se usa. */
+  curingDays?: number;
   notificationSettings?: NotificationSettings;
   isMultiLocation?: boolean;
   locations?: Location[];

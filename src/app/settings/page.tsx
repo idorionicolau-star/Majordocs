@@ -251,6 +251,7 @@ export default function SettingsPage() {
     signatureUrl: '' as string,
     paymentInfo: '',
     businessType: 'manufacturer' as 'manufacturer' | 'reseller',
+    curingDays: 0,
     notificationSettings: {
       emails: [] as {
         email: string;
@@ -311,6 +312,7 @@ export default function SettingsPage() {
         signatureUrl: companyData.signatureUrl || '',
         paymentInfo: companyData.paymentInfo || '',
         businessType: companyData.businessType || 'manufacturer',
+        curingDays: companyData.curingDays ?? 0,
         notificationSettings: {
           emails: companyData.notificationSettings?.emails || (
             companyData.notificationSettings?.email ? [{
@@ -677,6 +679,21 @@ export default function SettingsPage() {
                             </SelectContent>
                           </Select>
                         </div>
+                        {companyDetails.businessType === 'manufacturer' && (
+                          <div className="space-y-2">
+                            <Label htmlFor="curingDays">Dias de secagem</Label>
+                            <Input
+                              id="curingDays"
+                              type="number"
+                              min={0}
+                              max={30}
+                              inputMode="numeric"
+                              value={companyDetails.curingDays}
+                              onChange={(e) => setCompanyDetails(prev => ({ ...prev, curingDays: Math.max(0, Math.min(30, Number(e.target.value) || 0)) }))}
+                            />
+                            <p className="text-xs text-muted-foreground">Quantos dias o produto fica a secar depois de produzido antes de se poder carregar. Em tempo frio, aumente 1 dia. 0 = não usar.</p>
+                          </div>
+                        )}
                         <div className="space-y-2">
                           <Label htmlFor="email">Email de Contacto</Label>
                           <Input id="email" type="email" value={companyDetails.email} onChange={handleDetailChange} />

@@ -199,6 +199,7 @@ export default function DiagnosticoPage() {
             )}
             {a.stock.pendingPickups.length > 0 && (
               <Section title="Vendas pagas ainda não levantadas">
+                <Row left="Abrir lista de carga" right="→" href="/sales/carga" />
                 {a.stock.pendingPickups.slice(0, 5).map((p) => <Row key={p.sale.id} left={`${p.sale.productName} × ${qty(p.sale.quantity)}`} right={`${p.sale.clientName || "cliente"} · ${p.days} dias`} tone={p.days > 7 ? "warn" : undefined} href={links.sale(p.sale.guideNumber || p.sale.productName)} />)}
               </Section>
             )}

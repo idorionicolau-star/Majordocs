@@ -16,6 +16,7 @@ import {
   Book,
   Zap,
   TrendingDown,
+  Truck,
   CreditCard,
 } from 'lucide-react';
 
@@ -28,6 +29,7 @@ export const mainNavItems: NavItem[] = [
   { title: 'Perdas', href: '/inventory/perdas', id: 'inventory', isSubItem: true, icon: TrendingDown },
   { title: 'Venda Rápida', href: '/pos', id: 'sales', icon: Zap },
   { title: 'Histórico de Vendas', href: '/sales', id: 'sales', icon: ShoppingCart },
+  { title: 'Lista de Carga', href: '/sales/carga', id: 'sales', isSubItem: true, icon: Truck },
   { title: 'Emitir Documento', href: '/documents/new', id: 'sales', icon: FileText },
   { title: 'Clientes', href: '/customers', id: 'customers', icon: Users },
   { title: 'Matéria-Prima', href: '/raw-materials', id: 'raw-materials', icon: Layers },
