@@ -1,0 +1,427 @@
+'use client';
+
+import { useCallback, useMemo } from 'react';
+import type { Product, RawMaterial, Recipe } from '@/lib/types';
+import { collection, doc, writeBatch, updateDoc, deleteDoc, arrayUnion, type CollectionReference, arrayRemove } from 'firebase/firestore';
+import { updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import type { InventoryCore } from './core';
+
+type CatalogProduct = Omit<
+  Product,
+  'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'
+>;
+type CatalogCategory = { id: string; name: string };
+
+export function useSettingsActions(core: InventoryCore) {
+  const { isReadOnly, toast, catalogProductsCollectionRef, catalogCategoriesCollectionRef, catalogCategoriesData, rawMaterialsCollectionRef, recipesCollectionRef, firestore, companyId, productsData, salesData, companyData, products, rawMaterialsData, catalogProductsData, productsCollectionRef } = core;
+
+
+
+  const addCatalogProduct = useCallback(async (productData: Omit<CatalogProduct, 'id'>) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
+    if (!catalogProductsCollectionRef) {
+      throw new Error("Referência da coleção do catálogo não disponível.");
+    }
+    try {
+      addDocumentNonBlocking(catalogProductsCollectionRef, productData);
+    } catch (e) {
+      console.error("Error adding catalog product:", e);
+      throw new Error("Não foi possível adicionar o produto ao catálogo.");
+    }
+  }, [catalogProductsCollectionRef]);
+
+
+  const addCatalogCategory = useCallback(async (categoryName: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
+    if (!catalogCategoriesCollectionRef || !catalogCategoriesData) return;
+    const trimmedName = categoryName.trim();
+    if (!trimmedName) return;
+
+    const exists = catalogCategoriesData.some(c => c.name.toLowerCase() === trimmedName.toLowerCase());
+    if (exists) {
+      return;
+    }
+
+    try {
+      addDocumentNonBlocking(catalogCategoriesCollectionRef, { name: trimmedName });
+    } catch (e) {
+      console.error("Error adding catalog category:", e);
+      throw new Error("Não foi possível adicionar a nova categoria.");
+    }
+  }, [catalogCategoriesCollectionRef, catalogCategoriesData]);
+
+
+  const addRawMaterial = useCallback(async (material: Omit<RawMaterial, 'id'>) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
+    if (!rawMaterialsCollectionRef) return;
+    addDocumentNonBlocking(rawMaterialsCollectionRef, material);
+    toast({ title: 'Matéria-Prima Adicionada' });
+  }, [rawMaterialsCollectionRef, toast]);
+
+
+  const updateRawMaterial = useCallback(async (materialId: string, data: Partial<RawMaterial>) => {
+    if (!rawMaterialsCollectionRef) return;
+    const docRef = doc(rawMaterialsCollectionRef as CollectionReference, materialId);
+    updateDocumentNonBlocking(docRef, data);
+    toast({ title: 'Matéria-Prima Atualizada' });
+  }, [rawMaterialsCollectionRef, toast]);
+
+
+  const deleteRawMaterial = useCallback(async (materialId: string) => {
+    if (!rawMaterialsCollectionRef) return;
+    deleteDocumentNonBlocking(doc(rawMaterialsCollectionRef as CollectionReference, materialId));
+    toast({ title: 'Matéria-Prima Removida' });
+  }, [rawMaterialsCollectionRef, toast]);
+
+
+  const addRecipe = useCallback(async (recipe: Omit<Recipe, 'id'>) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
+    if (!recipesCollectionRef) return;
+    addDocumentNonBlocking(recipesCollectionRef, recipe);
+    toast({ title: 'Receita Adicionada' });
+  }, [recipesCollectionRef, toast]);
+
+
+  const updateRecipe = useCallback(async (recipeId: string, data: Partial<Recipe>) => {
+    if (!recipesCollectionRef) return;
+    const docRef = doc(recipesCollectionRef as CollectionReference, recipeId);
+    updateDocumentNonBlocking(docRef, data);
+    toast({ title: 'Receita Atualizada' });
+  }, [recipesCollectionRef, toast]);
+
+
+  /*
+  const deleteRecipe = useCallback(async (recipeId: string) => {
+    if (!recipesCollectionRef) return;
+    deleteDocumentNonBlocking(doc(recipesCollectionRef as CollectionReference, recipeId));
+    toast({ title: 'Receita Removida' });
+  }, [recipesCollectionRef, toast]);
+  */
+
+
+
+  const restoreItem = useCallback(async (collectionName: string, id: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
+    if (!firestore || !companyId) return;
+    const docRef = doc(firestore, `companies/${companyId}/${collectionName}`, id);
+
+    // If it's a sale, we might need to deduct stock again?
+    // For simplicity in this iteration, we just restore the record. 
+    // Ideally, if we restored stock on delete, we should consume it on restore.
+    // This logic is complex for "Undo".
+    // Let's implement basic restore (remove deletedAt) first.
+
+    await updateDocumentNonBlocking(docRef, { deletedAt: null, deletedBy: null });
+    toast({ title: 'Item Restaurado' });
+  }, [firestore, companyId, toast]);
+
+
+  const hardDelete = useCallback(async (collectionName: string, id: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
+    if (!firestore || !companyId) return;
+    try {
+      const docRef = doc(firestore, `companies/${companyId}/${collectionName}`, id);
+      await deleteDoc(docRef); // Force standard delete to ensure it waits and updates
+      toast({ title: 'Item Apagado Permanentemente' });
+    } catch (error: any) {
+      console.error("Hard delete error:", error);
+      toast({ variant: 'destructive', title: 'Erro ao Apagar', description: error.message });
+    }
+  }, [firestore, companyId, toast]);
+
+
+  const exportCompanyData = useCallback(async () => {
+    if (!productsData || !salesData) {
+      toast({ variant: 'destructive', title: 'Aguarde', description: 'Os dados ainda estão a carregar.' });
+      return;
+    }
+
+    const backup = {
+      date: new Date().toISOString(),
+      company: companyData,
+      products: products,
+      sales: salesData,
+      clients: [], // Assuming separate clients collection later, for now implicit in sales
+      version: '1.0'
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `majorstockx-backup-${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchorNode); // required for firefox
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  }, [productsData, salesData, companyData, products, toast]);
+
+
+  // --- Units & Categories Management ---
+  const availableUnits = useMemo(() => {
+    const defaultUnits = ['un', 'kg', 'm', 'm²', 'm³', 'L', 'cxs', 'saco', 'rolo', 'cj', 'ton', 'lata', 'galão'];
+    const companyUnits = companyData?.validUnits || [];
+    // Also include units currently in use by products to prevent data loss or hiding
+    const productUnits = productsData?.map(p => p.unit).filter(Boolean) as string[] || [];
+    const materialUnits = rawMaterialsData?.map(m => m.unit).filter(Boolean) as string[] || [];
+
+    // Merge unique
+    const allUnits = Array.from(new Set([...defaultUnits, ...companyUnits, ...productUnits, ...materialUnits]));
+    return allUnits.sort((a, b) => a.localeCompare(b));
+  }, [companyData, productsData, rawMaterialsData]);
+
+
+  const addUnit = useCallback(async (unit: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
+    if (!firestore || !companyId) return;
+    try {
+      const companyRef = doc(firestore, 'companies', companyId);
+      await updateDoc(companyRef, {
+        validUnits: arrayUnion(unit)
+      });
+      toast({ title: 'Unidade Adicionada', description: `A unidade "${unit}" foi adicionada.` });
+    } catch (error) {
+      console.error("Error adding unit:", error);
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao adicionar unidade." });
+    }
+  }, [firestore, companyId, toast]);
+
+
+  const editUnit = useCallback(async (oldUnit: string, newUnit: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
+    if (!firestore || !companyId || !oldUnit || !newUnit) return;
+    try {
+      const batch = writeBatch(firestore);
+
+      const currentValidUnits = companyData?.validUnits || [];
+      const updatedValidUnits = Array.from(new Set(currentValidUnits.filter(u => u !== oldUnit).concat(newUnit)));
+      const companyRef = doc(firestore, 'companies', companyId);
+      batch.update(companyRef, { validUnits: updatedValidUnits });
+
+      const productsToUpdate = productsData?.filter(p => p.unit === oldUnit) || [];
+      productsToUpdate.forEach(p => {
+        if (p.id) {
+          const docRef = doc(firestore, `companies/${companyId}/products`, p.id);
+          batch.update(docRef, { unit: newUnit, lastUpdated: new Date().toISOString() });
+        }
+      });
+
+      const rawMaterialsToUpdate = rawMaterialsData?.filter(r => r.unit === oldUnit) || [];
+      rawMaterialsToUpdate.forEach(r => {
+        if (r.id) {
+          const docRef = doc(firestore, `companies/${companyId}/rawMaterials`, r.id);
+          batch.update(docRef, { unit: newUnit });
+        }
+      });
+
+      await batch.commit();
+      toast({ title: 'Unidade Editada', description: `A unidade "${oldUnit}" passou a "${newUnit}".` });
+    } catch (error) {
+      console.error("Error editing unit:", error);
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao editar a unidade." });
+    }
+  }, [firestore, companyId, toast, companyData, productsData, rawMaterialsData]);
+
+
+  const removeUnit = useCallback(async (unit: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
+    if (!firestore || !companyId || !unit) return;
+    try {
+      const companyRef = doc(firestore, 'companies', companyId);
+      await updateDoc(companyRef, {
+        validUnits: arrayRemove(unit)
+      });
+      toast({ title: 'Unidade Removida', description: `A unidade "${unit}" foi removida da lista.` });
+    } catch (error) {
+      console.error("Error removing unit:", error);
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao remover unidade." });
+    }
+  }, [firestore, companyId, toast]);
+
+
+  const availableCategories = useMemo(() => {
+    const catalogCats = catalogCategoriesData?.map(c => c.name) || [];
+    const companyCats = companyData?.validCategories || [];
+    const productCats = productsData?.map(p => p.category).filter(Boolean) as string[] || [];
+
+    const allCats = Array.from(new Set([...catalogCats, ...companyCats, ...productCats]));
+    return allCats.sort((a, b) => a.localeCompare(b));
+  }, [catalogCategoriesData, companyData, productsData]);
+
+
+  const addCategory = useCallback(async (category: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
+    if (!firestore || !companyId) return;
+    try {
+      // We update company-specific categories to keep it clean
+      const companyRef = doc(firestore, 'companies', companyId);
+      await updateDoc(companyRef, {
+        validCategories: arrayUnion(category)
+      });
+      toast({ title: 'Categoria Adicionada', description: `Categoria "${category}" adicionada.` });
+    } catch (error) {
+      console.error("Error adding category:", error);
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao adicionar categoria." });
+    }
+  }, [firestore, companyId, toast]);
+
+
+  const editCategory = useCallback(async (oldCategory: string, newCategory: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
+    if (!firestore || !companyId || !oldCategory || !newCategory) return;
+    try {
+      const batch = writeBatch(firestore);
+
+      const currentValidCategories = companyData?.validCategories || [];
+      const updatedValidCategories = Array.from(new Set(currentValidCategories.filter(c => c !== oldCategory).concat(newCategory)));
+      const companyRef = doc(firestore, 'companies', companyId);
+      batch.update(companyRef, { validCategories: updatedValidCategories });
+
+      // Clean up catalogCategories: Drop old one, create new one if it doesn't exist
+      const oldCatalogCat = catalogCategoriesData?.find(c => c.name.toLowerCase() === oldCategory.toLowerCase());
+      if (oldCatalogCat && oldCatalogCat.id) {
+        const docRef = doc(firestore, `companies/${companyId}/catalogCategories`, oldCatalogCat.id);
+        batch.delete(docRef);
+      }
+
+      const newCatalogCatExists = catalogCategoriesData?.some(c => c.name.toLowerCase() === newCategory.toLowerCase());
+      if (!newCatalogCatExists) {
+        const newCatRef = doc(collection(firestore, `companies/${companyId}/catalogCategories`));
+        batch.set(newCatRef, { name: newCategory });
+      }
+
+      const catalogProductsToUpdate = catalogProductsData?.filter(p => p.category === oldCategory) || [];
+      catalogProductsToUpdate.forEach(p => {
+        if (p.id) {
+          const docRef = doc(firestore, `companies/${companyId}/catalogProducts`, p.id);
+          batch.update(docRef, { category: newCategory });
+        }
+      });
+
+      const productsToUpdate = productsData?.filter(p => p.category === oldCategory) || [];
+      productsToUpdate.forEach(p => {
+        if (p.id) {
+          const docRef = doc(firestore, `companies/${companyId}/products`, p.id);
+          batch.update(docRef, { category: newCategory, lastUpdated: new Date().toISOString() });
+        }
+      });
+
+      await batch.commit();
+      toast({ title: 'Categorias Fundidas', description: `A categoria "${oldCategory}" foi unificada com "${newCategory}".` });
+    } catch (error) {
+      console.error("Error editing category:", error);
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao editar a categoria." });
+    }
+  }, [firestore, companyId, toast, companyData, productsData, catalogProductsData, catalogCategoriesData]);
+
+
+  const removeCategory = useCallback(async (category: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
+    if (!firestore || !companyId || !category) return;
+    try {
+      const companyRef = doc(firestore, 'companies', companyId);
+      await updateDoc(companyRef, {
+        validCategories: arrayRemove(category)
+      });
+      toast({ title: 'Categoria Removida', description: `Categoria "${category}" removida.` });
+    } catch (error) {
+      console.error("Error removing category:", error);
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao remover categoria." });
+    }
+  }, [firestore, companyId, toast]);
+
+
+  // Products Merge Tool
+  const mergeProducts = useCallback(async (targetProductId: string, sourceProductIds: string[]) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
+    if (!productsCollectionRef || !firestore || !companyId) return;
+
+    try {
+      const batch = writeBatch(firestore);
+      if (!productsData) return;
+      const targetProduct = productsData.find(p => p.id === targetProductId);
+
+      if (!targetProduct) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Produto principal não encontrado.' });
+        return;
+      }
+
+      let totalStockToAdd = 0;
+      let totalReservedToAdd = 0;
+      const sourceIdsRecord: string[] = targetProduct.sourceIds || [];
+
+      // Calculate totals and mark sources for deletion
+      for (const sourceId of sourceProductIds) {
+        const sourceProduct = productsData?.find(p => p.id === sourceId);
+        if (sourceProduct) {
+          totalStockToAdd += (sourceProduct.stock || 0);
+          totalReservedToAdd += (sourceProduct.reservedStock || 0);
+          sourceIdsRecord.push(sourceId);
+
+          // Delete source product
+          const sourceRef = doc(productsCollectionRef as CollectionReference, sourceId);
+          batch.delete(sourceRef);
+        }
+      }
+
+      // Update target product
+      const targetRef = doc(productsCollectionRef as CollectionReference, targetProductId);
+      batch.update(targetRef, {
+        stock: (targetProduct.stock || 0) + totalStockToAdd,
+        reservedStock: (targetProduct.reservedStock || 0) + totalReservedToAdd,
+        sourceIds: sourceIdsRecord,
+        lastUpdated: new Date().toISOString()
+      });
+
+      await batch.commit();
+      toast({
+        title: 'Produtos Unificados!',
+        description: `${sourceProductIds.length} produtos foram fundidos em "${targetProduct.name}".`
+      });
+
+    } catch (error) {
+      console.error("Error merging products:", error);
+      toast({ variant: 'destructive', title: 'Erro ao Unificar', description: 'Ocorreu um erro ao tentar unificar os produtos.' });
+    }
+  }, [productsCollectionRef, firestore, companyId, productsData, toast]);
+  return { addCatalogProduct, addCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts };
+}
+
+export type SettingsActions = ReturnType<typeof useSettingsActions>;

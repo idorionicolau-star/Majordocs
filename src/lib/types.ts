@@ -180,6 +180,10 @@ export type Sale = {
   transactionId?: string; // For grouping multi-item sales
   paymentMethod?: string;
   timestamp?: any; // Firestore serverTimestamp or Date
+  /** Venda feita sem internet: o guideNumber é provisório (OFF-…) até ser numerada ao sincronizar. */
+  offlinePending?: boolean;
+  /** Número provisório que a venda teve antes de receber o oficial. */
+  provisionalNumber?: string;
 };
 
 export type CartItem = {
@@ -403,6 +407,9 @@ export interface InventoryContextType {
   clearNotifications: () => void;
   addNotification: (notification: Omit<AppNotification, 'id' | 'date' | 'read'>) => void;
   recalculateReservedStock: () => Promise<void>;
+  /** Vendas feitas sem internet que ainda não receberam o número oficial. */
+  pendingOfflineSales: number;
+  syncOfflineSales: () => Promise<void>;
   /** Anti-theft alerts to managers (feed + push). Ignored when the actor is a manager unless `always`. */
   notifyManagers: (msg: { title: string; body: string; link?: string; type?: string; dedupeId?: string; always?: boolean }) => void;
   addCatalogProduct: (productData: Omit<CatalogProduct, 'id'>) => Promise<void>;

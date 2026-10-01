@@ -43,7 +43,7 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, vi
                     </CardTitle>
                 </div>
                 <CardDescription className={cn("text-[10px]", isCondensed && "hidden")}>
-                    {sale.documentType} #{sale.guideNumber}
+                    {sale.documentType} #{sale.guideNumber}{sale.offlinePending ? ' · provisório' : ''}
                 </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow space-y-2 p-1 sm:p-2">

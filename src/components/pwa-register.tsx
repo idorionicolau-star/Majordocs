@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { WifiOff } from "lucide-react";
+import { useContext, useEffect, useState } from "react";
+import { WifiOff, RefreshCw } from "lucide-react";
+import { InventoryContext } from "@/context/inventory-context";
 import { mainNavItems } from "@/lib/data";
 
 const WARM_KEY = "majorstockx-sw-warm";
@@ -41,9 +42,11 @@ export function PwaRegister() {
     return null;
 }
 
-/** Faixa que avisa quando não há internet — e tranquiliza: o trabalho fica guardado. */
+/** Faixa que avisa quando não há internet — e tranquiliza: o trabalho fica guardado e segue sozinho. */
 export function OfflineBanner() {
     const [online, setOnline] = useState(true);
+    const ctx = useContext(InventoryContext);
+    const pending = ctx?.pendingOfflineSales || 0;
 
     useEffect(() => {
         const update = () => setOnline(navigator.onLine);
@@ -56,13 +59,30 @@ export function OfflineBanner() {
         };
     }, []);
 
-    if (online) return null;
+    if (online && !pending) return null;
     return (
-        <div role="status" className="mb-3 flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-            <WifiOff className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-            <p className="min-w-0 flex-1">
-                <b>Sem internet.</b> Pode consultar stock, vendas e clientes, e registar entradas e contagens no Stock Rápido (ficam guardadas e seguem quando a ligação voltar). Vender, levantar e transferir precisam de internet, para não gastar stock que já não existe. Não limpe os dados do navegador até sincronizar.
-            </p>
+        <div role="status" className="mb-3 space-y-2">
+            {!online && (
+                <div className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                    <WifiOff className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                    <p className="min-w-0 flex-1">
+                        <b>Sem internet.</b> Pode continuar a vender, levantar material e fazer entradas e contagens no Stock Rápido: fica tudo guardado neste aparelho e segue sozinho quando a ligação voltar. As vendas recebem um recibo provisório (OFF-…) e o número oficial é atribuído ao sincronizar. Transferir, produzir e auditar ainda precisam de internet. Não limpe os dados do navegador até sincronizar.
+                    </p>
+                </div>
+            )}
+            {pending > 0 && (
+                <div className="flex items-center gap-2 rounded-xl border border-blue-500/40 bg-blue-500/10 p-3 text-sm">
+                    <RefreshCw className="h-4 w-4 shrink-0 text-blue-600" />
+                    <p className="min-w-0 flex-1">
+                        <b>{pending} venda{pending > 1 ? "s" : ""} por numerar.</b> {online ? "A sincronizar…" : "Serão numeradas quando houver internet."}
+                    </p>
+                    {online && (
+                        <button type="button" onClick={() => ctx?.syncOfflineSales()} className="shrink-0 rounded-lg border border-blue-500/40 px-3 py-1 text-xs font-semibold">
+                            Sincronizar agora
+                        </button>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

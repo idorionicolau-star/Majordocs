@@ -260,6 +260,12 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
                 <div className="flex flex-col">
                     <span className="font-bold">{row.original.guideNumber}</span>
                     <span className="text-xs text-muted-foreground">{row.original.documentType}</span>
+                    {row.original.offlinePending && (
+                        <span className="mt-0.5 w-fit rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Provisório · por numerar</span>
+                    )}
+                    {!row.original.offlinePending && row.original.provisionalNumber && (
+                        <span className="text-[10px] text-muted-foreground">antes: {row.original.provisionalNumber}</span>
+                    )}
                 </div>
             )
         },
