@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, AlertCircle, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { links } from "@/lib/deep-links";
 
 export function InventoryAlerts() {
     const { products, loading } = useContext(InventoryContext) || { products: [], loading: true };
@@ -41,7 +42,7 @@ export function InventoryAlerts() {
                     return (
                         <Link
                             key={product.instanceId}
-                            href={`/inventory?filter=${encodeURIComponent(product.name)}`}
+                            href={links.product(product.name, product.location)}
                             className="group"
                         >
                             <Card className={cn(

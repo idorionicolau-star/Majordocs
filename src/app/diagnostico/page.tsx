@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, formatCurrency } from "@/lib/utils";
+import { links } from "@/lib/deep-links";
 
 const SEV: Record<Severity, { box: string; icon: React.ElementType; iconColor: string; label: string }> = {
   critical: { box: "border-red-500/30 bg-red-500/5", icon: ShieldAlert, iconColor: "text-red-500", label: "Urgente" },
@@ -131,16 +132,16 @@ export default function DiagnosticoPage() {
           <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-lg"><Package className="h-5 w-5 text-primary" /> Stock</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-3 gap-2 text-center">
-              <Stat n={a.stock.outOfStock.length} label="Esgotados" tone="bad" />
-              <Stat n={a.stock.critical.length} label="Críticos" tone="warn" />
-              <Stat n={a.stock.low.length} label="Baixos" />
+              <Stat n={a.stock.outOfStock.length} label="Esgotados" tone="bad" href={links.inventoryProblem("esgotado")} />
+              <Stat n={a.stock.critical.length} label="Críticos" tone="warn" href={links.inventoryProblem("critico")} />
+              <Stat n={a.stock.low.length} label="Baixos" href={links.inventoryProblem("baixo")} />
             </div>
             <Section title="Vão esgotar em ≤ 14 dias">
               {salesStale ? (
                 <Empty>Sem vendas recentes registadas não dá para prever. Registe as vendas e esta lista passa a funcionar.</Empty>
               ) : a.stock.runout.length ? (
                 a.stock.runout.slice(0, 6).map((r) => (
-                  <Row key={`${r.name}${r.location}`} left={r.name} right={`~${r.daysLeft} dias · ${qty(r.available)} ${r.unit}`} tone={r.daysLeft <= 5 ? "bad" : "warn"} />
+                  <Row key={`${r.name}${r.location}`} left={r.name} right={`~${r.daysLeft} dias · ${qty(r.available)} ${r.unit}`} tone={r.daysLeft <= 5 ? "bad" : "warn"} href={links.product(r.name, r.location)} />
                 ))
               ) : <Empty>Nada em risco ao ritmo actual de vendas. 👍</Empty>}
             </Section>
@@ -168,7 +169,7 @@ export default function DiagnosticoPage() {
             </div>
             <Section title="Mais vendidos (30 dias)">
               {a.sales.topProducts30.length ? a.sales.topProducts30.map((t, i) => (
-                <Row key={t.name} left={`${i + 1}. ${t.name}`} right={`${qty(t.qty)} ${t.unit} · ${formatCurrency(t.revenue)}`} />
+                <Row key={t.name} left={`${i + 1}. ${t.name}`} right={`${qty(t.qty)} ${t.unit} · ${formatCurrency(t.revenue)}`} href={links.salesOfProduct(t.name)} />
               )) : <Empty>Sem vendas registadas nos últimos 30 dias.</Empty>}
             </Section>
             {a.sales.topSellers30.length > 0 && (
@@ -185,17 +186,17 @@ export default function DiagnosticoPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-3 gap-2 text-center">
               <Stat n={a.orders.open.length} label="Em aberto" />
-              <Stat n={a.orders.overdue.length} label="Atrasadas" tone={a.orders.overdue.length ? "bad" : undefined} />
+              <Stat n={a.orders.overdue.length} label="Atrasadas" tone={a.orders.overdue.length ? "bad" : undefined} href="/orders" />
               <Stat n={a.orders.readyForPickup.length + a.stock.pendingPickups.length} label="Por levantar" tone="warn" />
             </div>
             {a.orders.readyForPickup.length > 0 && (
               <Section title="Encomendas prontas — avise o cliente">
-                {a.orders.readyForPickup.slice(0, 5).map((o) => <Row key={o.id} left={o.productName} right={o.clientName || "cliente"} />)}
+                {a.orders.readyForPickup.slice(0, 5).map((o) => <Row key={o.id} left={o.productName} right={o.clientName || "cliente"} href={links.order(o.id)} />)}
               </Section>
             )}
             {a.stock.pendingPickups.length > 0 && (
               <Section title="Vendas pagas ainda não levantadas">
-                {a.stock.pendingPickups.slice(0, 5).map((p) => <Row key={p.sale.id} left={`${p.sale.productName} × ${qty(p.sale.quantity)}`} right={`${p.sale.clientName || "cliente"} · ${p.days} dias`} tone={p.days > 7 ? "warn" : undefined} />)}
+                {a.stock.pendingPickups.slice(0, 5).map((p) => <Row key={p.sale.id} left={`${p.sale.productName} × ${qty(p.sale.quantity)}`} right={`${p.sale.clientName || "cliente"} · ${p.days} dias`} tone={p.days > 7 ? "warn" : undefined} href={links.sale(p.sale.guideNumber || p.sale.productName)} />)}
               </Section>
             )}
             {!a.orders.open.length && !a.stock.pendingPickups.length && <Empty>Nada pendente.</Empty>}
@@ -216,7 +217,7 @@ export default function DiagnosticoPage() {
             )}
             <Section title="Bons clientes que não voltam há +45 dias">
               {a.customers.inactive.length ? a.customers.inactive.slice(0, 5).map((c) => (
-                <Row key={c.id} left={c.name} right={`${formatCurrency(c.totalPurchases || 0)}${c.phone ? ` · ${c.phone}` : ""}`} />
+                <Row key={c.id} left={c.name} right={`${formatCurrency(c.totalPurchases || 0)}${c.phone ? ` · ${c.phone}` : ""}`} href={links.customer(c.name)} />
               )) : <Empty>{a.customers.total ? "Nenhum cliente importante afastado." : "Registe clientes nas vendas para ver esta lista."}</Empty>}
             </Section>
             <Button asChild variant="outline" size="sm"><Link href="/customers">Ver clientes</Link></Button>
@@ -239,7 +240,14 @@ function AlertCard({ alert }: { alert: Alert }) {
           <p className="mt-0.5 text-sm text-muted-foreground">{alert.detail}</p>
           {alert.items && alert.items.length > 0 && (
             <ul className="mt-2 space-y-0.5 text-sm">
-              {alert.items.map((i) => <li key={i} className="truncate">• {i}</li>)}
+              {alert.items.map((i, idx) => {
+                const href = alert.itemLinks?.[idx];
+                return (
+                  <li key={`${i}-${idx}`} className="truncate">
+                    {href ? <Link href={href} className="underline-offset-2 hover:underline">• {i}</Link> : <>• {i}</>}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -275,13 +283,16 @@ function MiniKpi({ label, value, sub, tone }: { label: string; value: string; su
   );
 }
 
-function Stat({ n, label, tone, suffix = "" }: { n: number; label: string; tone?: "bad" | "warn"; suffix?: string }) {
-  return (
-    <div className="rounded-xl bg-muted/40 p-3">
+function Stat({ n, label, tone, suffix = "", href }: { n: number; label: string; tone?: "bad" | "warn"; suffix?: string; href?: string }) {
+  const inner = (
+    <>
       <p className={cn("text-2xl font-bold tabular-nums", tone === "bad" && n > 0 && "text-red-500", tone === "warn" && n > 0 && "text-amber-500")}>{n}{suffix}</p>
       <p className="text-[11px] text-muted-foreground">{label}</p>
-    </div>
+    </>
   );
+  return href && n > 0
+    ? <Link href={href} className="block rounded-xl bg-muted/40 p-3 transition hover:bg-muted">{inner}</Link>
+    : <div className="rounded-xl bg-muted/40 p-3">{inner}</div>;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -293,13 +304,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Row({ left, right, tone }: { left: string; right: string; tone?: "bad" | "warn" }) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-muted/40">
+function Row({ left, right, tone, href }: { left: string; right: string; tone?: "bad" | "warn"; href?: string }) {
+  const body = (
+    <>
       <span className="min-w-0 truncate">{left}</span>
       <span className={cn("shrink-0 tabular-nums text-muted-foreground", tone === "bad" && "text-red-500 font-semibold", tone === "warn" && "text-amber-500 font-semibold")}>{right}</span>
-    </div>
+    </>
   );
+  const cls = "flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-muted/40";
+  return href ? <Link href={href} className={cls}>{body}</Link> : <div className={cls}>{body}</div>;
 }
 
 function Empty({ children }: { children: React.ReactNode }) {

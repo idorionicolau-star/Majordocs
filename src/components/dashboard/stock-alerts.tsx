@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { links } from "@/lib/deep-links";
 
 export function StockAlerts({ className }: { className?: string }) {
     const { products, sales, loading, companyData } = useContext(InventoryContext) || { products: [], sales: [], loading: true, companyData: null };
@@ -170,7 +171,7 @@ export function StockAlerts({ className }: { className?: string }) {
 
                     return (
                         <Link
-                            href={`/inventory?filter=${encodeURIComponent(product.name)}`}
+                            href={links.product(product.name, product.location)}
                             key={product.id}
                             className="block group"
                         >

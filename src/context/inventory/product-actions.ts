@@ -6,6 +6,7 @@ import { collection, doc, writeBatch, getDocs, query, where, runTransaction, ser
 import { computeSmartThresholds } from '@/lib/smart-thresholds';
 import { formatCurrency, normalizeString } from '@/lib/utils';
 import type { InventoryCore } from './core';
+import { links } from '@/lib/deep-links';
 
 export function useProductActions(core: InventoryCore) {
   const { companyData, sendPush, locations, triggerEmailAlert, toast, isReadOnly, productsCollectionRef, firestore, user, companyId, productsData, addNotification, stockMovementsData, salesData, products, notifyManagers, assertOnline, isMultiLocation, catalogProductsData } = core;
@@ -26,7 +27,7 @@ export function useProductActions(core: InventoryCore) {
     sendPush({
       title: `⚠️ Stock crítico: ${product.name}`,
       body: `Restam ${availableStock} ${product.unit || 'un'} · ${locations.find(l => l.id === product.location)?.name || 'Principal'}`,
-      link: '/inventory',
+      link: links.product(product.name, product.location),
       tag: `critical-${product.name}`,
       type: 'stock',
       includeSelf: true, // alerta de stock não é "acção de outra pessoa": chega também a quem vendeu
@@ -312,7 +313,7 @@ export function useProductActions(core: InventoryCore) {
         type: 'security',
         title: `✏️ Stock alterado à mão: ${productToUpdate.name}`,
         body: `${user?.username || '—'} mudou de ${productToUpdate.stock} para ${stock} ${productToUpdate.unit || 'un'} (${delta > 0 ? '+' : ''}${delta}) · ${formatCurrency(Math.abs(delta) * (productToUpdate.price || 0))}`,
-        link: '/inventory/perdas',
+        link: links.losses(productToUpdate.name),
       });
     }
     if (updatedData.price !== undefined && Math.abs(Number(updatedData.price) - (productToUpdate.price || 0)) >= 0.01) {
@@ -320,7 +321,7 @@ export function useProductActions(core: InventoryCore) {
         type: 'price',
         title: `💲 Preço alterado: ${productToUpdate.name}`,
         body: `${user?.username || '—'}: ${formatCurrency(productToUpdate.price || 0)} → ${formatCurrency(Number(updatedData.price))}`,
-        link: '/inventory',
+        link: links.product(productToUpdate.name, productToUpdate.location),
       });
     }
 
@@ -490,7 +491,7 @@ export function useProductActions(core: InventoryCore) {
           type: 'security', always: true,
           title: `🔎 Contagem: ${product.name} com falta de ${missing} ${product.unit || 'un'}`,
           body: `${user.username} · ${formatCurrency(missing * (product.price || 0))} · ${reason}`,
-          link: '/inventory/perdas',
+          link: links.losses(product.name),
         });
       }
 

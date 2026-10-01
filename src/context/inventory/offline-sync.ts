@@ -7,6 +7,7 @@ import { nextGuideNumber } from '@/lib/sale-plan';
 import { isOffline } from './offline-helpers';
 import type { InventoryCore } from './core';
 import type { ProductActions } from './product-actions';
+import { links } from '@/lib/deep-links';
 
 const MANAGER_TAKEOVER_MS = 15 * 60 * 1000;
 
@@ -89,6 +90,7 @@ export function useOfflineSync(core: InventoryCore, deps: { product_actions: Pro
               type: 'security',
               title: `⚠️ Stock inconsistente: ${sale.productName}`,
               body: `Depois de sincronizar vendas feitas offline ficou com stock ${stock} (reservado ${reserved}). Dois aparelhos podem ter vendido o último artigo ao mesmo tempo — confirme com uma contagem.`,
+              link: links.product(sale.productName, sale.location),
               dedupeId: `offline-neg-${sale.productName}-${new Date().toISOString().slice(0, 10)}`,
             });
           }

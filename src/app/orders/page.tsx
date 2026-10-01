@@ -2,7 +2,8 @@
 
 
 import { useState, useMemo, useContext, useEffect } from "react";
-import { useSearchParams } from 'next/navigation';
+import { DeepLinkBanner } from "@/components/deep-link-banner";
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useFuse } from '@/hooks/use-fuse';
 import type { Order, Sale, ProductionLog, StockMovement } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -240,7 +241,15 @@ export default function OrdersPage() {
     return result;
   }, [orders, statusFilter]);
 
-  const filteredOrders = useFuse(statusFilteredOrders, nameFilter, { keys: ['productName', 'clientName'] });
+  const fuseOrders = useFuse(statusFilteredOrders, nameFilter, { keys: ['productName', 'clientName'] });
+  // Vindo de um aviso: mostra só a encomenda pedida.
+  const orderFocus = searchParams.get('encomenda');
+  const filteredOrders = orderFocus ? statusFilteredOrders.filter((o) => o.id === orderFocus) : fuseOrders;
+  const router = useRouter();
+  useEffect(() => {
+    const st = searchParams.get('statusFilter');
+    if (st) setStatusFilter(st);
+  }, [searchParams]);
 
 
   const handlePrintReport = () => {
@@ -366,6 +375,12 @@ export default function OrdersPage() {
 
   return (
     <>
+      {(orderFocus || searchParams.get('statusFilter')) && (
+        <DeepLinkBanner
+          title={orderFocus ? `Encomenda: ${filteredOrders[0]?.productName || 'não encontrada'}${filteredOrders[0]?.clientName ? ` — ${filteredOrders[0].clientName}` : ''}` : `Encomendas: ${searchParams.get('statusFilter')} (${filteredOrders.length})`}
+          onClear={() => { setStatusFilter('all'); router.replace('/orders'); }}
+        />
+      )}
       <AlertDialog open={showAutoProductionConfirm} onOpenChange={setShowAutoProductionConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>

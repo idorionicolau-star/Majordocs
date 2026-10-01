@@ -23,6 +23,7 @@ import {
     type QuickLine,
     type QuickMode,
 } from "@/lib/quick-stock";
+import { links } from "@/lib/deep-links";
 import {
     ArrowDownToLine,
     ArrowUpFromLine,
@@ -375,7 +376,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                         always: true,
                         title: `🔎 Contagem: ${short.length} produto(s) em falta — ${value.toLocaleString("pt-PT", { maximumFractionDigits: 0 })} MT`,
                         body: `${user.username}${isMultiLocation && location ? ` · ${locations.find((l) => l.id === location)?.name || ""}` : ""} · ${top.map((l) => `${l.name} −${fmt(l.systemStock - l.qty)}`).join(", ")}`,
-                        link: "/inventory/perdas",
+                        link: links.products(short.map((l) => l.name), "Produtos em falta na contagem"),
                     });
                 }
             } else if (mode === "out") {
@@ -384,7 +385,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                     type: "security",
                     title: `📤 Saída de stock (${note.trim() || "sem motivo"}) — ${value.toLocaleString("pt-PT", { maximumFractionDigits: 0 })} MT`,
                     body: `${user.username} · ${lineList.slice(0, 3).map((l) => `${l.name} ×${fmt(l.qty)}`).join(", ")}${lineList.length > 3 ? "…" : ""}`,
-                    link: "/inventory/perdas",
+                    link: links.products(lineList.map((l) => l.name), "Saída de stock"),
                 });
             }
             toast({
