@@ -200,13 +200,30 @@ export default function InventoryHistoryPage() {
     }
   };
 
-  const handleDownloadPdf = () => {
-    toast({
-      title: "Como Guardar o Relatório em PDF",
-      description: "Na janela de impressão que vai abrir, por favor mude o destino para 'Guardar como PDF' para descarregar o ficheiro.",
-      duration: 8000,
-    });
-    handlePrint();
+  const handleDownloadPdf = async () => {
+    try {
+      const { generateMovementsPDF } = await import('@/lib/pdf-generator');
+      const rows = filteredMovements.map(m => {
+        const ts = m.timestamp as Timestamp;
+        const from = m.fromLocationId ? (locationMap.get(m.fromLocationId) || '') : '';
+        const to = m.toLocationId ? (locationMap.get(m.toLocationId) || '') : '';
+        const location = m.type === 'TRANSFER' ? `${from} → ${to}` : m.type === 'IN' ? to : m.type === 'OUT' ? from : (from || to);
+        const reason = m.isAudit ? `${m.reason} (sistema ${m.systemCountBefore} → contado ${m.physicalCount})` : m.reason;
+        return {
+          date: ts ? format(ts.toDate(), 'dd/MM/yyyy HH:mm') : '',
+          type: m.type,
+          product: m.productName,
+          quantity: m.quantity,
+          location: location.replace('→', '->'),
+          reason: reason.replace('→', '->'),
+          user: m.userName || '',
+        };
+      });
+      generateMovementsPDF(rows, companyData || null, selectedDate ? format(selectedDate, 'dd/MM/yyyy') : 'Todos os movimentos');
+      toast({ title: 'PDF descarregado', description: `${rows.length} movimento${rows.length === 1 ? '' : 's'}.` });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Não foi possível gerar o PDF', description: e?.message || 'Tente de novo.' });
+    }
   };
 
 

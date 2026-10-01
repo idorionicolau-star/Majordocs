@@ -1,119 +1,11 @@
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Sale, Company } from './types';
-import { formatCurrency } from './utils';
+import type { Company } from './types';
+import { formatCurrency as formatCurrencyUi } from './utils';
 
-export const generateSalePDF = async (sale: Sale, company: Company | null) => {
-    const doc = new jsPDF();
-
-    // Add company logo/header
-    doc.setFontSize(20);
-    doc.text(company?.name || 'MajorStockX', 14, 22);
-
-    doc.setFontSize(10);
-    doc.text(company?.address || '', 14, 30);
-    doc.text(`NUIT: ${company?.taxId || 'N/A'}`, 14, 35);
-
-    // Add sale details
-    doc.setFontSize(12);
-    doc.text(sale.documentType, 150, 22, { align: 'right' });
-    doc.text(`Nº ${sale.guideNumber}`, 150, 30, { align: 'right' });
-
-    doc.setFontSize(10);
-    doc.text(`Data: ${new Date(sale.date).toLocaleDateString('pt-BR')}`, 14, 50);
-    doc.text(`Cliente: ${sale.clientName || 'Consumidor Final'}`, 14, 55);
-    if (sale.soldBy) doc.text(`Vendedor: ${sale.soldBy}`, 14, 60);
-
-    // Add items table
-    const tableColumn = ["Produto", "Qtd", "Preço Unit.", "Total"];
-    const tableRows = [];
-
-    // For now, assuming single item sale structure based on existing code, 
-    // but extensible for multiple items
-    const saleData = [
-        sale.productName,
-        sale.quantity.toString(),
-        formatCurrency(sale.unitPrice),
-        formatCurrency(sale.subtotal)
-    ];
-    tableRows.push(saleData);
-
-    autoTable(doc, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: 70,
-        theme: 'striped',
-        headStyles: { fillColor: [41, 128, 185], textColor: 255 }, // Blue header
-        styles: { fontSize: 10, cellPadding: 3 },
-    });
-
-    // Add totals
-    const finalY = (doc as any).lastAutoTable.finalY || 80;
-
-    doc.text(`Subtotal: ${formatCurrency(sale.subtotal)}`, 140, finalY + 10);
-
-    let currentY = finalY + 15;
-    if (sale.discount && sale.discount > 0) {
-        doc.text(`Desconto: -${formatCurrency(sale.discount)}`, 140, currentY);
-        currentY += 5;
-    }
-
-    if (sale.vat && sale.vat > 0) {
-        doc.text(`IVA: ${formatCurrency(sale.vat)}`, 140, currentY);
-        currentY += 5;
-    }
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text(`Total: ${formatCurrency(sale.totalValue)}`, 140, currentY + 5);
-
-    // Payment Info and Signature Area
-    let footerY = currentY + 20;
-
-    if (company?.paymentInfo) {
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.text("Informações de Pagamento:", 14, footerY);
-        doc.setFont("helvetica", "normal");
-
-        const lines = doc.splitTextToSize(company.paymentInfo, 100);
-        doc.text(lines, 14, footerY + 6);
-    }
-
-    if (company?.signatureUrl) {
-        try {
-            const img = new Image();
-            img.crossOrigin = "Anonymous";
-            img.src = company.signatureUrl;
-            await new Promise((resolve, reject) => {
-                img.onload = resolve;
-                img.onerror = resolve; // Ignore errors to still generate the PDF
-            });
-            // Try to add the image if it loaded properly
-            if (img.complete && img.naturalHeight > 0) {
-                doc.addImage(img, 'PNG', 130, footerY - 5, 50, 20, undefined, 'FAST');
-            }
-        } catch (e) {
-            console.error("Erro ao carregar assinatura", e);
-        }
-    } else {
-        // Draw signature line if no image
-        doc.setLineWidth(0.5);
-        doc.line(130, footerY + 15, 180, footerY + 15);
-    }
-
-    doc.setFontSize(8);
-    doc.text("A Empresa / Assinatura", 155, footerY + 20, { align: 'center' });
-
-    // Footer
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.text('Gerado por MajorStockX - Gestão Inteligente', 105, 290, { align: 'center' });
-
-    // Save
-    doc.save(`${sale.documentType}_${sale.guideNumber}.pdf`);
-};
+// As fontes base do PDF não têm os espaços finos que o Intl pode usar nos números.
+const formatCurrency = (value: number, options?: Parameters<typeof formatCurrencyUi>[1]) => formatCurrencyUi(value, options).replace(/[\u00A0\u202F]/g, ' ');
 
 export const generateInventoryReportPDF = (products: any[], company: Company | null, locationName: string = 'Geral') => {
     const doc = new jsPDF();
@@ -575,4 +467,43 @@ export const generateInsightsPDF = (insights: string, companyName: string, date:
     }
 
     doc.save(`Insights_MajorStockX_${date.toISOString().split('T')[0]}.pdf`);
+};
+
+export type MovementPdfRow = { date: string; type: string; product: string; quantity: number; location: string; reason: string; user: string };
+
+/** Histórico de movimentos de stock como PDF verdadeiro (antes era a janela de impressão). */
+export const generateMovementsPDF = (rows: MovementPdfRow[], company: Company | null, periodLabel: string) => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const W = doc.internal.pageSize.getWidth();
+    const TYPE: Record<string, string> = { IN: 'Entrada', OUT: 'Saída', TRANSFER: 'Transferência', ADJUSTMENT: 'Ajuste' };
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.text(company?.name || 'MajorStockX', 14, 18);
+    doc.setFontSize(13);
+    doc.text('Movimentos de Stock', W - 14, 18, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(110);
+    doc.text(`Período: ${periodLabel} · ${rows.length} movimento${rows.length === 1 ? '' : 's'} · gerado a ${new Date().toLocaleString('pt-PT')}`, 14, 25);
+    doc.setTextColor(0);
+
+    autoTable(doc, {
+        startY: 30,
+        head: [['Data e hora', 'Tipo', 'Produto', 'Qtd.', 'Local', 'Motivo', 'Utilizador']],
+        body: rows.map(r => [r.date, TYPE[r.type] || r.type, r.product, `${r.quantity > 0 ? '+' : ''}${r.quantity}`, r.location, r.reason, r.user]),
+        theme: 'striped',
+        headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 8.5 },
+        styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+        columnStyles: { 0: { cellWidth: 32 }, 1: { cellWidth: 24 }, 3: { halign: 'right', cellWidth: 18 }, 5: { cellWidth: 70 } },
+        didDrawPage: () => {
+            const H = doc.internal.pageSize.getHeight();
+            doc.setFontSize(7.5);
+            doc.setTextColor(130);
+            doc.text(`${company?.name || 'MajorStockX'} · MajorStockX`, 14, H - 8);
+            doc.setTextColor(0);
+        },
+    });
+
+    doc.save(`Movimentos_Stock_${new Date().toISOString().split('T')[0]}.pdf`);
 };
