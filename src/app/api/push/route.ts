@@ -8,14 +8,14 @@ import { initializeAdmin, verifyIdToken } from '@/lib/firebase-admin';
  * (companies/{companyId}/pushTokens). FCM is free, also on the Spark plan.
  *
  * Body: { companyId, title, body, link?, tag?, includeSelf? }
- * By default the person who triggered the event is not notified (they already know);
+ * By default the device that triggered the event is not notified (it already knows);
  * `includeSelf: true` is used by the "test" button.
  */
 export async function POST(req: Request) {
     const decoded = await verifyIdToken(req);
     if (!decoded) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
 
-    const { companyId, title, body, link, tag, includeSelf, audience } = await req.json();
+    const { companyId, title, body, link, tag, includeSelf, audience, excludeToken } = await req.json();
     if (!companyId || !title) return NextResponse.json({ error: 'Dados em falta.' }, { status: 400 });
     if (!(decoded as any).superAdmin && companyId !== (decoded as any).companyId) {
         return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
@@ -24,7 +24,9 @@ export async function POST(req: Request) {
     try {
         const admin = initializeAdmin();
         const snap = await admin.firestore().collection(`companies/${companyId}/pushTokens`).get();
-        let targets = snap.docs.filter((d) => includeSelf || d.get('userId') !== decoded.uid);
+        // Não avisa só o aparelho que fez a acção (os outros aparelhos da mesma conta recebem).
+        // Aparelhos antigos, sem código guardado, continuam a ser excluídos pela conta.
+        let targets = snap.docs.filter((d) => includeSelf || (excludeToken ? d.id !== excludeToken : d.get('userId') !== decoded.uid));
         if (audience === 'managers') {
             // Só gestores (Admin/Dono) recebem, p.ex., pedidos de confirmação de preço.
             const ids = Array.from(new Set(targets.map((d) => d.get('userId') as string).filter(Boolean)));

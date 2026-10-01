@@ -9,6 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 export type PushStatus = 'unsupported' | 'no-key' | 'default' | 'denied' | 'enabled' | 'error';
 
 const VAPID = process.env.NEXT_PUBLIC_VAPID_KEY;
+/** Código deste aparelho: serve para não o avisar das vendas que ele próprio fez (e avisar os outros, mesmo da mesma conta). */
+export const PUSH_TOKEN_KEY = 'majorstockx-push-token';
 
 /**
  * Push notifications for this device.
@@ -31,6 +33,7 @@ export function usePushNotifications(companyId: string | null | undefined, user:
         const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
         const token = await getToken(messaging, { vapidKey: VAPID, serviceWorkerRegistration: swReg });
         if (!token) return false;
+        try { localStorage.setItem(PUSH_TOKEN_KEY, token); } catch { /* ignore */ }
         await setDoc(doc(firestore, `companies/${companyId}/pushTokens/${token}`), {
             userId: user.id,
             userName: user.username,
