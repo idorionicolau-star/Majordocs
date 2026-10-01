@@ -11,12 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn, formatCurrency, normalizeString } from "@/lib/utils";
 import type { CartItem, Product, Sale } from "@/lib/types";
 import { parseQuickInput, searchProducts, toNumber } from "@/lib/quick-stock";
-import { Check, ChevronDown, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, Truck, X } from "lucide-react";
 import { BarcodeScanner } from "@/components/scan/barcode-scanner";
 import { VoiceButton } from "@/components/scan/voice-button";
 import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode";
 import { parseVoice } from "@/lib/voice-parse";
 import { useBarcodeLink } from "@/hooks/use-barcode-link";
+import { useCuring } from "@/hooks/use-curing";
 
 type Line = {
     key: string;
@@ -27,6 +28,9 @@ type Line = {
     price: number;
     cost: number;
     available: number;
+    /** pronto para levar hoje (descontado o que ainda seca); só existe se a empresa usa secagem */
+    ready?: number;
+    readyAt?: string;
     location: string;
     /** Habitual price when added — a different price will need the manager's confirmation */
     ref?: number;
@@ -78,6 +82,8 @@ export function FastSale() {
     const [pendingCode, setPendingCode] = useState<string | null>(null);
     const [listening, setListening] = useState("");
     const { link: linkBarcode, canLink } = useBarcodeLink();
+    const curingInfo = useCuring();
+    const fmtDay = (d: Date) => d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" });
 
     const searchRef = useRef<HTMLInputElement>(null);
     const qtyRefs = useRef<Map<string, HTMLInputElement>>(new Map());
@@ -153,7 +159,7 @@ export function FastSale() {
             if (cur) return prev.map((l) => (l.key === key ? { ...l, qty: qty != null && qty > 0 ? qty : l.qty + 1 } : l));
             return [
                 ...prev,
-                { key, productId: p.sourceIds?.[0] || p.id || "", name: p.name, unit: p.unit || "un", qty: q, price: priceOf(p), cost: p.cost || 0, available: a, location: p.location || "", ref: p.price || 0 },
+                { key, productId: p.sourceIds?.[0] || p.id || "", name: p.name, unit: p.unit || "un", qty: q, price: priceOf(p), cost: p.cost || 0, available: a, ready: curingInfo.enabled ? Math.max(0, a - curingInfo.curing(p.name, p.location)) : undefined, readyAt: curingInfo.enabled ? curingInfo.nextReady(p.name, p.location)?.toISOString() : undefined, location: p.location || "", ref: p.price || 0 },
             ];
         });
         setText("");
@@ -237,7 +243,10 @@ export function FastSale() {
     const overStock = lines.filter((l) => l.qty > l.available);
     const zeroPrice = lines.filter((l) => !(l.price > 0));
     const isProforma = docType === "Factura Proforma";
-    const canConfirm = lines.length > 0 && !saving && (isProforma || overStock.length === 0) && zeroPrice.length === 0 && (debt === 0 || client.trim().length > 0);
+    // Betão ainda a secar não se carrega hoje: só se vende como "levanta depois".
+    const overReady = curingInfo.enabled && !isProforma ? lines.filter((l) => l.ready !== undefined && l.qty > l.ready) : [];
+    const blockedByCuring = pickedUp ? overReady : [];
+    const canConfirm = lines.length > 0 && !saving && (isProforma || overStock.length === 0) && zeroPrice.length === 0 && blockedByCuring.length === 0 && (debt === 0 || client.trim().length > 0);
 
     const customerNames = useMemo(() => Array.from(new Set(customers.map((c) => c.name))).sort((a, b) => a.localeCompare(b, "pt")), [customers]);
 
@@ -325,9 +334,16 @@ export function FastSale() {
                     <p className="text-xs text-muted-foreground">Escreva, leia o código de barras ou dite — Enter junta ao carrinho.</p>
                     <p className="hidden text-[11px] text-muted-foreground/70 md:block">Atalhos: F2 pesquisar · F8 câmara · Ctrl+Enter finalizar · Alt+1…5 pagamento</p>
                 </div>
-                <Button asChild variant="outline" size="sm" className="shrink-0">
-                    <Link href="/pos/catalogo"><LayoutGrid className="mr-1.5 h-4 w-4" />Catálogo</Link>
-                </Button>
+                <div className="flex shrink-0 gap-2">
+                    {curingInfo.enabled && (
+                        <Button asChild variant="outline" size="sm">
+                            <Link href="/sales/carga"><Truck className="mr-1.5 h-4 w-4" />Carga</Link>
+                        </Button>
+                    )}
+                    <Button asChild variant="outline" size="sm">
+                        <Link href="/pos/catalogo"><LayoutGrid className="mr-1.5 h-4 w-4" />Catálogo</Link>
+                    </Button>
+                </div>
             </div>
 
             {isMultiLocation && locations.length > 0 && (
@@ -401,7 +417,7 @@ export function FastSale() {
                                 className={cn("flex w-full items-center justify-between gap-3 border-b px-4 py-3 text-left last:border-0 disabled:opacity-50", i === highlight && "bg-muted")}>
                                 <div className="min-w-0">
                                     <p className="truncate font-medium">{p.name}</p>
-                                    <p className={cn("text-xs", a <= 0 ? "text-red-500" : "text-muted-foreground")}>{a <= 0 ? "Esgotado" : `${fmtQ(a)} ${p.unit || "un"} disponíveis`}{c ? ` · no carrinho: ${fmtQ(c.qty)}` : ""}</p>
+                                    <p className={cn("text-xs", a <= 0 ? "text-red-500" : "text-muted-foreground")}>{a <= 0 ? "Esgotado" : `${fmtQ(a)} ${p.unit || "un"} disponíveis`}{curingInfo.enabled && curingInfo.curing(p.name, p.location) > 0 ? ` · ${fmtQ(Math.min(a, curingInfo.curing(p.name, p.location)))} a secar` : ""}{c ? ` · no carrinho: ${fmtQ(c.qty)}` : ""}</p>
                                 </div>
                                 <span className={cn("shrink-0 font-semibold tabular-nums", !priceOf(p) && "text-red-500")}>{priceOf(p) ? formatCurrency(priceOf(p)) : "sem preço"}</span>
                             </button>
@@ -493,6 +509,24 @@ export function FastSale() {
                                 </button>
                             ))}
                         </div>
+
+                        {overReady.length > 0 && (
+                            <div className={cn("rounded-xl border p-3 text-sm", pickedUp ? "border-amber-500/50 bg-amber-500/10" : "border-sky-500/40 bg-sky-500/10")}>
+                                <p className="font-semibold">{pickedUp ? "Ainda a secar — não se pode levar hoje" : "Fica reservado até secar"}</p>
+                                <ul className="mt-1 space-y-0.5 text-xs">
+                                    {overReady.map((l) => (
+                                        <li key={l.key}>
+                                            {l.name}: {fmtQ(l.ready ?? 0)} prontos de {fmtQ(l.qty)}{l.readyAt ? ` · o resto fica pronto a partir de ${fmtDay(new Date(l.readyAt))}` : ""}
+                                        </li>
+                                    ))}
+                                </ul>
+                                {pickedUp && (
+                                    <button type="button" onClick={() => setPickedUp(false)} className="mt-2 rounded-lg bg-amber-500/20 px-3 py-1.5 text-xs font-semibold">
+                                        Vender como “Levanta depois”
+                                    </button>
+                                )}
+                            </div>
+                        )}
 
                         {!isProforma && (
                             <>
