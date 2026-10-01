@@ -24,7 +24,7 @@ import { Search, Plus, User, Phone, Mail, Calendar, Edit, Trash2 } from 'lucide-
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
 import { useFuse } from '@/hooks/use-fuse';
@@ -34,7 +34,9 @@ export default function CustomersPage() {
     const { customers, deleteCustomer, loading } = useCRM();
     const router = useRouter();
 
-    const [searchTerm, setSearchTerm] = useState('');
+    // Vindo de um aviso (ex.: diagnóstico): abre já filtrado pelo cliente.
+    const searchParams = useSearchParams();
+    const [searchTerm, setSearchTerm] = useState(searchParams.get('cliente') || '');
     const [viewingCustomer, setViewingCustomer] = useState<any>(null);
     const searchPlaceholder = useDynamicPlaceholder('person');
 

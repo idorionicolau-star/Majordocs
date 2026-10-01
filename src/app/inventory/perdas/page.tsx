@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { DeepLinkBanner } from "@/components/deep-link-banner";
 import Link from "next/link";
 import { AlertTriangle, ClipboardCheck, MapPin, PackageMinus, ShieldAlert, User } from "lucide-react";
 import { useInventory } from "@/context/inventory-context";
@@ -28,6 +30,10 @@ export default function LossesPage() {
     const isManager = !!user && (user.role === "Admin" || user.role === "Dono");
     const [days, setDays] = useState(30);
     const [loc, setLoc] = useState<string>("all");
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    // Vindo de um aviso sobre um produto: só os registos desse produto.
+    const onlyProduct = searchParams.get("produto");
 
     const priceOf = useMemo(() => {
         const byId = new Map<string, number>();
@@ -47,6 +53,7 @@ export default function LossesPage() {
             if (!date || date.getTime() < since) return;
             const location = (m.type === "OUT" ? m.fromLocationId : m.toLocationId) || m.fromLocationId || m.toLocationId || "";
             if (loc !== "all" && location !== loc) return;
+            if (onlyProduct && normalizeString(m.productName) !== normalizeString(onlyProduct)) return;
             const reason = m.reason || "";
             const base = { id: m.id || `${m.productId}-${date.getTime()}`, date, product: m.productName, location, user: m.userName || "—", reason };
             if (m.type === "ADJUSTMENT" && m.quantity !== 0) {
@@ -59,7 +66,7 @@ export default function LossesPage() {
             }
         });
         return out.sort((a, b) => b.date.getTime() - a.date.getTime());
-    }, [stockMovements, days, loc, priceOf]);
+    }, [stockMovements, days, loc, priceOf, onlyProduct]);
 
     const sum = (k: Kind) => events.filter((e) => e.kind === k).reduce((t, e) => t + e.value, 0);
     const lost = sum("falta") + sum("perda");
@@ -89,6 +96,10 @@ export default function LossesPage() {
                 </div>
                 <Button asChild><Link href="/inventory/quick?modo=contagem"><ClipboardCheck className="mr-2 h-4 w-4" />Fazer contagem</Link></Button>
             </div>
+
+            {onlyProduct && (
+                <DeepLinkBanner title={`Registos de “${onlyProduct}” (${events.length})`} hint="Só este produto — contagens, faltas e saídas." count={events.length} onClear={() => router.replace("/inventory/perdas")} />
+            )}
 
             <div className="flex flex-wrap gap-2">
                 {PERIODS.map((d) => (

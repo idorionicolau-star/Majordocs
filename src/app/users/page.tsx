@@ -27,6 +27,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { EmployeeCard } from "@/components/users/employee-card";
 import { Card } from "@/components/ui/card";
+import { DeepLinkBanner } from "@/components/deep-link-banner";
+import { useSearchParams, useRouter } from "next/navigation";
 
 
 export default function UsersPage() {
@@ -34,6 +36,9 @@ export default function UsersPage() {
   const firestore = useFirestore();
   const { companyId, user, loading, companyData } = useContext(InventoryContext) || {};
   const isAdmin = user?.role === 'Admin';
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const focusId = searchParams.get('funcionario');
 
   const employeesCollectionRef = useMemoFirebase(
     () => firestore && companyId ? collection(firestore, `companies/${companyId}/employees`) : null,
@@ -49,6 +54,8 @@ export default function UsersPage() {
   const handleDeleteEmployee = async () => {
     // Removal disabled
   };
+
+  const shownEmployees = useMemo(() => (focusId ? (employees || []).filter((e) => e.id === focusId) : (employees || [])), [employees, focusId]);
 
   const tableColumns = useMemo(() => columns({
     onDelete: (employee) => setEmployeeToDelete(employee),
@@ -113,15 +120,21 @@ export default function UsersPage() {
         )}
       </div>
 
+      {focusId && (
+        <DeepLinkBanner
+          title={shownEmployees[0] ? `Funcionário: ${shownEmployees[0].username}` : 'Funcionário não encontrado'}
+          onClear={() => router.replace('/users')}
+        />
+      )}
       <div className="hidden md:block">
         <UsersDataTable
           columns={tableColumns}
-          data={employees || []}
+          data={shownEmployees}
         />
       </div>
       <div className="md:hidden space-y-3">
-        {(employees && employees.length > 0) ? (
-          employees.map(employee => (
+        {(shownEmployees.length > 0) ? (
+          shownEmployees.map(employee => (
             <EmployeeCard
               key={employee.id}
               employee={employee}

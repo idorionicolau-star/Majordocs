@@ -9,6 +9,7 @@ import { planBulkSale, planSingleSale, planPickup, nextGuideNumber, provisionalG
 import { isOffline, isOfflineReadError, queueBatch, writeDeltas, writeMovements } from './offline-helpers';
 import type { InventoryCore } from './core';
 import type { ProductActions } from './product-actions';
+import { links } from '@/lib/deep-links';
 
 export function useSalesActions(core: InventoryCore, deps: { product_actions: ProductActions }) {
   const { isReadOnly, toast, firestore, companyId, productsCollectionRef, companyData, isMultiLocation, locations, user, sendPush, triggerEmailAlert, setLastSaleTimestamp, products, notifyManagers, isManagerUser, productsData } = core;
@@ -369,7 +370,7 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
         type: 'security',
         title: `🏷️ Desconto de ${Math.round((totalDiscountAmount / cartSubtotal) * 100)}% numa venda`,
         body: `${user.username} · ${formatCurrency(totalDiscountAmount)} de desconto em ${formatCurrency(cartSubtotal)}${saleData.clientName ? ` · ${saleData.clientName}` : ''}`,
-        link: '/sales',
+        link: guideNumberForOuterScope ? links.sale(guideNumberForOuterScope) : '/sales',
       });
     }
 

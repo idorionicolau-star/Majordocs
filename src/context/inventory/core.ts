@@ -15,6 +15,7 @@ import { pt } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useSubscriptionState } from '@/hooks/useSubscriptionState';
+import { links } from '@/lib/deep-links';
 
 type CatalogProduct = Omit<
   Product,
@@ -190,7 +191,7 @@ export function useInventoryCore() {
         type: 'sale',
         title: `💰 Nova venda — ${formatCurrency(Number(payload.totalValue) || 0)}`,
         body: `${payload.productName || 'Venda'}${client}${who}`,
-        link: '/sales',
+        link: payload.guideNumber ? links.sale(String(payload.guideNumber)) : (payload.productName ? links.salesOfProduct(String(payload.productName)) : '/sales'),
       });
     }
 

@@ -2,7 +2,7 @@
 import { formatCurrency } from "@/lib/utils";
 
 import { useState, useEffect, useMemo, useContext } from "react";
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import type { Sale } from "@/lib/types";
 import { columns } from "@/components/sales/columns";
 import { SalesDataTable } from "@/components/sales/sales-data-table";
@@ -24,6 +24,8 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Card } from "@/components/ui/card";
 import { useFuse } from "@/hooks/use-fuse";
+import { DeepLinkBanner } from "@/components/deep-link-banner";
+import { links } from '@/lib/deep-links';
 // Removed useFirestorePagination and firestore query imports
 
 export default function SalesPage() {
@@ -35,6 +37,17 @@ export default function SalesPage() {
   const [gridCols, setGridCols] = useState<'3' | '4' | '5'>('3');
 
   const [locationFilter, setLocationFilter] = useState<string>('all');
+  const router = useRouter();
+  // Chegou por um aviso? `venda` = número da guia, ou nome do produto (lista das mais recentes primeiro); `statusFilter` = estado.
+  const [linkFocus, setLinkFocus] = useState<string | null>(null);
+  useEffect(() => {
+    const venda = searchParams.get('venda');
+    const st = searchParams.get('statusFilter');
+    if (st) setStatusFilter(st);
+    if (venda) setNameFilter(venda);
+    setLinkFocus(venda || st || null);
+  }, [searchParams]);
+  const clearLinkFocus = () => { setNameFilter(''); setStatusFilter('all'); setLinkFocus(null); router.replace('/sales'); };
   const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
   const firestore = useFirestore();
@@ -155,7 +168,7 @@ export default function SalesPage() {
           type: 'security',
           title: `✏️ Venda ${before.guideNumber || ''} alterada`,
           body: `${user.username || '—'} · ${changes.join(' · ')}`,
-          link: '/sales',
+          link: before.guideNumber ? links.sale(before.guideNumber) : '/sales',
         });
       }
     }
@@ -357,6 +370,14 @@ export default function SalesPage() {
           </div>
         ) : (
           <>
+            {linkFocus && (
+              <DeepLinkBanner
+                title={searchParams.get('venda') ? `Vendas: “${searchParams.get('venda')}” (${sales.length})` : `Vendas ${searchParams.get('statusFilter')} (${sales.length})`}
+                hint={searchParams.get('venda') ? 'As mais recentes primeiro — a de cima foi a última a sair.' : undefined}
+                count={sales.length}
+                onClear={clearLinkFocus}
+              />
+            )}
             <div className="space-y-4">
               {view === 'list' ? (
                 <SalesDataTable

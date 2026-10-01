@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
@@ -49,6 +49,8 @@ import { forwardRef } from 'react';
 
 
 import { useFuse } from "@/hooks/use-fuse";
+import { DeepLinkBanner } from "@/components/deep-link-banner";
+import { parseInventoryFocus, applyInventoryFocus, hasInventoryFocus, inventoryFocusTitle } from "@/lib/deep-links";
 
 export default function InventoryPage() {
   const {
@@ -70,6 +72,9 @@ export default function InventoryPage() {
     isReadOnly,
   } = useInventory();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  // Chegou por um aviso (notificação, diagnóstico)? Mostra só o caso pedido.
+  const focus = useMemo(() => parseInventoryFocus(searchParams), [searchParams]);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [nameFilter, setNameFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
@@ -368,7 +373,7 @@ export default function InventoryPage() {
 
   // Pre-filter by category, location, and date BEFORE fuzzy search
   const preFilteredProducts = useMemo(() => {
-    let result = [...products];
+    let result = hasInventoryFocus(focus) ? applyInventoryFocus(products, focus) : [...products];
 
     if (selectedLocation !== 'all') {
       result = result.filter(p => p.location === selectedLocation);
@@ -383,7 +388,7 @@ export default function InventoryPage() {
     }
 
     return result;
-  }, [products, selectedLocation, categoryFilter, dateFilter]);
+  }, [products, focus, selectedLocation, categoryFilter, dateFilter]);
 
   // Apply fuzzy search on the pre-filtered list
   const searchedProducts = useFuse(preFilteredProducts, nameFilter, { keys: ['name', 'barcode', 'sku'] });
@@ -808,6 +813,11 @@ export default function InventoryPage() {
             </ScrollArea>
           </div>
         </div>
+
+        {hasInventoryFocus(focus) && (() => {
+          const t = inventoryFocusTitle(focus, filteredProducts.length);
+          return <DeepLinkBanner title={t.title} hint={t.hint} count={filteredProducts.length} onClear={() => router.replace('/inventory')} />;
+        })()}
 
         {view === 'list' ? (
           <InventoryDataTable
