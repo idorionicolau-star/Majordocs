@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useInventory } from "@/context/inventory-context";
 import { useCRM } from "@/context/crm-context";
 import { useToast } from "@/hooks/use-toast";
+import { useKeepFocusedAboveBar, useKeyboardInset } from "@/hooks/use-keyboard-inset";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn, formatCurrency, normalizeString } from "@/lib/utils";
+import { cn, formatCurrency, normalizeString, plural } from "@/lib/utils";
 import type { CartItem, Product, Sale } from "@/lib/types";
 import { parseQuickInput, searchProducts, toNumber } from "@/lib/quick-stock";
 import { Check, ChevronDown, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, Truck, X } from "lucide-react";
@@ -61,6 +62,9 @@ export function FastSale() {
     const { products, catalogProducts, sales, locations, isMultiLocation, companyId, user, addBulkSale, isReadOnly } = useInventory();
     const { customers, addCustomer } = useCRM();
     const { toast } = useToast();
+    // Teclado aberto no telemóvel: a barra de confirmar sobe e fica por cima dele.
+    const keyboardInset = useKeyboardInset();
+    useKeepFocusedAboveBar(keyboardInset, 96);
 
     const [location, setLocation] = useState("");
     const [text, setText] = useState("");
@@ -131,7 +135,8 @@ export function FastSale() {
     const names = useMemo(() => scoped.map((p) => p.name), [scoped]);
     const parsed = useMemo(() => parseQuickInput(text, names), [text, names]);
     const results = useMemo(() => searchProducts(scoped, parsed.term, 8), [scoped, parsed.term]);
-    useEffect(() => setHighlight(0), [parsed.term]);
+    // Enter escolhe o primeiro que se pode vender — não um esgotado que aparece no topo.
+    useEffect(() => setHighlight(Math.max(0, results.findIndex((p) => avail(p) > 0))), [parsed.term]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const inCart = (p: Product) => lines.find((l) => l.key === `${p.name}|${p.location || ""}`);
 
@@ -429,7 +434,7 @@ export function FastSale() {
                 favourites.length > 0 && (
                     <div className="mt-1">
                         <p className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Mais vendidos — um toque junta 1</p>
-                        <div className={cn("-mx-4 flex gap-2 px-4 pb-1", lines.length ? "overflow-x-auto" : "flex-wrap")}>
+                        <div className={cn("-mx-4 flex gap-2 px-4 pb-1", lines.length ? "overflow-x-auto overflow-y-hidden" : "flex-wrap")}>
                             {favourites.map((p) => (
                                 <button key={p.instanceId} type="button" onClick={() => add(p)} className="shrink-0 whitespace-nowrap rounded-full border bg-card px-3 py-2 text-left text-sm hover:border-primary">
                                     <span className="font-medium">{p.name}</span>
@@ -595,10 +600,10 @@ export function FastSale() {
 
             {/* Sticky confirm */}
             {lines.length > 0 && (
-                <div className="fixed inset-x-0 bottom-16 z-40 border-t bg-background/95 p-3 backdrop-blur md:bottom-0 md:left-64">
+                <div className={cn("fixed inset-x-0 z-40 border-t bg-background/95 p-3 backdrop-blur md:bottom-0 md:left-64", !keyboardInset && "bottom-16")} style={keyboardInset ? { bottom: keyboardInset } : undefined}>
                     <div className="mx-auto flex max-w-3xl items-center gap-3">
                         <div className="min-w-0 flex-1">
-                            <p className="text-[11px] text-muted-foreground">{lines.length} produto(s){discount > 0 ? ` · desconto ${formatCurrency(discount)}` : ""}</p>
+                            <p className="text-[11px] text-muted-foreground">{plural(lines.length, "produto", "produtos")}{discount > 0 ? ` · desconto ${formatCurrency(discount)}` : ""}</p>
                             <p className="text-xl font-bold tabular-nums">{formatCurrency(total)}</p>
                         </div>
                         <Button type="button" onClick={confirm} disabled={!canConfirm} className="h-12 shrink-0 rounded-xl bg-emerald-600 px-5 text-base text-white hover:bg-emerald-700">
