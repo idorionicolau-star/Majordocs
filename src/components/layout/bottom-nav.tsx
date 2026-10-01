@@ -83,7 +83,7 @@ export function BottomNav({ onMenuClick }: BottomNavProps) {
   if (keyboardOpen) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 md:hidden pb-safe touch-none select-none">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 md:hidden pb-safe touch-none select-none">
       <div className="grid h-full grid-flow-col auto-cols-fr">
         {items.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));

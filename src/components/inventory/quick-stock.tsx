@@ -538,7 +538,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             )}
 
             {/* Search */}
-            <div className="sticky top-0 z-20 -mx-4 mt-3 bg-background/95 px-4 py-2 backdrop-blur">
+            <div className="sticky top-0 z-20 -mx-4 mt-3 bg-background px-4 py-2">
                 <div className="flex items-center gap-2">
                 <div className="relative min-w-0 flex-1">
                     <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
@@ -860,7 +860,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
 
             {/* Sticky confirm bar */}
             {lineList.length > 0 && (
-                <div className={cn("fixed inset-x-0 z-40 border-t bg-background/95 p-3 backdrop-blur md:bottom-0 md:left-64", !keyboardInset && "bottom-16")} style={keyboardInset ? { bottom: keyboardInset } : undefined}>
+                <div className={cn("fixed inset-x-0 z-40 border-t bg-background p-3 md:bottom-0 md:left-64", !keyboardInset && "bottom-16")} style={keyboardInset ? { bottom: keyboardInset } : undefined}>
                     <div className="mx-auto flex max-w-3xl flex-col gap-2">
                         {mode === "out" && (
                             <div className="flex gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5">

@@ -366,7 +366,7 @@ export function FastSale() {
             )}
 
             {/* Search */}
-            <div className="sticky top-0 z-20 -mx-4 mt-3 bg-background/95 px-4 py-2 backdrop-blur">
+            <div className="sticky top-0 z-20 -mx-4 mt-3 bg-background px-4 py-2">
                 <div className="flex items-center gap-2">
                 <div className="relative min-w-0 flex-1">
                     <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
@@ -600,7 +600,7 @@ export function FastSale() {
 
             {/* Sticky confirm */}
             {lines.length > 0 && (
-                <div className={cn("fixed inset-x-0 z-40 border-t bg-background/95 p-3 backdrop-blur md:bottom-0 md:left-64", !keyboardInset && "bottom-16")} style={keyboardInset ? { bottom: keyboardInset } : undefined}>
+                <div className={cn("fixed inset-x-0 z-40 border-t bg-background p-3 md:bottom-0 md:left-64", !keyboardInset && "bottom-16")} style={keyboardInset ? { bottom: keyboardInset } : undefined}>
                     <div className="mx-auto flex max-w-3xl items-center gap-3">
                         <div className="min-w-0 flex-1">
                             <p className="text-[11px] text-muted-foreground">{plural(lines.length, "produto", "produtos")}{discount > 0 ? ` · desconto ${formatCurrency(discount)}` : ""}</p>
