@@ -152,7 +152,7 @@ export function useInventoryCore() {
         await fetch('/api/push', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${fbToken}` },
-          body: JSON.stringify({ companyId, ...msg }),
+          body: JSON.stringify({ companyId, ...msg, excludeToken: (() => { try { return localStorage.getItem('majorstockx-push-token') || undefined; } catch { return undefined; } })() }),
         });
       } catch (e) {
         console.warn('[Push] envio falhou', e);
