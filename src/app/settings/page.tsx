@@ -18,6 +18,7 @@ import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Code, Re
 import { LocationsManager } from "@/components/settings/locations-manager";
 import { AdminMergeTool } from "@/components/admin/admin-merge-tool";
 import { BackupManager } from "@/components/settings/backup-manager";
+import { StartFresh } from "@/components/settings/start-fresh";
 import { RecycleBin } from "@/components/settings/recycle-bin";
 import { UnitsCategoriesManager } from "@/components/settings/units-categories-manager";
 import { CategoryMergeTool } from "@/components/settings/category-merge-tool";
@@ -907,6 +908,7 @@ export default function SettingsPage() {
               <TabsContent value="security">
                 <div className="space-y-6">
                   <BackupManager />
+                  <StartFresh />
                   <RecycleBin />
                 </div>
               </TabsContent>
