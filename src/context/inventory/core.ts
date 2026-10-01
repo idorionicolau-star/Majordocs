@@ -33,6 +33,9 @@ export function useInventoryCore() {
 
   const [loading, setLoading] = useState(true);
 
+  // O Firebase ainda não disse se há sessão guardada? Até dizer, "sem utilizador" não quer dizer "sem sessão".
+  const [authReady, setAuthReady] = useState(false);
+
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -284,21 +287,45 @@ export function useInventoryCore() {
 
 
   useEffect(() => {
+    let cancelled = false;
+    const isTransient = (e: unknown) => {
+      const code = String((e as { code?: string })?.code || '');
+      const msg = String((e as { message?: string })?.message || '');
+      return code === 'unavailable' || code === 'deadline-exceeded' || code === 'resource-exhausted' || /offline|network|unavailable/i.test(msg);
+    };
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
+      setAuthReady(true);
       if (fbUser) {
         setFirebaseUser(fbUser);
         const userMapDocRef = doc(firestore, `users/${fbUser.uid}`);
-        try {
-          const userMapDoc = await getDoc(userMapDocRef);
-          if (userMapDoc.exists()) {
-            const userCompanyId = userMapDoc.data().companyId;
-            setCompanyId(userCompanyId);
-          } else {
-            throw new Error("Mapeamento de utilizador não encontrado.");
+        // Falha de rede (sem sinal, ligação a acordar) NÃO é motivo para terminar a sessão: tenta de novo.
+        for (let attempt = 0; attempt < 6 && !cancelled; attempt++) {
+          try {
+            const userMapDoc = await getDoc(userMapDocRef);
+            if (userMapDoc.exists()) {
+              setCompanyId(userMapDoc.data().companyId);
+            } else if (userMapDoc.metadata.fromCache) {
+              throw Object.assign(new Error('unavailable'), { code: 'unavailable' }); // cópia local incompleta: espera pelo servidor
+            } else {
+              throw new Error("Mapeamento de utilizador não encontrado.");
+            }
+            return;
+          } catch (error) {
+            if (isTransient(error) && attempt < 5) {
+              await new Promise((res) => setTimeout(res, 1500 * (attempt + 1)));
+              continue;
+            }
+            if (isTransient(error)) {
+              // Continua com sessão; quando a ligação voltar, recarrega para abrir normalmente.
+              console.warn("Sem ligação para abrir a sessão; a manter o utilizador.");
+              if (typeof window !== 'undefined') window.addEventListener('online', () => window.location.reload(), { once: true });
+              return;
+            }
+            console.error("Error fetching user map:", error);
+            logout();
+            return;
           }
-        } catch (error) {
-          console.error("Error fetching user map:", error);
-          logout();
         }
       } else {
         setUser(null);
@@ -308,7 +335,7 @@ export function useInventoryCore() {
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => { cancelled = true; unsubscribeAuth(); };
   }, [auth, firestore, logout]);
 
 
@@ -328,22 +355,26 @@ export function useInventoryCore() {
           } else {
             setProfilePicture(null);
           }
+          setLoading(false);
+        } else if (docSnap.metadata.fromCache) {
+          // Ainda só há a cópia local (sem sinal): não é prova de que o perfil não existe. Espera pelo servidor.
         } else {
           console.error("Perfil de funcionário não encontrado na empresa.");
           logout();
+          setLoading(false);
         }
-        setLoading(false);
       }, (error) => {
         console.error("Error subscribing to employee data:", error);
-        logout();
+        // Só termina a sessão se o servidor recusou o acesso; falhas de rede passam sozinhas.
+        if ((error as { code?: string })?.code === 'permission-denied') logout();
         setLoading(false);
       });
-    } else if (!firebaseUser) {
+    } else if (!firebaseUser && authReady) {
       setLoading(false);
     }
 
     return () => unsubscribeEmployee();
-  }, [firebaseUser, companyId, firestore, logout]);
+  }, [firebaseUser, companyId, firestore, logout, authReady]);
 
 
   const canView = (module: ModulePermission) => {
