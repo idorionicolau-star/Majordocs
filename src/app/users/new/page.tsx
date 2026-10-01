@@ -35,8 +35,8 @@ import type { Employee, ModulePermission, PermissionLevel } from '@/lib/types';
 import { allPermissions } from '@/lib/data';
 import { InventoryContext } from "@/context/inventory-context";
 import { useFirestore } from '@/firebase/provider';
-import { doc, runTransaction } from "firebase/firestore";
-import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
+import { doc, setDoc, deleteDoc, getFirestore } from "firebase/firestore";
+import { createUserWithEmailAndPassword, deleteUser, getAuth, type User as AuthUser } from "firebase/auth";
 import { firebaseConfig } from "@/firebase/config";
 import { initializeApp, deleteApp, type FirebaseApp } from "firebase/app";
 
@@ -108,41 +108,44 @@ export default function NewUserPage() {
         const secondaryApp = createSecondaryApp();
         const secondaryAuth = getAuth(secondaryApp);
 
+        let createdAuthUser: AuthUser | null = null;
+        let mapWritten = false;
+        const secondaryDb = getFirestore(secondaryApp);
         try {
-            // 1. Create user in the secondary Firebase Auth instance
+            // 1. Conta de acesso, numa instância Firebase separada (não termina a sessão do administrador)
             const userCredential = await createUserWithEmailAndPassword(secondaryAuth, fullEmail, values.password);
+            createdAuthUser = userCredential.user;
             const newUserId = userCredential.user.uid;
 
-            // 2. Run transaction to create both employee and user map documents
-            await runTransaction(firestore, async (transaction) => {
-                const permissionsForAdmin = allPermissions.reduce((acc, perm) => {
-                    acc[perm.id] = 'write';
-                    return acc;
-                }, {} as Record<ModulePermission, PermissionLevel>);
+            const permissionsForAdmin = allPermissions.reduce((acc, perm) => {
+                acc[perm.id] = 'write';
+                return acc;
+            }, {} as Record<ModulePermission, PermissionLevel>);
 
-                const permissionsForDono = allPermissions.reduce((acc, perm) => {
-                    acc[perm.id] = 'read';
-                    return acc;
-                }, {} as Record<ModulePermission, PermissionLevel>);
+            const permissionsForDono = allPermissions.reduce((acc, perm) => {
+                acc[perm.id] = 'read';
+                return acc;
+            }, {} as Record<ModulePermission, PermissionLevel>);
 
-                let finalPermissions = values.permissions;
-                if (role === 'Admin') finalPermissions = permissionsForAdmin;
-                else if (role === 'Dono') finalPermissions = permissionsForDono;
+            let finalPermissions = values.permissions;
+            if (role === 'Admin') finalPermissions = permissionsForAdmin;
+            else if (role === 'Dono') finalPermissions = permissionsForDono;
 
-                const employeeForFirestore: Omit<Employee, 'id' | 'password'> = {
-                    username: values.username,
-                    email: fullEmail,
-                    role: values.role,
-                    companyId: companyId,
-                    permissions: finalPermissions
-                };
+            const employeeForFirestore: Omit<Employee, 'id' | 'password'> = {
+                username: values.username,
+                email: fullEmail,
+                role: values.role,
+                companyId: companyId,
+                permissions: finalPermissions
+            };
 
-                const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, newUserId);
-                transaction.set(employeeDocRef, employeeForFirestore);
+            // 2. Mapa utilizador → empresa. As regras só deixam cada pessoa criar o PRÓPRIO mapa
+            //    (impede mudar de empresa), por isso é gravado como o novo utilizador, não como o administrador.
+            await setDoc(doc(secondaryDb, `users/${newUserId}`), { companyId });
+            mapWritten = true;
 
-                const userMapDocRef = doc(firestore, `users/${newUserId}`);
-                transaction.set(userMapDocRef, { companyId: companyId });
-            });
+            // 3. Ficha do funcionário, como administrador (tem permissão para gerir utilizadores)
+            await setDoc(doc(firestore, `companies/${companyId}/employees`, newUserId), employeeForFirestore);
 
             toast({
                 title: "Funcionário Adicionado",
@@ -151,8 +154,15 @@ export default function NewUserPage() {
             router.push('/users');
 
         } catch (error: any) {
-            let message = "Ocorreu um erro ao criar a conta.";
-            if (error.code === 'auth/email-already-in-use') {
+            // Se algo falhou a meio, desfaz o que ficou criado (senão a conta fica "presa" e o email aparece como já usado)
+            if (createdAuthUser) {
+                try { if (mapWritten) await deleteDoc(doc(secondaryDb, `users/${createdAuthUser.uid}`)); } catch { /* ignore */ }
+                try { await deleteUser(createdAuthUser); } catch { /* ignore */ }
+            }
+            let message = `Ocorreu um erro ao criar a conta${error?.code ? ` (${error.code})` : ''}.`;
+            if (error.code === 'permission-denied') {
+                message = "Sem permissão para criar funcionários. Confirme que tem a função Admin e que as regras do Firestore estão publicadas.";
+            } else if (error.code === 'auth/email-already-in-use') {
                 message = `O prefixo de email "${values.email}" já está a ser utilizado nesta empresa.`;
             } else if (error.code === 'auth/weak-password') {
                 message = "A senha deve ter pelo menos 6 caracteres.";
