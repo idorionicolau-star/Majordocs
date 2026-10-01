@@ -79,6 +79,7 @@ export default function InventoryPage() {
     companyData,
     confirmAction,
     syncSmartThresholds,
+    setAutoThresholds,
     isReadOnly,
   } = useInventory();
   const searchParams = useSearchParams();
@@ -782,7 +783,15 @@ export default function InventoryPage() {
 
         {hasInventoryFocus(focus) && (() => {
           const t = inventoryFocusTitle(focus, filteredProducts.length);
-          return <DeepLinkBanner title={t.title} hint={t.hint} count={filteredProducts.length} onClear={() => router.replace('/inventory')} />;
+          return (
+            <DeepLinkBanner title={t.title} hint={t.hint} count={filteredProducts.length} onClear={() => router.replace('/inventory')}>
+              {focus.problem === 'limites-manuais' && canEditInventory && filteredProducts.length > 0 && (
+                <Button type="button" size="sm" onClick={() => setAutoThresholds(filteredProducts)} disabled={isReadOnly} className="shrink-0">
+                  <WandSparkles className="mr-1.5 h-4 w-4" /> Pôr {filteredProducts.length === 1 ? 'em' : `os ${filteredProducts.length} em`} automático
+                </Button>
+              )}
+            </DeepLinkBanner>
+          );
         })()}
 
         {currentView === 'list' && !isDesktop ? (

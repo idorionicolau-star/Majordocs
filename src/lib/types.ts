@@ -448,6 +448,8 @@ export interface InventoryContextType {
   editCategory: (oldCategory: string, newCategory: string) => Promise<void>;
   removeCategory: (category: string) => Promise<void>;
   syncSmartThresholds: (mode?: boolean | 'silent') => Promise<void>;
+  /** Põe os produtos indicados em limites automáticos. */
+  setAutoThresholds: (products: Product[]) => Promise<void>;
   confirmAction: (action: () => Promise<void>, title?: string, message?: string) => void;
 }
 

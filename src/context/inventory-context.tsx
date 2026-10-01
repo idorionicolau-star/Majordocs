@@ -22,7 +22,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const authActions = useAuthActions(core);
   const { login, loginWithGoogle, resetPassword, changePassword, registerCompany, registerCompanyWithGoogle } = authActions;
   const productActions = useProductActions(core);
-  const { addProduct, syncSmartThresholds, updateProduct, deleteProduct, clearProductsCollection, auditStock, transferStock, updateProductStock } = productActions;
+  const { addProduct, syncSmartThresholds, setAutoThresholds, updateProduct, deleteProduct, clearProductsCollection, auditStock, transferStock, updateProductStock } = productActions;
   const salesActions = useSalesActions(core, { product_actions: productActions });
   const { addSale, addBulkSale, confirmSalePickup, deleteSale, recalculateReservedStock } = salesActions;
   const { pendingOfflineSales, syncOfflineSales } = useOfflineSync(core, { product_actions: productActions });
@@ -173,6 +173,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     hardDelete,
     exportCompanyData,
     syncSmartThresholds,
+    setAutoThresholds,
 
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
     recalculateReservedStock,
@@ -217,6 +218,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     availableUnits, addUnit,
     availableCategories, addCategory,
     syncSmartThresholds,
+    setAutoThresholds,
     confirmAction,
     notifyManagers,
   ]);
