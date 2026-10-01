@@ -20,6 +20,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Period = 'daily' | 'weekly' | 'monthly';
 
+const MIN_SALES_FOR_TREND = 5;
+
 export const PrimaryKPIs = () => {
     const { dashboardStats, sales, loading, products, stockMovements } = useContext(InventoryContext) || {
         dashboardStats: null,
@@ -67,9 +69,6 @@ export const PrimaryKPIs = () => {
             default:
                 currentPeriodSales = sales.filter(s => s.documentType !== 'Factura Proforma' && isToday(parseISO(s.date)));
                 previousPeriodSales = sales.filter(s => s.documentType !== 'Factura Proforma' && isYesterday(parseISO(s.date)));
-                trendLabel = "vs ontem";
-                capitalTrendPeriod = 1;
-                break;
                 trendLabel = "vs ontem";
                 capitalTrendPeriod = 1;
                 break;
@@ -163,7 +162,12 @@ export const PrimaryKPIs = () => {
             ? ((currentInventoryValue - inventoryValuePeriodAgo) / inventoryValuePeriodAgo) * 100
             : (currentInventoryValue > 0 ? 100 : 0);
 
+        // Com poucas vendas no período anterior, qualquer variação parece um desastre
+        // (ex.: -97%). Só comparamos quando há base suficiente.
+        const hasBase = previousPeriodSales.length >= MIN_SALES_FOR_TREND;
+
         return {
+            hasBase,
             salesGrowth,
             ticketGrowth,
             capitalGrowth,
@@ -198,12 +202,12 @@ export const PrimaryKPIs = () => {
             title: `FATURAMENTO (${periodLabels[period].toUpperCase()})`,
             value: kpiData.currentPeriodSales,
             href: "/sales",
-            trend: kpiData.salesGrowth,
-            trendLabel: kpiData.trendLabel,
+            trend: kpiData.hasBase ? kpiData.salesGrowth : null,
+            trendLabel: kpiData.hasBase ? kpiData.trendLabel : "poucos dados para comparar",
             colorClass: "kpi-card--green",
         },
         {
-            title: "CAPITAL IMOBILIZADO",
+            title: "VALOR EM STOCK",
             value: dashboardStats.totalInventoryValue,
             href: "/inventory",
             trend: kpiData.capitalGrowth,
@@ -215,16 +219,16 @@ export const PrimaryKPIs = () => {
             title: `TICKET MÉDIO (${periodLabels[period].toUpperCase()})`,
             value: kpiData.currentAvgTicket,
             href: "/reports",
-            trend: kpiData.ticketGrowth,
-            trendLabel: kpiData.trendLabel,
+            trend: kpiData.hasBase ? kpiData.ticketGrowth : null,
+            trendLabel: kpiData.hasBase ? kpiData.trendLabel : "poucos dados para comparar",
             colorClass: "kpi-card--purple",
         },
         {
             title: `LUCRO LÍQUIDO (${periodLabels[period].toUpperCase()})`,
             value: kpiData.currentProfit,
             href: "/finance",
-            trend: kpiData.profitGrowth,
-            trendLabel: kpiData.trendLabel,
+            trend: kpiData.hasBase ? kpiData.profitGrowth : null,
+            trendLabel: kpiData.hasBase ? kpiData.trendLabel : "poucos dados para comparar",
             colorClass: "kpi-card--orange", // Define orange class in CSS or just use utility if configured
         },
     ];
@@ -251,7 +255,7 @@ export const PrimaryKPIs = () => {
                         ? "text-slate-400"
                         : isGood ? "text-[var(--card-color)]" : "text-rose-500 dark:text-rose-400";
 
-                    const trendText = card.trend === null || !isFinite(card.trend) ? "--" : `${isPositive ? '+' : ''}${card.trend?.toFixed(1)}%`;
+                    const trendText = card.trend === null || !isFinite(card.trend) ? "" : `${isPositive ? '+' : ''}${card.trend?.toFixed(1)}%`;
 
                     return (
                         <Link href={card.href} key={index} className="block group">
@@ -266,7 +270,7 @@ export const PrimaryKPIs = () => {
                                     </h2>
                                     <div className="flex items-center gap-1 mt-1">
                                         <span className={cn("flex items-center text-xs font-bold gap-0.5", trendColor)}>
-                                            <TrendIcon className="h-3 w-3" />
+                                            {trendText && <TrendIcon className="h-3 w-3" />}
                                             {trendText}
                                         </span>
                                         <span className="text-slate-400 text-[10px]">{card.trendLabel}</span>

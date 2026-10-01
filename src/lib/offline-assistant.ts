@@ -5,7 +5,7 @@
 import type { Customer, Location, Order, Product, Production, Sale, StockMovement } from "@/lib/types";
 import { analyzeBusiness, type Analysis } from "@/lib/business-analysis";
 import { searchProducts } from "@/lib/quick-stock";
-import { formatCurrency, normalizeString } from "@/lib/utils";
+import { formatCurrency, normalizeString, plural } from "@/lib/utils";
 
 export type AssistantData = {
     products: Product[];
@@ -114,7 +114,7 @@ export function answerOffline(question: string, data: AssistantData, cached?: An
     if (has(q, "vendedor", "funcionario", "quem vendeu", "equipa")) {
         const s = a.sales.topSellers30;
         if (!s.length) return "Sem vendas nos últimos 30 dias.";
-        return `### 👷 Vendas por funcionário (30 dias)\n${s.map((x) => `- **${x.name}** — ${formatCurrency(x.revenue)} em ${x.tickets} venda(s)`).join("\n")}`;
+        return `### 👷 Vendas por funcionário (30 dias)\n${s.map((x) => `- **${x.name}** — ${formatCurrency(x.revenue)} em ${plural(x.tickets, "venda", "vendas")}`).join("\n")}`;
     }
 
     // ---------- profit / margin ----------
@@ -128,7 +128,7 @@ export function answerOffline(question: string, data: AssistantData, cached?: An
     // ---------- sales ----------
     if (has(q, "venda", "vendi", "faturado", "facturado", "faturacao", "facturacao", "receita", "dinheiro") || word(q, "hoje", "semana", "mes")) {
         const s = a.sales;
-        if (word(q, "hoje")) return `### 💵 Hoje\n**${formatCurrency(s.today)}** em ${s.todayTickets} venda(s).${s.todayTickets === 0 ? "\n\nAinda nenhuma venda registada hoje. Se já vendeu, registe em **Venda Rápida** para o stock ficar certo." : ""}`;
+        if (word(q, "hoje")) return `### 💵 Hoje\n**${formatCurrency(s.today)}** em ${plural(s.todayTickets, "venda", "vendas")}.${s.todayTickets === 0 ? "\n\nAinda nenhuma venda registada hoje. Se já vendeu, registe em **Venda Rápida** para o stock ficar certo." : ""}`;
         if (word(q, "semana")) return `### 💵 Últimos 7 dias\n**${formatCurrency(s.last7)}**`;
         let md = `### 💵 Vendas\n- Hoje: **${formatCurrency(s.today)}** (${s.todayTickets})\n- Este mês: **${formatCurrency(s.month)}** (${s.monthTickets} vendas)\n- Mês passado: **${formatCurrency(s.lastMonth)}**\n- Últimos 30 dias: **${formatCurrency(s.last30)}**`;
         if (s.growth30 !== null) md += ` (${s.growth30 >= 0 ? "+" : ""}${s.growth30.toFixed(0)}% vs. 30 dias anteriores)`;
@@ -206,7 +206,7 @@ function productTerm(q: string): string {
 
 function stockSummary(a: Analysis) {
     const s = a.stock;
-    return `### 📦 Stock\n- **${s.productCount}** produtos · valor a preço de venda **${formatCurrency(s.valueAtPrice)}**${s.valueAtCost !== null ? ` · a custo ${formatCurrency(s.valueAtCost)}` : ""}\n- Esgotados: **${s.outOfStock.length}** · Críticos: **${s.critical.length}** · Baixos: **${s.low.length}**\n- Reservado para clientes: ${s.pendingPickups.length} venda(s) por levantar\n- Última contagem: **${s.lastCountDate ? fmtDate(s.lastCountDate) : "nunca feita"}**`;
+    return `### 📦 Stock\n- **${s.productCount}** produtos · valor a preço de venda **${formatCurrency(s.valueAtPrice)}**${s.valueAtCost !== null ? ` · a custo ${formatCurrency(s.valueAtCost)}` : ""}\n- Esgotados: **${s.outOfStock.length}** · Críticos: **${s.critical.length}** · Baixos: **${s.low.length}**\n- Reservado para clientes: ${plural(s.pendingPickups.length, "venda", "vendas")} por levantar\n- Última contagem: **${s.lastCountDate ? fmtDate(s.lastCountDate) : "nunca feita"}**`;
 }
 
 function today(a: Analysis): string {

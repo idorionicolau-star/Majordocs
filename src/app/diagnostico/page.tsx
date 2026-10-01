@@ -13,7 +13,7 @@ import { StockHealthScore } from "@/components/diagnostico/stock-health-score";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, daysAgo, formatCurrency, plural } from "@/lib/utils";
 import { links } from "@/lib/deep-links";
 
 const SEV: Record<Severity, { box: string; icon: React.ElementType; iconColor: string; label: string }> = {
@@ -76,7 +76,7 @@ export default function DiagnosticoPage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Vendas este mês" value={formatCurrency(a.sales.month)} sub={`${a.sales.monthTickets} vendas · mês passado ${formatCurrency(a.sales.lastMonth)}`} icon={ShoppingCart} />
+        <Kpi label="Vendas este mês" value={formatCurrency(a.sales.month)} sub={`${plural(a.sales.monthTickets, "venda", "vendas")} · mês passado ${formatCurrency(a.sales.lastMonth)}`} icon={ShoppingCart} />
         <Kpi
           label="Últimos 30 dias"
           value={formatCurrency(a.sales.last30)}
@@ -85,7 +85,7 @@ export default function DiagnosticoPage() {
           tone={a.sales.growth30 === null ? undefined : a.sales.growth30 >= 0 ? "good" : "bad"}
         />
         <Kpi label="Valor em stock" value={formatCurrency(a.stock.valueAtPrice)} sub={`${a.stock.productCount} produtos (a preço de venda)`} icon={Package} />
-        <Kpi label="Por receber" value={formatCurrency(a.sales.receivables)} sub={`${a.sales.receivablesList.length} venda(s) com saldo em falta`} icon={CircleDollarSign} tone={a.sales.receivables > 0 ? "bad" : "good"} />
+        <Kpi label="Por receber" value={formatCurrency(a.sales.receivables)} sub={`${plural(a.sales.receivablesList.length, "venda", "vendas")} com saldo em falta`} icon={CircleDollarSign} tone={a.sales.receivables > 0 ? "bad" : "good"} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
@@ -96,7 +96,7 @@ export default function DiagnosticoPage() {
             <p className="text-sm text-muted-foreground">
               {openTasks.length === 0
                 ? "Os dados estão completos — as análises abaixo são fiáveis."
-                : `Faltam ${openTasks.length} passo(s) para as análises serem fiáveis. Cada um leva poucos minutos.`}
+                : `${openTasks.length === 1 ? "Falta 1 passo" : `Faltam ${openTasks.length} passos`} para as análises serem fiáveis. Cada um leva poucos minutos.`}
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -165,10 +165,10 @@ export default function DiagnosticoPage() {
           <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-lg"><TrendingUp className="h-5 w-5 text-primary" /> Vendas</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-2">
-              <MiniKpi label="Hoje" value={formatCurrency(a.sales.today)} sub={`${a.sales.todayTickets} venda(s)`} />
+              <MiniKpi label="Hoje" value={formatCurrency(a.sales.today)} sub={plural(a.sales.todayTickets, "venda", "vendas")} />
               <MiniKpi label="Valor médio por venda" value={a.sales.avgTicket30 ? formatCurrency(a.sales.avgTicket30) : "—"} sub="30 dias" />
               <MiniKpi label="Margem bruta" value={a.sales.marginPct30 !== null ? `${a.sales.marginPct30.toFixed(0)}%` : "—"} sub={a.sales.marginPct30 !== null ? "produtos com custo" : `${a.quality.missingCost.length} produtos sem custo`} />
-              <MiniKpi label="Última venda" value={fmtDate(a.sales.lastSaleDate)} sub={a.sales.daysSinceLastSale !== null ? `há ${a.sales.daysSinceLastSale} dias` : "nenhuma"} tone={salesStale ? "bad" : undefined} />
+              <MiniKpi label="Última venda" value={fmtDate(a.sales.lastSaleDate)} sub={a.sales.daysSinceLastSale !== null ? daysAgo(a.sales.daysSinceLastSale) : "nenhuma"} tone={salesStale ? "bad" : undefined} />
             </div>
             <Section title="Mais vendidos (30 dias)">
               {a.sales.topProducts30.length ? a.sales.topProducts30.map((t, i) => (
@@ -177,7 +177,7 @@ export default function DiagnosticoPage() {
             </Section>
             {a.sales.topSellers30.length > 0 && (
               <Section title="Por funcionário (30 dias)">
-                {a.sales.topSellers30.map((s) => <Row key={s.name} left={s.name} right={`${formatCurrency(s.revenue)} · ${s.tickets} venda(s)`} />)}
+                {a.sales.topSellers30.map((s) => <Row key={s.name} left={s.name} right={`${formatCurrency(s.revenue)} · ${plural(s.tickets, "venda", "vendas")}`} />)}
               </Section>
             )}
           </CardContent>
@@ -200,7 +200,7 @@ export default function DiagnosticoPage() {
             {a.stock.pendingPickups.length > 0 && (
               <Section title="Vendas pagas ainda não levantadas">
                 <Row left="Abrir lista de carga" right="→" href="/sales/carga" />
-                {a.stock.pendingPickups.slice(0, 5).map((p) => <Row key={p.sale.id} left={`${p.sale.productName} × ${qty(p.sale.quantity)}`} right={`${p.sale.clientName || "cliente"} · ${p.days} dias`} tone={p.days > 7 ? "warn" : undefined} href={links.sale(p.sale.guideNumber || p.sale.productName)} />)}
+                {a.stock.pendingPickups.slice(0, 5).map((p) => <Row key={p.sale.id} left={`${p.sale.productName} × ${qty(p.sale.quantity)}`} right={`${p.sale.clientName || "cliente"} · ${daysAgo(p.days)}`} tone={p.days > 7 ? "warn" : undefined} href={links.sale(p.sale.guideNumber || p.sale.productName)} />)}
               </Section>
             )}
             {!a.orders.open.length && !a.stock.pendingPickups.length && <Empty>Nada pendente.</Empty>}

@@ -73,6 +73,18 @@ export function formatCurrency(value: number, options?: Intl.NumberFormatOptions
   }).format(value);
 }
 
+/** "1 venda", "3 vendas" */
+export function plural(n: number, one: string, many: string) {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+/** Dias passados em texto: "hoje", "ontem", "há 5 dias". */
+export function daysAgo(n: number) {
+  if (n <= 0) return "hoje";
+  if (n === 1) return "ontem";
+  return `há ${n} dias`;
+}
+
 export function downloadSaleDocument(saleOrSales: Sale | Sale[], companyData: Company | null) {
   const isBrowser = typeof window !== 'undefined';
   if (!isBrowser) return;
