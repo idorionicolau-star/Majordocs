@@ -681,7 +681,7 @@ export default function SettingsPage() {
                         </div>
                         {companyDetails.businessType === 'manufacturer' && (
                           <div className="space-y-2">
-                            <Label htmlFor="curingDays">Dias de secagem</Label>
+                            <Label htmlFor="curingDays">Dias até ficar pronto (secagem / cura)</Label>
                             <Input
                               id="curingDays"
                               type="number"
@@ -691,7 +691,7 @@ export default function SettingsPage() {
                               value={companyDetails.curingDays}
                               onChange={(e) => setCompanyDetails(prev => ({ ...prev, curingDays: Math.max(0, Math.min(30, Number(e.target.value) || 0)) }))}
                             />
-                            <p className="text-xs text-muted-foreground">Quantos dias o produto fica a secar depois de produzido antes de se poder carregar. Em tempo frio, aumente 1 dia. 0 = não usar.</p>
+                            <p className="text-xs text-muted-foreground">Só para quem tem um tempo de espera depois de produzir (betão a secar, cura, acabamento). Durante esses dias o produto já conta no stock, mas só se vende como “levanta depois”. Deixe em 0 se o produto fica pronto na hora — nada muda.</p>
                           </div>
                         )}
                         <div className="space-y-2">
