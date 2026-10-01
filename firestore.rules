@@ -119,7 +119,11 @@ service cloud.firestore {
       allow create: if isSignedIn(); // Qualquer pessoa autenticada pode registar uma nova empresa.
       allow get: if isEmployeeOf(companyId);
       allow list: if isSuperAdmin();
-      allow update: if isSuperAdmin() || (isAdminOf(companyId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'trialEndsAt', 'subscriptionEndsAt', 'paidUntilMs', 'plan']));
+      allow update: if isSuperAdmin() || (isAdminOf(companyId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'trialEndsAt', 'subscriptionEndsAt', 'paidUntilMs', 'plan']))
+        // Quem vende (não só o Admin) precisa de avançar a numeração dos documentos: só esses dois campos, e o contador nunca recua.
+        || (can('sales', 'write') && isCompanySubscriptionActive(companyId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['saleCounter', 'documentNumbering'])
+            && request.resource.data.get('saleCounter', 0) >= resource.data.get('saleCounter', 0));
 
       // Pagamentos da subscrição (PaySuite): só o servidor escreve; o admin vê o histórico.
       match /payments/{paymentId} {
@@ -179,6 +183,11 @@ service cloud.firestore {
         allow create: if can('sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
         allow update: if can('sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && (
           isManagerOf(companyId) || (
+            // Venda feita sem internet: ao sincronizar recebe o número oficial (e só isso muda).
+            resource.data.get('offlinePending', false) == true
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['guideNumber', 'provisionalNumber', 'offlinePending'])
+            && request.resource.data.get('offlinePending', false) == false
+          ) || (
             !request.resource.data.diff(resource.data).affectedKeys().hasAny([
               'productId', 'productName', 'quantity', 'unit', 'unitPrice', 'unitCost', 'subtotal', 'discount', 'vat',
               'totalValue', 'date', 'soldBy', 'guideNumber', 'location', 'documentType', 'orderId', 'transactionId',

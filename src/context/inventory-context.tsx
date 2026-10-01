@@ -9,6 +9,7 @@ import { useSalesActions } from './inventory/sales-actions';
 import { useProductionActions } from './inventory/production-actions';
 import { useOrderActions } from './inventory/order-actions';
 import { useSettingsActions } from './inventory/settings-actions';
+import { useOfflineSync } from './inventory/offline-sync';
 import { useInventoryCore } from './inventory/core';
 
 export const InventoryContext = createContext<InventoryContextType | undefined>(
@@ -24,6 +25,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const { addProduct, syncSmartThresholds, updateProduct, deleteProduct, clearProductsCollection, auditStock, transferStock, updateProductStock } = productActions;
   const salesActions = useSalesActions(core, { product_actions: productActions });
   const { addSale, addBulkSale, confirmSalePickup, deleteSale, recalculateReservedStock } = salesActions;
+  const { pendingOfflineSales, syncOfflineSales } = useOfflineSync(core, { product_actions: productActions });
   const productionActions = useProductionActions(core);
   const { addProduction, addProductionLog, deleteProduction, updateProduction } = productionActions;
   const orderActions = useOrderActions(core);
@@ -174,6 +176,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
     recalculateReservedStock,
+    pendingOfflineSales, syncOfflineSales,
     addCatalogProduct, addCatalogCategory,
     addRawMaterial,
     updateRawMaterial,
@@ -202,7 +205,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     addProduction, updateProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
     clearProductsCollection,
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
-    recalculateReservedStock,
+    recalculateReservedStock, pendingOfflineSales, syncOfflineSales,
     addCatalogProduct, addCatalogCategory,
     addRawMaterial,
     updateRawMaterial,

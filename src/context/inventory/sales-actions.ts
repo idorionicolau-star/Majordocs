@@ -5,16 +5,17 @@ import type { Product, Sale, StockMovement, CartItem } from '@/lib/types';
 import { collection, doc, writeBatch, getDocs, query, where, runTransaction, getDoc, serverTimestamp, DocumentReference, limit } from 'firebase/firestore';
 import { ref } from "firebase/storage";
 import { downloadSaleDocument, formatCurrency } from '@/lib/utils';
+import { planBulkSale, planSingleSale, planPickup, nextGuideNumber, provisionalGuideNumber } from '@/lib/sale-plan';
+import { isOffline, isOfflineReadError, queueBatch, writeDeltas, writeMovements } from './offline-helpers';
 import type { InventoryCore } from './core';
 import type { ProductActions } from './product-actions';
 
 export function useSalesActions(core: InventoryCore, deps: { product_actions: ProductActions }) {
-  const { assertOnline, isReadOnly, toast, firestore, companyId, productsCollectionRef, companyData, isMultiLocation, locations, user, sendPush, triggerEmailAlert, setLastSaleTimestamp, products, notifyManagers, isManagerUser, productsData } = core;
+  const { isReadOnly, toast, firestore, companyId, productsCollectionRef, companyData, isMultiLocation, locations, user, sendPush, triggerEmailAlert, setLastSaleTimestamp, products, notifyManagers, isManagerUser, productsData } = core;
   const { checkStockAndNotify } = deps.product_actions;
 
 
   const addSale = useCallback(async (newSaleData: Omit<Sale, 'id' | 'guideNumber'>, reserveStock = true) => {
-    assertOnline('registar a venda');
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
@@ -28,6 +29,39 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
         title: "E-mail de Notificação em Falta",
         description: "Ativou as notificações de venda, mas não configurou um e-mail de destino nos Ajustes.",
       });
+    }
+
+    const wantedLocation = newSaleData.location || (isMultiLocation ? locations[0]?.id : 'Principal');
+    const isProformaSale = newSaleData.documentType === 'Factura Proforma';
+
+    // Venda sem internet: grava neste aparelho com número provisório e segue sozinha quando a ligação voltar.
+    const sellOfflineSingle = () => {
+      const nowIso = new Date().toISOString();
+      const guideNumber = provisionalGuideNumber();
+      const found = (productsData || []).find(p => p.id && p.name === newSaleData.productName && p.location === wantedLocation);
+      const plan = planSingleSale({
+        sale: newSaleData, reserveStock: reserveStock && !isProformaSale,
+        source: found ? { id: found.id as string, data: found } : null,
+        user: { id: user?.id || 'unknown', username: user?.username || 'Sistema', role: user?.role },
+        guideNumber, nowIso, newId: () => doc(collection(firestore, `companies/${companyId}/sales`)).id,
+      });
+      const batch = writeBatch(firestore);
+      batch.set(doc(firestore, `companies/${companyId}/sales`, plan.sale.id), { ...plan.sale, offlinePending: true });
+      writeDeltas(batch, productsCollectionRef, plan.deltas, nowIso);
+      writeMovements(batch, firestore, companyId, plan.movements, { id: user?.id || 'unknown', username: user?.username || 'Sistema' }, () => 'Venda levantada no acto (offline)');
+      const reviewsRef = collection(firestore, `companies/${companyId}/priceReviews`);
+      plan.priceReviews.forEach(r => batch.set(doc(reviewsRef), r));
+      queueBatch(batch, 'Venda feita offline', (title, description) => toast({ variant: 'destructive', title, description }));
+      toast({
+        title: "Venda guardada neste aparelho",
+        description: `Sem internet. Recibo provisório ${guideNumber} — o número oficial é atribuído quando a ligação voltar.`,
+      });
+      downloadSaleDocument({ ...plan.sale, offlinePending: true } as Sale, companyData);
+    };
+
+    if (isOffline()) {
+      sellOfflineSingle();
+      return;
     }
 
     const productQuery = query(
@@ -55,6 +89,7 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
     }
     const productDocRef = productSnapshot ? productSnapshot.docs[0].ref : null;
 
+    try {
     await runTransaction(firestore, async (transaction) => {
       const companyDoc = await transaction.get(companyDocRef);
       if (!companyDoc.exists()) {
@@ -133,6 +168,11 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
         }
       }
     });
+    } catch (e) {
+      // A ligação caiu antes de gravar qualquer coisa: repete no modo offline em vez de perder a venda.
+      if (isOfflineReadError(e)) { sellOfflineSingle(); return; }
+      throw e;
+    }
 
     if (reviewForPush) {
       const r = reviewForPush as Record<string, any>;
@@ -172,7 +212,7 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
     }
 
     setLastSaleTimestamp(Date.now());
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, toast, triggerEmailAlert, user, sendPush]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, productsData, toast, triggerEmailAlert, user, sendPush]);
 
 
   const addBulkSale = useCallback(async (
@@ -194,7 +234,6 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
       amountPaid?: number;
     }
   ) => {
-    assertOnline('registar a venda');
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
@@ -204,33 +243,26 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
 
     const salesCollectionRef = collection(firestore, `companies/${companyId}/sales`);
     const companyDocRef = doc(firestore, `companies/${companyId}`);
+    const defaultLocation = (isMultiLocation && locations.length > 0 ? locations[0]?.id : 'Principal') || 'Principal';
+    const planUser = { id: user.id, username: user.username, role: user.role };
+    const newId = () => doc(salesCollectionRef).id;
 
     let guideNumberForOuterScope: string | null = null;
     let createdSalesForOuterScope: Sale[] = [];
     let pendingPriceReviews: Record<string, any>[] = [];
+    let cartSubtotal = 0;
+    let totalDiscountAmount = 0;
+    let cartTotal = 0;
+    let wasOffline = false;
 
-    // Calculate totals for proportional distribution
-    const cartSubtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
-    const totalDiscountAmount = saleData.discount
-      ? (saleData.discount.type === 'percentage' ? cartSubtotal * (saleData.discount.value / 100) : saleData.discount.value)
-      : 0;
-    const totalAfterDiscount = Math.max(0, cartSubtotal - totalDiscountAmount);
-    const totalVatAmount = saleData.applyVat ? totalAfterDiscount * (saleData.vatPercentage / 100) : 0;
-    const cartTotal = totalAfterDiscount + totalVatAmount;
-    // Parte paga agora (venda a crédito / sinal). Sem valor = pago na totalidade.
-    const paidRatio = saleData.amountPaid === undefined || cartTotal <= 0 ? 1 : Math.max(0, Math.min(1, saleData.amountPaid / cartTotal));
-
-    // To deduct across multiple source documents, we need all relevant products.
-    // We already have `products` aggregated from the query. Let's just use the sourceIds!
-    // But we are in a transaction, so we must read the raw docs.
+    // Todos os registos de stock que podem estar por trás de cada linha do carrinho
     const allSourceIds = new Set<string>();
     items.forEach(item => {
-      const targetLoc = item.location || (isMultiLocation && locations.length > 0 ? locations[0]?.id : 'Principal');
+      const targetLoc = item.location || defaultLocation;
       const aggregatedProduct = products.find(p =>
         p.name === item.productName &&
         (!isMultiLocation || p.location === targetLoc || (!p.location && (targetLoc === 'Principal' || !item.location)))
       );
-
       if (aggregatedProduct?.sourceIds) {
         aggregatedProduct.sourceIds.forEach(id => allSourceIds.add(id));
       } else if (item.productId) {
@@ -238,178 +270,98 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
       }
     });
 
-    await runTransaction(firestore, async (transaction) => {
+    // Venda sem internet: grava neste aparelho com número provisório e segue sozinha quando a ligação voltar.
+    const sellOffline = () => {
+      const nowIso = new Date().toISOString();
+      const guideNumber = provisionalGuideNumber();
+      const sources = (productsData || []).filter(p => p.id && allSourceIds.has(p.id)).map(p => ({ id: p.id as string, data: p }));
+      const plan = planBulkSale({ items, saleData, sources, isMultiLocation, defaultLocation, user: planUser, guideNumber, nowIso, newId });
+      const batch = writeBatch(firestore);
+      plan.sales.forEach(sale => batch.set(doc(salesCollectionRef, sale.id), { ...sale, offlinePending: true }));
+      writeDeltas(batch, productsCollectionRef, plan.deltas, nowIso);
+      writeMovements(batch, firestore, companyId, plan.movements, user, () => `Venda ${guideNumber} (levantada no acto, offline)`);
+      const reviewsRef = collection(firestore, `companies/${companyId}/priceReviews`);
+      plan.priceReviews.forEach(r => batch.set(doc(reviewsRef), r));
+      queueBatch(batch, 'Venda feita offline', (title, description) => toast({ variant: 'destructive', title, description }));
+      guideNumberForOuterScope = guideNumber;
+      createdSalesForOuterScope = plan.sales.map(x => ({ ...x, offlinePending: true } as Sale));
+      cartSubtotal = plan.cartSubtotal; totalDiscountAmount = plan.totalDiscountAmount; cartTotal = plan.cartTotal;
+      wasOffline = true;
+    };
+
+    const sellOnline = () => runTransaction(firestore, async (transaction) => {
       // 1. READS
       const companyDoc = await transaction.get(companyDocRef);
       if (!companyDoc.exists()) throw new Error("Empresa não encontrada.");
 
       const sourceDocRefs = Array.from(allSourceIds).map(id => doc(productsCollectionRef, id));
       const sourceSnaps = await Promise.all(sourceDocRefs.map(ref => transaction.get(ref)));
+      const loaded = sourceSnaps.filter(s => s.exists()).map(s => ({ id: s.id, ref: s.ref, data: s.data() as Product }));
 
-      const loadedProducts = sourceSnaps.filter(s => s.exists()).map(s => ({ id: s.id, ref: s.ref, data: s.data() as Product }));
-
-      // 2. VALIDATION & LOGIC
-      const currentCompanyData = companyDoc.data();
-      const allBulkNumbering = currentCompanyData.documentNumbering || {};
-      const bulkTypeConfig = allBulkNumbering[saleData.documentType];
-      const newSaleCounter = (currentCompanyData.saleCounter || 0) + 1;
-
-      let guideNumber: string;
-      if (bulkTypeConfig && bulkTypeConfig.prefix) {
-        const num = bulkTypeConfig.nextNumber || 1;
-        const padded = bulkTypeConfig.padding > 0 ? String(num).padStart(bulkTypeConfig.padding, '0') : String(num);
-        guideNumber = `${bulkTypeConfig.prefix}${bulkTypeConfig.separator || ''}${padded}`;
-      } else {
-        guideNumber = `GT-${String(newSaleCounter).padStart(6, '0')}`;
-      }
-      guideNumberForOuterScope = guideNumber;
-
-      const salesToCreate: Sale[] = [];
-      const productUpdates: { ref: DocumentReference; data: any }[] = [];
-      const stockOutMovements: { productId: string; productName: string; quantity: number; location?: string }[] = [];
-      // Preço de venda: a venda ensina o preço a produtos sem preço; preço diferente do habitual → pedido de confirmação ao gestor.
-      const priceReviews: Record<string, any>[] = [];
-
-      items.forEach((item, index) => {
-        const isProforma = saleData.documentType === 'Factura Proforma';
-
-        let remainingQuantityToDeduct = item.quantity;
-        // Find all underlying documents for this item's name and location
-        const targetLocation = item.location || (isMultiLocation && locations.length > 0 ? locations[0]?.id : 'Principal');
-        const availableSources = loadedProducts.filter(p =>
-          p.data.name === item.productName &&
-          (!isMultiLocation || p.data.location === targetLocation || (!p.data.location && (targetLocation === 'Principal' || !item.location)))
-        );
-
-        const totalAvailableStock = availableSources.reduce((sum, p) => sum + (p.data.stock - p.data.reservedStock), 0);
-
-        if (!isProforma && totalAvailableStock < item.quantity) {
-          throw new Error(`Stock insuficiente para "${item.productName}". Disponível: ${totalAvailableStock}.`);
-        }
-
-        // Levantado no acto => sai do stock já; por levantar => fica reservado.
-        const pickedUpNow = !isProforma && saleData.isPickedUp !== false;
-
-        if (!isProforma) {
-          for (const source of availableSources) {
-            if (remainingQuantityToDeduct <= 0) break;
-            const availableInSource = (source.data.stock || 0) - (source.data.reservedStock || 0);
-            if (availableInSource > 0) {
-              const deductAmount = Math.min(availableInSource, remainingQuantityToDeduct);
-              if (pickedUpNow) {
-                source.data.stock = (source.data.stock || 0) - deductAmount;
-                stockOutMovements.push({ productId: source.ref.id, productName: item.productName, quantity: deductAmount, location: source.data.location });
-              } else {
-                source.data.reservedStock = (source.data.reservedStock || 0) + deductAmount;
-              }
-              remainingQuantityToDeduct -= deductAmount;
-
-              const data = { stock: source.data.stock || 0, reservedStock: source.data.reservedStock || 0, lastUpdated: new Date().toISOString() };
-              const existingUpdate = productUpdates.find(u => u.ref.id === source.ref.id);
-              if (existingUpdate) existingUpdate.data = data;
-              else productUpdates.push({ ref: source.ref, data });
-            }
-          }
-        }
-
-        // Proportional math for this specific Sale document
-        const proportion = cartSubtotal > 0 ? (item.subtotal / cartSubtotal) : 0;
-        const itemDiscount = totalDiscountAmount * proportion;
-        const itemVat = totalVatAmount * proportion;
-        const itemTotal = item.subtotal - itemDiscount + itemVat;
-
-        const newSaleRef = doc(salesCollectionRef); // Auto-ID
-        const sale: Sale = {
-          id: newSaleRef.id,
-          guideNumber,
-          productId: item.productId, // primary id reference
-          productName: item.productName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          unitCost: item.originalCost || 0,
-          subtotal: item.subtotal,
-          discount: itemDiscount,
-          vat: itemVat,
-          totalValue: itemTotal,
-          amountPaid: saleData.documentType !== 'Factura Proforma' ? Math.round(itemTotal * paidRatio * 100) / 100 : 0,
-          date: saleData.date || new Date().toISOString(),
-          status: saleData.documentType === 'Factura Proforma' ? 'Pendente' : (saleData.isPickedUp === false ? 'Pago' : 'Levantado'),
-          paymentMethod: saleData.paymentMethod || 'Numerário',
-          location: targetLocation,
-          unit: item.unit || 'un',
-          soldBy: user.username,
-          documentType: saleData.documentType,
-          clientName: saleData.clientName || '',
-          ...(saleData.customerId && { customerId: saleData.customerId }),
-          ...(saleData.notes && { notes: saleData.notes }),
-        };
-
-        salesToCreate.push(sale);
-        createdSalesForOuterScope.push(sale);
-
-        if (!isProforma && availableSources.length > 0 && item.unitPrice > 0) {
-          const reference = Number(availableSources[0].data.price) || 0;
-          if (reference <= 0) {
-            // Produto sem preço: aprende com esta venda.
-            availableSources.forEach(src => {
-              const existing = productUpdates.find(u => u.ref.id === src.ref.id);
-              if (existing) existing.data.price = item.unitPrice;
-              else productUpdates.push({ ref: src.ref, data: { price: item.unitPrice, lastUpdated: new Date().toISOString() } });
-            });
-          } else if (Math.abs(item.unitPrice - reference) >= 0.01 && user.role !== 'Admin' && user.role !== 'Dono') {
-            // (O gestor a vender com outro preço já decidiu — não precisa de se confirmar a si próprio.)
-            priceReviews.push({
-              productName: item.productName,
-              productIds: availableSources.map(src => src.ref.id),
-              location: targetLocation || '',
-              unit: item.unit || 'un',
-              referencePrice: reference,
-              soldPrice: item.unitPrice,
-              quantity: item.quantity,
-              saleId: sale.id,
-              guideNumber,
-              clientName: saleData.clientName || '',
-              soldBy: user.username,
-              soldById: user.id,
-              status: 'pending',
-              createdAt: new Date().toISOString(),
-            });
-          }
-        }
+      // 2. CONTAS (as mesmas da venda offline)
+      const numbering = nextGuideNumber(companyDoc.data(), saleData.documentType);
+      const nowIso = new Date().toISOString();
+      const plan = planBulkSale({
+        items, saleData, sources: loaded.map(l => ({ id: l.id, data: l.data })),
+        isMultiLocation, defaultLocation, user: planUser, guideNumber: numbering.guideNumber, nowIso, newId,
       });
+      guideNumberForOuterScope = numbering.guideNumber;
+      createdSalesForOuterScope = plan.sales;
+      pendingPriceReviews = plan.priceReviews;
+      cartSubtotal = plan.cartSubtotal; totalDiscountAmount = plan.totalDiscountAmount; cartTotal = plan.cartTotal;
 
       // 3. WRITES
       const priceReviewsRef = collection(firestore, `companies/${companyId}/priceReviews`);
-      priceReviews.forEach(r => transaction.set(doc(priceReviewsRef), r));
-      pendingPriceReviews = priceReviews;
-      transaction.update(companyDocRef, {
-        saleCounter: newSaleCounter,
-        ...(bulkTypeConfig && bulkTypeConfig.prefix ? { [`documentNumbering.${saleData.documentType}.nextNumber`]: (bulkTypeConfig.nextNumber || 1) + 1 } : {})
-      });
+      plan.priceReviews.forEach(r => transaction.set(doc(priceReviewsRef), r));
+      transaction.update(companyDocRef, { saleCounter: numbering.saleCounter, ...numbering.numberingUpdate });
 
-      productUpdates.forEach(update => {
-        transaction.update(update.ref, update.data);
-      });
+      for (const d of plan.deltas) {
+        const base = loaded.find(l => l.id === d.id)!;
+        transaction.update(base.ref, {
+          ...(d.stock || d.reserved ? { stock: (base.data.stock || 0) + d.stock, reservedStock: (base.data.reservedStock || 0) + d.reserved } : {}),
+          ...(d.price !== undefined ? { price: d.price } : {}),
+          lastUpdated: nowIso,
+        });
+      }
 
       const bulkMovementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
-      stockOutMovements.forEach(m => {
+      plan.movements.forEach(m => {
         const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
           productId: m.productId,
           productName: m.productName,
           type: 'OUT',
           quantity: -m.quantity,
           fromLocationId: m.location,
-          reason: `Venda ${guideNumber} (levantada no acto)`,
+          reason: `Venda ${numbering.guideNumber} (levantada no acto)`,
           userId: user.id,
           userName: user.username,
         };
         transaction.set(doc(bulkMovementsRef), { ...movement, timestamp: serverTimestamp() });
       });
 
-      salesToCreate.forEach(sale => {
-        transaction.set(doc(salesCollectionRef, sale.id), sale);
-      });
+      plan.sales.forEach(sale => transaction.set(doc(salesCollectionRef, sale.id), sale));
     });
+
+    if (isOffline()) {
+      sellOffline();
+    } else {
+      try {
+        await sellOnline();
+      } catch (e) {
+        // A ligação caiu antes de gravar qualquer coisa: repete no modo offline em vez de perder a venda.
+        if (!isOfflineReadError(e)) throw e;
+        sellOffline();
+      }
+    }
+
+    if (wasOffline) {
+      toast({
+        title: "Venda guardada neste aparelho",
+        description: `Sem internet. Recibo provisório ${guideNumberForOuterScope} — o número oficial é atribuído quando a ligação voltar.`,
+      });
+      downloadSaleDocument(createdSalesForOuterScope, companyData);
+      return;
+    }
 
     // Desconto grande (≥ 10%) → avisar o gestor.
     if (cartSubtotal > 0 && totalDiscountAmount / cartSubtotal >= 0.1) {
@@ -471,12 +423,11 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
     }
 
     setLastSaleTimestamp(Date.now());
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, products, toast, triggerEmailAlert, sendPush, user, notifyManagers]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, products, productsData, toast, triggerEmailAlert, sendPush, user, notifyManagers]);
 
 
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
-    assertOnline('confirmar o levantamento');
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
@@ -484,12 +435,20 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
 
     const saleRef = doc(firestore, `companies/${companyId}/sales`, sale.id);
-    const saleSnap = await getDoc(saleRef);
-    if (!saleSnap.exists()) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Venda não encontrada.' });
-      return;
+    const offlineMode = isOffline();
+    let freshSale: Sale = sale; // offline usa a venda que está no ecrã (já vem da cópia local)
+    if (!offlineMode) {
+      try {
+        const saleSnap = await getDoc(saleRef);
+        if (!saleSnap.exists()) {
+          toast({ variant: 'destructive', title: 'Erro', description: 'Venda não encontrada.' });
+          return;
+        }
+        freshSale = saleSnap.data() as Sale;
+      } catch (e) {
+        if (!isOfflineReadError(e)) throw e;
+      }
     }
-    const freshSale = saleSnap.data() as Sale;
 
     if (freshSale.status === 'Levantado') {
       throw new Error("Esta venda já foi marcada como levantada. O stock não foi alterado.");
@@ -534,6 +493,29 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
       throw new Error(`Produto "${freshSale.productName}" não encontrado para atualizar estoque.`);
     }
 
+    // Levantamento sem internet: grava neste aparelho e sincroniza depois (incrementos atómicos).
+    const pickupOffline = () => {
+      const nowIso = new Date().toISOString();
+      const sources = (productsData || []).filter(p => p.id && sourceIdsToCheck.includes(p.id)).map(p => ({ id: p.id as string, data: p }));
+      const plan = planPickup({ quantity: freshSale.quantity, sources });
+      if ('error' in plan) {
+        throw new Error(`Erro Crítico: Stock insuficiente para realizar o levantamento. Disp: ${plan.error}, Necessário: ${freshSale.quantity}`);
+      }
+      const batch = writeBatch(firestore);
+      writeDeltas(batch, productsCollectionRef, plan.deltas, nowIso);
+      writeMovements(batch, firestore, companyId, plan.movements.map(m => ({ ...m, productName: freshSale.productName })), user,
+        () => `Levantamento Venda #${freshSale.guideNumber} (offline)`);
+      batch.update(saleRef, { status: 'Levantado' });
+      queueBatch(batch, 'Levantamento feito offline', (title, description) => toast({ variant: 'destructive', title, description }));
+      toast({ title: 'Levantamento guardado neste aparelho', description: 'Sem internet. Sincroniza sozinho quando a ligação voltar.' });
+    };
+
+    if (offlineMode) {
+      pickupOffline();
+      return;
+    }
+
+    try {
     await runTransaction(firestore, async (transaction) => {
       // 1. READS
       const sourceDocRefs = sourceIdsToCheck.map(id => doc(productsCollectionRef, id));
@@ -605,8 +587,12 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
       // Send notification with total remaining stock
       checkStockAndNotify({ ...loadedProducts[0].data, stock: totalStock - freshSale.quantity });
     });
+    } catch (e) {
+      if (isOfflineReadError(e)) { pickupOffline(); return; }
+      throw e;
+    }
 
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user, checkStockAndNotify, toast]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user, checkStockAndNotify, toast, productsData, products]);
 
 
   const deleteSale = useCallback(async (saleId: string) => {
