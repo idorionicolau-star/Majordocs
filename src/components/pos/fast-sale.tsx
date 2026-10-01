@@ -11,7 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn, formatCurrency, normalizeString } from "@/lib/utils";
 import type { CartItem, Product, Sale } from "@/lib/types";
 import { parseQuickInput, searchProducts, toNumber } from "@/lib/quick-stock";
-import { Check, ChevronDown, LayoutGrid, Loader2, MapPin, Minus, Plus, Search, ShoppingCart, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, X } from "lucide-react";
+import { BarcodeScanner } from "@/components/scan/barcode-scanner";
+import { VoiceButton } from "@/components/scan/voice-button";
+import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode";
+import { parseVoice } from "@/lib/voice-parse";
+import { useBarcodeLink } from "@/hooks/use-barcode-link";
 
 type Line = {
     key: string;
@@ -68,6 +73,11 @@ export function FastSale() {
     const [notes, setNotes] = useState("");
     const [saving, setSaving] = useState(false);
     const [lastSale, setLastSale] = useState<{ total: number; items: number; client: string } | null>(null);
+    const [scanOpen, setScanOpen] = useState(false);
+    /** código lido que ainda não pertence a nenhum produto: o próximo produto tocado fica com ele */
+    const [pendingCode, setPendingCode] = useState<string | null>(null);
+    const [listening, setListening] = useState("");
+    const { link: linkBarcode, canLink } = useBarcodeLink();
 
     const searchRef = useRef<HTMLInputElement>(null);
     const qtyRefs = useRef<Map<string, HTMLInputElement>>(new Map());
@@ -129,7 +139,7 @@ export function FastSale() {
         });
     const focusSearch = () => requestAnimationFrame(() => searchRef.current?.focus());
 
-    const add = (p: Product, qty?: number | null) => {
+    const add = (p: Product, qty?: number | null, quiet = false) => {
         const a = avail(p);
         if (a <= 0) {
             toast({ variant: "destructive", title: "Esgotado", description: `${p.name} não tem stock disponível${isMultiLocation ? " nesta localização" : ""}.` });
@@ -147,14 +157,71 @@ export function FastSale() {
             ];
         });
         setText("");
+        if (quiet) return;
         if (qty != null && qty > 0) focusSearch();
         else focusQty(key); // added 1 — cursor goes to the quantity so the number can be typed straight away
+    };
+
+    const pickProduct = (p: Product, qty?: number | null) => {
+        if (pendingCode) {
+            const ok = linkBarcode(p, pendingCode);
+            toast({ title: ok ? `Código ligado a ${p.name}` : "Não foi possível guardar o código", description: ok ? "Da próxima vez basta ler." : "Sem permissão para editar produtos — a venda continua." });
+            setPendingCode(null);
+        }
+        add(p, qty);
+    };
+
+    /** Código lido (câmara ou leitor): junta o produto, ou guarda o código para associar ao próximo produto escolhido. */
+    const handleCode = (raw: string, fromCamera = false): string | undefined => {
+        const code = normalizeBarcode(raw);
+        const p = findByBarcode(scoped, code, location);
+        if (p) {
+            if (avail(p) <= 0) {
+                toast({ variant: "destructive", title: "Esgotado", description: `${p.name} não tem stock disponível.` });
+                return `✗ ${p.name} — esgotado`;
+            }
+            const have = inCart(p)?.qty || 0;
+            add(p, have + 1, true);
+            setText("");
+            return `✓ ${p.name} × ${fmtQ(have + 1)}`;
+        }
+        setPendingCode(code);
+        setText("");
+        if (fromCamera) setScanOpen(false);
+        toast({ title: "Código novo", description: canLink ? "Ainda não está ligado a nenhum produto. Toque no produto certo para o associar." : "Ainda não está ligado a nenhum produto. Peça a quem gere o inventário para o associar." });
+        focusSearch();
+        return undefined;
+    };
+
+    const handleVoice = (transcript: string) => {
+        setListening("");
+        const items = parseVoice(transcript);
+        if (!items.length) return;
+        const done: string[] = [];
+        const missed: string[] = [];
+        for (const it of items) {
+            const hit = searchProducts(scoped, it.term, 1)[0];
+            if (!hit) { missed.push(it.term); continue; }
+            if (avail(hit) <= 0) { missed.push(`${hit.name} (esgotado)`); continue; }
+            add(hit, it.qty ?? 1, true);
+            done.push(`${fmtQ(it.qty ?? 1)} × ${hit.name}`);
+        }
+        toast({
+            variant: missed.length && !done.length ? "destructive" : undefined,
+            title: done.length ? `Juntei: ${done.join(", ")}` : "Não encontrei esse produto",
+            description: missed.length ? `Não encontrei: ${missed.join(", ")}. Disse: “${transcript}”.` : undefined,
+        });
     };
 
     const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "ArrowDown") { e.preventDefault(); setHighlight((h) => Math.min(h + 1, Math.max(results.length - 1, 0))); }
         else if (e.key === "ArrowUp") { e.preventDefault(); setHighlight((h) => Math.max(h - 1, 0)); }
-        else if (e.key === "Enter") { e.preventDefault(); if (results[highlight]) add(results[highlight], parsed.qty); }
+        else if (e.key === "Enter") {
+            e.preventDefault();
+            // leitor USB/Bluetooth: escreve o código e carrega Enter
+            if (looksLikeBarcode(text)) { handleCode(text); return; }
+            if (results[highlight]) pickProduct(results[highlight], parsed.qty);
+        }
         else if (e.key === "Escape") setText("");
     };
 
@@ -235,12 +302,28 @@ export function FastSale() {
 
     const locName = (id: string) => locations.find((l) => l.id === id)?.name || "—";
 
+    // Atalhos (teclado físico): F2 pesquisar · F8 câmara · Ctrl+Enter finalizar · Alt+1…5 forma de pagamento
+    const shortcutRef = useRef({ confirm, canConfirm });
+    useEffect(() => { shortcutRef.current = { confirm, canConfirm }; });
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === "F2") { e.preventDefault(); searchRef.current?.focus(); searchRef.current?.select(); }
+            else if (e.key === "F8") { e.preventDefault(); setScanOpen(true); }
+            else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { if (shortcutRef.current.canConfirm) { e.preventDefault(); shortcutRef.current.confirm(); } }
+            else if (e.altKey && /^[1-5]$/.test(e.key)) { e.preventDefault(); setPayment(PAYMENTS[Number(e.key) - 1]); }
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, []);
+
     return (
         <div className="mx-auto w-full max-w-3xl pb-44">
+            <BarcodeScanner open={scanOpen} onClose={() => { setScanOpen(false); focusSearch(); }} onScan={(c) => handleCode(c, true)} />
             <div className="flex items-center justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Venda Rápida</h1>
-                    <p className="text-xs text-muted-foreground">Escreva o produto e a quantidade — Enter junta ao carrinho.</p>
+                    <p className="text-xs text-muted-foreground">Escreva, leia o código de barras ou dite — Enter junta ao carrinho.</p>
+                    <p className="hidden text-[11px] text-muted-foreground/70 md:block">Atalhos: F2 pesquisar · F8 câmara · Ctrl+Enter finalizar · Alt+1…5 pagamento</p>
                 </div>
                 <Button asChild variant="outline" size="sm" className="shrink-0">
                     <Link href="/pos/catalogo"><LayoutGrid className="mr-1.5 h-4 w-4" />Catálogo</Link>
@@ -263,7 +346,8 @@ export function FastSale() {
 
             {/* Search */}
             <div className="sticky top-0 z-20 -mx-4 mt-3 bg-background/95 px-4 py-2 backdrop-blur">
-                <div className="relative">
+                <div className="flex items-center gap-2">
+                <div className="relative min-w-0 flex-1">
                     <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         ref={searchRef}
@@ -282,6 +366,25 @@ export function FastSale() {
                         <button type="button" aria-label="Limpar" onClick={() => { setText(""); focusSearch(); }} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground"><X className="h-5 w-5" /></button>
                     )}
                 </div>
+                <button
+                    type="button"
+                    aria-label="Ler código de barras com a câmara"
+                    title="Ler código de barras (F8)"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setScanOpen(true)}
+                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border bg-card text-muted-foreground hover:text-foreground"
+                >
+                    <ScanBarcode className="h-6 w-6" />
+                </button>
+                <VoiceButton className="h-14 w-14" onInterim={setListening} onResult={handleVoice} onProblem={(m) => { setListening(""); toast({ variant: "destructive", title: "Ditado", description: m }); }} />
+                </div>
+                {listening && <p className="mt-1.5 px-1 text-sm italic text-muted-foreground">🎙 {listening}</p>}
+                {pendingCode && (
+                    <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-sm">
+                        <span>Código <b className="tabular-nums">{pendingCode}</b> ainda sem produto — {canLink ? "escreva o nome e toque no produto certo para o associar." : "peça a quem gere o inventário para o associar."}</span>
+                        <button type="button" aria-label="Cancelar" onClick={() => setPendingCode(null)} className="shrink-0 text-muted-foreground"><X className="h-4 w-4" /></button>
+                    </div>
+                )}
                 {parsed.qty != null && results[highlight] && (
                     <p className="mt-1.5 px-1 text-xs text-muted-foreground">Enter junta <b className="text-foreground">{fmtQ(parsed.qty)} × {results[highlight].name}</b> = {formatCurrency(parsed.qty * priceOf(results[highlight]))}</p>
                 )}
@@ -294,7 +397,7 @@ export function FastSale() {
                         const a = avail(p);
                         const c = inCart(p);
                         return (
-                            <button key={p.instanceId} type="button" onClick={() => add(p, parsed.qty)} onMouseEnter={() => setHighlight(i)} disabled={a <= 0}
+                            <button key={p.instanceId} type="button" onClick={() => pickProduct(p, parsed.qty)} onMouseEnter={() => setHighlight(i)} disabled={a <= 0}
                                 className={cn("flex w-full items-center justify-between gap-3 border-b px-4 py-3 text-left last:border-0 disabled:opacity-50", i === highlight && "bg-muted")}>
                                 <div className="min-w-0">
                                     <p className="truncate font-medium">{p.name}</p>

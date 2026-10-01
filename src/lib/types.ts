@@ -107,6 +107,8 @@ export type Product = {
   thresholdMode?: 'auto' | 'manual';
   ads?: number;
   targetStock?: number;
+  /** Código de barras (EAN/UPC/Code128…) — lido com a câmara ou um leitor */
+  barcode?: string;
 };
 
 
