@@ -55,7 +55,7 @@ export const TacticalSummary = () => {
     try {
       const { analyzeBusiness, analysisToMarkdown } = await import('@/lib/business-analysis');
 
-      const text = analysisToMarkdown(analyzeBusiness({ products: products || [], sales: sales || [], customers: customers || [], orders: (inv as any)?.orders || [], productions: (inv as any)?.productions || [], stockMovements: (inv as any)?.stockMovements || [] }));
+      const text = analysisToMarkdown(analyzeBusiness({ products: products || [], sales: sales || [], customers: customers || [], orders: (inv as any)?.orders || [], productions: (inv as any)?.productions || [], stockMovements: (inv as any)?.stockMovements || [], businessType: companyData?.businessType }));
 
       setIsFreshlyGenerated(true);
       setInsights(text);

@@ -89,14 +89,17 @@ export function analyzeBusiness(input: {
     productions?: Production[];
     customers?: Customer[];
     stockMovements?: StockMovement[];
+    /** 'reseller' = comércio (não fabrica, não tem encomendas): o diagnóstico não fala de produção. */
+    businessType?: 'manufacturer' | 'reseller';
     now?: Date;
 }): Analysis {
+    const reseller = input.businessType === 'reseller';
     const now = input.now ?? new Date();
     const products = (input.products || []).filter((p) => !p.deletedAt);
     const allSales = (input.sales || []).filter((s) => !s.deletedAt);
     const realSales = allSales.filter((s) => s.documentType !== "Factura Proforma" && s.documentType !== "Cotação");
-    const orders = (input.orders || []).filter((o) => !o.deletedAt);
-    const productions = (input.productions || []).filter((p) => !p.deletedAt);
+    const orders = reseller ? [] : (input.orders || []).filter((o) => !o.deletedAt);
+    const productions = reseller ? [] : (input.productions || []).filter((p) => !p.deletedAt);
     const customers = input.customers || [];
     const movements = input.stockMovements || [];
 
@@ -258,13 +261,6 @@ export function analyzeBusiness(input: {
             action: { label: "Fazer contagem", href: "/inventory/quick?modo=contagem" },
         },
         {
-            id: "production", weight: 15,
-            label: "Produção registada",
-            done: daysSinceProd !== null && daysSinceProd <= 14,
-            detail: daysSinceProd === null ? "Sem produção registada." : daysSinceProd <= 14 ? `Última produção há ${daysSinceProd} dias.` : `A última produção registada foi há ${daysSinceProd} dias. O que foi fabricado depois não está no stock.`,
-            action: { label: "Registar produção", href: "/production" },
-        },
-        {
             id: "cost", weight: 15,
             label: "Custos dos produtos preenchidos",
             done: pct(missingCost.length) <= 0.1,
@@ -286,6 +282,16 @@ export function analyzeBusiness(input: {
             action: { label: "Rever catálogo", href: duplicateNames.size ? links.products([...duplicateNames], "Possíveis duplicados") : links.inventoryProblem("sem-categoria") },
         },
     ];
+    // Só quem fabrica regista produção (um comércio de revenda não).
+    if (!reseller) {
+        tasks.splice(2, 0, {
+            id: "production", weight: 15,
+            label: "Produção registada",
+            done: daysSinceProd !== null && daysSinceProd <= 14,
+            detail: daysSinceProd === null ? "Sem produção registada." : daysSinceProd <= 14 ? `Última produção há ${daysSinceProd} dias.` : `A última produção registada foi há ${daysSinceProd} dias. O que foi fabricado depois não está no stock.`,
+            action: { label: "Registar produção", href: "/production" },
+        });
+    }
     const qualityScore = Math.round(tasks.reduce((t, k) => t + (k.done ? k.weight : 0), 0) / tasks.reduce((t, k) => t + k.weight, 0) * 100);
 
     // ---------- alerts (most important first) ----------
@@ -298,10 +304,10 @@ export function analyzeBusiness(input: {
             action: { label: "Registar venda agora", href: "/pos" },
         });
     }
-    if (negative.length) alerts.push({ id: "negative", severity: "critical", title: `${plural(negative.length, "produto", "produtos")} com stock negativo`, detail: "Saiu mais do que entrou — falta registar entradas ou produção.", items: negative.slice(0, 5).map((p) => `${p.name}: ${fmtQty(p.stock)} ${p.unit || "un"}`), itemLinks: negative.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Ver produtos com stock negativo", href: links.inventoryProblem("negativo") } });
+    if (negative.length) alerts.push({ id: "negative", severity: "critical", title: `${plural(negative.length, "produto", "produtos")} com stock negativo`, detail: reseller ? "Saiu mais do que entrou — falta registar a entrada (compra) desse produto." : "Saiu mais do que entrou — falta registar entradas ou produção.", items: negative.slice(0, 5).map((p) => `${p.name}: ${fmtQty(p.stock)} ${p.unit || "un"}`), itemLinks: negative.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Ver produtos com stock negativo", href: links.inventoryProblem("negativo") } });
     if (overdue.length) alerts.push({ id: "overdue", severity: "critical", title: `${plural(overdue.length, "encomenda atrasada", "encomendas atrasadas")}`, detail: "Passou a data de entrega combinada com o cliente.", items: overdue.slice(0, 5).map((o) => `${o.productName} — ${o.clientName || "cliente"}`), itemLinks: overdue.slice(0, 5).map((o) => links.order(o.id)), action: { label: "Ver encomendas atrasadas", href: overdue.length === 1 ? links.order(overdue[0].id) : "/orders" } });
-    if (runout.length) alerts.push({ id: "runout", severity: "warning", title: `${plural(runout.length, "produto vai", "produtos vão")} esgotar em ≤ 14 dias`, detail: "Ao ritmo de venda do último mês.", items: runout.slice(0, 5).map((r) => `${r.name}: ~${r.daysLeft} dias (${fmtQty(r.available)} ${r.unit})`), itemLinks: runout.slice(0, 5).map((r) => links.product(r.name, r.location)), action: { label: "Planear produção", href: "/production" } });
-    if (outOfStock.length) alerts.push({ id: "out", severity: "warning", title: `${plural(outOfStock.length, "produto esgotado", "produtos esgotados")}`, detail: "Não podem ser vendidos até haver entrada ou produção.", items: outOfStock.slice(0, 5).map((p) => p.name), itemLinks: outOfStock.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Ver produtos esgotados", href: links.inventoryProblem("esgotado") } });
+    if (runout.length) alerts.push({ id: "runout", severity: "warning", title: `${plural(runout.length, "produto vai", "produtos vão")} esgotar em ≤ 14 dias`, detail: "Ao ritmo de venda do último mês.", items: runout.slice(0, 5).map((r) => `${r.name}: ~${r.daysLeft} dias (${fmtQty(r.available)} ${r.unit})`), itemLinks: runout.slice(0, 5).map((r) => links.product(r.name, r.location)), action: reseller ? { label: "Repor stock", href: "/inventory/quick?modo=entrada" } : { label: "Planear produção", href: "/production" } });
+    if (outOfStock.length) alerts.push({ id: "out", severity: "warning", title: `${plural(outOfStock.length, "produto esgotado", "produtos esgotados")}`, detail: reseller ? "Não podem ser vendidos até haver nova entrada de stock." : "Não podem ser vendidos até haver entrada ou produção.", items: outOfStock.slice(0, 5).map((p) => p.name), itemLinks: outOfStock.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Ver produtos esgotados", href: links.inventoryProblem("esgotado") } });
     if (pendingPickups.some((p) => p.days > 7)) {
         const stale = pendingPickups.filter((p) => p.days > 7);
         alerts.push({ id: "pickups", severity: "warning", title: `${plural(stale.length, "venda paga", "vendas pagas")} por levantar há mais de 7 dias`, detail: "O material está reservado e não pode ser vendido a outros. Confirme o levantamento ou contacte o cliente.", items: stale.slice(0, 5).map((p) => `${p.sale.productName} — ${p.sale.clientName || "cliente"} (${p.days} dias)`), itemLinks: stale.slice(0, 5).map((p) => links.sale(p.sale.guideNumber || p.sale.productName)), action: { label: "Ver vendas por levantar", href: links.salesByStatus("Pago") } });
@@ -317,7 +323,7 @@ export function analyzeBusiness(input: {
     }
     if (duplicates.length) alerts.push({ id: "dups", severity: "info", title: `${plural(duplicates.length, "produto parece duplicado", "produtos parecem duplicados")}`, detail: "O mesmo artigo registado duas vezes divide o stock e confunde as vendas.", items: duplicates.slice(0, 5), itemLinks: duplicates.slice(0, 5).map((n) => links.product(n)), action: { label: "Rever duplicados", href: links.products([...duplicateNames], "Possíveis duplicados") } });
     if (fractionalUnits.length) alerts.push({ id: "units", severity: "info", title: `${plural(fractionalUnits.length, "produto em 'un'", "produtos em 'un'")} com quantidades decimais`, detail: "Ex.: 23.8 un. Provavelmente a unidade certa é m² ou m — confirme a unidade.", items: fractionalUnits.slice(0, 5).map((p) => `${p.name}: ${fmtQty(p.stock)} un`), itemLinks: fractionalUnits.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Rever unidades", href: links.inventoryProblem("unidades") } });
-    if (!alerts.length) alerts.push({ id: "ok", severity: "good", title: "Tudo em ordem", detail: "Sem alertas importantes. Continue a registar vendas, produção e contagens." });
+    if (!alerts.length) alerts.push({ id: "ok", severity: "good", title: "Tudo em ordem", detail: "Sem alertas importantes. Continue a registar vendas" + (reseller ? "" : ", produção") + " e contagens." });
 
     // ---------- headline ----------
     const headline: string[] = [];
