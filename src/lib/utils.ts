@@ -105,6 +105,13 @@ export function downloadSaleDocument(saleOrSales: Sale | Sale[], companyData: Co
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;
 
+  // O botão "Guardar PDF" da janela chama a app para gerar o ficheiro .pdf verdadeiro
+  // (antes só abria a janela de impressão).
+  (window as any).__msxSaleDocPdf = async () => {
+    const { downloadSaleDocumentPDF } = await import('./sale-document-pdf');
+    await downloadSaleDocumentPDF(salesArray, companyData);
+  };
+
   printWindow.document.write(`
     <html>
       <head>
@@ -373,7 +380,7 @@ export function downloadSaleDocument(saleOrSales: Sale | Sale[], companyData: Co
   printWindow.document.write(`
     <div class="actions-bar">
       <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
-      <button class="btn-pdf" onclick="window.print()">📄 Guardar PDF</button>
+      <button class="btn-pdf" onclick="var o=window.opener; if (o && o.__msxSaleDocPdf) { this.disabled=true; this.textContent='A gerar PDF…'; var b=this; o.__msxSaleDocPdf().then(function(){ b.textContent='✓ PDF descarregado'; }).catch(function(){ b.disabled=false; b.textContent='📄 Descarregar PDF'; alert('Não foi possível gerar o PDF.'); }); } else { window.print(); }">📄 Descarregar PDF</button>
     </div>
   `);
 

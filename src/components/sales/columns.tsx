@@ -21,7 +21,6 @@ import { InventoryContext } from "@/context/inventory-context"
 import { cn } from "@/lib/utils"
 
 
-import { generateSalePDF } from "@/lib/pdf-generator";
 
 interface ColumnsOptions {
     onUpdateSale: (sale: Sale) => void;
@@ -93,12 +92,25 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
         }
     };
 
+    // O documento leva todos os artigos com o mesmo número (uma venda com vários produtos).
+    const documentLines = () => {
+        const same = sale.guideNumber
+            ? (inventoryContext?.sales || []).filter(s => s.guideNumber === sale.guideNumber && s.documentType === sale.documentType)
+            : [];
+        return same.length ? same : [sale];
+    };
+
     const handleDownload = async () => {
-        await generateSalePDF(sale, companyData || null);
+        try {
+            const { downloadSaleDocumentPDF } = await import("@/lib/sale-document-pdf");
+            await downloadSaleDocumentPDF(documentLines(), companyData || null);
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'Não foi possível gerar o PDF', description: e?.message || 'Tente de novo.' });
+        }
     };
 
     const handlePrint = () => {
-        downloadSaleDocument(sale, companyData || null);
+        downloadSaleDocument(documentLines(), companyData || null);
     };
 
     return (
