@@ -17,7 +17,8 @@ import { Input } from "@/components/ui/input";
 import Link from 'next/link';
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import { doc, updateDoc } from "firebase/firestore";
+import { collection, doc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { changesToUpdate, diffSale, sellerBlockedFields } from "@/lib/sale-audit";
 import { useFirestore } from '@/firebase/provider';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -120,33 +121,68 @@ export default function SalesPage() {
     localStorage.setItem('majorstockx-sales-grid-cols', cols);
   }
 
-  const handleUpdateSale = (updatedSale: Sale) => {
-    // Anti-roubo: alterações a valores de uma venda já feita avisam o gestor.
+  const handleUpdateSale = async (updatedSale: Sale) => {
     const before = (contextSales || []).find((s: Sale) => s.id === updatedSale.id);
-    if (before && inventoryContext?.notifyManagers) {
+    if (!before || !updatedSale.id || !firestore || !companyId || !user) return;
+
+    // Só o que mudou de facto — e cada mudança fica registada (quem, quando, antes e depois).
+    const diff = diffSale(before, updatedSale);
+    if (!Object.keys(diff).length) return;
+
+    const isManager = user.role === 'Admin' || user.role === 'Dono';
+    const blocked = sellerBlockedFields(diff);
+    if (!isManager && blocked.length) {
+      toast({ variant: "destructive", title: "Só o gestor pode alterar isto", description: "Produto, quantidade, preço e valores de uma venda já feita só podem ser corrigidos pelo gestor." });
+      return;
+    }
+    // Defesa: mudar produto/quantidade de uma venda que já mexeu no stock deixaria o stock errado.
+    if (before.status !== 'Pendente' && (diff.quantity || diff.productName)) {
+      toast({ variant: "destructive", title: "Não é possível", description: "Para trocar produto ou quantidade, apague a venda (o stock volta) e faça outra." });
+      return;
+    }
+
+    // Anti-roubo: alterações a valores de uma venda já feita avisam o gestor.
+    if (inventoryContext?.notifyManagers) {
       const changes: string[] = [];
       const fmt = (n: number) => formatCurrency(Number(n) || 0);
-      if (before.quantity !== updatedSale.quantity) changes.push(`qtd ${before.quantity} → ${updatedSale.quantity}`);
-      if (before.unitPrice !== updatedSale.unitPrice) changes.push(`preço ${fmt(before.unitPrice)} → ${fmt(updatedSale.unitPrice)}`);
-      if (before.totalValue !== updatedSale.totalValue) changes.push(`total ${fmt(before.totalValue)} → ${fmt(updatedSale.totalValue)}`);
-      if ((before.amountPaid ?? 0) !== (updatedSale.amountPaid ?? 0)) changes.push(`pago ${fmt(before.amountPaid ?? 0)} → ${fmt(updatedSale.amountPaid ?? 0)}`);
-      if (before.productName !== updatedSale.productName) changes.push(`produto ${before.productName} → ${updatedSale.productName}`);
+      if (diff.quantity) changes.push(`qtd ${before.quantity} → ${updatedSale.quantity}`);
+      if (diff.unitPrice) changes.push(`preço ${fmt(before.unitPrice)} → ${fmt(updatedSale.unitPrice)}`);
+      if (diff.totalValue) changes.push(`total ${fmt(before.totalValue)} → ${fmt(updatedSale.totalValue)}`);
+      if (diff.amountPaid) changes.push(`pago ${fmt(before.amountPaid ?? 0)} → ${fmt(updatedSale.amountPaid ?? 0)}`);
+      if (diff.productName) changes.push(`produto ${before.productName} → ${updatedSale.productName}`);
       if (changes.length) {
         inventoryContext.notifyManagers({
           type: 'security',
           title: `✏️ Venda ${before.guideNumber || ''} alterada`,
-          body: `${user?.username || '—'} · ${changes.join(' · ')}`,
+          body: `${user.username || '—'} · ${changes.join(' · ')}`,
           link: '/sales',
         });
       }
     }
-    if (updatedSale.id && firestore && companyId) {
-      const saleDocRef = doc(firestore, `companies/${companyId}/sales`, updatedSale.id);
-      updateDoc(saleDocRef, updatedSale as any);
+
+    try {
+      const saleRef = doc(firestore, `companies/${companyId}/sales`, updatedSale.id);
+      const batch = writeBatch(firestore);
+      batch.update(saleRef, changesToUpdate(diff));
+      batch.set(doc(collection(saleRef, 'history')), {
+        action: 'editada',
+        userId: user.id,
+        userName: user.username,
+        at: serverTimestamp(),
+        guideNumber: before.guideNumber || null,
+        changes: diff,
+      });
+      await batch.commit();
+      // Proforma que passa a paga tem de reservar o stock (antes ficava "Pago" sem reserva).
+      if (before.status === 'Pendente' && updatedSale.status === 'Pago') {
+        try { await (inventoryContext as any)?.recalculateReservedStock?.(); } catch { /* o botão de recalcular continua disponível */ }
+      }
       toast({
         title: "Venda Atualizada",
         description: `A venda #${updatedSale.guideNumber} foi atualizada com sucesso.`,
       });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Não foi possível atualizar a venda", description: e?.message || "Tente de novo." });
     }
   };
 

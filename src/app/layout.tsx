@@ -4,6 +4,7 @@ import { AppProviders } from '@/firebase/client-provider';
 import type { Metadata, Viewport } from 'next';
 import { PT_Sans, Space_Grotesk } from 'next/font/google';
 import { Toaster } from "@/components/ui/toaster";
+import { PwaRegister } from "@/components/pwa-register";
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -53,6 +54,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <AppProviders>{children}</AppProviders>
         <Toaster />
+        <PwaRegister />
       </body>
     </html>
   );

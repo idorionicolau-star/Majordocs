@@ -175,6 +175,10 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
   const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
   const missingAmount = totalValue - (watchedAmountPaid || 0);
   const isFromOrder = sale.documentType === 'Encomenda';
+  // Uma venda que já moveu stock (Pago/Levantado) não muda de produto nem de quantidade:
+  // para isso apaga-se (o stock volta) e faz-se outra. Só o gestor muda preços.
+  const isManager = inventoryContext?.user?.role === 'Admin' || inventoryContext?.user?.role === 'Dono';
+  const stockLocked = sale.status !== 'Pendente';
 
   function onSubmit(values: EditSaleFormValues) {
     const total = (values.unitPrice || 0) * (values.quantity || 0);
@@ -315,12 +319,15 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
           render={({ field }) => (
             <FormItem>
               <FormLabel>Produto</FormLabel>
+              <div className={stockLocked ? 'pointer-events-none opacity-60' : undefined} aria-disabled={stockLocked}>
               <CatalogProductSelector
                 products={productsInStock}
                 categories={catalogCategories || []}
                 selectedValue={field.value}
                 onValueChange={handleProductSelect}
               />
+              </div>
+              {stockLocked && <FormDescription>Venda já registada no stock: para trocar o produto ou a quantidade, apague a venda (o stock volta) e faça outra.</FormDescription>}
               <FormMessage />
             </FormItem>
           )}
@@ -333,7 +340,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
               <FormItem>
                 <FormLabel>Quantidade</FormLabel>
                 <FormControl>
-                  <Input type="number" step="any" min="0.01" {...field} />
+                  <Input type="number" step="any" min="0.01" disabled={stockLocked} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -372,7 +379,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
               <FormItem>
                 <FormLabel>Preço Unitário</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" {...field} />
+                  <Input type="number" step="0.01" disabled={!isManager} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

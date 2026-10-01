@@ -2475,6 +2475,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta.' });
       return;
     }
+    if (!isManagerUser) {
+      toast({ variant: 'destructive', title: 'Só o gestor pode apagar vendas', description: 'Peça ao gestor para apagar ou corrigir esta venda.' });
+      return;
+    }
     const saleRef = doc(firestore, `companies/${companyId}/sales`, saleId);
 
     try {
@@ -2536,6 +2540,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           deletedAt: new Date().toISOString(),
           deletedBy: user.username
         });
+        // Fica registado quem apagou, quando e o que era a venda (histórico imutável)
+        transaction.set(doc(collection(saleRef, 'history')), {
+          action: 'apagada',
+          userId: user.id,
+          userName: user.username,
+          at: serverTimestamp(),
+          guideNumber: saleData.guideNumber || null,
+          snapshot: {
+            productName: saleData.productName, quantity: saleData.quantity, unitPrice: saleData.unitPrice,
+            totalValue: saleData.totalValue, status: saleData.status, clientName: saleData.clientName || null,
+          },
+        });
       });
 
       toast({ title: 'Venda enviada para Lixeira', description: 'O stock foi reposto.' });
@@ -2550,7 +2566,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       console.error("Error deleting sale: ", error);
       toast({ variant: 'destructive', title: 'Erro ao Apagar Venda', description: error.message });
     }
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, toast, user, notifyManagers]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, toast, user, notifyManagers, isManagerUser]);
 
   const recalculateReservedStock = useCallback(async () => {
     if (!firestore || !companyId || !productsData) {

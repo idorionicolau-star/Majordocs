@@ -8,13 +8,6 @@ const nextConfig = {
   turbopack: {},
 };
 
-import withPWA from 'next-pwa';
-
-const pwaConfig = withPWA({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: true, // Temporarily disabled for Vercel deployment debug
-});
-
-export default pwaConfig(nextConfig);
+// O PWA (service worker) vive em public/firebase-messaging-sw.js e é registado por <PwaRegister />.
+// O plugin next-pwa foi removido: não funciona com o Turbopack.
+export default nextConfig;
