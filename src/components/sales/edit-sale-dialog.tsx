@@ -76,6 +76,10 @@ const formSchema = z.object({
 
 type EditSaleFormValues = z.infer<typeof formSchema>;
 
+const UNITS = ['un', 'm²', 'm', 'cj', 'outro'] as const;
+// As vendas antigas guardam a unidade como texto livre; só aceita as do formulário.
+const toUnit = (u?: string): EditSaleFormValues['unit'] => (UNITS as readonly string[]).includes(u || '') ? (u as (typeof UNITS)[number]) : 'un';
+
 interface EditSaleDialogProps {
   sale: Sale;
   onUpdateSale: (sale: Sale) => void;
@@ -98,7 +102,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
       quantity: sale.quantity,
       unitPrice: sale.unitPrice,
       amountPaid: sale.amountPaid ?? 0,
-      unit: sale.unit || 'un',
+      unit: toUnit(sale.unit),
       documentType: sale.documentType,
       clientName: sale.clientName || '',
       customerId: sale.customerId || '',
@@ -164,7 +168,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
     form.setValue('productName', productName);
     if (product && productName !== sale.productName) {
       form.setValue('unitPrice', product.price);
-      form.setValue('unit', product.unit || 'un');
+      form.setValue('unit', toUnit(product.unit));
     }
   };
 

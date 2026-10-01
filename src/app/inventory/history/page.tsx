@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { startOfDay, endOfDay, isWithinInterval, format } from 'date-fns';
 import { Button } from "@/components/ui/button";
-import { Trash2, Printer, Download, ArrowLeft } from "lucide-react";
+import { Printer, Download, ArrowLeft } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,10 +34,8 @@ export default function InventoryHistoryPage() {
   const searchParams = useSearchParams();
   const productNameFromQuery = searchParams.get('productName');
 
-  const { companyId, locations, loading: contextLoading, user, clearStockMovements, companyData } = useContext(InventoryContext) || {};
+  const { companyId, locations, loading: contextLoading, user, companyData } = useContext(InventoryContext) || {};
   const firestore = useFirestore();
-  const isAdmin = user?.role === 'Admin';
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const { toast } = useToast();
 
 
@@ -114,13 +112,6 @@ export default function InventoryHistoryPage() {
       return dateB - dateA;
     });
   }, [movements, searchFilter, selectedDate]);
-
-  const handleClearHistory = async () => {
-    if (clearStockMovements) {
-      await clearStockMovements();
-    }
-    setShowClearConfirm(false);
-  };
 
   const handlePrint = () => {
     const printWindow = window.open('', '', 'height=800,width=800');
@@ -233,23 +224,6 @@ export default function InventoryHistoryPage() {
 
   return (
     <>
-      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação é irreversível e irá apagar permanentemente **todo** o histórico de movimentos de stock.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearHistory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Sim, apagar tudo
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <Button asChild variant="outline" className="h-12">
@@ -304,20 +278,6 @@ export default function InventoryHistoryPage() {
           </div>
         )}
 
-        {isAdmin && (
-          <Card className="mt-8">
-            <div className="p-6 flex flex-col items-center text-center">
-              <h3 className="font-semibold mb-2">Zona de Administrador</h3>
-              <p className="text-sm text-muted-foreground mb-4 max-w-md">
-                Esta ação é irreversível e irá apagar permanentemente **todo** o histórico de movimentos de stock.
-              </p>
-              <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Limpar Histórico
-              </Button>
-            </div>
-          </Card>
-        )}
       </div>
     </>
   );

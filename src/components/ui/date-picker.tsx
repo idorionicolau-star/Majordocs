@@ -59,7 +59,6 @@ export function DatePicker({ date, setDate }: DatePickerProps) {
             setDate(newDate);
             setIsOpen(false);
           }}
-          onClose={() => setIsOpen(false)}
         />
       </PopoverContent>
     </Popover>
