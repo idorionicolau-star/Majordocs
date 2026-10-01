@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn, plural } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 import { NewProductFields } from "@/components/inventory/new-product-fields";
+import { PhotoCount } from "@/components/inventory/photo-count";
 import { cleanProductName, findNameMatches, guessUnit, planCatalogWrites, suggestCategory, type NameMatch } from "@/lib/new-product";
 import {
     commitQuickStock,
@@ -720,6 +721,15 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             {/* Count mode: full list, type the number, Enter goes to the next */}
             {mode === "count" && !picked && (
                 <div className="mt-2">
+                    {/* Folhas fotografadas → a IA da pessoa transcreve → cola-se aqui e confere-se */}
+                    <div className="mb-2">
+                        <PhotoCount
+                            products={scoped}
+                            locationName={isMultiLocation ? locations.find((l) => l.id === location)?.name : undefined}
+                            blind={blind}
+                            onApply={(items) => items.forEach(({ product, qty }) => addLine(lineFromProduct(product, qty), true))}
+                        />
+                    </div>
                     <div className="mb-2 flex items-center justify-between gap-2">
                         <div className="flex gap-1 rounded-xl bg-muted p-1 text-xs font-medium">
                             {([["todo", "Por contar"], ["done", "Contados"], ["all", "Todos"]] as const).map(([id, label]) => (
