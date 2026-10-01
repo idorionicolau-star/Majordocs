@@ -51,7 +51,7 @@ export function VirtualProductGrid({
 }: VirtualProductGridProps) {
 
     const ItemContainer = useMemo(() => {
-        return ({ children, ...props }: any) => {
+        return function ItemContainer({ children, ...props }: any) {
             let widthClass = "w-full"; // Fallback
 
             // Calculate width based on columns and gap

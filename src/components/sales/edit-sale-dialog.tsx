@@ -76,6 +76,10 @@ const formSchema = z.object({
 
 type EditSaleFormValues = z.infer<typeof formSchema>;
 
+const UNITS = ['un', 'm²', 'm', 'cj', 'outro'] as const;
+// As vendas antigas guardam a unidade como texto livre; só aceita as do formulário.
+const toUnit = (u?: string): EditSaleFormValues['unit'] => (UNITS as readonly string[]).includes(u || '') ? (u as (typeof UNITS)[number]) : 'un';
+
 interface EditSaleDialogProps {
   sale: Sale;
   onUpdateSale: (sale: Sale) => void;
@@ -98,7 +102,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
       quantity: sale.quantity,
       unitPrice: sale.unitPrice,
       amountPaid: sale.amountPaid ?? 0,
-      unit: sale.unit || 'un',
+      unit: toUnit(sale.unit),
       documentType: sale.documentType,
       clientName: sale.clientName || '',
       customerId: sale.customerId || '',
@@ -164,13 +168,17 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
     form.setValue('productName', productName);
     if (product && productName !== sale.productName) {
       form.setValue('unitPrice', product.price);
-      form.setValue('unit', product.unit || 'un');
+      form.setValue('unit', toUnit(product.unit));
     }
   };
 
   const totalValue = (watchedUnitPrice || 0) * (watchedQuantity || 0);
   const missingAmount = totalValue - (watchedAmountPaid || 0);
   const isFromOrder = sale.documentType === 'Encomenda';
+  // Uma venda que já moveu stock (Pago/Levantado) não muda de produto nem de quantidade:
+  // para isso apaga-se (o stock volta) e faz-se outra. Só o gestor muda preços.
+  const isManager = inventoryContext?.user?.role === 'Admin' || inventoryContext?.user?.role === 'Dono';
+  const stockLocked = sale.status !== 'Pendente';
 
   function onSubmit(values: EditSaleFormValues) {
     const total = (values.unitPrice || 0) * (values.quantity || 0);
@@ -311,12 +319,15 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
           render={({ field }) => (
             <FormItem>
               <FormLabel>Produto</FormLabel>
+              <div className={stockLocked ? 'pointer-events-none opacity-60' : undefined} aria-disabled={stockLocked}>
               <CatalogProductSelector
                 products={productsInStock}
                 categories={catalogCategories || []}
                 selectedValue={field.value}
                 onValueChange={handleProductSelect}
               />
+              </div>
+              {stockLocked && <FormDescription>Venda já registada no stock: para trocar o produto ou a quantidade, apague a venda (o stock volta) e faça outra.</FormDescription>}
               <FormMessage />
             </FormItem>
           )}
@@ -329,7 +340,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
               <FormItem>
                 <FormLabel>Quantidade</FormLabel>
                 <FormControl>
-                  <Input type="number" step="any" min="0.01" {...field} />
+                  <Input type="number" step="any" min="0.01" disabled={stockLocked} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -368,7 +379,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
               <FormItem>
                 <FormLabel>Preço Unitário</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" {...field} />
+                  <Input type="number" step="0.01" disabled={!isManager} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

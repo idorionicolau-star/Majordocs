@@ -61,8 +61,12 @@ function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProp
       toast({ variant: 'destructive', title: 'Acesso Restrito', description: 'Conta em modo leitura — contacte o suporte.' });
       return;
     }
-    await auditStock(product, values.physicalCount, values.reason);
-    setOpen(false);
+    try {
+      await auditStock(product, values.physicalCount, values.reason);
+      setOpen(false);
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Não foi possível guardar a auditoria', description: e?.message || 'Tente de novo.' });
+    }
   }
 
   const systemStock = product.stock;

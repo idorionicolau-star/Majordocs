@@ -22,14 +22,17 @@ const INSIGHTS_STORAGE_KEY = 'majorstockx-daily-insights-v2';
 
 export const BusinessSummary = () => {
     const context = useContext(InventoryContext);
+    if (!context) return null;
+    return <BusinessSummaryInner context={context} />;
+};
+
+const BusinessSummaryInner = ({ context }: { context: NonNullable<React.ContextType<typeof InventoryContext>> }) => {
     const auth = useAuth();
     const [insightsOpen, setInsightsOpen] = useState(false);
     const [insights, setInsights] = useState<string | null>(null);
     const [insightsLoading, setInsightsLoading] = useState(false);
     const [insightsFetched, setInsightsFetched] = useState(false);
     const [isFreshlyGenerated, setIsFreshlyGenerated] = useState(false);
-
-    if (!context) return null;
 
     const { sales, products, dashboardStats, companyData, loading } = context;
     const inv = context;
@@ -126,6 +129,10 @@ export const BusinessSummary = () => {
         }
     }, [insightsOpen, insightsFetched, sales, fetchInsights]);
 
+    const displayedInsights = useTypingEffect(insights || "", 15, isFreshlyGenerated, () => {
+        setIsFreshlyGenerated(false);
+    });
+
     if (loading || !summary) {
         return (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-pulse">
@@ -140,9 +147,7 @@ export const BusinessSummary = () => {
         ? Math.round((summary.healthyProducts / summary.totalProducts) * 100)
         : 100;
 
-    const displayedInsights = useTypingEffect(insights || "", 15, isFreshlyGenerated, () => {
-        setIsFreshlyGenerated(false);
-    });
+
 
     return (
         <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-white via-slate-50/50 to-blue-50/30 dark:from-slate-900 dark:via-slate-900/80 dark:to-blue-950/20 p-4 md:p-5 shadow-sm">

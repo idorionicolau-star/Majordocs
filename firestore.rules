@@ -63,6 +63,11 @@ service cloud.firestore {
       return isEmployeeOf(companyId) && (getUserEmployeeData(request.auth.uid).role == 'Admin' || isSuperAdmin());
     }
     
+    // Gestor da empresa (Admin ou Dono) — quem pode corrigir/apagar registos já feitos.
+    function isManagerOf(companyId) {
+      return isEmployeeOf(companyId) && (getUserEmployeeData(request.auth.uid).role in ['Admin', 'Dono'] || isSuperAdmin());
+    }
+
     function can(module, level) {
       let hasMap = isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
       let companyId = hasMap ? getUserCompanyId(request.auth.uid) : '';
@@ -166,9 +171,30 @@ service cloud.firestore {
         allow update, delete: if false; 
       }
       
+      // Vendas: depois de feitas, só o gestor as corrige ou apaga. O vendedor só pode avançar o
+      // fluxo normal (marcar como pago, levantar) e mexer em notas/cliente — nunca em produto,
+      // quantidade, preço, totais, data, autor ou apagar — e nunca baixar o valor já pago.
       match /sales/{saleId} {
         allow get, list: if can('sales', 'read');
-        allow create, update, delete: if can('sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+        allow create: if can('sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+        allow update: if can('sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && (
+          isManagerOf(companyId) || (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+              'productId', 'productName', 'quantity', 'unit', 'unitPrice', 'unitCost', 'subtotal', 'discount', 'vat',
+              'totalValue', 'date', 'soldBy', 'guideNumber', 'location', 'documentType', 'orderId', 'transactionId',
+              'deletedAt', 'deletedBy', 'timestamp'
+            ]) &&
+            request.resource.data.get('amountPaid', 0) >= resource.data.get('amountPaid', 0)
+          )
+        );
+        allow delete: if isManagerOf(companyId) && can('sales', 'write');
+
+        // Registo de cada correcção (quem, quando, antes e depois). Imutável.
+        match /history/{historyId} {
+          allow get, list: if isManagerOf(companyId);
+          allow create: if can('sales', 'write') && request.resource.data.userId == request.auth.uid;
+          allow update, delete: if false;
+        }
       }
       
       match /productions/{productionId} {

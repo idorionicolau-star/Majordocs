@@ -106,6 +106,20 @@ export function CatalogManager() {
   }, [searchQuery]);
 
 
+  // Hooks sempre antes de qualquer 'return' antecipado (senão a ordem dos hooks muda entre renders)
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    return products.filter(p =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [products, searchQuery]);
+
+  const filteredCategories = useMemo(() => {
+    if (!categories) return [];
+    return categories.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [categories, searchQuery]);
+
   if (!inventoryContext) {
     return <div>A carregar gestor de catálogo...</div>
   }
@@ -240,13 +254,6 @@ export function CatalogManager() {
     setNewCategoryName(category.name);
   }
 
-  const filteredProducts = useMemo(() => {
-    if (!products) return [];
-    return products.filter(p =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-  }, [products, searchQuery]);
 
   const totalProductPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const paginatedProducts = filteredProducts.slice((currentProductPage - 1) * itemsPerPage, currentProductPage * itemsPerPage);
@@ -282,10 +289,6 @@ export function CatalogManager() {
     }
   };
 
-  const filteredCategories = useMemo(() => {
-    if (!categories) return [];
-    return categories.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [categories, searchQuery]);
 
   const totalCategoryPages = Math.ceil(filteredCategories.length / itemsPerPage);
   const paginatedCategories = filteredCategories.slice((currentCategoryPage - 1) * itemsPerPage, currentCategoryPage * itemsPerPage);

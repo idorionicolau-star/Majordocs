@@ -190,6 +190,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     })();
   }, [companyId, auth, postFeed]);
 
+  // Operações que mexem no stock usam transacções (seguras, mas precisam de internet).
+  // Sem ligação, falham logo com uma mensagem clara em vez de ficarem à espera.
+  const assertOnline = (what: string) => {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      throw new Error(`Sem internet: ${what} precisa de ligação para não gastar stock que já não existe. Pode consultar tudo e registar entradas e contagens no Stock Rápido; tente de novo quando a ligação voltar.`);
+    }
+  };
+
   // Anti-roubo: avisos para o gestor (feed + push só para Admin/Dono).
   // Acções do próprio gestor não geram alerta.
   const isManagerUser = !!user && (user.role === 'Admin' || user.role === 'Dono');
@@ -1318,6 +1326,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [productsCollectionRef, products, firestore, user, toast]);
 
   const auditStock = useCallback(async (product: Product, physicalCount: number, reason: string) => {
+    assertOnline('fazer a auditoria');
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
@@ -1405,6 +1414,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, user, toast, checkStockAndNotify, notifyManagers]);
 
   const transferStock = useCallback(async (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => {
+    assertOnline('transferir stock');
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
@@ -1495,6 +1505,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
 
   const updateProductStock = useCallback(async (productName: string, quantity: number, locationId?: string) => {
+    assertOnline('actualizar o stock');
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
@@ -1582,6 +1593,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [companyDocRef]);
 
   const addSale = useCallback(async (newSaleData: Omit<Sale, 'id' | 'guideNumber'>, reserveStock = true) => {
+    assertOnline('registar a venda');
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
@@ -1760,6 +1772,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       amountPaid?: number;
     }
   ) => {
+    assertOnline('registar a venda');
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
@@ -2040,6 +2053,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
 
   const confirmSalePickup = useCallback(async (sale: Sale) => {
+    assertOnline('confirmar o levantamento');
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
@@ -2172,6 +2186,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, user, checkStockAndNotify, toast]);
 
   const addProduction = useCallback(async (prodData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
+    assertOnline('registar a produção');
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
@@ -2316,6 +2331,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [firestore, companyId, user, addNotification, recipesData, productsData, catalogProductsData, isMultiLocation, locations, toast]);
 
   const addProductionLog = useCallback(async (orderId: string, logData: { quantity: number; notes?: string }) => {
+    assertOnline('registar a produção');
     if (!firestore || !companyId || !user || !ordersData) return;
 
     const orderToUpdate = ordersData.find(o => o.id === orderId);
@@ -2475,6 +2491,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta.' });
       return;
     }
+    if (!isManagerUser) {
+      toast({ variant: 'destructive', title: 'Só o gestor pode apagar vendas', description: 'Peça ao gestor para apagar ou corrigir esta venda.' });
+      return;
+    }
     const saleRef = doc(firestore, `companies/${companyId}/sales`, saleId);
 
     try {
@@ -2536,6 +2556,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           deletedAt: new Date().toISOString(),
           deletedBy: user.username
         });
+        // Fica registado quem apagou, quando e o que era a venda (histórico imutável)
+        transaction.set(doc(collection(saleRef, 'history')), {
+          action: 'apagada',
+          userId: user.id,
+          userName: user.username,
+          at: serverTimestamp(),
+          guideNumber: saleData.guideNumber || null,
+          snapshot: {
+            productName: saleData.productName, quantity: saleData.quantity, unitPrice: saleData.unitPrice,
+            totalValue: saleData.totalValue, status: saleData.status, clientName: saleData.clientName || null,
+          },
+        });
       });
 
       toast({ title: 'Venda enviada para Lixeira', description: 'O stock foi reposto.' });
@@ -2550,7 +2582,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       console.error("Error deleting sale: ", error);
       toast({ variant: 'destructive', title: 'Erro ao Apagar Venda', description: error.message });
     }
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, toast, user, notifyManagers]);
+  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, toast, user, notifyManagers, isManagerUser]);
 
   const recalculateReservedStock = useCallback(async () => {
     if (!firestore || !companyId || !productsData) {
@@ -2722,6 +2754,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [ordersCollectionRef, firestore, companyId, toast, user]);
 
   const finalizeOrder = useCallback(async (orderId: string, finalPayment: number) => {
+    assertOnline('entregar a encomenda');
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;

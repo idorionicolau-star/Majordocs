@@ -184,6 +184,7 @@ export const useMessaging = (): Messaging | null => {
 export const memoizedRefs = new WeakSet<any>();
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
+  // eslint-disable-next-line react-hooks/use-memo -- wrapper deliberado: recebe a função e as deps de quem chama
   const memoized = useMemo(factory, deps);
 
   if (typeof memoized === 'object' && memoized !== null) {

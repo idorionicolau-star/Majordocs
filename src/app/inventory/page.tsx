@@ -138,13 +138,17 @@ export default function InventoryPage() {
     }
   };
 
-  const handleTransferStock = (
+  const handleTransferStock = async (
     productName: string,
     fromLocationId: string,
     toLocationId: string,
     quantity: number
   ) => {
-    transferStock(productName, fromLocationId, toLocationId, quantity);
+    try {
+      await transferStock(productName, fromLocationId, toLocationId, quantity);
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Não foi possível transferir', description: e?.message || 'Tente de novo.' });
+    }
   };
 
 

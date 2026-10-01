@@ -15,6 +15,7 @@ import { MobileNav } from './mobile-nav';
 import { BottomNav } from './bottom-nav';
 import { PushPrompt } from '@/components/push-notifications';
 import { PriceReviewBanner } from '@/components/price-reviews';
+import { OfflineBanner } from '@/components/pwa-register';
 
 import { LoadingBar } from './loading-bar';
 import { SubscriptionExpired } from './subscription-expired';
@@ -176,6 +177,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             <Header onSearchClick={() => setOpenCommandMenu(true)} />
             <main className="flex-1 relative">
               <div className="p-4 sm:p-6 md:p-8 pb-24 md:pb-8 main-content">
+                <OfflineBanner />
                 <PushPrompt />
                 <PriceReviewBanner />
                 <Suspense fallback={

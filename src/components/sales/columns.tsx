@@ -37,6 +37,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
     const { canEdit } = options;
     const inventoryContext = React.useContext(InventoryContext);
     const { companyData } = inventoryContext || {};
+    const isManagerUser = inventoryContext?.user?.role === 'Admin' || inventoryContext?.user?.role === 'Dono';
     const { customers } = useCRM();
     const { toast } = useToast();
     const customer = customers.find(c => c.id === sale.customerId);
@@ -226,7 +227,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
                 </Tooltip>
             </TooltipProvider>
 
-            {canEdit && (
+            {canEdit && isManagerUser && (
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
                     if (inventoryContext?.confirmAction) {
                         inventoryContext.confirmAction(async () => {

@@ -1,23 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  typescript: {
-    // Isso vai ignorar o erro da biblioteca Resend e permitir que o build termine
-    ignoreBuildErrors: true,
-  },
+  // Erros de tipos agora quebram o build (antes eram ignorados e escondiam bugs reais).
   // eslint: {
   //   ignoreDuringBuilds: true,
   // },
   turbopack: {},
 };
 
-import withPWA from 'next-pwa';
-
-const pwaConfig = withPWA({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: true, // Temporarily disabled for Vercel deployment debug
-});
-
-export default pwaConfig(nextConfig);
+// O PWA (service worker) vive em public/firebase-messaging-sw.js e é registado por <PwaRegister />.
+// O plugin next-pwa foi removido: não funciona com o Turbopack.
+export default nextConfig;
