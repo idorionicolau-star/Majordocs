@@ -3,7 +3,6 @@
 import { useState, useEffect, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirestore } from '@/firebase/provider';
-import { collection, addDoc } from "firebase/firestore";
 import {
     Form,
     FormControl,
@@ -60,8 +59,9 @@ export default function NewProductionPage() {
         isMultiLocation,
         availableUnits,
         companyId,
-        user
-    } = inventoryContext || { catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false, availableUnits: [], companyId: null, user: null };
+        user,
+        addProduction
+    } = inventoryContext || { catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false, availableUnits: [], companyId: null, user: null, addProduction: async () => { } };
 
     const form = useForm<AddProductionFormValues>({
         resolver: zodResolver(formSchema),
@@ -73,7 +73,7 @@ export default function NewProductionPage() {
     });
 
     const handleProductSelect = (productName: string, product?: CatalogProduct) => {
-        form.setValue('productName', productName);
+        form.setValue('productName', productName, { shouldValidate: true });
         if (product) {
             form.setValue('unit', product.unit || 'un');
         }
@@ -107,31 +107,25 @@ export default function NewProductionPage() {
             localStorage.setItem('majorstockx-last-product-location', values.location);
         }
 
-        const newProduction: any = {
-            date: new Date().toISOString().split('T')[0],
+        const newProduction = {
             productName: values.productName,
             quantity: values.quantity,
             unit: values.unit || 'un',
-            registeredBy: user.username || 'Desconhecido',
-            status: 'Concluído'
+            ...(isMultiLocation && values.location ? { location: values.location } : {}),
         };
 
-        if (isMultiLocation && values.location) {
-            newProduction.location = values.location;
-        }
-
         try {
-            const productionsRef = collection(firestore, `companies/${companyId}/productions`);
-            await addDoc(productionsRef, newProduction);
+            // regista a produção E põe o produto no stock (e desconta a matéria-prima da receita)
+            await addProduction(newProduction);
 
             toast({
                 title: "Produção Registrada",
-                description: `O registo de ${newProduction.quantity} ${newProduction.unit} de ${newProduction.productName} foi criado.`,
+                description: `${newProduction.quantity} ${newProduction.unit} de ${newProduction.productName} registadas e adicionadas ao stock.`,
                 action: <CheckCircle2 className="text-emerald-500" />
             });
             router.push('/production');
-        } catch (error: any) {
-            toast({ variant: "destructive", title: "Erro", description: error.message });
+        } catch {
+            // o erro (ex.: falta de matéria-prima) já foi mostrado por addProduction; a página fica aberta
         }
     }
 
@@ -152,7 +146,7 @@ export default function NewProductionPage() {
                 </Button>
                 <div>
                     <h1 className="text-2xl md:text-3xl font-headline font-bold">Novo Registo de Produção</h1>
-                    <p className="text-muted-foreground text-sm">Adicione uma nova produção ao sistema. O stock será atualizado automaticamente ao ser transferido.</p>
+                    <p className="text-muted-foreground text-sm">Adicione uma nova produção ao sistema. O produto entra no stock e a matéria-prima da receita é descontada ao guardar.</p>
                 </div>
             </div>
 

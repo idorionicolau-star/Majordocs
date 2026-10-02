@@ -8,9 +8,11 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { InventoryCore } from './core';
 import { locationIn, pickActive, resolveInventoryProductRef } from '@/lib/product-ref';
 import { ingredientRequiredQty } from '@/lib/order-stock';
+import { applyMaterialUse, assertMaterialEnough, readMaterialUse } from '@/lib/production-materials';
+import { isProductionInStock } from '@/lib/production';
 
 export function useProductionActions(core: InventoryCore) {
-  const { assertOnline, isReadOnly, toast, firestore, companyId, user, isMultiLocation, locations, recipesData, catalogProductsData, addNotification, productsData, ordersData, productionsCollectionRef } = core;
+  const { assertOnline, isReadOnly, toast, firestore, companyId, user, isMultiLocation, locations, recipesData, catalogProductsData, addNotification, productsData, ordersData, productionsCollectionRef, productionsData } = core;
 
 
   const addProduction = useCallback(async (prodData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
@@ -290,16 +292,85 @@ export function useProductionActions(core: InventoryCore) {
   }, [firestore, companyId, user, ordersData, toast, addNotification, isMultiLocation, locations, recipesData, catalogProductsData]);
 
 
-  const deleteProduction = useCallback((productionId: string) => {
+  /**
+   * Apagar (ou restaurar) um registo de produção que já entrou no stock desfaz (ou refaz) o que ele fez:
+   * o produto sai do stock, a matéria-prima volta, e a encomenda perde a parte "produzida".
+   * Numa encomenda já entregue o stock já seguiu para o cliente: só se apaga o registo.
+   */
+  const reverseProduction = useCallback(async (productionId: string, direction: 'undo' | 'redo') => {
+    if (!firestore || !companyId || !user || !productionsCollectionRef) return;
+    const prodRef = doc(productionsCollectionRef, productionId);
+    const prodSnap = await getDoc(prodRef);
+    if (!prodSnap.exists()) return;
+    const prod = prodSnap.data() as Production;
+    const undo = direction === 'undo';
+    const stamp = undo ? { deletedAt: new Date().toISOString() } : { deletedAt: null as unknown as string };
+
+    const order = prod.orderId ? ordersData?.find(o => o.id === prod.orderId) : undefined;
+    if (!isProductionInStock(prod) || order?.status === 'Entregue') {
+      await updateDocumentNonBlocking(prodRef, stamp);
+      return;
+    }
+
+    const location = prod.location || (isMultiLocation ? locations[0]?.id : 'Principal') || 'Principal';
+    const productRef = await resolveInventoryProductRef(firestore, companyId, { productName: prod.productName, location });
+    if (!productRef) throw new Error(`O produto "${prod.productName}" já não existe no inventário: não dá para ${undo ? 'desfazer' : 'refazer'} esta produção.`);
+
+    await runTransaction(firestore, async (transaction) => {
+      const pSnap = await transaction.get(productRef);
+      if (!pSnap.exists()) throw new Error(`O produto "${prod.productName}" já não existe no inventário.`);
+      const p = pSnap.data() as Product;
+      const orderRef = prod.orderId && order ? doc(firestore, `companies/${companyId}/orders`, prod.orderId) : null;
+      const oSnap = orderRef ? await transaction.get(orderRef) : null;
+      const materials = await readMaterialUse(transaction, firestore, companyId, recipesData ?? undefined, prod.productName, prod.quantity);
+
+      if (undo && (p.stock || 0) < prod.quantity) {
+        throw new Error(`Não dá para apagar: o stock atual de ${prod.productName} (${p.stock || 0}) é menor do que o que esta produção acrescentou (${prod.quantity}). Já foi vendido ou movido.`);
+      }
+      if (!undo) assertMaterialEnough(materials);
+
+      transaction.update(productRef, { stock: Math.max(0, (p.stock || 0) + (undo ? -prod.quantity : prod.quantity)), lastUpdated: new Date().toISOString() });
+      applyMaterialUse(transaction, materials, undo ? 1 : -1);
+      if (orderRef && oSnap?.exists()) {
+        const produced = Number(oSnap.data().quantityProduced) || 0;
+        transaction.update(orderRef, { quantityProduced: Math.max(0, produced + (undo ? -prod.quantity : prod.quantity)) });
+      }
+      transaction.update(prodRef, stamp);
+      transaction.set(doc(collection(firestore, `companies/${companyId}/stockMovements`)), {
+        productId: productRef.id,
+        productName: prod.productName,
+        type: undo ? 'OUT' : 'IN',
+        quantity: undo ? -prod.quantity : prod.quantity,
+        ...(undo ? { fromLocationId: location } : { toLocationId: location }),
+        reason: undo ? `Produção apagada: ${prod.quantity} ${prod.unit || 'un'}` : `Produção restaurada: ${prod.quantity} ${prod.unit || 'un'}`,
+        userId: user.id,
+        userName: user.username,
+        timestamp: serverTimestamp(),
+      });
+    });
+  }, [firestore, companyId, user, productionsCollectionRef, ordersData, isMultiLocation, locations, recipesData]);
+
+  const deleteProduction = useCallback(async (productionId: string) => {
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
     }
-    if (!productionsCollectionRef) return;
-    const docRef = doc(productionsCollectionRef, productionId);
-    updateDocumentNonBlocking(docRef, { deletedAt: new Date().toISOString() });
-    toast({ title: 'Registo de Produção movido para Lixeira' });
-  }, [productionsCollectionRef, toast]);
+    try {
+      await reverseProduction(productionId, 'undo');
+      toast({ title: 'Registo de Produção movido para Lixeira', description: 'O stock e a matéria-prima foram acertados.' });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Não foi possível apagar', description: e?.message });
+    }
+  }, [isReadOnly, toast, reverseProduction]);
+
+  const restoreProduction = useCallback(async (productionId: string) => {
+    try {
+      await reverseProduction(productionId, 'redo');
+      toast({ title: 'Produção restaurada', description: 'O stock e a matéria-prima foram refeitos.' });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Não foi possível restaurar', description: e?.message });
+    }
+  }, [toast, reverseProduction]);
 
 
   const updateProduction = useCallback((productionId: string, data: Partial<Production>) => {
@@ -312,7 +383,7 @@ export function useProductionActions(core: InventoryCore) {
     updateDocumentNonBlocking(docRef, data);
     toast({ title: 'Registo de Produção Atualizado' });
   }, [productionsCollectionRef, toast]);
-  return { addProduction, addProductionLog, deleteProduction, updateProduction };
+  return { addProduction, addProductionLog, deleteProduction, restoreProduction, updateProduction };
 }
 
 export type ProductionActions = ReturnType<typeof useProductionActions>;

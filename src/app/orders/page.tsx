@@ -33,6 +33,7 @@ import { format } from "date-fns";
 import { VirtuosoGrid } from 'react-virtuoso';
 import { forwardRef } from 'react';
 import { resolveInventoryProductRef } from "@/lib/product-ref";
+import { applyMaterialUse, assertMaterialEnough, readMaterialUse } from "@/lib/production-materials";
 
 
 export default function OrdersPage() {
@@ -140,6 +141,13 @@ export default function OrdersPage() {
         if (productExists) {
           productName = productSnap.data()?.name || productName;
         }
+
+        // Matéria-prima da receita: tem de haver (e é descontada) tal como numa produção normal
+        const materials = productExists
+          ? await readMaterialUse(transaction, firestore, companyId, inventoryContext?.recipes, productName, missingQty)
+          : [];
+        assertMaterialEnough(materials);
+        applyMaterialUse(transaction, materials, -1);
 
         const newLog: ProductionLog = {
           id: `log-${Date.now()}`,
