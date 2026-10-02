@@ -8,9 +8,10 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { InventoryCore } from './core';
 import { reservedToRelease } from '@/lib/order-stock';
 import { resolveInventoryProductRef } from '@/lib/product-ref';
+import { applyMaterialUse, assertMaterialEnough, readMaterialUse } from '@/lib/production-materials';
 
 export function useOrderActions(core: InventoryCore) {
-  const { isReadOnly, toast, ordersCollectionRef, firestore, companyId, user, assertOnline, ordersData, isMultiLocation, locations } = core;
+  const { isReadOnly, toast, ordersCollectionRef, firestore, companyId, user, assertOnline, ordersData, isMultiLocation, locations, recipesData } = core;
 
 
   const deleteOrder = useCallback(async (orderId: string) => {
@@ -139,6 +140,13 @@ export function useOrderActions(core: InventoryCore) {
         // Se a venda já foi levantada pelo ecrã de Vendas, o stock já saiu — não descontar outra vez.
         const stockAlreadyOut = freshSaleData?.status === 'Levantado';
 
+        // A parte que ainda não foi produzida é produzida agora: gasta a matéria-prima da receita (lê antes de escrever)
+        const missingNow = Math.max(0, orderData.quantity - Math.min(Number(orderData.quantityProduced) || 0, orderData.quantity));
+        const materials = productRef && freshProductData && missingNow > 0
+          ? await readMaterialUse(transaction, firestore, companyId, recipesData ?? undefined, orderData.productName, missingNow)
+          : [];
+        assertMaterialEnough(materials);
+
         // --- WRITES ---
 
         // 4. Update Sale
@@ -165,6 +173,7 @@ export function useOrderActions(core: InventoryCore) {
           const missing = Math.max(0, orderData.quantity - alreadyInStock);
 
           if (missing > 0) {
+            applyMaterialUse(transaction, materials, -1);
             const productionsRef = collection(firestore, `companies/${companyId}/productions`);
             transaction.set(doc(productionsRef), {
               date: new Date().toISOString().split('T')[0],
@@ -221,7 +230,7 @@ export function useOrderActions(core: InventoryCore) {
       console.error("Error finalizing order:", e);
       toast({ variant: 'destructive', title: 'Erro ao Finalizar', description: e.message });
     }
-  }, [firestore, companyId, user, toast, isMultiLocation, locations, ordersData]);
+  }, [firestore, companyId, user, toast, isMultiLocation, locations, ordersData, recipesData]);
   return { deleteOrder, finalizeOrder };
 }
 

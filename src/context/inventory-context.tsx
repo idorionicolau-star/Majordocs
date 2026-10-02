@@ -27,11 +27,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const { addSale, addBulkSale, confirmSalePickup, deleteSale, recalculateReservedStock } = salesActions;
   const { pendingOfflineSales, syncOfflineSales } = useOfflineSync(core, { product_actions: productActions });
   const productionActions = useProductionActions(core);
-  const { addProduction, addProductionLog, deleteProduction, updateProduction } = productionActions;
+  const { addProduction, addProductionLog, deleteProduction, updateProduction, restoreProduction } = productionActions;
   const orderActions = useOrderActions(core);
   const { deleteOrder, finalizeOrder } = orderActions;
   const settingsActions = useSettingsActions(core);
-  const { addCatalogProduct, addCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts } = settingsActions;
+  const { addCatalogProduct, addCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem: restoreItemBase, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts } = settingsActions;
+  // Restaurar uma produção refaz o stock e a matéria-prima; o resto da lixeira usa a regra geral
+  const restoreItem = useCallback((collectionName: string, id: string) => (collectionName === 'productions' ? restoreProduction(id) : restoreItemBase(collectionName, id)), [restoreProduction, restoreItemBase]);
 
 
   const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || stockMovementsLoading || catalogProductsLoading || catalogCategoriesLoading || rawMaterialsLoading || recipesLoading;

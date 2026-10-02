@@ -53,9 +53,9 @@ export function ProductionCard({ production, onTransfer, onDelete, onUpdate, vie
                             <CardDescription className={cn("text-[10px]", isCondensed && "hidden")}>ID: {production.id.slice(-6)}</CardDescription>
                         </div>
                     </div>
-                    {canEdit && !isTransferred && (
+                    {canEdit && (
                         <div className="flex items-center gap-1">
-                            <EditProductionDialog production={production} onUpdate={onUpdate} />
+                            {!isTransferred && <EditProductionDialog production={production} onUpdate={onUpdate} />}
                             <AlertDialog>
                                 <TooltipProvider>
                                     <Tooltip>
@@ -76,7 +76,7 @@ export function ProductionCard({ production, onTransfer, onDelete, onUpdate, vie
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            Esta ação irá mover o registo de produção para a lixeira.
+                                            Esta ação move o registo para a lixeira.{isTransferred && ' Como já entrou no stock, o produto sai do stock e a matéria-prima volta (só é possível se o stock ainda chegar).'}
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>

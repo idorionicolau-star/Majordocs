@@ -1,10 +1,10 @@
 "use client";
 
 import { useContext, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
-import { Download, FilePlus2, FileText, Search } from "lucide-react";
+import { ChevronDown, Download, FilePlus2, FileText, Plus, Search } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { InventoryContext } from "@/context/inventory-context";
 import { useFirestore } from "@/firebase/provider";
 import { useToast } from "@/hooks/use-toast";
@@ -62,34 +62,32 @@ export default function DocumentsPage() {
 
     return (
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 pb-20">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-start justify-between gap-3">
                 <div>
                     <h1 className="font-headline text-2xl font-bold md:text-3xl">Documentos</h1>
-                    <p className="text-sm text-muted-foreground">Cotações, facturas, recibos e guias — guardados, editáveis enquanto rascunho, com histórico.</p>
+                    <p className="text-sm text-muted-foreground">Cotações, facturas, recibos e guias.</p>
                 </div>
+                {canWrite && (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button className="shrink-0 gap-1.5"><Plus className="h-4 w-4" /> Novo<ChevronDown className="h-4 w-4 opacity-70" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {DOCUMENT_TYPES.map((t) => <DropdownMenuItem key={t} onSelect={() => router.push(`/documents/new?tipo=${encodeURIComponent(t)}`)}><FilePlus2 className="mr-2 h-4 w-4" />{t}</DropdownMenuItem>)}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                )}
             </div>
 
-            {canWrite && (
-                <div className="flex flex-wrap gap-2">
-                    {DOCUMENT_TYPES.map((t) => (
-                        <Button key={t} variant="outline" size="sm" asChild className="gap-1.5">
-                            <Link href={`/documents/new?tipo=${encodeURIComponent(t)}`}><FilePlus2 className="h-4 w-4" />{t}</Link>
-                        </Button>
-                    ))}
-                </div>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-                <div className="relative min-w-[200px] flex-1">
+            <div className="grid grid-cols-2 gap-2 sm:flex">
+                <div className="relative col-span-2 min-w-[200px] flex-1">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input className="pl-9" placeholder="Procurar por número ou cliente…" value={search} onChange={(e) => setSearch(e.target.value)} />
                 </div>
                 <Select value={type} onValueChange={setType}>
-                    <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="sm:w-[180px]"><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="all">Todos os tipos</SelectItem>{DOCUMENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                 </Select>
                 <Select value={status} onValueChange={setStatus}>
-                    <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="sm:w-[160px]"><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="all">Todos os estados</SelectItem>{(Object.keys(STATUS) as DocStatus[]).map((s) => <SelectItem key={s} value={s}>{STATUS[s].label}</SelectItem>)}</SelectContent>
                 </Select>
             </div>
@@ -114,7 +112,7 @@ export default function DocumentsPage() {
                                     </div>
                                     <p className="truncate text-sm text-muted-foreground">{d.client?.name || "Sem cliente"} · {new Date(d.issueDate).toLocaleDateString("pt-PT")}</p>
                                 </div>
-                                <span className="font-semibold tabular-nums">{formatCurrency(d.totals?.total ?? 0)}</span>
+                                <span className="whitespace-nowrap text-sm font-semibold tabular-nums">{formatCurrency(d.totals?.total ?? 0)}</span>
                                 <Button variant="ghost" size="icon" aria-label="Descarregar PDF" onClick={(e) => { e.stopPropagation(); download(d); }}><Download className="h-4 w-4" /></Button>
                             </CardContent>
                         </Card>

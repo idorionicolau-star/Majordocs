@@ -18,18 +18,29 @@ const fmtDate = (iso?: string) => {
 type Img = { data: string; w: number; h: number };
 
 /** Carrega uma imagem (URL ou data URL) para o PDF; devolve null se não der (ex.: CORS ou fora do navegador). */
+const decode = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('imagem'));
+    setTimeout(() => reject(new Error('tempo')), 6000);
+    img.src = src;
+});
+
+/**
+ * Carrega uma imagem (URL ou data URL) para o PDF; devolve null se não der.
+ * Se o endereço directo falhar (sem CORS), tenta pelo nosso servidor (só para imagens do Vercel Blob).
+ */
 export async function loadImage(src?: string): Promise<Img | null> {
     if (!src || typeof window === 'undefined') return null;
+    let img: HTMLImageElement | null = null;
+    try { img = await decode(src); } catch {
+        if (/^https:\/\/[^/]+\.public\.blob\.vercel-storage\.com\//.test(src)) {
+            try { img = await decode(`/api/image-proxy?url=${encodeURIComponent(src)}`); } catch { /* sem logótipo */ }
+        }
+    }
+    if (!img?.naturalWidth) return null;
     try {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.src = src;
-        await new Promise<void>((resolve, reject) => {
-            img.onload = () => resolve();
-            img.onerror = () => reject(new Error('imagem'));
-            setTimeout(() => reject(new Error('tempo')), 6000);
-        });
-        if (!img.naturalWidth) return null;
         const canvas = document.createElement('canvas');
         canvas.width = img.naturalWidth;
         canvas.height = img.naturalHeight;
@@ -40,7 +51,7 @@ export async function loadImage(src?: string): Promise<Img | null> {
         ctx.drawImage(img, 0, 0);
         return { data: canvas.toDataURL('image/jpeg', 0.92), w: img.naturalWidth, h: img.naturalHeight };
     } catch {
-        return null;
+        return null; // canvas "contaminado" (CORS)
     }
 }
 

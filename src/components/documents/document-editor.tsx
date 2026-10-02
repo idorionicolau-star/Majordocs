@@ -5,22 +5,24 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, query, runTransaction, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
 import {
-    ArrowDown, ArrowLeft, ArrowUp, Ban, CheckCircle2, ChevronDown, Copy, Download, Eye, FilePlus2, Loader2, Lock, Pencil, Plus, Printer, Redo2, Save, Share2, Trash2, Undo2,
+    ArrowDown, ArrowLeft, ArrowUp, Ban, Check, CheckCircle2, ChevronDown, Copy, Download, Eye, FilePlus2, Loader2, Lock, MoreHorizontal, MoreVertical, Pencil, Percent, Plus, Printer, Redo2, Save, Share2, Trash2, Undo2,
 } from "lucide-react";
 import { InventoryContext } from "@/context/inventory-context";
 import { useCRM } from "@/context/crm-context";
 import { useFirestore } from "@/firebase/provider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { DocPreview } from "@/components/documents/doc-preview";
+import { NumInput } from "@/components/documents/num-input";
 import { Textarea } from "@/components/ui/textarea";
 import { SignaturePad } from "@/components/documents/signature-pad";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -65,8 +67,7 @@ export function DocumentEditor({ docId: docIdProp, initialType }: Props) {
     const [registerSale, setRegisterSale] = useState(false);
     const [cancelOpen, setCancelOpen] = useState(false);
     const [cancelReason, setCancelReason] = useState("");
-    const [previewOpen, setPreviewOpen] = useState(false);
-    const [previewUrl, setPreviewUrl] = useState("");
+    const [tab, setTab] = useState("content");
     const [viewStyle, setViewStyle] = useState<Partial<DocDraft["style"]>>({}); // aparência só para exportar (documento emitido)
 
     const [hist, dispatch] = useReducer(reducer, undefined, () => initHistory(emptyDraft(initialType || "Cotação", "", null)));
@@ -155,22 +156,9 @@ export function DocumentEditor({ docId: docIdProp, initialType }: Props) {
         return () => clearTimeout(t);
     }, [draft, status, canWrite, firestore, companyId, user, docId, persist]);
 
-    // ---------- pré-visualização em PDF ----------
+    // ---------- modelo do documento (pré-visualização e PDF) ----------
     const modelFor = useCallback(() => draftToModel({ ...draft, style }, company, { status, operator: user?.username }), [draft, style, company, status, user]);
-    useEffect(() => {
-        if (!company) return;
-        let cancelled = false;
-        const timer = setTimeout(async () => {
-            try {
-                const { renderDocPDF } = await import("@/lib/doc-pdf");
-                const pdf = await renderDocPDF(modelFor(), company);
-                const url = URL.createObjectURL(pdf.output("blob"));
-                if (cancelled) { URL.revokeObjectURL(url); return; }
-                setPreviewUrl((old) => { if (old) URL.revokeObjectURL(old); return url; });
-            } catch { /* mantém a anterior */ }
-        }, 700);
-        return () => { cancelled = true; clearTimeout(timer); };
-    }, [modelFor, company]);
+    const previewModel = useMemo(() => modelFor(), [modelFor]);
 
     // ---------- atalhos: Ctrl+Z / Ctrl+Y ----------
     useEffect(() => {
@@ -351,30 +339,24 @@ export function DocumentEditor({ docId: docIdProp, initialType }: Props) {
     if (!canWrite && !docId) return <div className="mx-auto max-w-md p-8 text-center text-muted-foreground">Não tem permissão para criar documentos.</div>;
 
     const title = `${draft.type}${draft.number ? ` ${draft.number}` : ""}`;
-    const Field = ({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) => <div className={cn("space-y-1.5", className)}><Label>{label}</Label>{children}</div>;
+    const moreOpen = !!(draft.notes || draft.paymentTerms || draft.paymentMethod);
+    const clientMore = !!(draft.client.taxId || draft.client.address || draft.client.phone || draft.client.email);
+    const nItems = validItems(draft.items).length;
+
+    const statusPill = (
+        <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", status === "draft" ? "bg-amber-500/15 text-amber-700 dark:text-amber-400" : status === "issued" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : "bg-red-500/15 text-red-700 dark:text-red-400")}>{STATUS_LABEL[status]}</span>
+    );
+    const saveInfo = status === "draft" && (save === "saving" ? <span className="flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> A guardar…</span> : save === "error" ? <span className="text-red-600">Não guardado</span> : docId ? <span className="flex items-center gap-1"><Check className="h-3 w-3" /> Guardado</span> : <span>Não guardado</span>);
 
     return (
-        <div className="mx-auto w-full max-w-[1400px] pb-24">
+        <div className="mx-auto w-full max-w-[1280px] pb-40 lg:pb-8">
             {/* barra superior */}
-            <div className="sticky top-0 z-30 -mx-2 mb-4 flex flex-wrap items-center gap-2 border-b bg-background/95 px-2 py-3 backdrop-blur">
-                <Button variant="ghost" size="icon" asChild className="rounded-full"><Link href="/documents" aria-label="Voltar"><ArrowLeft className="h-5 w-5" /></Link></Button>
-                <div className="min-w-0 flex-1">
-                    <h1 className="truncate text-lg font-bold md:text-xl">{title}</h1>
-                    <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className={cn("rounded-full px-2 py-0.5 font-medium", status === "draft" ? "bg-amber-500/15 text-amber-700 dark:text-amber-400" : status === "issued" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : "bg-red-500/15 text-red-700 dark:text-red-400")}>{STATUS_LABEL[status]}</span>
-                        {status === "draft" && (save === "saving" ? <span className="flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> A guardar…</span> : save === "saved" ? "Guardado" : save === "error" ? <span className="text-red-600">Não guardado</span> : docId ? "Guardado" : "Ainda não guardado")}
-                        {unlocked && <span className="flex items-center gap-1 text-amber-700"><Pencil className="h-3 w-3" /> a corrigir</span>}
-                    </p>
-                </div>
-                {editable && (
-                    <div className="flex items-center gap-1">
-                        <Button variant="outline" size="icon" onClick={() => dispatch({ t: "undo" })} disabled={!canUndo(hist)} title="Desfazer (Ctrl+Z)" aria-label="Desfazer"><Undo2 className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="icon" onClick={() => dispatch({ t: "redo" })} disabled={!canRedo(hist)} title="Refazer (Ctrl+Y)" aria-label="Refazer"><Redo2 className="h-4 w-4" /></Button>
-                    </div>
-                )}
-                <Button variant="outline" size="sm" className="lg:hidden" onClick={() => setPreviewOpen(true)}><Eye className="mr-1.5 h-4 w-4" /> Ver</Button>
+            <div className="sticky top-0 z-30 -mx-2 mb-3 border-b bg-background/95 px-2 pb-1.5 pt-2 backdrop-blur">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+                <Button variant="ghost" size="icon" asChild className="h-9 w-9 shrink-0 rounded-full"><Link href="/documents" aria-label="Voltar"><ArrowLeft className="h-5 w-5" /></Link></Button>
+                <h1 className="min-w-0 flex-1 truncate text-base font-bold leading-tight sm:text-lg">{title}</h1>
                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild><Button variant="outline" size="sm">Exportar <ChevronDown className="ml-1 h-4 w-4" /></Button></DropdownMenuTrigger>
+                    <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-9 px-2.5" aria-label="Exportar"><Download className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Exportar</span></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onSelect={download}><Download className="mr-2 h-4 w-4" /> Baixar PDF</DropdownMenuItem>
                         <DropdownMenuItem onSelect={print}><Printer className="mr-2 h-4 w-4" /> Imprimir</DropdownMenuItem>
@@ -382,7 +364,7 @@ export function DocumentEditor({ docId: docIdProp, initialType }: Props) {
                     </DropdownMenuContent>
                 </DropdownMenu>
                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild><Button variant="outline" size="sm">Mais <ChevronDown className="ml-1 h-4 w-4" /></Button></DropdownMenuTrigger>
+                    <DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="h-9 w-9" aria-label="Mais opções"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onSelect={() => derive(draft.type, `${draft.type} (cópia)`)} disabled={!docId && !hasContent(draft)}><Copy className="mr-2 h-4 w-4" /> Duplicar</DropdownMenuItem>
                         {CONVERT_TARGETS[draft.type].length > 0 && <DropdownMenuSeparator />}
@@ -392,167 +374,215 @@ export function DocumentEditor({ docId: docIdProp, initialType }: Props) {
                         {status === "issued" && isManager && <><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => setUnlocked(true)}><Pencil className="mr-2 h-4 w-4" /> Corrigir documento</DropdownMenuItem><DropdownMenuItem onSelect={() => setCancelOpen(true)} className="text-red-600"><Ban className="mr-2 h-4 w-4" /> Anular</DropdownMenuItem></>}
                     </DropdownMenuContent>
                 </DropdownMenu>
-                {status === "draft" && canWrite && <Button size="sm" onClick={issue} disabled={!!busy}>{busy === "issue" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-4 w-4" />} Emitir</Button>}
-                {unlocked && <Button size="sm" onClick={saveCorrection} disabled={!!busy}>{busy === "fix" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />} Guardar correcção</Button>}
+                {status === "draft" && canWrite && <Button size="sm" className="h-9" onClick={issue} disabled={!!busy}>{busy === "issue" ? <Loader2 className="h-4 w-4 animate-spin sm:mr-1.5" /> : <CheckCircle2 className="h-4 w-4 sm:mr-1.5" />}<span className="hidden sm:inline">Emitir</span><span className="sm:hidden">Emitir</span></Button>}
+                {unlocked && <Button size="sm" className="h-9" onClick={saveCorrection} disabled={!!busy}>{busy === "fix" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />} Guardar</Button>}
+            </div>
+            <div className="mt-1 flex items-center justify-between gap-2 pl-11">
+                <div className="flex min-w-0 items-center gap-2 whitespace-nowrap text-[11px] text-muted-foreground">{statusPill}{saveInfo}{unlocked && <span className="flex items-center gap-1 text-amber-700"><Pencil className="h-3 w-3" /> a corrigir</span>}</div>
+                {editable && (
+                    <div className="flex items-center">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => dispatch({ t: "undo" })} disabled={!canUndo(hist)} title="Desfazer (Ctrl+Z)" aria-label="Desfazer"><Undo2 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => dispatch({ t: "redo" })} disabled={!canRedo(hist)} title="Refazer (Ctrl+Y)" aria-label="Refazer"><Redo2 className="h-4 w-4" /></Button>
+                    </div>
+                )}
+            </div>
             </div>
 
             {status !== "draft" && !unlocked && (
-                <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
                     <Lock className="mt-0.5 h-4 w-4 shrink-0" />
-                    <p>{status === "cancelled" ? `Documento anulado${meta?.cancelReason ? `: ${meta.cancelReason}` : ""}.` : "Documento emitido: o número e o conteúdo ficam fixos."} {isManager && status === "issued" ? "Para alterar, use Mais → Corrigir documento (fica registado). " : ""}Pode sempre exportar, duplicar ou converter, e mudar o aspecto do PDF.</p>
+                    <p>{status === "cancelled" ? `Documento anulado${meta?.cancelReason ? `: ${meta.cancelReason}` : ""}.` : "Documento emitido: o número e o conteúdo ficam fixos."} {isManager && status === "issued" ? "Para alterar: ⋯ → Corrigir documento (fica registado). " : ""}Pode exportar, duplicar, converter e mudar o aspecto do PDF.</p>
                 </div>
             )}
 
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)]">
-                <div className="space-y-4">
-                    <Card>
-                        <CardHeader className="pb-3"><CardTitle className="text-base">Documento</CardTitle></CardHeader>
-                        <CardContent className="grid gap-3 sm:grid-cols-2">
-                            <Field label="Tipo">
-                                <Select value={draft.type} onValueChange={(v) => { const t = v as DocumentType; const sug = suggestNumber(t, company).number; set({ type: t, number: !draft.number || draft.number === suggested.number ? sug : draft.number }); }} disabled={!editable || !!docId && status !== "draft"}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>{DOCUMENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                                </Select>
-                            </Field>
-                            <Field label="Número">
-                                <div className="flex gap-2">
-                                    <Input value={draft.number} onChange={(e) => set({ number: e.target.value }, "number")} disabled={!editable} placeholder={suggested.number} />
-                                    {editable && draft.number !== suggested.number && <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => set({ number: suggested.number })} title="Usar o número que a numeração da empresa sugere">Sugerido</Button>}
-                                </div>
-                                <p className="text-xs text-muted-foreground">Sugerido pela numeração da empresa: <b>{suggested.number}</b>. Pode escrever outro.</p>
-                            </Field>
-                            <Field label="Data de emissão"><DatePicker date={ymd(draft.issueDate)} setDate={(d) => d && editable && set({ issueDate: d.toISOString() })} /></Field>
-                            <Field label={quote ? "Válida até" : "Vencimento"}><DatePicker date={ymd(draft.dueDate)} setDate={(d) => editable && set({ dueDate: d ? d.toISOString() : undefined })} /></Field>
-                        </CardContent>
-                    </Card>
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">
+                <Tabs value={tab} onValueChange={setTab} className="min-w-0">
+                    <TabsList className="mb-3 grid w-full grid-cols-3 lg:grid-cols-2">
+                        <TabsTrigger value="content">Conteúdo</TabsTrigger>
+                        <TabsTrigger value="style">Aspecto</TabsTrigger>
+                        <TabsTrigger value="preview" className="lg:hidden">Pré-visualizar</TabsTrigger>
+                    </TabsList>
 
-                    <Card>
-                        <CardHeader className="pb-3"><CardTitle className="text-base">Cliente</CardTitle></CardHeader>
-                        <CardContent className="grid gap-3 sm:grid-cols-2">
+                    <TabsContent value="content" className="mt-0 space-y-3">
+                        <Section title="Documento">
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                <Field label="Tipo" className="col-span-1 sm:col-span-2">
+                                    <Select value={draft.type} onValueChange={(v) => { const t = v as DocumentType; const sug = suggestNumber(t, company).number; set({ type: t, number: !draft.number || draft.number === suggested.number ? sug : draft.number }); }} disabled={!editable || (!!docId && status !== "draft")}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>{DOCUMENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </Field>
+                                <Field label="Número" className="col-span-1 sm:col-span-2">
+                                    <Input value={draft.number} onChange={(e) => set({ number: e.target.value }, "number")} disabled={!editable} placeholder={suggested.number} />
+                                </Field>
+                                <Field label="Data de emissão" className="col-span-2"><DatePicker date={ymd(draft.issueDate)} setDate={(d) => d && editable && set({ issueDate: d.toISOString() })} /></Field>
+                                <Field label={quote ? "Válida até" : "Vencimento"} className="col-span-2"><DatePicker date={ymd(draft.dueDate)} setDate={(d) => editable && set({ dueDate: d ? d.toISOString() : undefined })} /></Field>
+                            </div>
+                            {editable && draft.number !== suggested.number && (
+                                <button type="button" className="mt-2 text-xs text-primary underline-offset-2 hover:underline" onClick={() => set({ number: suggested.number })}>Usar o número sugerido ({suggested.number})</button>
+                            )}
+                        </Section>
+
+                        <Section title="Cliente">
                             <Field label="Nome">
                                 <Input list="doc-customers" value={draft.client.name || ""} disabled={!editable} placeholder="Consumidor Final"
                                     onChange={(e) => { const c = customers.find((x) => x.name.toLowerCase() === e.target.value.toLowerCase()); setClient(c ? { name: c.name, phone: c.phone || draft.client.phone, email: c.email || draft.client.email } : { name: e.target.value }, "cname"); }} />
                                 <datalist id="doc-customers">{customers.map((c) => <option key={c.id} value={c.name} />)}</datalist>
                             </Field>
-                            <Field label="NUIT"><Input value={draft.client.taxId || ""} disabled={!editable} onChange={(e) => setClient({ taxId: e.target.value }, "ctax")} inputMode="numeric" /></Field>
-                            <Field label="Morada" className="sm:col-span-2"><Input value={draft.client.address || ""} disabled={!editable} onChange={(e) => setClient({ address: e.target.value }, "caddr")} /></Field>
-                            <Field label="Telefone"><Input value={draft.client.phone || ""} disabled={!editable} onChange={(e) => setClient({ phone: e.target.value }, "cphone")} inputMode="tel" /></Field>
-                            <Field label="Email"><Input value={draft.client.email || ""} disabled={!editable} onChange={(e) => setClient({ email: e.target.value }, "cmail")} inputMode="email" /></Field>
-                        </CardContent>
-                    </Card>
+                            <Collapsible defaultOpen={clientMore} className="mt-2">
+                                <CollapsibleTrigger className="group flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"><ChevronDown className="h-3.5 w-3.5 transition group-data-[state=open]:rotate-180" /> NUIT, morada e contactos</CollapsibleTrigger>
+                                <CollapsibleContent className="mt-2 grid grid-cols-2 gap-3">
+                                    <Field label="NUIT"><Input value={draft.client.taxId || ""} disabled={!editable} onChange={(e) => setClient({ taxId: e.target.value }, "ctax")} inputMode="numeric" /></Field>
+                                    <Field label="Telefone"><Input value={draft.client.phone || ""} disabled={!editable} onChange={(e) => setClient({ phone: e.target.value }, "cphone")} inputMode="tel" /></Field>
+                                    <Field label="Morada" className="col-span-2"><Input value={draft.client.address || ""} disabled={!editable} onChange={(e) => setClient({ address: e.target.value }, "caddr")} /></Field>
+                                    <Field label="Email" className="col-span-2"><Input value={draft.client.email || ""} disabled={!editable} onChange={(e) => setClient({ email: e.target.value }, "cmail")} inputMode="email" /></Field>
+                                </CollapsibleContent>
+                            </Collapsible>
+                        </Section>
 
-                    <Card>
-                        <CardHeader className="pb-3"><CardTitle className="text-base">Artigos</CardTitle></CardHeader>
-                        <CardContent className="space-y-3">
+                        <Section title={`Artigos${nItems ? ` (${nItems})` : ""}`}>
                             <datalist id="doc-products">{catalog.map((p) => <option key={p.id || p.name} value={p.name} />)}</datalist>
-                            {draft.items.map((it, idx) => (
-                                <div key={it.id} className="rounded-xl border p-3">
-                                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                        <Field label="Descrição" className="col-span-2 sm:col-span-4"><Input list="doc-products" value={it.description} disabled={!editable} onChange={(e) => pickProduct(it.id, e.target.value)} placeholder="Artigo ou serviço" /></Field>
-                                        <Field label="Qtd."><Input type="number" min="0" step="any" value={it.quantity} disabled={!editable} onChange={(e) => setItem(it.id, { quantity: parseFloat(e.target.value) || 0 }, "qty")} /></Field>
-                                        <Field label="Un."><Input value={it.unit} disabled={!editable} onChange={(e) => setItem(it.id, { unit: e.target.value }, "unit")} /></Field>
-                                        <Field label="Preço unit."><Input type="number" min="0" step="0.01" value={it.unitPrice} disabled={!editable} onChange={(e) => setItem(it.id, { unitPrice: parseFloat(e.target.value) || 0 }, "price")} /></Field>
-                                        <Field label="Desc. %"><Input type="number" min="0" max="100" step="any" value={it.discountPct ?? ""} disabled={!editable} onChange={(e) => setItem(it.id, { discountPct: e.target.value === "" ? undefined : Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) }, "disc")} /></Field>
+                            <div className="space-y-2.5">
+                                {draft.items.map((it, idx) => (
+                                    <div key={it.id} className="rounded-xl border bg-muted/20 p-2.5">
+                                        <div className="flex items-start gap-1.5">
+                                            <Input className="flex-1" list="doc-products" aria-label="Descrição" value={it.description} disabled={!editable} onChange={(e) => pickProduct(it.id, e.target.value)} placeholder="Artigo ou serviço" />
+                                            {editable && (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" className="h-10 w-9 shrink-0" aria-label="Opções da linha"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onSelect={() => moveItem(idx, -1)} disabled={idx === 0}><ArrowUp className="mr-2 h-4 w-4" /> Subir</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => moveItem(idx, 1)} disabled={idx === draft.items.length - 1}><ArrowDown className="mr-2 h-4 w-4" /> Descer</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => setItem(it.id, { discountPct: it.discountPct === undefined ? 0 : undefined }, "disc")}><Percent className="mr-2 h-4 w-4" /> {it.discountPct === undefined ? "Desconto na linha" : "Tirar desconto"}</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => draft.items.length > 1 && set({ items: draft.items.filter((x) => x.id !== it.id) })} disabled={draft.items.length <= 1} className="text-red-600"><Trash2 className="mr-2 h-4 w-4" /> Remover</DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            )}
+                                        </div>
+                                        <div className={cn("mt-2 grid gap-2", it.discountPct !== undefined ? "grid-cols-4" : "grid-cols-3")}>
+                                            <Field label="Qtd." small><NumInput value={it.quantity} onValue={(n) => setItem(it.id, { quantity: n ?? 0 }, "qty")} disabled={!editable} /></Field>
+                                            <Field label="Un." small><Input value={it.unit} disabled={!editable} onChange={(e) => setItem(it.id, { unit: e.target.value }, "unit")} /></Field>
+                                            <Field label="Preço" small><NumInput value={it.unitPrice} onValue={(n) => setItem(it.id, { unitPrice: n ?? 0 }, "price")} disabled={!editable} /></Field>
+                                            {it.discountPct !== undefined && <Field label="Desc. %" small><NumInput value={it.discountPct || undefined} max={100} onValue={(n) => setItem(it.id, { discountPct: n ?? 0 }, "disc")} disabled={!editable} /></Field>}
+                                        </div>
+                                        <div className="mt-1.5 text-right text-sm font-semibold tabular-nums">{formatCurrency(it.quantity * it.unitPrice * (1 - (it.discountPct || 0) / 100))}</div>
                                     </div>
-                                    <div className="mt-2 flex items-center justify-between">
-                                        <span className="text-sm font-semibold tabular-nums">{formatCurrency(it.quantity * it.unitPrice * (1 - (it.discountPct || 0) / 100))}</span>
-                                        {editable && (
-                                            <div className="flex items-center gap-0.5">
-                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveItem(idx, -1)} disabled={idx === 0} aria-label="Subir"><ArrowUp className="h-4 w-4" /></Button>
-                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveItem(idx, 1)} disabled={idx === draft.items.length - 1} aria-label="Descer"><ArrowDown className="h-4 w-4" /></Button>
-                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => draft.items.length > 1 && set({ items: draft.items.filter((x) => x.id !== it.id) })} disabled={draft.items.length <= 1} aria-label="Remover"><Trash2 className="h-4 w-4" /></Button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                            {editable && <Button type="button" variant="outline" size="sm" onClick={() => set({ items: [...draft.items, newItem()] })}><Plus className="mr-1.5 h-4 w-4" /> Adicionar artigo</Button>}
+                                ))}
+                            </div>
+                            {editable && <Button type="button" variant="outline" size="sm" className="mt-3 w-full" onClick={() => set({ items: [...draft.items, newItem()] })}><Plus className="mr-1.5 h-4 w-4" /> Adicionar artigo</Button>}
+                        </Section>
 
-                            <div className="grid gap-3 border-t pt-3 sm:grid-cols-3">
-                                <Field label="Desconto geral (valor)"><Input type="number" min="0" step="0.01" value={draft.discount || ""} disabled={!editable} onChange={(e) => set({ discount: Math.max(0, parseFloat(e.target.value) || 0) }, "discount")} /></Field>
+                        <Section title="Totais">
+                            <div className="grid grid-cols-2 gap-3">
+                                <Field label="Desconto geral (MT)"><NumInput value={draft.discount || undefined} onValue={(n) => set({ discount: n ?? 0 }, "discount")} disabled={!editable} placeholder="0" /></Field>
                                 <Field label="IVA">
                                     <Select value={String(draft.vatPct || 0)} onValueChange={(v) => set({ vatPct: parseFloat(v) })} disabled={!editable}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent><SelectItem value="0">Sem IVA</SelectItem><SelectItem value="16">16%</SelectItem><SelectItem value="17">17%</SelectItem></SelectContent>
                                     </Select>
                                 </Field>
-                                <Field label="Forma de pagamento"><Input value={draft.paymentMethod || ""} disabled={!editable} onChange={(e) => set({ paymentMethod: e.target.value }, "pm")} placeholder="M-Pesa, numerário…" /></Field>
                             </div>
-                            <div className="ml-auto max-w-xs space-y-1 text-sm">
+                            <div className="mt-3 space-y-1 rounded-xl bg-muted/40 p-3 text-sm">
                                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">{formatCurrency(totals.subtotal)}</span></div>
                                 {totals.discount > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Desconto</span><span className="tabular-nums">-{formatCurrency(totals.discount)}</span></div>}
                                 {totals.vat > 0 && <div className="flex justify-between"><span className="text-muted-foreground">IVA ({draft.vatPct}%)</span><span className="tabular-nums">{formatCurrency(totals.vat)}</span></div>}
-                                <div className="flex justify-between border-t pt-1 text-base font-bold"><span>Total</span><span className="tabular-nums">{formatCurrency(totals.total)}</span></div>
+                                <div className="flex justify-between border-t pt-1.5 text-base font-bold"><span>Total</span><span className="tabular-nums">{formatCurrency(totals.total)}</span></div>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </Section>
 
-                    <Card>
-                        <CardHeader className="pb-3"><CardTitle className="text-base">Notas e condições</CardTitle></CardHeader>
-                        <CardContent className="grid gap-3 sm:grid-cols-2">
-                            <Field label="Notas"><Textarea rows={3} value={draft.notes || ""} disabled={!editable} onChange={(e) => set({ notes: e.target.value }, "notes")} placeholder="Ex.: entrega no estaleiro" /></Field>
-                            <Field label="Condições de pagamento"><Textarea rows={3} value={draft.paymentTerms || ""} disabled={!editable} onChange={(e) => set({ paymentTerms: e.target.value }, "terms")} placeholder="Ex.: pagamento a 15 dias" /></Field>
-                        </CardContent>
-                    </Card>
+                        <Section>
+                            <Collapsible defaultOpen={moreOpen}>
+                                <CollapsibleTrigger className="group flex w-full items-center justify-between text-sm font-semibold">Notas e pagamento <ChevronDown className="h-4 w-4 text-muted-foreground transition group-data-[state=open]:rotate-180" /></CollapsibleTrigger>
+                                <CollapsibleContent className="mt-3 space-y-3">
+                                    <Field label="Forma de pagamento"><Input value={draft.paymentMethod || ""} disabled={!editable} onChange={(e) => set({ paymentMethod: e.target.value }, "pm")} placeholder="M-Pesa, numerário…" /></Field>
+                                    <Field label="Condições de pagamento"><Textarea rows={2} value={draft.paymentTerms || ""} disabled={!editable} onChange={(e) => set({ paymentTerms: e.target.value }, "terms")} placeholder="Ex.: pagamento a 15 dias" /></Field>
+                                    <Field label="Notas"><Textarea rows={2} value={draft.notes || ""} disabled={!editable} onChange={(e) => set({ notes: e.target.value }, "notes")} placeholder="Ex.: entrega no estaleiro" /></Field>
+                                </CollapsibleContent>
+                            </Collapsible>
+                        </Section>
 
-                    <Card>
-                        <CardHeader className="pb-3"><CardTitle className="text-base">Aspecto e assinaturas</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid gap-2 sm:grid-cols-3">
-                                {DOC_THEMES.map((t) => (
-                                    <button key={t.id} type="button" onClick={() => setStyle({ theme: t.id }, "theme")}
-                                        className={cn("rounded-lg border p-2 text-left text-sm transition", themeById(style.theme).id === t.id ? "border-primary bg-primary/5 ring-2 ring-primary/30" : "hover:bg-muted/50")}>
-                                        <span className="flex items-center gap-1.5 font-medium"><span className="h-2.5 w-2.5 rounded-full" style={{ background: style.accent || rgbToHex(t.defaultAccent) }} />{t.name}</span>
-                                    </button>
-                                ))}
+                        {status === "draft" && !quote && (
+                            <label className="flex items-start justify-between gap-3 rounded-xl border p-3 text-sm">
+                                <span><b>Registar também nas vendas</b><span className="block text-xs text-muted-foreground">Ao emitir, conta como venda paga (receita). Não mexe no stock.</span></span>
+                                <Switch checked={registerSale} onCheckedChange={setRegisterSale} />
+                            </label>
+                        )}
+                    </TabsContent>
+
+                    <TabsContent value="style" className="mt-0 space-y-3">
+                        <Section title="Tema">
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                {DOC_THEMES.map((t) => {
+                                    const on = themeById(style.theme).id === t.id;
+                                    const hex = style.accent || rgbToHex(t.defaultAccent);
+                                    return (
+                                        <button key={t.id} type="button" onClick={() => setStyle({ theme: t.id }, "theme")} className={cn("overflow-hidden rounded-xl border text-left transition", on ? "border-primary ring-2 ring-primary/40" : "hover:border-foreground/30")}>
+                                            <div className="h-14 w-full bg-white p-1.5">
+                                                <div className="h-2 w-full rounded-sm" style={{ background: t.header === "band" || t.header === "block" ? hex : "transparent", borderBottom: t.header === "band" || t.header === "block" ? "none" : `2px solid ${hex}` }} />
+                                                <div className="mt-1.5 flex gap-1"><div className="h-1.5 flex-1 rounded-sm bg-zinc-200" /><div className="h-1.5 w-4 rounded-sm" style={{ background: hex }} /></div>
+                                                <div className="mt-1 h-1.5 w-3/4 rounded-sm bg-zinc-200" />
+                                                <div className="mt-1 ml-auto h-2 w-1/3 rounded-sm" style={{ background: hex }} />
+                                            </div>
+                                            <div className="px-2 py-1.5 text-xs font-semibold">{t.name}</div>
+                                        </button>
+                                    );
+                                })}
                             </div>
-                            <div className="flex flex-wrap items-center gap-2">
-                                <button type="button" onClick={() => setStyle({ accent: undefined }, "accent")} className={cn("rounded-full border px-3 py-1 text-xs", !style.accent && "border-primary bg-primary/10 font-semibold")}>Cor do tema</button>
-                                {ACCENT_PRESETS.map((p) => { const hex = rgbToHex(p.rgb); return <button key={hex} type="button" title={p.name} aria-label={p.name} onClick={() => setStyle({ accent: hex }, "accent")} className={cn("h-6 w-6 rounded-full border-2", style.accent === hex ? "scale-110 border-foreground" : "border-transparent")} style={{ background: hex }} />; })}
+                            <p className="mt-2 text-xs text-muted-foreground">{themeById(style.theme).description}</p>
+                            {!editable && <p className="mt-1 text-xs text-muted-foreground">Num documento emitido, o aspecto só muda o PDF que exportar agora.</p>}
+                        </Section>
+
+                        <Section title="Cor de destaque">
+                            <div className="flex flex-wrap items-center gap-2.5">
+                                <button type="button" onClick={() => setStyle({ accent: undefined }, "accent")} className={cn("rounded-full border px-3 py-1 text-xs", !style.accent && "border-primary bg-primary/10 font-semibold")}>Do tema</button>
+                                {ACCENT_PRESETS.map((p) => { const hex = rgbToHex(p.rgb); return <button key={hex} type="button" title={p.name} aria-label={p.name} onClick={() => setStyle({ accent: hex }, "accent")} className={cn("h-7 w-7 rounded-full border-2", style.accent === hex ? "scale-110 border-foreground" : "border-transparent")} style={{ background: hex }} />; })}
                             </div>
-                            {!editable && <p className="text-xs text-muted-foreground">Num documento emitido, o aspecto só muda o PDF que exportar agora; não altera o documento guardado.</p>}
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"><span>Mostrar logótipo</span><Switch checked={style.showLogo !== false} onCheckedChange={(v) => setStyle({ showLogo: v }, "logo")} /></label>
-                                <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"><span>Espaço para assinaturas</span><Switch checked={style.showSignatures !== false} onCheckedChange={(v) => setStyle({ showSignatures: v }, "showsig")} /></label>
+                        </Section>
+
+                        <Section title="Cabeçalho e rodapé">
+                            <div className="space-y-2">
+                                <label className="flex items-center justify-between gap-3 text-sm"><span>Mostrar logótipo</span><Switch checked={style.showLogo !== false} onCheckedChange={(v) => setStyle({ showLogo: v }, "logo")} /></label>
+                                <label className="flex items-center justify-between gap-3 text-sm"><span>Espaço para assinaturas</span><Switch checked={style.showSignatures !== false} onCheckedChange={(v) => setStyle({ showSignatures: v }, "showsig")} /></label>
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-3">
                                 <Field label="Local da assinatura"><Input value={style.signaturePlace || ""} onChange={(e) => setStyle({ signaturePlace: e.target.value }, "place")} placeholder="Maputo" /></Field>
                                 <Field label="Texto do rodapé"><Input value={style.footerNote || ""} onChange={(e) => setStyle({ footerNote: e.target.value }, "footer")} placeholder="Processado por computador" /></Field>
                             </div>
-                            {style.showSignatures !== false && (
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <SignaturePad label="Assinatura da empresa" value={style.companySignature} disabled={!editable} onChange={(v) => setStyle({ companySignature: v || undefined }, "sig-c")} />
-                                    <SignaturePad label="Assinatura do cliente" value={style.clientSignature} disabled={!editable} onChange={(v) => setStyle({ clientSignature: v || undefined }, "sig-k")} />
-                                </div>
-                            )}
-                            {style.showSignatures !== false && !style.companySignature && company?.signatureUrl && <p className="text-xs text-muted-foreground">Sem assinatura desenhada, usa-se a assinatura/carimbo da empresa das Definições.</p>}
-                        </CardContent>
-                    </Card>
+                        </Section>
 
-                    {status === "draft" && !quote && (
-                        <label className="flex items-start justify-between gap-3 rounded-xl border p-3 text-sm">
-                            <span><b>Registar também nas vendas</b><span className="block text-xs text-muted-foreground">Ao emitir, conta como venda paga (receita). Não mexe no stock. Deixe desligado se a venda já foi registada noutro sítio.</span></span>
-                            <Switch checked={registerSale} onCheckedChange={setRegisterSale} />
-                        </label>
-                    )}
-                </div>
+                        {style.showSignatures !== false && (
+                            <Section title="Assinaturas">
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <SignaturePad label="Empresa" value={style.companySignature} disabled={!editable} onChange={(v) => setStyle({ companySignature: v || undefined }, "sig-c")} />
+                                    <SignaturePad label="Cliente" value={style.clientSignature} disabled={!editable} onChange={(v) => setStyle({ clientSignature: v || undefined }, "sig-k")} />
+                                </div>
+                                {!style.companySignature && company?.signatureUrl && <p className="mt-2 text-xs text-muted-foreground">Sem assinatura desenhada, usa-se a assinatura/carimbo da empresa das Definições.</p>}
+                            </Section>
+                        )}
+                    </TabsContent>
+
+                    <TabsContent value="preview" className="mt-0 lg:hidden">
+                        <DocPreview model={previewModel} company={company} />
+                        <p className="mt-2 text-center text-xs text-muted-foreground">Pré-visualização aproximada. O PDF segue o mesmo tema e cores.</p>
+                    </TabsContent>
+                </Tabs>
 
                 {/* pré-visualização (ecrãs largos) */}
                 <div className="hidden lg:block">
-                    <div className="sticky top-24 space-y-2">
+                    <div className="sticky top-20 space-y-2">
                         <p className="text-sm font-medium">Pré-visualização</p>
-                        <div className="overflow-hidden rounded-xl border bg-muted/30">
-                            {previewUrl ? <iframe key={previewUrl} src={`${previewUrl}#toolbar=0&navpanes=0&view=FitH`} title="Pré-visualização" className="h-[78vh] w-full bg-white" /> : <div className="flex h-[78vh] items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> A preparar…</div>}
-                        </div>
+                        <DocPreview model={previewModel} company={company} />
                     </div>
                 </div>
             </div>
 
-            {/* pré-visualização (telemóvel) */}
-            <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-                <DialogContent className="max-w-3xl">
-                    <DialogHeader><DialogTitle>Pré-visualização</DialogTitle><DialogDescription>Se não aparecer neste aparelho, use Exportar → Baixar PDF.</DialogDescription></DialogHeader>
-                    {previewUrl && <iframe src={`${previewUrl}#toolbar=0&navpanes=0&view=FitH`} title="Pré-visualização" className="h-[70vh] w-full rounded-lg border bg-white" />}
-                </DialogContent>
-            </Dialog>
+            {/* resumo fixo (telemóvel) */}
+            {tab !== "preview" && (
+                <div className="fixed inset-x-3 bottom-20 z-20 flex items-center justify-between gap-3 rounded-2xl border bg-background/95 p-2.5 pl-4 shadow-lg backdrop-blur lg:hidden">
+                    <div className="leading-tight"><div className="text-[11px] text-muted-foreground">Total</div><div className="text-base font-bold tabular-nums">{formatCurrency(totals.total)}</div></div>
+                    <Button size="sm" variant="secondary" onClick={() => { setTab("preview"); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Eye className="mr-1.5 h-4 w-4" /> Pré-visualizar</Button>
+                </div>
+            )}
 
             <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
                 <DialogContent>
@@ -563,4 +593,13 @@ export function DocumentEditor({ docId: docIdProp, initialType }: Props) {
             </Dialog>
         </div>
     );
+}
+
+// Definidos fora do componente: se fossem criados a cada render, os campos perdiam o foco a cada tecla.
+function Field({ label, children, className, small }: { label: string; children: React.ReactNode; className?: string; small?: boolean }) {
+    // <label> a envolver o campo: associa o texto ao campo (acessibilidade) sem precisar de ids
+    return <label className={cn("block min-w-0 space-y-1", className)}><span className={cn("block", small ? "text-[11px] text-muted-foreground" : "text-xs font-medium text-muted-foreground")}>{label}</span>{children}</label>;
+}
+function Section({ title, children }: { title?: string; children: React.ReactNode }) {
+    return <section className="rounded-2xl border bg-card p-3.5 sm:p-4">{title && <h2 className="mb-3 text-sm font-semibold">{title}</h2>}{children}</section>;
 }
