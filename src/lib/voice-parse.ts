@@ -1,7 +1,12 @@
 // Interpreta o que a pessoa disse ("dez sacos de cimento e duas latas de tinta branca") em itens
 // { qty, term }. Só regras — sem IA, sem internet. O ditado vem do navegador; isto só arruma o texto.
 
-export type VoiceItem = { qty: number | null; term: string };
+export type VoiceItem = {
+  qty: number | null;
+  term: string;
+  /** Se se tirou uma palavra de medida do nome ("15 metros de pavê" → "pave"), o texto completo, para tentar se o resto não existir. */
+  full?: string;
+};
 
 const strip = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -43,6 +48,16 @@ function readNumber(words: string[], i: number): { value: number; used: number }
   return any ? { value: total + current, used } : null;
 }
 
+/** "15 unidades", "32 metros de …": o número seguido destas palavras é a quantidade. */
+const QTY_UNITS = new Set([
+  'unidade', 'unidades', 'un', 'uni', 'peca', 'pecas', 'metro', 'metros', 'm', 'm2', 'm3', 'saco', 'sacos', 'caixa', 'caixas', 'lata', 'latas',
+  'kg', 'kgs', 'quilo', 'quilos', 'quilograma', 'quilogramas', 'litro', 'litros', 'l', 'rolo', 'rolos', 'pacote', 'pacotes', 'par', 'pares',
+  'folha', 'folhas', 'barra', 'barras', 'fardo', 'fardos', 'palete', 'paletes', 'duzia', 'duzias', 'garrafa', 'garrafas', 'balde', 'baldes',
+  'tubo', 'tubos', 'conjunto', 'conjuntos', 'cj', 'jogo', 'jogos', 'embalagem', 'embalagens', 'carga', 'cargas', 'tonelada', 'toneladas',
+]);
+/** Medidas de tamanho: "15 mm" é parte do nome do produto, não quantidade. */
+const SIZE_WORDS = new Set(['mm', 'cm', 'milimetro', 'milimetros', 'centimetro', 'centimetros', 'polegada', 'polegadas', 'pol', 'x', 'por']);
+
 const MARKS = new Set(['x', '×', 'xis', 'vezes']);
 const isMark = (w: string) => MARKS.has(w);
 const norm = (s: string) => strip(s).replace(/(\d)\s*[x×]\s*(\d)/g, '$1x$2').replace(/[^a-z0-9.x]+/g, ' ').trim();
@@ -61,7 +76,9 @@ type Tok = { kind: 'num'; value: number } | { kind: 'word'; w: string } | { kind
  */
 export function parseVoice(transcript: string, productNames: string[] = []): VoiceItem[] {
   const text = strip(transcript)
+    .replace(/(\d)[.,](\d)/g, '$1§$2') // decimais (2,5 / 32.5) não se partem
     .replace(/[.,;!?]/g, (m) => (m === ',' || m === ';' ? ' | ' : ' '))
+    .replace(/§/g, '.')
     // "x20" / "20x" ditados juntos
     .replace(/\bx\s*(\d+(?:[.,]\d+)?)\b/g, ' x $1 ')
     .replace(/\b(\d+(?:[.,]\d+)?)\s*x\b/g, ' $1 x ')
@@ -91,6 +108,11 @@ export function parseVoice(transcript: string, productNames: string[] = []): Voi
     if (t.kind === 'word' && t.w === 'e' && cur.length >= 2 && cur[cur.length - 1].kind === 'num' && cur[cur.length - 2].kind === 'mark' && i + 1 < toks.length) {
       groups.push([]);
       continue;
+    }
+    // "… 15 unidades e pavê 32 metros": um "e" logo a seguir a número + unidade também separa artigos
+    if (t.kind === 'word' && t.w === 'e' && cur.length >= 2 && i + 1 < toks.length) {
+      const a = cur[cur.length - 1], b = cur[cur.length - 2];
+      if (a.kind === 'word' && QTY_UNITS.has(a.w) && b.kind === 'num') { groups.push([]); continue; }
     }
     cur.push(t);
   }
@@ -127,8 +149,17 @@ export function parseVoice(transcript: string, productNames: string[] = []): Voi
       qty = (g[1] as { kind: 'num'; value: number }).value;
       body = g.slice(2);
     }
+    let full: string | undefined;
+    if (qty === null) {
+      const nat = naturalQty(g, isNameStart, norm);
+      if (nat) { qty = nat.qty; body = nat.rest; full = clean(g); }
+    }
     const term = clean(body);
-    if (term) items.push({ qty, term });
+    if (term) { items.push(full && full !== term ? { qty, term, full } : { qty, term }); continue; }
+    // "afiador de plástico, 15 unidades": a quantidade veio num grupo à parte → vai para o artigo anterior
+    const lone = naturalQty(g, () => false, norm, true);
+    const prev = items[items.length - 1];
+    if (lone && prev && prev.qty === null) prev.qty = lone.qty;
   }
   return items;
 }
@@ -151,4 +182,36 @@ function clean(tokens: Tok[]): string {
   }
   while (out.length && GLUE.has(out[out.length - 1]) && out.length > 1) out.pop();
   return out.join(' ').trim();
+}
+
+/**
+ * Quantidade dita à vontade, sem "x":
+ *   "15 unidades de afiador"  → 15, resto "afiador"       "pavê 32 metros"        → 32, resto "pave"
+ *   "15 afiadores de plástico" → 15, resto "afiadores de plástico"   (número à cabeça, seguido de palavras)
+ * Não conta: medidas ("15 mm"), nomes de produtos que começam pelo número, e números no meio do nome sem unidade.
+ * `loneGroup`: o grupo é só "15 unidades" (ou "15") — para ligar ao artigo anterior.
+ */
+function naturalQty(g: Tok[], isNameStart: (t: string) => boolean, norm: (s: string) => string, loneGroup = false): { qty: number; rest: Tok[] } | null {
+  const w = (t?: Tok) => (t && t.kind === 'word' ? t.w : '');
+  for (let i = 0; i < g.length; i++) {
+    const t = g[i];
+    if (t.kind !== 'num') continue;
+    let j = i + 1;
+    const unit = w(g[j]);
+    if (QTY_UNITS.has(unit)) {
+      j++;
+      if (/^quadrad[oa]s?$/.test(w(g[j]))) j++; // "metros quadrados"
+      // "15 metros de pavê": o "de" que liga a unidade ao produto sai
+      const rest = [...g.slice(0, i), ...g.slice(j)];
+      if (['de', 'do', 'da', 'dos', 'das'].includes(w(rest[i]))) rest.splice(i, 1);
+      return { qty: t.value, rest };
+    }
+    if (loneGroup) return g.length === 1 ? { qty: t.value, rest: [] } : null;
+    // número à cabeça seguido de palavras: "15 afiadores de plástico"
+    if (i === 0 && g.length > 1 && g[1].kind === 'word' && !SIZE_WORDS.has(w(g[1]))) {
+      if (isNameStart(norm(tokensToText(g)))) return null; // "15 Colunas" é um produto
+      return { qty: t.value, rest: g.slice(1) };
+    }
+  }
+  return null;
 }

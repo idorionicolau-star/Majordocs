@@ -122,7 +122,7 @@ function fuzzyWord(tok: string, nameWords: string[]): boolean {
  * as palavras de ligação ("de", "para") não contam, e se nada bater, tolera uma ou duas letras trocadas
  * (o que o ditado costuma errar). Começos de nome primeiro.
  */
-export function searchProducts(products: Product[], term: string, limit = 8): Product[] {
+export function searchProducts(products: Product[], term: string, limit = 8, fuzzy = true): Product[] {
     const t = normalizeString(term.trim()).replace(/[()\[\]{}"'`´]/g, " ").replace(/\s+/g, " ").trim();
     if (!t) return [];
     const all = t.split(" ").filter(Boolean);
@@ -149,7 +149,7 @@ export function searchProducts(products: Product[], term: string, limit = 8): Pr
     };
 
     const exact = run((name, _w, tok) => wordForms(tok).some((f) => name.includes(f)));
-    if (exact.length) return exact;
+    if (exact.length || !fuzzy) return exact;
     // Sem resultados: tolera erros de ditado. Só em palavras (não em números: "Bloco 15" ≠ "Bloco 20").
     return run((name, words, tok) => (/\d/.test(tok) ? name.includes(tok) : fuzzyWord(tok, words)));
 }
@@ -158,8 +158,8 @@ export function searchProducts(products: Product[], term: string, limit = 8): Pr
  * O produto certo para o que se disse, ou nenhum se houver dúvida. Por voz não se pode adivinhar:
  * "bloco" com "Bloco 15" e "Bloco 20" no inventário deve perguntar, não somar ao primeiro.
  */
-export function pickVoiceMatch(products: Product[], term: string): { hit?: Product; ambiguous: Product[] } {
-    const hits = searchProducts(products, term, 4);
+export function pickVoiceMatch(products: Product[], term: string, fuzzy = true): { hit?: Product; ambiguous: Product[] } {
+    const hits = searchProducts(products, term, 4, fuzzy);
     if (hits.length <= 1) return { hit: hits[0], ambiguous: [] };
     const t = normalizeString(term.trim());
     const exact = hits.find((h) => normalizeString(h.name) === t);

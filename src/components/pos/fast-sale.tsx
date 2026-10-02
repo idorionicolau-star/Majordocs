@@ -11,12 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, formatCurrency, normalizeString, plural } from "@/lib/utils";
 import type { CartItem, Product, Sale } from "@/lib/types";
-import { parseQuickInput, pickVoiceMatch, searchProducts, toNumber } from "@/lib/quick-stock";
+import { parseQuickInput, searchProducts, toNumber } from "@/lib/quick-stock";
 import { Check, ChevronDown, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, Truck, X } from "lucide-react";
 import { BarcodeScanner } from "@/components/scan/barcode-scanner";
 import { VoiceButton } from "@/components/scan/voice-button";
 import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode";
 import { parseVoice } from "@/lib/voice-parse";
+import { resolveVoice } from "@/lib/voice-approx";
+import { VoiceConfirm, type VoiceAsk } from "@/components/scan/voice-confirm";
 import { useBarcodeLink } from "@/hooks/use-barcode-link";
 import { useCuring } from "@/hooks/use-curing";
 import { isCountableSale } from '@/lib/sale-filters';
@@ -86,6 +88,7 @@ export function FastSale() {
     /** código lido que ainda não pertence a nenhum produto: o próximo produto tocado fica com ele */
     const [pendingCode, setPendingCode] = useState<string | null>(null);
     const [listening, setListening] = useState("");
+    const [voiceAsks, setVoiceAsks] = useState<VoiceAsk[]>([]);
     const { link: linkBarcode, canLink } = useBarcodeLink();
     const curingInfo = useCuring();
     const fmtDay = (d: Date) => d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" });
@@ -211,18 +214,22 @@ export function FastSale() {
         if (!items.length) return;
         const done: string[] = [];
         const missed: string[] = [];
+        const asks: VoiceAsk[] = [];
         for (const it of items) {
-            const { hit, ambiguous } = pickVoiceMatch(scoped, it.term);
-            if (!hit && ambiguous.length) { missed.push(`${it.term} (pode ser ${ambiguous.slice(0, 3).map((a) => a.name).join(", ")})`); continue; }
-            if (!hit) { missed.push(it.term); continue; }
+            const r = resolveVoice(scoped, it);
+            if (r.kind === "none") { missed.push(it.term); continue; }
+            if (r.kind === "confirm") { asks.push({ id: `${Date.now()}-${asks.length}`, said: it.term, qty: it.qty ?? 1, options: r.options }); continue; }
+            const hit = r.product;
             if (avail(hit) <= 0) { missed.push(`${hit.name} (esgotado)`); continue; }
             add(hit, it.qty ?? 1, true);
             done.push(`${fmtQ(it.qty ?? 1)} × ${hit.name}`);
         }
+        if (asks.length) setVoiceAsks((q) => [...q, ...asks]);
+        if (!done.length && !missed.length) return; // só há perguntas: a janela de confirmação já aparece
         toast({
             variant: missed.length && !done.length ? "destructive" : undefined,
             title: done.length ? `Juntei: ${done.join(", ")}` : "Não encontrei esse produto",
-            description: missed.length ? `Não encontrei: ${missed.join(", ")}. Disse: “${transcript}”.${missed.some((m) => /\d/.test(m)) ? " Para a quantidade diga «x 20»: o resto é parte do nome." : ""}` : undefined,
+            description: missed.length ? `Não encontrei: ${missed.join(", ")}. Disse: “${transcript}”.${missed.some((m) => /\d/.test(m)) ? " Pode dizer, por exemplo, «15 unidades de afiador» ou «cimento x 20»." : ""}` : undefined,
         });
     };
 
@@ -402,6 +409,19 @@ export function FastSale() {
                 <VoiceButton className="h-14 w-14" onInterim={setListening} onResult={handleVoice} onProblem={(m) => { setListening(""); toast({ variant: "destructive", title: "Ditado", description: m }); }} />
                 </div>
                 {listening && <p className="mt-1.5 px-1 text-sm italic text-muted-foreground">🎙 {listening}</p>}
+                <VoiceConfirm
+                    asks={voiceAsks}
+                    fmt={fmtQ}
+                    note={(p) => (avail(p) <= 0 ? "Esgotado" : `Disponível: ${fmtQ(avail(p))} ${p.unit || "un"}`)}
+                    onClose={() => setVoiceAsks([])}
+                    onSkip={(a) => setVoiceAsks((q) => q.filter((x) => x.id !== a.id))}
+                    onPick={(a, prod) => {
+                        if (avail(prod) <= 0) { toast({ variant: "destructive", title: `${prod.name} está esgotado` }); return; }
+                        add(prod, a.qty, true);
+                        setVoiceAsks((q) => q.filter((x) => x.id !== a.id));
+                        toast({ title: `Juntei: ${fmtQ(a.qty)} × ${prod.name}` });
+                    }}
+                />
                 {pendingCode && (
                     <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-sm">
                         <span>Código <b className="tabular-nums">{pendingCode}</b> ainda sem produto — {canLink ? "escreva o nome e toque no produto certo para o associar." : "peça a quem gere o inventário para o associar."}</span>
