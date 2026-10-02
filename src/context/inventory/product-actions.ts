@@ -7,7 +7,7 @@ import { computeSmartThresholds } from '@/lib/smart-thresholds';
 import { formatCurrency, normalizeString } from '@/lib/utils';
 import type { InventoryCore } from './core';
 import { links } from '@/lib/deep-links';
-import { pickActive } from '@/lib/product-ref';
+import { locationIn, pickActive, sameLocation } from '@/lib/product-ref';
 
 export function useProductActions(core: InventoryCore) {
   const { companyData, sendPush, locations, triggerEmailAlert, toast, isReadOnly, productsCollectionRef, firestore, user, companyId, productsData, addNotification, stockMovementsData, salesData, products, notifyManagers, assertOnline, isMultiLocation, catalogProductsData } = core;
@@ -79,7 +79,7 @@ export function useProductActions(core: InventoryCore) {
             const targetLoc = location || "";
             const sameProduct = (p: Product) =>
               normalizeString(p.name) === normalizedNewName &&
-              (p.location === targetLoc || (!p.location && !targetLoc));
+              sameLocation(p.location, targetLoc);
 
             // Primeiro o produto activo; só depois um da lixeira (esse recomeça do zero, ver abaixo)
             const match = productsData.find(p => sameProduct(p) && !p.deletedAt) || productsData.find(sameProduct);
@@ -89,7 +89,7 @@ export function useProductActions(core: InventoryCore) {
           }
 
           if (!existingProductId) {
-            const q = query(productsCollectionRef, where("name", "==", name), where("location", "==", location || ""));
+            const q = query(productsCollectionRef, where("name", "==", name), where("location", "in", locationIn(location)));
             const querySnapshot = await getDocs(q);
             const found = pickActive(querySnapshot.docs) || querySnapshot.docs[0];
             if (found) {
@@ -543,7 +543,7 @@ export function useProductActions(core: InventoryCore) {
     }
     if (!firestore || !companyId || !user) return;
 
-    const fromProduct = products.find(p => p.name === productName && p.location === fromLocationId);
+    const fromProduct = products.find(p => p.name === productName && sameLocation(p.location, fromLocationId));
     if (!fromProduct || !fromProduct.id) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Produto de origem não encontrado.' });
       return;
@@ -553,7 +553,7 @@ export function useProductActions(core: InventoryCore) {
       return;
     }
 
-    const toProduct = products.find(p => p.name === productName && p.location === toLocationId);
+    const toProduct = products.find(p => p.name === productName && sameLocation(p.location, toLocationId));
 
     try {
       await runTransaction(firestore, async (transaction) => {
@@ -639,7 +639,7 @@ export function useProductActions(core: InventoryCore) {
     if (!firestore || !companyId || !user) return;
     const targetLocation = locationId || (isMultiLocation && locations.length > 0 ? locations[0].id : 'Principal');
     const catalogProduct = catalogProductsData?.find(p => p.name === productName);
-    const existingInstance = products.find(p => p.name === productName && p.location === targetLocation);
+    const existingInstance = products.find(p => p.name === productName && sameLocation(p.location, targetLocation));
 
     const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 

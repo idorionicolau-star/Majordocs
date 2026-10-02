@@ -6,7 +6,7 @@ import { collection, doc, getDocs, query, where, runTransaction, getDoc, serverT
 import { ref } from "firebase/storage";
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { InventoryCore } from './core';
-import { pickActive, resolveInventoryProductRef } from '@/lib/product-ref';
+import { locationIn, pickActive, resolveInventoryProductRef } from '@/lib/product-ref';
 import { ingredientRequiredQty } from '@/lib/order-stock';
 
 export function useProductionActions(core: InventoryCore) {
@@ -26,7 +26,7 @@ export function useProductionActions(core: InventoryCore) {
 
     // 1. Move product lookup OUTSIDE the transaction because transactions don't support queries
     const productsRef = collection(firestore, `companies/${companyId}/products`);
-    const q = query(productsRef, where("name", "==", productName), where("location", "==", targetLocation));
+    const q = query(productsRef, where("name", "==", productName), where("location", "in", locationIn(targetLocation)));
     const productQuerySnapshot = await getDocs(q);
     const existingProductId = pickActive(productQuerySnapshot.docs)?.id ?? null; // um produto na lixeira não recebe stock
 

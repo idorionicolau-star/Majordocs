@@ -8,6 +8,7 @@ import { isOffline } from './offline-helpers';
 import type { InventoryCore } from './core';
 import type { ProductActions } from './product-actions';
 import { links } from '@/lib/deep-links';
+import { locationIn } from '@/lib/product-ref';
 
 const MANAGER_TAKEOVER_MS = 15 * 60 * 1000;
 
@@ -79,7 +80,7 @@ export function useOfflineSync(core: InventoryCore, deps: { product_actions: Pro
       const productsRef = collection(firestore, `companies/${companyId}/products`);
       for (const sale of touched.values()) {
         try {
-          const snap = await getDocs(query(productsRef, where('name', '==', sale.productName), where('location', '==', sale.location || '')));
+          const snap = await getDocs(query(productsRef, where('name', '==', sale.productName), where('location', 'in', locationIn(sale.location))));
           const docs = snap.docs.map((d) => d.data() as Product);
           if (!docs.length) continue;
           const stock = docs.reduce((t, p) => t + (p.stock || 0), 0);
