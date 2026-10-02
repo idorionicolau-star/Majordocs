@@ -23,6 +23,7 @@ import { SubscriptionExpired } from './subscription-expired';
 import { differenceInDays } from 'date-fns';
 
 import { useSearchParams } from 'next/navigation';
+import { trialMessage, trialTone } from '@/lib/trial';
 
 function NavigationObserver({ onNavigate }: { onNavigate: () => void }) {
   const pathname = usePathname();
@@ -156,13 +157,18 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        {isTrial && (
-          <div className="bg-blue-600 text-white text-center py-2 px-4 text-sm font-medium sticky top-0 z-[60] shadow-md flex justify-center items-center gap-2">
-            <span>Você está no período de teste gratuito do MajorStockX.</span>
-            <span className="bg-white/20 px-2 py-0.5 rounded text-xs font-bold">Lhe restam {daysLeft} dias</span>
-            <a href="/billing" className="rounded bg-white px-2 py-0.5 text-xs font-bold text-blue-700 hover:bg-white/90">Assinar</a>
-          </div>
-        )}
+        {isTrial && (() => {
+          const tone = trialTone(daysLeft);
+          const bg = tone === 'urgent' ? 'bg-rose-600' : tone === 'soon' ? 'bg-amber-500' : 'bg-blue-600';
+          const btn = tone === 'urgent' ? 'text-rose-700' : tone === 'soon' ? 'text-amber-700' : 'text-blue-700';
+          return (
+            <div className={`${bg} text-white text-center py-2 px-4 text-sm font-medium sticky top-0 z-[60] shadow-md flex flex-wrap justify-center items-center gap-2`}>
+              <span>{trialMessage(daysLeft)}</span>
+              <span className="bg-white/20 px-2 py-0.5 rounded text-xs font-bold">{daysLeft <= 0 ? 'Último dia' : daysLeft === 1 ? 'Resta 1 dia' : `Restam ${daysLeft} dias`}</span>
+              <a href="/billing" className={`rounded bg-white px-2 py-0.5 text-xs font-bold hover:bg-white/90 ${btn}`}>Subscrever</a>
+            </div>
+          );
+        })()}
 
         {!isReadOnly && !isTrial && typeof renewInDays === 'number' && (
           <div className="bg-amber-500 text-white text-center py-2 px-4 text-sm font-medium sticky top-0 z-[60] shadow-md flex flex-wrap justify-center items-center gap-2">

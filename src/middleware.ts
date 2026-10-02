@@ -25,6 +25,7 @@ export function middleware(request: NextRequest) {
             "img-src 'self' data: https: blob:",
             "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://vercel.com https://*.vercel-storage.com", // vercel: envio de fotos (Blob)
             "worker-src 'self' blob:",
+            "frame-src 'self' blob:",
             "frame-ancestors 'none'",
         ].join('; ')
     );

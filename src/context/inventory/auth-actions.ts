@@ -5,6 +5,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, se
 import { collection, doc, writeBatch, getDocs, query, where, getDoc } from 'firebase/firestore';
 import { allPermissions } from '@/lib/data';
 import type { InventoryCore } from './core';
+import { trialEndFrom } from '@/lib/trial';
 
 export function useAuthActions(core: InventoryCore) {
   const { auth, toast, firestore } = core;
@@ -169,8 +170,8 @@ export function useAuthActions(core: InventoryCore) {
 
       batch.set(userMapDocRef, { companyId: newCompanyRef.id });
 
-      const trialEndsAt = new Date();
-      trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+      const trialStart = new Date();
+      const trialEndsAt = trialEndFrom(trialStart);
 
       batch.set(newCompanyRef, {
         name: companyName,
@@ -180,7 +181,9 @@ export function useAuthActions(core: InventoryCore) {
         businessType,
         saleCounter: 0,
         status: 'trial',
-        trialEndsAt: trialEndsAt.toISOString()
+        trialEndsAt: trialEndsAt.toISOString(),
+        // empresa nova: os dias de teste já começam agora, não há reinício
+        trialRestartedAt: trialStart.toISOString()
       });
 
       await batch.commit();
@@ -273,8 +276,8 @@ export function useAuthActions(core: InventoryCore) {
 
       batch.set(userMapDocRef, { companyId: newCompanyRef.id });
 
-      const trialEndsAt = new Date();
-      trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+      const trialStart = new Date();
+      const trialEndsAt = trialEndFrom(trialStart);
 
       batch.set(newCompanyRef, {
         name: companyName,
@@ -284,7 +287,9 @@ export function useAuthActions(core: InventoryCore) {
         businessType,
         saleCounter: 0,
         status: 'trial',
-        trialEndsAt: trialEndsAt.toISOString()
+        trialEndsAt: trialEndsAt.toISOString(),
+        // empresa nova: os dias de teste já começam agora, não há reinício
+        trialRestartedAt: trialStart.toISOString()
       });
 
       await batch.commit();

@@ -17,6 +17,9 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useSubscriptionState } from '@/hooks/useSubscriptionState';
 import { links } from '@/lib/deep-links';
 import { isCountableSale } from '@/lib/sale-filters';
+import { canRestartTrial } from '@/lib/trial';
+import { TRIAL_DAYS } from '@/lib/plans';
+import { authedFetch } from '@/lib/api-client';
 
 type CatalogProduct = Omit<
   Product,
@@ -525,6 +528,18 @@ export function useInventoryCore() {
     return Array.from(productMap.values());
   }, [productsData]);
 
+
+  // Teste gratuito: as empresas que já existiam recebem UMA vez 14 dias novos, a contar de agora (o servidor decide e garante o "uma vez").
+  const trialRestartAsked = useRef(false);
+  useEffect(() => {
+    if (trialRestartAsked.current || !firebaseUser || !canRestartTrial(companyData)) return;
+    trialRestartAsked.current = true;
+    authedFetch('/api/billing/trial-restart', 'POST', {})
+      .then((r) => {
+        if (r?.restarted) toast({ title: 'Teste gratuito renovado', description: `Tem mais ${TRIAL_DAYS} dias para experimentar o MajorStockX.` });
+      })
+      .catch(() => { trialRestartAsked.current = false; });
+  }, [firebaseUser, companyData, toast]);
 
   useEffect(() => {
     if (companyDocRef) {

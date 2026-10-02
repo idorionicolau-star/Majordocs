@@ -210,6 +210,23 @@ service cloud.firestore {
         }
       }
       
+      // Documentos (cotações, facturas, recibos, guias…). Rascunhos: qualquer pessoa com permissão de vendas edita e apaga.
+      // Emitidos: só o gestor corrige (e fica registado em /history), e nunca se apagam — anulam-se.
+      match /documents/{docId} {
+        allow get, list: if can('sales', 'read');
+        allow create: if can('sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+        allow update: if can('sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin())
+          && (resource.data.status == 'draft' || isManagerOf(companyId));
+        allow delete: if can('sales', 'write') && resource.data.status == 'draft';
+
+        // Registo de cada correcção a um documento emitido (quem, quando, antes e depois). Imutável.
+        match /history/{historyId} {
+          allow get, list: if isManagerOf(companyId);
+          allow create: if isManagerOf(companyId) && request.resource.data.userId == request.auth.uid;
+          allow update, delete: if false;
+        }
+      }
+
       match /productions/{productionId} {
         allow get, list: if can('production', 'read');
         allow create, update, delete: if can('production', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
