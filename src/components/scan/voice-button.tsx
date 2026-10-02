@@ -88,6 +88,7 @@ export function VoiceButton({ onResult, onInterim, onProblem, className }: {
         <button
             type="button"
             aria-label={listening ? "A ouvir… toque para parar" : "Ditar por voz"}
+            title="Diga o produto. Para a quantidade, diga «x 20» (ex.: cimento x 20)"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => (listening ? recRef.current?.stop() : start(true))}
             className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition", listening ? "animate-pulse border-red-500 bg-red-500/15 text-red-600" : "bg-card text-muted-foreground hover:text-foreground", className)}

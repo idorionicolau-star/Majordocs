@@ -83,25 +83,87 @@ export function parseQuickInput(
     return { term: text, qty: null };
 }
 
-/** Fast, typo-tolerant-enough search: every word must appear in the name; prefix matches first. */
-export function searchProducts(products: Product[], term: string, limit = 8): Product[] {
-    const t = normalizeString(term.trim());
-    if (!t) return [];
-    const tokens = t.split(" ").filter(Boolean);
-    const scored: { p: Product; score: number }[] = [];
-    for (const p of products) {
-        const name = normalizeString(p.name);
-        if (!tokens.every((tok) => name.includes(tok))) continue;
-        let score = 0;
-        if (name === t) score += 100;
-        if (name.startsWith(t)) score += 50;
-        if (name.startsWith(tokens[0])) score += 20;
-        if (name.split(" ").some((w) => w.startsWith(tokens[0]))) score += 10;
-        score -= name.length / 100; // shorter names first on ties
-        scored.push({ p, score });
+// Palavras de ligação: numa pesquisa são opcionais ("blocos de 15" encontra "Bloco 15").
+const STOP = new Set(['de', 'do', 'da', 'dos', 'das', 'e', 'o', 'a', 'os', 'as', 'um', 'uma', 'para', 'com', 'em', 'no', 'na', 'tipo']);
+
+/** Formas de uma palavra no singular/plural ("blocos" → bloco, "colheres" → colher, "paes" → pao, "leões" → leao). */
+function wordForms(tok: string): string[] {
+    const forms = [tok];
+    if (tok.length > 3) {
+        if (tok.endsWith('oes')) forms.push(tok.slice(0, -3) + 'ao');
+        if (tok.endsWith('aes')) forms.push(tok.slice(0, -3) + 'ao');
+        if (tok.endsWith('ns')) forms.push(tok.slice(0, -2) + 'm');
+        if (tok.endsWith('es')) forms.push(tok.slice(0, -2));
+        if (tok.endsWith('s')) forms.push(tok.slice(0, -1));
     }
-    scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, limit).map((s) => s.p);
+    return forms;
+}
+
+function editDistance(a: string, b: string): number {
+    const m = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)] as number[]);
+    for (let j = 1; j <= b.length; j++) m[0][j] = j;
+    for (let i = 1; i <= a.length; i++) {
+        for (let j = 1; j <= b.length; j++) m[i][j] = Math.min(m[i - 1][j] + 1, m[i][j - 1] + 1, m[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    return m[a.length][b.length];
+}
+
+/** Uma palavra do que se procura "é" uma palavra do nome se for igual, parecida (plural) ou tiver 1–2 letras trocadas (ditado). */
+function fuzzyWord(tok: string, nameWords: string[]): boolean {
+    return wordForms(tok).some((f) => nameWords.some((w) => {
+        if (w === f || (f.length >= 3 && w.startsWith(f))) return true;
+        if (Math.min(w.length, f.length) < 4) return false;
+        return editDistance(w, f) <= (Math.max(w.length, f.length) >= 9 ? 2 : 1);
+    }));
+}
+
+/**
+ * Pesquisa de produtos (teclado e voz). Cada palavra tem de existir no nome — mas "blocos" encontra "Bloco 15",
+ * as palavras de ligação ("de", "para") não contam, e se nada bater, tolera uma ou duas letras trocadas
+ * (o que o ditado costuma errar). Começos de nome primeiro.
+ */
+export function searchProducts(products: Product[], term: string, limit = 8): Product[] {
+    const t = normalizeString(term.trim()).replace(/[()\[\]{}"'`´]/g, " ").replace(/\s+/g, " ").trim();
+    if (!t) return [];
+    const all = t.split(" ").filter(Boolean);
+    // "de" só se ignora se houver mais palavras; uma pesquisa só de ligações continua a funcionar como antes
+    const tokens = all.filter((w) => !STOP.has(w));
+    const toks = tokens.length ? tokens : all;
+
+    const run = (match: (name: string, words: string[], tok: string) => boolean) => {
+        const scored: { p: Product; score: number }[] = [];
+        for (const p of products) {
+            const name = normalizeString(p.name);
+            const words = name.split(/[^a-z0-9.,]+/).filter(Boolean);
+            if (!toks.every((tok) => match(name, words, tok))) continue;
+            let score = 0;
+            if (name === t) score += 100;
+            if (name.startsWith(t)) score += 50;
+            if (name.startsWith(toks[0])) score += 20;
+            if (words.some((w) => w.startsWith(toks[0]))) score += 10;
+            score -= name.length / 100; // nomes mais curtos primeiro em empate
+            scored.push({ p, score });
+        }
+        scored.sort((a, b) => b.score - a.score);
+        return scored.slice(0, limit).map((s) => s.p);
+    };
+
+    const exact = run((name, _w, tok) => wordForms(tok).some((f) => name.includes(f)));
+    if (exact.length) return exact;
+    // Sem resultados: tolera erros de ditado. Só em palavras (não em números: "Bloco 15" ≠ "Bloco 20").
+    return run((name, words, tok) => (/\d/.test(tok) ? name.includes(tok) : fuzzyWord(tok, words)));
+}
+
+/**
+ * O produto certo para o que se disse, ou nenhum se houver dúvida. Por voz não se pode adivinhar:
+ * "bloco" com "Bloco 15" e "Bloco 20" no inventário deve perguntar, não somar ao primeiro.
+ */
+export function pickVoiceMatch(products: Product[], term: string): { hit?: Product; ambiguous: Product[] } {
+    const hits = searchProducts(products, term, 4);
+    if (hits.length <= 1) return { hit: hits[0], ambiguous: [] };
+    const t = normalizeString(term.trim());
+    const exact = hits.find((h) => normalizeString(h.name) === t);
+    return exact ? { hit: exact, ambiguous: [] } : { ambiguous: hits };
 }
 
 export function lineFromProduct(p: Product, qty: number): QuickLine {

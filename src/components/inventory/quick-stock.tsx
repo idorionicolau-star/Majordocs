@@ -19,6 +19,7 @@ import {
     lineFromProduct,
     lineKey,
     parseQuickInput,
+    pickVoiceMatch,
     resultingStock,
     searchProducts,
     toNumber,
@@ -168,11 +169,11 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const exactExists = results.some((p) => p.name.trim().toLowerCase() === parsed.term.trim().toLowerCase());
     // Artigos que ainda não existem aqui: os de OUTRAS localizações e os que só estão no CATÁLOGO (sem stock).
     // Escolher um traz os dados dele (categoria, unidade, preço, imagem) para uma linha nova.
-    const elsewhere = useMemo(() => {
-        if (mode === "out" || !parsed.term) return [] as Product[];
+    const beyondScope = useCallback((term: string): Product[] => {
+        if (mode === "out" || !term) return [] as Product[];
         const here = new Set(scoped.map((p) => p.name.trim().toLowerCase()));
         const seen = new Set<string>();
-        const fromInventory = searchProducts(products.filter((p) => !p.deletedAt), parsed.term, 20)
+        const fromInventory = searchProducts(products.filter((p) => !p.deletedAt), term, 20)
             .filter((p) => {
                 const k = p.name.trim().toLowerCase();
                 if (here.has(k) || seen.has(k)) return false;
@@ -182,7 +183,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
         const catalogAsProducts: Product[] = (catalogProducts || [])
             .filter((c) => !c.deletedAt)
             .map((c) => ({ ...c, instanceId: `catalog-${c.id || c.name}`, stock: 0, reservedStock: 0, lastUpdated: "", location: "" }));
-        const fromCatalog = searchProducts(catalogAsProducts, parsed.term, 20)
+        const fromCatalog = searchProducts(catalogAsProducts, term, 20)
             .filter((p) => {
                 const k = p.name.trim().toLowerCase();
                 if (here.has(k) || seen.has(k)) return false;
@@ -190,7 +191,8 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                 return true;
             });
         return [...fromInventory, ...fromCatalog].slice(0, 6);
-    }, [mode, parsed.term, scoped, products, catalogProducts]);
+    }, [mode, scoped, products, catalogProducts]);
+    const elsewhere = useMemo(() => beyondScope(parsed.term), [beyondScope, parsed.term]);
     const elsewhereExact = elsewhere.some((p) => p.name.trim().toLowerCase() === parsed.term.trim().toLowerCase());
     const canCreate = mode === "in" && !elsewhereExact && parsed.term.trim().length >= 2 && !exactExists;
 
@@ -345,20 +347,38 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
 
     const handleVoice = (transcript: string) => {
         setListening("");
-        const items = parseVoice(transcript);
+        const items = parseVoice(transcript, [...names, ...(catalogProducts || []).map((c) => c.name)]);
         if (!items.length) return;
         const done: string[] = [];
         const missed: string[] = [];
         for (const it of items) {
-            const hit = searchProducts(scoped, it.term, 1)[0];
-            if (!hit) { missed.push(it.term); continue; }
-            addLine(lineFromProduct(hit, it.qty ?? 1));
-            done.push(`${fmt(it.qty ?? 1)} × ${hit.name}`);
+            const qty = it.qty ?? 1;
+            const { hit, ambiguous } = pickVoiceMatch(scoped, it.term);
+            if (hit) {
+                addLine(lineFromProduct(hit, qty));
+                done.push(`${fmt(qty)} × ${hit.name}`);
+                continue;
+            }
+            if (ambiguous.length) {
+                // Vários parecidos: não adivinha. Deixa o termo na pesquisa para escolher.
+                missed.push(`${it.term} (pode ser ${ambiguous.slice(0, 3).map((a) => a.name).join(", ")})`);
+                continue;
+            }
+            // Não existe neste local: como no teclado, oferece o de outro local ou do catálogo (sem stock)
+            const alt = beyondScope(it.term)[0];
+            if (alt) {
+                addLine(newLine(alt.name, qty, undefined, alt));
+                done.push(`${fmt(qty)} × ${alt.name} (${alt.instanceId.startsWith("catalog-") ? "do catálogo" : "trazido para aqui"})`);
+                continue;
+            }
+            missed.push(it.term);
         }
+        // Se só falhou um, deixa-o na caixa de pesquisa: aparecem as sugestões parecidas
+        if (missed.length === 1 && !done.length) setText(missed[0]);
         toast({
             variant: missed.length && !done.length ? "destructive" : undefined,
             title: done.length ? `Juntei: ${done.join(", ")}` : "Não encontrei esse produto",
-            description: missed.length ? `Não encontrei: ${missed.join(", ")}. Para criar um produto novo, escreva o nome.` : undefined,
+            description: missed.length ? `Ouvi: «${transcript}». Procurei: ${missed.map((m) => `«${m}»`).join(", ")}.${missed.length === 1 && !done.length ? " Veja as sugestões abaixo ou escreva o nome." : " Para criar um produto novo, escreva o nome."}${missed.some((m) => /\d/.test(m)) ? " Para a quantidade diga «x 20»: o resto é parte do nome." : ""}` : undefined,
         });
     };
 

@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, formatCurrency, normalizeString, plural } from "@/lib/utils";
 import type { CartItem, Product, Sale } from "@/lib/types";
-import { parseQuickInput, searchProducts, toNumber } from "@/lib/quick-stock";
+import { parseQuickInput, pickVoiceMatch, searchProducts, toNumber } from "@/lib/quick-stock";
 import { Check, ChevronDown, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, Truck, X } from "lucide-react";
 import { BarcodeScanner } from "@/components/scan/barcode-scanner";
 import { VoiceButton } from "@/components/scan/voice-button";
@@ -207,12 +207,13 @@ export function FastSale() {
 
     const handleVoice = (transcript: string) => {
         setListening("");
-        const items = parseVoice(transcript);
+        const items = parseVoice(transcript, scoped.map((p) => p.name));
         if (!items.length) return;
         const done: string[] = [];
         const missed: string[] = [];
         for (const it of items) {
-            const hit = searchProducts(scoped, it.term, 1)[0];
+            const { hit, ambiguous } = pickVoiceMatch(scoped, it.term);
+            if (!hit && ambiguous.length) { missed.push(`${it.term} (pode ser ${ambiguous.slice(0, 3).map((a) => a.name).join(", ")})`); continue; }
             if (!hit) { missed.push(it.term); continue; }
             if (avail(hit) <= 0) { missed.push(`${hit.name} (esgotado)`); continue; }
             add(hit, it.qty ?? 1, true);
@@ -221,7 +222,7 @@ export function FastSale() {
         toast({
             variant: missed.length && !done.length ? "destructive" : undefined,
             title: done.length ? `Juntei: ${done.join(", ")}` : "Não encontrei esse produto",
-            description: missed.length ? `Não encontrei: ${missed.join(", ")}. Disse: “${transcript}”.` : undefined,
+            description: missed.length ? `Não encontrei: ${missed.join(", ")}. Disse: “${transcript}”.${missed.some((m) => /\d/.test(m)) ? " Para a quantidade diga «x 20»: o resto é parte do nome." : ""}` : undefined,
         });
     };
 
