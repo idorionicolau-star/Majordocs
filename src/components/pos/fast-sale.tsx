@@ -19,6 +19,7 @@ import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode
 import { parseVoice } from "@/lib/voice-parse";
 import { useBarcodeLink } from "@/hooks/use-barcode-link";
 import { useCuring } from "@/hooks/use-curing";
+import { isCountableSale } from '@/lib/sale-filters';
 
 type Line = {
     key: string;
@@ -126,7 +127,7 @@ export function FastSale() {
         const count = new Map<string, number>();
         sales.forEach((s) => {
             const d = new Date(s.date).getTime();
-            if (d >= since && s.documentType !== "Factura Proforma") count.set(normalizeString(s.productName), (count.get(normalizeString(s.productName)) || 0) + 1);
+            if (d >= since && isCountableSale(s)) count.set(normalizeString(s.productName), (count.get(normalizeString(s.productName)) || 0) + 1);
         });
         const ranked = [...scoped].filter((p) => avail(p) > 0).sort((a, b) => (count.get(normalizeString(b.name)) || 0) - (count.get(normalizeString(a.name)) || 0) || avail(b) - avail(a));
         return ranked.slice(0, 10);

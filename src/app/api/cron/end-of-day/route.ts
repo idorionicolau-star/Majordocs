@@ -3,6 +3,7 @@ import { initializeAdmin } from '@/lib/firebase-admin';
 import { Resend } from 'resend';
 import { formatCurrency } from '@/lib/utils';
 import { format, startOfDay, endOfDay } from 'date-fns';
+import { isCountableSale } from '@/lib/sale-filters';
 
 export async function GET(req: Request) {
     const authHeader = req.headers.get('authorization');
@@ -54,7 +55,7 @@ export async function GET(req: Request) {
 
                     salesSnapshot.forEach(saleDoc => {
                         const sale = saleDoc.data();
-                        if (sale.documentType !== 'Factura Proforma') {
+                        if (isCountableSale(sale as any)) {
                             totalSalesCount++;
                             totalSalesValue += (sale.amountPaid ?? (sale.totalValue || 0));
                         }

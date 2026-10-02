@@ -16,6 +16,7 @@ import { formatCurrency } from '@/lib/utils';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useSubscriptionState } from '@/hooks/useSubscriptionState';
 import { links } from '@/lib/deep-links';
+import { isCountableSale } from '@/lib/sale-filters';
 
 type CatalogProduct = Omit<
   Product,
@@ -538,11 +539,12 @@ export function useInventoryCore() {
 
 
   const businessStartDate = useMemo(() => {
-    if (!salesData || salesData.length === 0) return null;
-    return salesData.reduce((earliest, currentSale) => {
+    const live = (salesData || []).filter(isCountableSale);
+    if (live.length === 0) return null;
+    return live.reduce((earliest, currentSale) => {
       const currentDate = new Date(currentSale.date);
       return currentDate < earliest ? currentDate : earliest;
-    }, new Date(salesData[0].date));
+    }, new Date(live[0].date));
   }, [salesData]);
 
 
@@ -601,7 +603,7 @@ export function useInventoryCore() {
 
     const chartData = monthInterval.map(monthStart => {
       const monthSales = salesData?.filter(s => {
-        if (s.documentType === 'Factura Proforma') return false;
+        if (!isCountableSale(s)) return false; // apagadas (lixeira) e cotações/pró-formas não contam
         const saleDate = new Date(s.date);
         return saleDate.getFullYear() === monthStart.getFullYear() && saleDate.getMonth() === monthStart.getMonth();
       }).reduce((sum, s) => sum + (s.amountPaid ?? s.totalValue), 0) || 0;
@@ -623,7 +625,7 @@ export function useInventoryCore() {
     const currentYear = currentDate.getFullYear();
 
     const monthlySales = salesData?.filter(sale => {
-      if (sale.documentType === 'Factura Proforma') return false;
+      if (!isCountableSale(sale)) return false; // apagadas (lixeira) e cotações/pró-formas não contam
       const saleDate = new Date(sale.date);
       return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
     }) || [];
@@ -637,8 +639,8 @@ export function useInventoryCore() {
     const totalInventoryValue = products?.reduce((sum, p) => sum + (p.stock * p.price), 0) || 0;
     const totalItemsInStock = products?.reduce((sum, p) => sum + p.stock, 0) || 0;
 
-    const pendingOrders = ordersData?.filter(o => o.status === 'Pendente').length || 0;
-    const readyForTransfer = productionsData?.filter(p => p.status === 'Concluído').length || 0;
+    const pendingOrders = ordersData?.filter(o => o.status === 'Pendente' && !o.deletedAt).length || 0;
+    const readyForTransfer = productionsData?.filter(p => p.status === 'Concluído' && !p.deletedAt).length || 0;
 
     return {
       monthlySalesValue,

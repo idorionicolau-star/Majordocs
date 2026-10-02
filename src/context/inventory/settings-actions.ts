@@ -1,8 +1,10 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import type { Product, RawMaterial, Recipe } from '@/lib/types';
-import { collection, doc, writeBatch, updateDoc, deleteDoc, arrayUnion, type CollectionReference, arrayRemove } from 'firebase/firestore';
+import type { Order, Product, RawMaterial, Recipe, Sale } from '@/lib/types';
+import { collection, doc, getDoc, getDocs, query, where, runTransaction, serverTimestamp, writeBatch, updateDoc, deleteDoc, arrayUnion, type CollectionReference, arrayRemove } from 'firebase/firestore';
+import { resolveInventoryProductRef } from '@/lib/product-ref';
+import { reservedToRelease } from '@/lib/order-stock';
 import { updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { InventoryCore } from './core';
 
@@ -13,7 +15,7 @@ type CatalogProduct = Omit<
 type CatalogCategory = { id: string; name: string };
 
 export function useSettingsActions(core: InventoryCore) {
-  const { isReadOnly, toast, catalogProductsCollectionRef, catalogCategoriesCollectionRef, catalogCategoriesData, rawMaterialsCollectionRef, recipesCollectionRef, firestore, companyId, productsData, salesData, companyData, products, rawMaterialsData, catalogProductsData, productsCollectionRef } = core;
+  const { isReadOnly, user, isMultiLocation, locations, toast, catalogProductsCollectionRef, catalogCategoriesCollectionRef, catalogCategoriesData, rawMaterialsCollectionRef, recipesCollectionRef, firestore, companyId, productsData, salesData, companyData, products, rawMaterialsData, catalogProductsData, productsCollectionRef } = core;
 
 
 
@@ -120,15 +122,74 @@ export function useSettingsActions(core: InventoryCore) {
     if (!firestore || !companyId) return;
     const docRef = doc(firestore, `companies/${companyId}/${collectionName}`, id);
 
-    // If it's a sale, we might need to deduct stock again?
-    // For simplicity in this iteration, we just restore the record. 
-    // Ideally, if we restored stock on delete, we should consume it on restore.
-    // This logic is complex for "Undo".
-    // Let's implement basic restore (remove deletedAt) first.
+    // Apagar uma venda ou encomenda repõe o stock / liberta a reserva; restaurar tem de fazer o contrário,
+    // senão o registo volta mas o stock fica como se ainda estivesse apagado.
+    if (collectionName === 'sales' || collectionName === 'orders') {
+      try {
+        const stockLocation = (loc?: string) => loc || (isMultiLocation ? locations?.[0]?.id : 'Principal') || 'Principal';
+        const snap = await getDoc(docRef);
+        if (!snap.exists()) return;
+
+        if (collectionName === 'sales') {
+          const sale = snap.data() as Sale;
+          if (sale.orderId) {
+            toast({ variant: 'destructive', title: 'Venda de encomenda', description: 'Restaure a encomenda: a venda volta com ela.' });
+            return;
+          }
+          const needsStock = (sale.status === 'Pago' || sale.status === 'Levantado') && sale.documentType !== 'Factura Proforma';
+          const productRef = needsStock
+            ? await resolveInventoryProductRef(firestore, companyId, { productId: sale.productId, productName: sale.productName, location: stockLocation(sale.location) })
+            : null;
+          if (needsStock && !productRef) throw new Error(`O produto "${sale.productName}" já não existe no inventário: não dá para repor esta venda.`);
+          await runTransaction(firestore, async (transaction) => {
+            if (productRef) {
+              const pDoc = await transaction.get(productRef);
+              if (!pDoc.exists()) throw new Error(`O produto "${sale.productName}" já não existe no inventário.`);
+              const p = pDoc.data() as Product;
+              if (sale.status === 'Pago') {
+                const available = (p.stock || 0) - (p.reservedStock || 0);
+                if (available < sale.quantity) throw new Error(`Stock insuficiente para repor esta venda. Disponível: ${available}.`);
+                transaction.update(productRef, { reservedStock: (p.reservedStock || 0) + sale.quantity, lastUpdated: new Date().toISOString() });
+              } else {
+                if ((p.stock || 0) < sale.quantity) throw new Error(`Stock insuficiente para repor esta venda. Em stock: ${p.stock || 0}.`);
+                transaction.update(productRef, { stock: (p.stock || 0) - sale.quantity, lastUpdated: new Date().toISOString() });
+              }
+            }
+            transaction.update(docRef, { deletedAt: null, deletedBy: null });
+            transaction.set(doc(collection(docRef, 'history')), {
+              action: 'restaurada', userId: user?.id || 'unknown', userName: user?.username || 'Sistema', at: serverTimestamp(),
+              guideNumber: sale.guideNumber || null,
+            });
+          });
+        } else {
+          const order = snap.data() as Order;
+          const reserves = order.status === 'Pendente' || order.status === 'Em produção';
+          const salesSnap = await getDocs(query(collection(firestore, `companies/${companyId}/sales`), where('orderId', '==', id)));
+          const productRef = reserves
+            ? await resolveInventoryProductRef(firestore, companyId, { productId: order.productId, productName: order.productName, location: stockLocation(order.location) })
+            : null;
+          await runTransaction(firestore, async (transaction) => {
+            if (productRef) {
+              const pDoc = await transaction.get(productRef);
+              if (pDoc.exists()) {
+                const p = pDoc.data() as Product;
+                transaction.update(productRef, { reservedStock: (p.reservedStock || 0) + reservedToRelease(order), lastUpdated: new Date().toISOString() });
+              }
+            }
+            transaction.update(docRef, { deletedAt: null, deletedBy: null });
+            salesSnap.docs.forEach((d) => transaction.update(d.ref, { deletedAt: null, deletedBy: null }));
+          });
+        }
+        toast({ title: 'Item Restaurado', description: 'O stock e as reservas foram refeitos.' });
+      } catch (e: any) {
+        toast({ variant: 'destructive', title: 'Não foi possível restaurar', description: e?.message });
+      }
+      return;
+    }
 
     await updateDocumentNonBlocking(docRef, { deletedAt: null, deletedBy: null });
     toast({ title: 'Item Restaurado' });
-  }, [firestore, companyId, toast]);
+  }, [firestore, companyId, toast, user, isMultiLocation, locations, isReadOnly]);
 
 
   const hardDelete = useCallback(async (collectionName: string, id: string) => {

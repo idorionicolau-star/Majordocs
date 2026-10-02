@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { subMonths, startOfYear, endOfYear, startOfMonth, format, eachMonthOfInterval, subYears, eachDayOfInterval, subDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { isCountableSale } from '@/lib/sale-filters';
 
 type Period = '30d' | '6m' | 'this_year' | 'last_year';
 
@@ -36,7 +37,7 @@ export function MonthlySalesChart({ className }: { className?: string }) {
 
       return dayInterval.map(day => {
         const daySales = sales.filter(s => {
-          if (s.documentType === 'Factura Proforma') return false;
+          if (!isCountableSale(s)) return false;
           const saleDate = new Date(s.date);
           return saleDate.getFullYear() === day.getFullYear() &&
             saleDate.getMonth() === day.getMonth() &&
@@ -76,7 +77,7 @@ export function MonthlySalesChart({ className }: { className?: string }) {
 
     const salesByMonth = monthInterval.map(monthStart => {
       const monthSales = sales.filter(s => {
-        if (s.documentType === 'Factura Proforma') return false;
+        if (!isCountableSale(s)) return false;
         const saleDate = new Date(s.date);
         return saleDate.getFullYear() === monthStart.getFullYear() && saleDate.getMonth() === monthStart.getMonth();
       }).reduce((sum, s) => sum + (s.amountPaid ?? s.totalValue), 0);

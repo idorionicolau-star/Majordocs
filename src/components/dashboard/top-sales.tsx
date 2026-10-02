@@ -27,6 +27,7 @@ import {
   isWithinInterval, parseISO, startOfDay, endOfDay
 } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { isCountableSale } from '@/lib/sale-filters';
 
 type Period = 'all_time' | 'daily' | 'weekly' | 'monthly' | 'custom';
 
@@ -40,7 +41,7 @@ export function TopSales({ className }: { className?: string }) {
     if (!sales || sales.length === 0) return [];
 
     const now = new Date();
-    let filteredSales = sales.filter(s => s.documentType !== 'Factura Proforma'); // Exclude proformas
+    let filteredSales = sales.filter(isCountableSale); // sem proformas, cotações nem apagadas
 
     // Filter by period
     if (period === 'daily') {
