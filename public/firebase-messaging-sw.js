@@ -50,7 +50,7 @@ self.addEventListener('notificationclick', (event) => {
 // Os dados (produtos, vendas…) já ficam no aparelho pelo Firestore. Aqui guardamos a própria
 // app (páginas e ficheiros JS/CSS) para ela abrir sem internet.
 // Mudar VERSION apaga as caches antigas.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL = 'msx-shell-' + VERSION;   // páginas
 const STATIC = 'msx-static-' + VERSION; // JS, CSS, imagens, fontes
 const OFFLINE_URL = '/offline.html';
@@ -75,7 +75,7 @@ const isCacheable = (res) => res && res.ok && res.type === 'basic' && !res.redir
 
 async function trim(cacheName, max) {
     const cache = await caches.open(cacheName);
-    const keys = await cache.keys();
+    const keys = (await cache.keys()).filter((k) => !k.url.endsWith(OFFLINE_URL));
     for (let i = 0; i < keys.length - max; i++) await cache.delete(keys[i]);
 }
 
@@ -96,13 +96,17 @@ async function staleWhileRevalidate(req) {
     return net;
 }
 
-// Páginas: rede primeiro (para teres sempre a versão nova), cópia guardada se a rede falhar ou for muito lenta.
+// Páginas (HTML): rede primeiro (para teres sempre a versão nova), cópia guardada se a rede falhar ou for muito lenta.
 async function networkFirst(event, isNavigation) {
     const req = event.request;
     const cache = await caches.open(SHELL);
-    const lookup = () => cache.match(req, { ignoreVary: true, ignoreSearch: isNavigation });
+    const lookup = async () => {
+        const hit = await cache.match(req, { ignoreVary: true, ignoreSearch: true });
+        // uma página só pode ser HTML: nunca mostrar dados internos do Next (text/x-component) como se fossem a página
+        return hit && (hit.headers.get('content-type') || '').includes('text/html') ? hit : undefined;
+    };
     const net = fetch(req).then((res) => {
-        if (isCacheable(res)) { cache.put(req, res.clone()).then(() => trim(SHELL, MAX_SHELL_ENTRIES)); }
+        if (isCacheable(res) && (res.headers.get('content-type') || '').includes('text/html')) { cache.put(req, res.clone()).then(() => trim(SHELL, MAX_SHELL_ENTRIES)); }
         return res;
     });
     const fallback = async () => {
@@ -130,7 +134,7 @@ self.addEventListener('fetch', (event) => {
     } else if (req.mode === 'navigate') {
         event.respondWith(networkFirst(event, true));
     } else if (url.searchParams.has('_rsc') || req.headers.get('RSC')) {
-        event.respondWith(networkFirst(event, false));
+        return; // dados internos do Next: sem rede, o Next abre a página normal (HTML guardado) em vez de usar cópias
     } else if (['image', 'font', 'style', 'script'].includes(req.destination) || /\.(png|jpe?g|webp|svg|ico|woff2?)$/i.test(p)) {
         event.respondWith(staleWhileRevalidate(req).catch(() => Response.error()));
     }
