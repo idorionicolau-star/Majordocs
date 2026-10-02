@@ -3,9 +3,9 @@
 import { useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import { Building2, Check, ImagePlus, Loader2, PackagePlus, ShoppingCart, Users, Zap, X } from "lucide-react";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getAuth } from "firebase/auth";
 import { InventoryContext } from "@/context/inventory-context";
-import { useStorage } from "@/firebase/provider";
+import { uploadProductImage } from "@/lib/upload-product-image";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,9 +27,8 @@ function StepBadge({ n, done }: { n: number; done: boolean }) {
  */
 export function EmptyStateWelcome() {
     const inv = useContext(InventoryContext);
-    const storage = useStorage();
     const { toast } = useToast();
-    const { user, companyData, updateCompany, products, catalogProducts } = inv || ({} as any);
+    const { user, companyId, companyData, updateCompany, products, catalogProducts } = inv || ({} as any);
     const canEditCompany = user?.role === "Admin" || user?.role === "Dono";
 
     const [details, setDetails] = useState<Details>({ name: "", taxId: "", phone: "", address: "", logoUrl: "" });
@@ -59,8 +58,8 @@ export function EmptyStateWelcome() {
     const uploadLogo = async (file: File) => {
         setUploading(true);
         try {
-            const snap = await uploadBytes(ref(storage, `logos/${Date.now()}_${file.name}`), file);
-            const url = await getDownloadURL(snap.ref);
+            // Vercel Blob (o Firebase Storage não funciona no plano gratuito)
+            const url = await uploadProductImage(file, getAuth(), companyId);
             setDetails((d) => ({ ...d, logoUrl: url }));
         } catch (e: any) {
             toast({ variant: "destructive", title: "Não foi possível enviar o logótipo", description: e.message });
