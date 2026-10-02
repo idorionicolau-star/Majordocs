@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ProductImageField } from "@/components/catalog/product-image-field";
 import { Plus } from "lucide-react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,6 +50,7 @@ const formSchema = z.object({
     return isNaN(num) ? 0 : num;
   }, z.number().min(0, { message: "O preço não pode ser negativo." })),
   unit: z.string().optional(),
+  imageUrl: z.string().optional(),
   lowStockThreshold: z.preprocess((val) => {
     if (val === undefined || val === "" || val === null) return 0;
     const num = Number(val);
@@ -119,6 +121,16 @@ function AddCatalogProductForm({
                 <Input placeholder={namePlaceholder} {...field} />
               </FormControl>
               <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="imageUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Foto (opcional)</FormLabel>
+              <ProductImageField value={field.value} onChange={field.onChange} />
             </FormItem>
           )}
         />
@@ -208,6 +220,7 @@ export function AddCatalogProductDialog({ categories, units, onAdd }: AddCatalog
       category: categories[0] || '',
       price: 0,
       unit: 'un',
+      imageUrl: '',
       lowStockThreshold: 10,
       criticalStockThreshold: 5,
     },

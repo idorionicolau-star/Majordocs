@@ -166,20 +166,31 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const parsed = useMemo(() => parseQuickInput(text, names), [text, names]);
     const results = useMemo(() => searchProducts(scoped, parsed.term, 8), [scoped, parsed.term]);
     const exactExists = results.some((p) => p.name.trim().toLowerCase() === parsed.term.trim().toLowerCase());
-    // Products that exist in OTHER locations but not here — offer to bring them here with the same data.
+    // Artigos que ainda não existem aqui: os de OUTRAS localizações e os que só estão no CATÁLOGO (sem stock).
+    // Escolher um traz os dados dele (categoria, unidade, preço, imagem) para uma linha nova.
     const elsewhere = useMemo(() => {
-        if (!isMultiLocation || mode === "out" || !parsed.term) return [] as Product[];
+        if (mode === "out" || !parsed.term) return [] as Product[];
         const here = new Set(scoped.map((p) => p.name.trim().toLowerCase()));
         const seen = new Set<string>();
-        return searchProducts(products.filter((p) => !p.deletedAt), parsed.term, 20)
+        const fromInventory = searchProducts(products.filter((p) => !p.deletedAt), parsed.term, 20)
             .filter((p) => {
                 const k = p.name.trim().toLowerCase();
                 if (here.has(k) || seen.has(k)) return false;
                 seen.add(k);
                 return true;
-            })
-            .slice(0, 4);
-    }, [isMultiLocation, mode, parsed.term, scoped, products]);
+            });
+        const catalogAsProducts: Product[] = (catalogProducts || [])
+            .filter((c) => !c.deletedAt)
+            .map((c) => ({ ...c, instanceId: `catalog-${c.id || c.name}`, stock: 0, reservedStock: 0, lastUpdated: "", location: "" }));
+        const fromCatalog = searchProducts(catalogAsProducts, parsed.term, 20)
+            .filter((p) => {
+                const k = p.name.trim().toLowerCase();
+                if (here.has(k) || seen.has(k)) return false;
+                seen.add(k);
+                return true;
+            });
+        return [...fromInventory, ...fromCatalog].slice(0, 6);
+    }, [mode, parsed.term, scoped, products, catalogProducts]);
     const elsewhereExact = elsewhere.some((p) => p.name.trim().toLowerCase() === parsed.term.trim().toLowerCase());
     const canCreate = mode === "in" && !elsewhereExact && parsed.term.trim().length >= 2 && !exactExists;
 
@@ -701,9 +712,11 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                             className={cn("flex w-full items-center justify-between gap-3 border-b px-4 py-3 text-left", highlight === results.length + i && "bg-muted")}>
                             <div className="min-w-0">
                                 <p className="truncate font-medium">{p.name}</p>
-                                <p className="text-xs text-amber-600">Ainda não existe nesta localização · existe em {locName(p.location || "")}</p>
+                                {p.instanceId.startsWith("catalog-")
+                                    ? <p className="text-xs text-muted-foreground">Do catálogo · ainda sem stock{p.category ? ` · ${p.category}` : ""}</p>
+                                    : <p className="text-xs text-amber-600">Ainda não existe nesta localização · existe em {locName(p.location || "")}</p>}
                             </div>
-                            <span className="shrink-0 text-xs font-semibold text-primary">Trazer para aqui</span>
+                            <span className="shrink-0 text-xs font-semibold text-primary">{p.instanceId.startsWith("catalog-") ? "Usar" : "Trazer para aqui"}</span>
                         </button>
                     ))}
                     {canCreate && (

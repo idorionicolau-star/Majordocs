@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ProductImageField } from "@/components/catalog/product-image-field";
 import { Edit } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -45,6 +46,7 @@ const formSchema = z.object({
     return isNaN(num) ? 0 : num;
   }, z.number().min(0, { message: "O preço não pode ser negativo." })),
   unit: z.string().optional(),
+  imageUrl: z.string().optional(),
   lowStockThreshold: z.preprocess((val) => {
     if (val === undefined || val === "" || val === null) return 0;
     const num = Number(val);
@@ -69,7 +71,7 @@ interface EditCatalogProductDialogProps {
 function EditCatalogProductDialogContent({ product, categories, units, onUpdate, setOpen }: EditCatalogProductDialogProps & { setOpen: (open: boolean) => void; }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { ...product, unit: product.unit || 'un' },
+    defaultValues: { ...product, unit: product.unit || 'un', imageUrl: product.imageUrl ?? '' },
   });
 
   function onSubmit(values: FormValues) {
@@ -122,6 +124,16 @@ function EditCatalogProductDialogContent({ product, categories, units, onUpdate,
                     <Input {...field} />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Foto (opcional)</FormLabel>
+                  <ProductImageField value={field.value} onChange={field.onChange} />
                 </FormItem>
               )}
             />
