@@ -10,6 +10,7 @@ import { isOffline, isOfflineReadError, queueBatch, writeDeltas, writeMovements 
 import type { InventoryCore } from './core';
 import type { ProductActions } from './product-actions';
 import { links } from '@/lib/deep-links';
+import { pickActive } from '@/lib/product-ref';
 
 export function useSalesActions(core: InventoryCore, deps: { product_actions: ProductActions }) {
   const { isReadOnly, toast, firestore, companyId, productsCollectionRef, companyData, isMultiLocation, locations, user, sendPush, triggerEmailAlert, setLastSaleTimestamp, products, notifyManagers, isManagerUser, productsData } = core;
@@ -85,10 +86,11 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
 
     // This is a read outside the transaction to get the document reference.
     const productSnapshot = shouldReserveStock ? await getDocs(productQuery) : null;
-    if (shouldReserveStock && productSnapshot && productSnapshot.empty) {
+    const activeProductDoc = productSnapshot ? pickActive(productSnapshot.docs) : undefined; // ignora os da lixeira
+    if (shouldReserveStock && productSnapshot && !activeProductDoc) {
       throw new Error(`Produto "${newSaleData.productName}" não encontrado no estoque para a localização selecionada.`);
     }
-    const productDocRef = productSnapshot ? productSnapshot.docs[0].ref : null;
+    const productDocRef = activeProductDoc ? activeProductDoc.ref : null;
 
     try {
     await runTransaction(firestore, async (transaction) => {
@@ -617,6 +619,11 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
         throw new Error("Venda não encontrada.");
       }
       const saleData = saleDoc.data() as Sale;
+      if (saleData.orderId) {
+        // A reserva desta venda pertence à encomenda: apagar só a venda libertava-a duas vezes (aqui e ao entregar).
+        toast({ variant: 'destructive', title: 'Venda de encomenda', description: 'Apague a encomenda (em Encomendas): a venda e a reserva saem juntas.' });
+        return;
+      }
 
       let productDocRef: DocumentReference | null = null;
       if (saleData.status === 'Pago' || saleData.status === 'Levantado') {
@@ -626,9 +633,7 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
           where("location", "==", saleData.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
         );
         const productSnapshot = await getDocs(productQuery);
-        if (!productSnapshot.empty) {
-          productDocRef = productSnapshot.docs[0].ref;
-        }
+        productDocRef = pickActive(productSnapshot.docs)?.ref ?? null;
       }
 
       await runTransaction(firestore, async (transaction) => {

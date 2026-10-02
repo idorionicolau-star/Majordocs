@@ -7,6 +7,7 @@ import { computeSmartThresholds } from '@/lib/smart-thresholds';
 import { formatCurrency, normalizeString } from '@/lib/utils';
 import type { InventoryCore } from './core';
 import { links } from '@/lib/deep-links';
+import { pickActive } from '@/lib/product-ref';
 
 export function useProductActions(core: InventoryCore) {
   const { companyData, sendPush, locations, triggerEmailAlert, toast, isReadOnly, productsCollectionRef, firestore, user, companyId, productsData, addNotification, stockMovementsData, salesData, products, notifyManagers, assertOnline, isMultiLocation, catalogProductsData } = core;
@@ -76,12 +77,12 @@ export function useProductActions(core: InventoryCore) {
           if (productsData) {
             const normalizedNewName = normalizeString(name);
             const targetLoc = location || "";
-
-            const match = productsData.find(p =>
+            const sameProduct = (p: Product) =>
               normalizeString(p.name) === normalizedNewName &&
-              (p.location === targetLoc || (!p.location && !targetLoc))
-            );
+              (p.location === targetLoc || (!p.location && !targetLoc));
 
+            // Primeiro o produto activo; só depois um da lixeira (esse recomeça do zero, ver abaixo)
+            const match = productsData.find(p => sameProduct(p) && !p.deletedAt) || productsData.find(sameProduct);
             if (match) {
               existingProductId = match.id || null;
             }
@@ -90,8 +91,9 @@ export function useProductActions(core: InventoryCore) {
           if (!existingProductId) {
             const q = query(productsCollectionRef, where("name", "==", name), where("location", "==", location || ""));
             const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty) {
-              existingProductId = querySnapshot.docs[0].id;
+            const found = pickActive(querySnapshot.docs) || querySnapshot.docs[0];
+            if (found) {
+              existingProductId = found.id;
             }
           }
 
@@ -107,13 +109,24 @@ export function useProductActions(core: InventoryCore) {
             if (existingDocSnap.exists()) {
               finalProductId = docRef.id;
               const existingData = existingDocSnap.data() as Product;
-              const oldStock = existingData.stock || 0;
-              const updateData: Record<string, any> = { stock: oldStock + newStock, lastUpdated: new Date().toISOString(), deletedAt: null };
-              // Preserve imageUrl if provided with the new product data
-              if (newProductData.imageUrl) {
-                updateData.imageUrl = newProductData.imageUrl;
+              if (existingData.deletedAt) {
+                // Estava na lixeira: volta a existir como produto NOVO. Antes herdava o stock e a reserva de quando
+                // foi apagado (por isso "limpar o inventário" e voltar a registar fazia reaparecer os números antigos).
+                transaction.set(docRef, {
+                  ...newProductData,
+                  stock: newStock,
+                  reservedStock: 0,
+                  lastUpdated: new Date().toISOString(),
+                });
+              } else {
+                const oldStock = existingData.stock || 0;
+                const updateData: Record<string, any> = { stock: oldStock + newStock, lastUpdated: new Date().toISOString() };
+                // Preserve imageUrl if provided with the new product data
+                if (newProductData.imageUrl) {
+                  updateData.imageUrl = newProductData.imageUrl;
+                }
+                transaction.update(docRef, updateData);
               }
-              transaction.update(docRef, updateData);
             } else {
               const newProduct: Omit<Product, 'id' | 'instanceId' | 'sourceIds'> = {
                 ...newProductData,
@@ -130,7 +143,7 @@ export function useProductActions(core: InventoryCore) {
               type: 'IN',
               quantity: newStock,
               toLocationId: location,
-              reason: existingDocSnap.exists() ? `Entrada de novo lote (Match)` : `Criação de novo produto`,
+              reason: existingDocSnap.exists() && !(existingDocSnap.data() as Product).deletedAt ? `Entrada de novo lote (Match)` : `Criação de novo produto`,
               userId: user.id,
               userName: user.username,
             };
@@ -562,8 +575,11 @@ export function useProductActions(core: InventoryCore) {
         const freshToData = toSnap?.exists() ? toSnap.data() as Product : null;
 
         // 2. VALIDATE AND CALCULATE
-        if ((freshFromData.stock || 0) < quantity) {
-          throw new Error(`Stock insuficiente em ${fromLocationId}. Disponível: ${freshFromData.stock}`);
+        // Só se transfere o disponível (stock − reservado): a verificação de fora usa isto, a de dentro (com os dados
+        // frescos) usava só o stock e deixava duas pessoas transferirem material já reservado para clientes.
+        const availableNow = (freshFromData.stock || 0) - (freshFromData.reservedStock || 0);
+        if (availableNow < quantity) {
+          throw new Error(`Stock insuficiente em ${fromLocationId}. Disponível: ${Math.max(0, availableNow)}`);
         }
 
         const newFromStock = freshFromData.stock - quantity;

@@ -109,7 +109,11 @@ export async function POST(req: Request) {
 
     // última coleção: volta a zero a numeração e limpa a marca do arranque oficial
     if (step === steps[steps.length - 1]) {
+        // a numeração com prefixo (FT-0001…) também recomeça
+        const numbering = (company.get('documentNumbering') || {}) as Record<string, unknown>;
+        const numberingReset = Object.fromEntries(Object.keys(numbering).map((k) => [`documentNumbering.${k}.nextNumber`, 1]));
         await companyRef.update({
+            ...numberingReset,
             saleCounter: 0,
             dataResetAt: admin.firestore.FieldValue.delete(),
             dataResetBy: admin.firestore.FieldValue.delete(),

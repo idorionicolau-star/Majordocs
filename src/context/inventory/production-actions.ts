@@ -6,6 +6,8 @@ import { collection, doc, getDocs, query, where, runTransaction, getDoc, serverT
 import { ref } from "firebase/storage";
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { InventoryCore } from './core';
+import { pickActive, resolveInventoryProductRef } from '@/lib/product-ref';
+import { ingredientRequiredQty } from '@/lib/order-stock';
 
 export function useProductionActions(core: InventoryCore) {
   const { assertOnline, isReadOnly, toast, firestore, companyId, user, isMultiLocation, locations, recipesData, catalogProductsData, addNotification, productsData, ordersData, productionsCollectionRef } = core;
@@ -26,7 +28,7 @@ export function useProductionActions(core: InventoryCore) {
     const productsRef = collection(firestore, `companies/${companyId}/products`);
     const q = query(productsRef, where("name", "==", productName), where("location", "==", targetLocation));
     const productQuerySnapshot = await getDocs(q);
-    const existingProductId = !productQuerySnapshot.empty ? productQuerySnapshot.docs[0].id : null;
+    const existingProductId = pickActive(productQuerySnapshot.docs)?.id ?? null; // um produto na lixeira não recebe stock
 
     try {
       await runTransaction(firestore, async (transaction) => {
@@ -49,15 +51,8 @@ export function useProductionActions(core: InventoryCore) {
               throw new Error(`Matéria-prima não encontrada (ID: ${ingredient.rawMaterialId}) para a receita de ${productName}.`);
             }
 
-            // Yield-based calculation: if yieldPerUnit is set, use ceil rounding (never half-units)
-            // e.g., 1 bag (qty=1) produces 75 products (yieldPerUnit=75)
-            // To produce 150: ceil(150/75) * 1 = 2 bags
-            // To produce 76:  ceil(76/75) * 1  = 2 bags (rounds up)
-            // Backward compatibility: if no yieldPerUnit, use old linear calculation
-            const yieldPer = ingredient.yieldPerUnit && ingredient.yieldPerUnit > 0 ? ingredient.yieldPerUnit : null;
-            const requiredQty = yieldPer
-              ? Math.ceil(quantity / yieldPer) * ingredient.quantity
-              : ingredient.quantity * quantity;
+            // 1 saco → 75 peças arredonda para cima (76 peças = 2 sacos); sem rendimento é linear
+            const requiredQty = ingredientRequiredQty(ingredient, quantity);
 
             ingredientDocs.push({
               ref: materialRef,
@@ -169,28 +164,15 @@ export function useProductionActions(core: InventoryCore) {
       const productionsRef = collection(firestore, `companies/${companyId}/productions`);
       const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
 
-      // Resolve product reference outside transaction (queries not allowed inside)
-      let resolvedProductRef: DocumentReference | null = null;
-      if (orderToUpdate.productId) {
-        const directRef = doc(firestore, `companies/${companyId}/products`, orderToUpdate.productId);
-        const directSnap = await getDoc(directRef);
-        if (directSnap.exists()) {
-          resolvedProductRef = directRef;
-        } else {
-          // Fallback: productId might be the product name
-          const targetLoc = orderToUpdate.location || (isMultiLocation ? locations[0]?.id : 'Principal');
-          const pQuery = query(
-            collection(firestore, `companies/${companyId}/products`),
-            where('name', '==', orderToUpdate.productName),
-            where('location', '==', targetLoc),
-            limit(1)
-          );
-          const pSnap = await getDocs(pQuery);
-          if (!pSnap.empty) {
-            resolvedProductRef = pSnap.docs[0].ref;
-          }
-        }
-      }
+      // O productId pode ser o ID do inventário, o do catálogo ou o nome: resolve o produto do inventário
+      const logLocation = orderToUpdate.location || (isMultiLocation ? locations[0]?.id : 'Principal');
+      const resolvedProductRef = await resolveInventoryProductRef(firestore, companyId, {
+        productId: orderToUpdate.productId,
+        productName: orderToUpdate.productName,
+        location: logLocation || 'Principal',
+      });
+      const newProductRef = resolvedProductRef ? null : doc(collection(firestore, `companies/${companyId}/products`));
+      const recipe = recipesData?.find(r => r.productName === orderToUpdate.productName);
 
       await runTransaction(firestore, async (transaction) => {
         // --- READS ---
@@ -202,7 +184,26 @@ export function useProductionActions(core: InventoryCore) {
           }
         }
 
+        // Matéria-prima da receita (igual à Produção normal): lê tudo antes de escrever e recusa se faltar
+        const ingredientDocs: { ref: DocumentReference; data: RawMaterial; requiredQty: number }[] = [];
+        for (const ingredient of recipe?.ingredients || []) {
+          const materialRef = doc(firestore, `companies/${companyId}/rawMaterials`, ingredient.rawMaterialId);
+          const materialDoc = await transaction.get(materialRef);
+          if (!materialDoc.exists()) {
+            throw new Error(`Matéria-prima não encontrada (ID: ${ingredient.rawMaterialId}) para a receita de ${orderToUpdate.productName}.`);
+          }
+          ingredientDocs.push({ ref: materialRef, data: materialDoc.data() as RawMaterial, requiredQty: ingredientRequiredQty(ingredient, logData.quantity) });
+        }
+        for (const ing of ingredientDocs) {
+          if ((ing.data.stock || 0) < ing.requiredQty) {
+            throw new Error(`Stock insuficiente de ${ing.data.name}. Necessário: ${ing.requiredQty}, Disponível: ${ing.data.stock}.`);
+          }
+        }
+
         // --- WRITES ---
+        for (const ing of ingredientDocs) {
+          transaction.update(ing.ref, { stock: (ing.data.stock || 0) - ing.requiredQty });
+        }
         const newLog: ProductionLog = {
           id: `log-${Date.now()}`,
           date: new Date().toISOString(),
@@ -229,15 +230,33 @@ export function useProductionActions(core: InventoryCore) {
         };
         transaction.set(doc(productionsRef), newProduction);
 
-        // Increment physical stock and register stock movement
-        if (resolvedProductRef && productData) {
-          transaction.update(resolvedProductRef, {
-            stock: (productData.stock || 0) + logData.quantity,
-            lastUpdated: new Date().toISOString()
-          });
+        // Soma ao stock físico e regista o movimento. Se o produto ainda não existe no inventário, nasce já com esta produção.
+        const targetProductRef = resolvedProductRef && productData ? resolvedProductRef : newProductRef;
+        if (targetProductRef) {
+          if (resolvedProductRef && productData) {
+            transaction.update(resolvedProductRef, {
+              stock: (productData.stock || 0) + logData.quantity,
+              lastUpdated: new Date().toISOString()
+            });
+          } else {
+            const cp = catalogProductsData?.find(p => p.name === orderToUpdate.productName);
+            transaction.set(targetProductRef, {
+              name: orderToUpdate.productName,
+              category: cp?.category || 'Geral',
+              stock: logData.quantity,
+              reservedStock: 0,
+              price: cp?.price || orderToUpdate.unitPrice || 0,
+              unit: orderToUpdate.unit || cp?.unit || 'un',
+              location: logLocation || 'Principal',
+              lowStockThreshold: cp?.lowStockThreshold || 10,
+              criticalStockThreshold: cp?.criticalStockThreshold || 5,
+              ...(cp?.imageUrl ? { imageUrl: cp.imageUrl } : {}),
+              lastUpdated: new Date().toISOString(),
+            });
+          }
 
           const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
-            productId: resolvedProductRef.id,
+            productId: targetProductRef.id,
             productName: orderToUpdate.productName,
             type: 'IN',
             quantity: logData.quantity,
@@ -268,7 +287,7 @@ export function useProductionActions(core: InventoryCore) {
         description: error.message || "Não foi possível guardar o registo de produção.",
       });
     }
-  }, [firestore, companyId, user, ordersData, toast, addNotification, isMultiLocation, locations]);
+  }, [firestore, companyId, user, ordersData, toast, addNotification, isMultiLocation, locations, recipesData, catalogProductsData]);
 
 
   const deleteProduction = useCallback((productionId: string) => {

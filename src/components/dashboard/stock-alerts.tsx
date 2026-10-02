@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { links } from "@/lib/deep-links";
+import { isCountableSale } from '@/lib/sale-filters';
 
 export function StockAlerts({ className }: { className?: string }) {
     const { products, sales, loading, companyData } = useContext(InventoryContext) || { products: [], sales: [], loading: true, companyData: null };
@@ -31,7 +32,7 @@ export function StockAlerts({ className }: { className?: string }) {
             // por isso nenhuma venda contava e TODOS os itens apareciam como "Sem giro recente".
             const raw: any = (s as any).date ?? (s as any).timestamp;
             const saleDate = raw?.toDate ? raw.toDate() : new Date(raw);
-            if (!isNaN(saleDate.getTime()) && saleDate >= thirtyDaysAgo && s.documentType !== 'Factura Proforma') {
+            if (!isNaN(saleDate.getTime()) && saleDate >= thirtyDaysAgo && isCountableSale(s)) {
                 const current = productSalesVelocity.get(s.productName) || 0;
                 productSalesVelocity.set(s.productName, current + (s.quantity || 0));
             }

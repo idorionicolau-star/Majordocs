@@ -17,6 +17,7 @@ import {
 import { pt } from 'date-fns/locale';
 import { Timestamp } from "firebase/firestore";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isCountableSale } from '@/lib/sale-filters';
 
 type Period = 'daily' | 'weekly' | 'monthly';
 
@@ -49,8 +50,8 @@ export const PrimaryKPIs = () => {
                 const startOfLastWeek = startOfWeek(subWeeks(now, 1), { locale: pt });
                 const endOfLastWeek = endOfWeek(subWeeks(now, 1), { locale: pt });
 
-                currentPeriodSales = sales.filter(s => s.documentType !== 'Factura Proforma' && isWithinInterval(parseISO(s.date), { start: startOfThisWeek, end: endOfThisWeek }));
-                previousPeriodSales = sales.filter(s => s.documentType !== 'Factura Proforma' && isWithinInterval(parseISO(s.date), { start: startOfLastWeek, end: endOfLastWeek }));
+                currentPeriodSales = sales.filter(s => isCountableSale(s) && isWithinInterval(parseISO(s.date), { start: startOfThisWeek, end: endOfThisWeek }));
+                previousPeriodSales = sales.filter(s => isCountableSale(s) && isWithinInterval(parseISO(s.date), { start: startOfLastWeek, end: endOfLastWeek }));
                 trendLabel = "vs semana ant.";
                 capitalTrendPeriod = 7;
                 break;
@@ -60,15 +61,15 @@ export const PrimaryKPIs = () => {
                 const startOfLastMonth = startOfMonth(subMonths(now, 1));
                 const endOfLastMonth = endOfMonth(subMonths(now, 1));
 
-                currentPeriodSales = sales.filter(s => s.documentType !== 'Factura Proforma' && isWithinInterval(parseISO(s.date), { start: startOfThisMonth, end: endOfThisMonth }));
-                previousPeriodSales = sales.filter(s => s.documentType !== 'Factura Proforma' && isWithinInterval(parseISO(s.date), { start: startOfLastMonth, end: endOfLastMonth }));
+                currentPeriodSales = sales.filter(s => isCountableSale(s) && isWithinInterval(parseISO(s.date), { start: startOfThisMonth, end: endOfThisMonth }));
+                previousPeriodSales = sales.filter(s => isCountableSale(s) && isWithinInterval(parseISO(s.date), { start: startOfLastMonth, end: endOfLastMonth }));
                 trendLabel = "vs mês ant.";
                 capitalTrendPeriod = 30;
                 break;
             case 'daily':
             default:
-                currentPeriodSales = sales.filter(s => s.documentType !== 'Factura Proforma' && isToday(parseISO(s.date)));
-                previousPeriodSales = sales.filter(s => s.documentType !== 'Factura Proforma' && isYesterday(parseISO(s.date)));
+                currentPeriodSales = sales.filter(s => isCountableSale(s) && isToday(parseISO(s.date)));
+                previousPeriodSales = sales.filter(s => isCountableSale(s) && isYesterday(parseISO(s.date)));
                 trendLabel = "vs ontem";
                 capitalTrendPeriod = 1;
                 break;
