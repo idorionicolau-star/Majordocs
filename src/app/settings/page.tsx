@@ -19,6 +19,7 @@ import { LocationsManager } from "@/components/settings/locations-manager";
 import { AdminMergeTool } from "@/components/admin/admin-merge-tool";
 import { BackupManager } from "@/components/settings/backup-manager";
 import { StartFresh } from "@/components/settings/start-fresh";
+import { FullReset } from "@/components/settings/full-reset";
 import { RecycleBin } from "@/components/settings/recycle-bin";
 import { UnitsCategoriesManager } from "@/components/settings/units-categories-manager";
 import { CategoryMergeTool } from "@/components/settings/category-merge-tool";
@@ -909,6 +910,7 @@ export default function SettingsPage() {
                 <div className="space-y-6">
                   <BackupManager />
                   <StartFresh />
+                  <FullReset />
                   <RecycleBin />
                 </div>
               </TabsContent>
@@ -957,7 +959,7 @@ export default function SettingsPage() {
                     <div className="space-y-2">
                       <h3 className="font-semibold text-destructive">Limpar Inventário</h3>
                       <p className="text-sm text-muted-foreground">
-                        Atenção: Apaga permanentemente todos os produtos do inventário. Utilize apenas se quiser recomeçar do zero.
+                        Move todos os produtos do inventário para a Lixeira (podem ser restaurados). Para apagar tudo de vez e recomeçar do zero, use "Apagar todos os dados da empresa" em Segurança.
                       </p>
                       <Button variant="destructive" onClick={() => setShowClearConfirm(true)}>
                         <Trash2 className="mr-2 h-4 w-4" />
