@@ -1,4 +1,4 @@
-/** Subscription plans (MZN). The PaySuite fee is absorbed by MajorStockX. */
+/** Subscription plans (MZN). A comissão da ZumboPay (8%) é absorvida pela MajorStockX. */
 export type PlanId = "mensal" | "trimestral" | "anual";
 export type Plan = { id: PlanId; label: string; months: number; amount: number; note?: string };
 

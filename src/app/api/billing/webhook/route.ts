@@ -2,50 +2,59 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { initializeAdmin } from '@/lib/firebase-admin';
-import { applyPaidPayment, paysuite, verifyPaysuiteSignature } from '@/lib/billing-server';
+import { applyPaidPayment, findPaymentByRef } from '@/lib/billing-server';
+import { eventAmount, extractPaymentRefs, verifyZumbopaySignature } from '@/lib/zumbopay-core';
 
 /**
- * PaySuite webhook. Verifies the HMAC-SHA256 signature (X-Signature over the raw body),
- * then double-checks the payment with the PaySuite API before extending the subscription.
+ * Webhook da ZumboPay (Painel → Programadores): URL = https://<o-seu-site>/api/billing/webhook
+ * Eventos: payment.succeeded, payment.failed, payment.refunded.
+ * Verifica a assinatura (`x-zumbopay-signature`: HMAC-SHA256 hex do corpo bruto) antes de fazer seja o que for.
+ * Pagamentos que não são nossos (a mesma conta pode receber outros) são ignorados com 200, para não haver reentregas.
  */
 export async function POST(req: Request) {
     const raw = await req.text();
-    if (!verifyPaysuiteSignature(raw, req.headers.get('x-signature'))) {
+    if (!verifyZumbopaySignature(raw, req.headers.get('x-zumbopay-signature'), process.env.ZUMBOPAY_WEBHOOK_SECRET)) {
         return NextResponse.json({ error: 'invalid signature' }, { status: 401 });
     }
     let evt: any;
     try { evt = JSON.parse(raw); } catch { return NextResponse.json({ error: 'bad json' }, { status: 400 }); }
-    const data = evt?.data || {};
-    const reference: string | undefined = data.reference;
-    if (!reference) return NextResponse.json({ ok: true, ignored: 'no reference' });
+    const eventName = String(evt?.event || evt?.type || '');
 
+    const db = initializeAdmin().firestore();
+    const refs = extractPaymentRefs(evt);
+    let outcome: Record<string, unknown> = { ok: true, ignored: 'event' };
+    let matched: { reference: string; companyId: string } | null = null;
     try {
-        if (evt.event === 'payment.success') {
-            // Defence in depth: confirm with PaySuite that it is really paid.
-            let confirmed = true;
-            let transactionId: string | undefined = data.transaction_id;
-            if (data.id) {
-                try {
-                    const r = await paysuite<{ data: { status?: string; transaction?: { transaction_id?: string } } }>(`/payments/${data.id}`);
-                    const st = String(r?.data?.status || '').toLowerCase();
-                    transactionId = r?.data?.transaction?.transaction_id || transactionId;
-                    confirmed = ['paid', 'success', 'completed', 'successful'].includes(st);
-                } catch { confirmed = true; /* signature already verified; API hiccup shouldn't lose a payment */ }
-            }
-            if (!confirmed) return NextResponse.json({ ok: false, reason: 'not confirmed' });
-            const r = await applyPaidPayment(reference, { paysuiteId: data.id, transactionId, amount: data.amount !== undefined ? Number(data.amount) : undefined });
-            return NextResponse.json(r);
+        for (const r of refs) { matched = await findPaymentByRef(r); if (matched) break; }
+
+        if (!matched) {
+            outcome = { ok: true, ignored: 'unknown reference' };
+        } else if (eventName === 'payment.succeeded') {
+            outcome = await applyPaidPayment(matched.reference, {
+                providerId: typeof evt?.data?.id === 'string' ? evt.data.id : undefined,
+                transactionId: evt?.data?.transaction_id || evt?.data?.reference || undefined,
+                amount: eventAmount(evt),
+            });
+        } else if (eventName === 'payment.failed') {
+            const pRef = db.doc(`companies/${matched.companyId}/payments/${matched.reference}`);
+            const cur = await pRef.get();
+            if (cur.exists && cur.get('status') === 'pending') await pRef.update({ status: 'failed', updatedAt: new Date().toISOString() });
+            outcome = { ok: true };
+        } else if (eventName === 'payment.refunded') {
+            // não se retira a subscrição sozinho: fica registado para decisão humana
+            await db.doc(`companies/${matched.companyId}/payments/${matched.reference}`).set({ refundedAt: new Date().toISOString() }, { merge: true });
+            outcome = { ok: true, note: 'refund recorded' };
         }
-        if (evt.event === 'payment.failed') {
-            const db = initializeAdmin().firestore();
-            const idx = await db.doc(`billingRefs/${reference}`).get();
-            if (idx.exists) {
-                await db.doc(`companies/${idx.get('companyId')}/payments/${reference}`).set({ status: 'failed', updatedAt: new Date().toISOString() }, { merge: true });
-            }
-        }
-        return NextResponse.json({ ok: true });
     } catch (e: any) {
-        console.error('PaySuite webhook error', e);
-        return NextResponse.json({ error: 'processing failed' }, { status: 500 }); // PaySuite retries
+        console.error('ZumboPay webhook error', e);
+        await db.collection('billingEvents').add({ receivedAt: new Date().toISOString(), event: eventName, refs, error: String(e?.message || e).slice(0, 300) }).catch(() => { });
+        return NextResponse.json({ error: 'processing failed' }, { status: 500 }); // a ZumboPay repete
     }
+
+    // A documentação não descreve o corpo dos eventos: guarda-se (sem números de telefone) para confirmar o formato.
+    await db.collection('billingEvents').add({
+        receivedAt: new Date().toISOString(), event: eventName, refs, matched: matched?.reference || null, outcome,
+        payload: raw.replace(/\d{9,}/g, '***').slice(0, 4000),
+    }).catch(() => { });
+    return NextResponse.json(outcome);
 }

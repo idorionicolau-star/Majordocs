@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { collection, limit, onSnapshot, orderBy, query } from "firebase/firestore";
 import { CheckCircle2, CreditCard, Loader2, ShieldCheck, Smartphone, XCircle } from "lucide-react";
@@ -37,9 +37,18 @@ function BillingInner() {
         return onSnapshot(q, (s) => setHistory(s.docs.map((d) => d.data() as Payment)), () => {});
     }, [firestore, companyId, isAdmin]);
 
-    // Back from PaySuite: poll until paid / failed (max ~1 min)
+    // A ZumboPay não devolve o cliente à app: quem volta (ou reabre a página) com um pagamento pendente recente
+    // vê-o acompanhado aqui. Sem isto ficava a olhar para o histórico à espera de uma actualização.
+    const watchRef = useMemo(() => {
+        if (returnedRef) return returnedRef;
+        const recent = history.find((h) => h.status === "pending" && Date.now() - new Date(h.createdAt).getTime() < 30 * 60_000);
+        return recent?.reference || null;
+    }, [returnedRef, history]);
+
+    // Poll until paid / failed (≈ 2 min)
     useEffect(() => {
-        if (!returnedRef) return;
+        if (!watchRef) return;
+        const returnedRef = watchRef;
         let tries = 0;
         let stop = false;
         const tick = async () => {
@@ -49,14 +58,14 @@ function BillingInner() {
                 const r = await fetch(`/api/billing/status?ref=${encodeURIComponent(returnedRef)}`, { headers: { Authorization: `Bearer ${token}` } });
                 const j = await r.json();
                 setReturned({ status: j.status, periodEnd: j.periodEnd });
-                if (!stop && j.status === "pending" && ++tries < 20) setTimeout(tick, 3000);
+                if (!stop && j.status === "pending" && ++tries < 40) setTimeout(tick, 3000);
             } catch {
-                if (!stop && ++tries < 20) setTimeout(tick, 3000);
+                if (!stop && ++tries < 40) setTimeout(tick, 3000);
             }
         };
         tick();
         return () => { stop = true; };
-    }, [returnedRef, auth]);
+    }, [watchRef, auth]);
 
     const pay = async () => {
         setBusy(true);
@@ -69,7 +78,7 @@ function BillingInner() {
             });
             const j = await r.json();
             if (!r.ok || !j.checkoutUrl) throw new Error(j.error || "Erro ao iniciar o pagamento");
-            window.location.href = j.checkoutUrl; // PaySuite checkout: M-Pesa, e-Mola, cartão…
+            window.location.href = j.checkoutUrl; // checkout ZumboPay: M-Pesa, e-Mola, cartão…
         } catch (e) {
             toast({ variant: "destructive", title: "Não foi possível iniciar o pagamento", description: e instanceof Error ? e.message : "" });
             setBusy(false);
@@ -125,7 +134,7 @@ function BillingInner() {
 
                     <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
                         <p className="flex items-center gap-2"><Smartphone className="h-4 w-4 shrink-0" /> M-Pesa, e-Mola, mKesh ou cartão Visa/Mastercard</p>
-                        <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 shrink-0" /> Pagamento seguro via PaySuite · conta activada na hora</p>
+                        <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 shrink-0" /> Pagamento seguro via ZumboPay (M-Pesa, e-Mola ou cartão) · conta activada na hora</p>
                     </div>
                     {ends && !isReadOnly && <p className="text-xs text-muted-foreground">Pagar antes do fim não perde dias: o novo período começa a {fmtDate(ends)}.</p>}
                 </>

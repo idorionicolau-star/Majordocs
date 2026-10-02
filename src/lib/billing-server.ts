@@ -1,32 +1,29 @@
 import 'server-only';
-import crypto from 'crypto';
 import { initializeAdmin } from '@/lib/firebase-admin';
 import { GRACE_DAYS, planById } from '@/lib/plans';
+import { amountLooksRight, parseZumboError } from '@/lib/zumbopay-core';
 
-const API = 'https://paysuite.tech/api/v1';
+const DEFAULT_BASE = 'https://zumbopay.com/api/public/v1';
 
-export async function paysuite<T = any>(path: string, init: RequestInit = {}): Promise<T> {
-    const token = process.env.PAYSUITE_API_TOKEN;
-    if (!token) throw new Error('PAYSUITE_API_TOKEN não configurado.');
-    const res = await fetch(`${API}${path}`, {
+/** Chamada à API da ZumboPay (só no servidor: a chave nunca vai para o navegador). */
+export async function zumbopay<T = any>(path: string, init: RequestInit = {}): Promise<T> {
+    const key = process.env.ZUMBOPAY_API_KEY;
+    const merchant = process.env.ZUMBOPAY_MERCHANT_ID;
+    if (!key || !merchant) throw new Error('ZUMBOPAY_API_KEY / ZUMBOPAY_MERCHANT_ID não configurados.');
+    const base = (process.env.ZUMBOPAY_BASE_URL || DEFAULT_BASE).replace(/\/$/, '');
+    const res = await fetch(`${base}${path}`, {
         ...init,
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${token}`, ...(init.headers || {}) },
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${key}`, 'X-Merchant-Id': merchant, ...(init.headers || {}) },
         cache: 'no-store',
     });
     const text = await res.text();
     let json: any = null;
-    try { json = text ? JSON.parse(text) : null; } catch { /* not json */ }
-    if (!res.ok) throw new Error(json?.message || json?.error || `PaySuite ${res.status}: ${text.slice(0, 200)}`);
+    try { json = text ? JSON.parse(text) : null; } catch { /* não é JSON */ }
+    if (!res.ok) {
+        const e = parseZumboError(res.status, json);
+        throw new Error(`${e.code}: ${e.message}`);
+    }
     return json as T;
-}
-
-export function verifyPaysuiteSignature(rawBody: string, signature: string | null): boolean {
-    const secret = process.env.PAYSUITE_WEBHOOK_SECRET;
-    if (!secret || !signature) return false;
-    const expected = crypto.createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex');
-    const a = Buffer.from(expected, 'utf8');
-    const b = Buffer.from(signature.trim(), 'utf8');
-    return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 function addMonths(from: Date, months: number) {
@@ -36,16 +33,28 @@ function addMonths(from: Date, months: number) {
 }
 
 /**
- * Marks a payment as paid (idempotent) and extends the company's subscription.
- * New period starts at the later of "now" and the current end date (paying early never loses days).
+ * `refKey` é qualquer identificador do pagamento guardado no índice `billingRefs` (a nossa referência, a da ZumboPay,
+ * o slug ou o id). Devolve a nossa referência e a empresa, ou null se não for um pagamento nosso.
  */
-export async function applyPaidPayment(reference: string, info: { paysuiteId?: string; transactionId?: string; amount?: number }) {
+export async function findPaymentByRef(refKey: string): Promise<{ reference: string; companyId: string } | null> {
+    if (!refKey || refKey.includes('/')) return null;
+    const snap = await initializeAdmin().firestore().doc(`billingRefs/${refKey}`).get();
+    if (!snap.exists) return null;
+    const d = snap.data() as { companyId: string; reference?: string };
+    return { companyId: d.companyId, reference: d.reference || refKey };
+}
+
+/**
+ * Marca um pagamento como pago (idempotente) e prolonga a subscrição da empresa.
+ * O novo período começa no mais tardio entre "agora" e o fim actual (pagar antes do fim não perde dias).
+ */
+export async function applyPaidPayment(reference: string, info: { providerId?: string; transactionId?: string; amount?: number }) {
     const admin = initializeAdmin();
     const db = admin.firestore();
-    const refDoc = await db.doc(`billingRefs/${reference}`).get();
-    if (!refDoc.exists) return { ok: false, reason: 'unknown-reference' as const };
-    const { companyId } = refDoc.data() as { companyId: string };
-    const paymentRef = db.doc(`companies/${companyId}/payments/${reference}`);
+    const found = await findPaymentByRef(reference);
+    if (!found) return { ok: false, reason: 'unknown-reference' as const };
+    const { companyId } = found;
+    const paymentRef = db.doc(`companies/${companyId}/payments/${found.reference}`);
     const companyRef = db.doc(`companies/${companyId}`);
 
     return db.runTransaction(async (tx) => {
@@ -53,7 +62,7 @@ export async function applyPaidPayment(reference: string, info: { paysuiteId?: s
         if (!pSnap.exists) return { ok: false, reason: 'missing-payment' as const };
         const p = pSnap.data()!;
         if (p.status === 'paid') return { ok: true, already: true };
-        if (info.amount !== undefined && Math.abs(Number(info.amount) - Number(p.amount)) > 0.5) {
+        if (!amountLooksRight(Number(p.amount), info.amount)) {
             tx.update(paymentRef, { status: 'amount-mismatch', paidAmount: info.amount, updatedAt: new Date().toISOString() });
             return { ok: false, reason: 'amount-mismatch' as const };
         }
@@ -70,14 +79,14 @@ export async function applyPaidPayment(reference: string, info: { paysuiteId?: s
             paidAt: now.toISOString(),
             periodStart: start.toISOString(),
             periodEnd: end.toISOString(),
-            ...(info.paysuiteId ? { paysuiteId: info.paysuiteId } : {}),
+            ...(info.providerId ? { providerId: info.providerId } : {}),
             ...(info.transactionId ? { transactionId: info.transactionId } : {}),
         });
         tx.set(companyRef, {
             status: 'active',
             plan: p.planId,
             subscriptionEndsAt: end.toISOString(),
-            // numeric copy for Firestore rules (they can't parse ISO dates): end + grace
+            // cópia numérica para as regras do Firestore (não sabem ler datas ISO): fim + tolerância
             paidUntilMs: end.getTime() + GRACE_DAYS * 86_400_000,
         }, { merge: true });
         return { ok: true, end: end.toISOString() };
