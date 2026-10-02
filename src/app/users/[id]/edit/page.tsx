@@ -35,7 +35,7 @@ import type { Employee, ModulePermission, PermissionLevel } from '@/lib/types';
 import { allPermissions } from '@/lib/data';
 import { InventoryContext } from "@/context/inventory-context";
 import { useFirestore } from '@/firebase/provider';
-import { doc, updateDoc } from "firebase/firestore";
+import { authedFetch } from "@/lib/api-client";
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection } from 'firebase/firestore';
 
@@ -119,14 +119,14 @@ export default function EditUserPage() {
             if (values.role === 'Admin') finalPermissions = permissionsForAdmin;
             else if (values.role === 'Dono') finalPermissions = permissionsForDono;
 
-            const updateData = {
+            // No servidor: as regras do Firestore não deixam mudar a função de um funcionário.
+            await authedFetch('/api/employees', 'PATCH', {
+                companyId,
+                employeeId: employeeToEdit.id,
                 username: values.username,
                 role: values.role,
                 permissions: finalPermissions,
-            };
-
-            const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, employeeToEdit.id);
-            await updateDoc(employeeDocRef, updateData);
+            });
 
             toast({
                 title: "Registo de Utilizador Atualizado",
@@ -140,7 +140,7 @@ export default function EditUserPage() {
             toast({
                 variant: "destructive",
                 title: "Erro de Atualização",
-                description: "Não foi possível atualizar as permissões do utilizador. Tente novamente.",
+                description: error?.message || "Não foi possível atualizar as permissões do utilizador. Tente novamente.",
             });
             console.error(error);
         } finally {

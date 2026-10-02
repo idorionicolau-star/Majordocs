@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { authedFetch } from "@/lib/api-client";
 import { EmployeeCard } from "@/components/users/employee-card";
 import { Card } from "@/components/ui/card";
 import { DeepLinkBanner } from "@/components/deep-link-banner";
@@ -52,7 +53,16 @@ export default function UsersPage() {
 
 
   const handleDeleteEmployee = async () => {
-    // Removal disabled
+    if (!employeeToDelete || !companyId) return;
+    const target = employeeToDelete;
+    try {
+      await authedFetch('/api/employees', 'DELETE', { companyId, employeeId: target.id });
+      toast({ title: "Funcionário removido", description: `"${target.username}" e o seu acesso foram removidos.` });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Não foi possível remover", description: e?.message || "Tente novamente." });
+    } finally {
+      setEmployeeToDelete(null);
+    }
   };
 
   const shownEmployees = useMemo(() => (focusId ? (employees || []).filter((e) => e.id === focusId) : (employees || [])), [employees, focusId]);
@@ -100,7 +110,7 @@ export default function UsersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação irá remover permanentemente o funcionário "{employeeToDelete?.username}". A conta de autenticação terá de ser removida manualmente na consola Firebase.
+              Esta ação irá remover permanentemente o funcionário "{employeeToDelete?.username}". A conta de acesso também é apagada.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

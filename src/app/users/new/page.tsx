@@ -31,14 +31,10 @@ import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
 
-import type { Employee, ModulePermission, PermissionLevel } from '@/lib/types';
+import type { ModulePermission, PermissionLevel } from '@/lib/types';
 import { allPermissions } from '@/lib/data';
 import { InventoryContext } from "@/context/inventory-context";
-import { useFirestore } from '@/firebase/provider';
-import { doc, runTransaction } from "firebase/firestore";
-import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
-import { firebaseConfig } from "@/firebase/config";
-import { initializeApp, deleteApp, type FirebaseApp } from "firebase/app";
+import { authedFetch } from "@/lib/api-client";
 
 const formSchema = z.object({
     username: z.string().min(3, { message: "O nome de utilizador deve ter pelo menos 3 caracteres." }),
@@ -50,17 +46,10 @@ const formSchema = z.object({
 
 type AddEmployeeFormValues = z.infer<typeof formSchema>;
 
-// Helper function to create a temporary, secondary Firebase app instance.
-const createSecondaryApp = (): FirebaseApp => {
-    const appName = `secondary-auth-app-${Date.now()}`;
-    return initializeApp(firebaseConfig, appName);
-};
-
 export default function NewUserPage() {
     const router = useRouter();
     const { toast } = useToast();
     const { companyId, user, companyData } = useContext(InventoryContext) || {};
-    const firestore = useFirestore();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const usernamePlaceholder = useDynamicPlaceholder('person');
@@ -98,50 +87,37 @@ export default function NewUserPage() {
     };
 
     async function onSubmit(values: AddEmployeeFormValues) {
-        if (!firestore || !companyId || !companyData) return;
+        if (!companyId || !companyData) return;
 
         setIsSubmitting(true);
 
         const safeCompanyName = (companyData.name || "company").toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9-]/g, '');
         const fullEmail = `${values.email}@${safeCompanyName}.com`;
 
-        const secondaryApp = createSecondaryApp();
-        const secondaryAuth = getAuth(secondaryApp);
-
         try {
-            // 1. Create user in the secondary Firebase Auth instance
-            const userCredential = await createUserWithEmailAndPassword(secondaryAuth, fullEmail, values.password);
-            const newUserId = userCredential.user.uid;
+            const permissionsForAdmin = allPermissions.reduce((acc, perm) => {
+                acc[perm.id] = 'write';
+                return acc;
+            }, {} as Record<ModulePermission, PermissionLevel>);
 
-            // 2. Run transaction to create both employee and user map documents
-            await runTransaction(firestore, async (transaction) => {
-                const permissionsForAdmin = allPermissions.reduce((acc, perm) => {
-                    acc[perm.id] = 'write';
-                    return acc;
-                }, {} as Record<ModulePermission, PermissionLevel>);
+            const permissionsForDono = allPermissions.reduce((acc, perm) => {
+                acc[perm.id] = 'read';
+                return acc;
+            }, {} as Record<ModulePermission, PermissionLevel>);
 
-                const permissionsForDono = allPermissions.reduce((acc, perm) => {
-                    acc[perm.id] = 'read';
-                    return acc;
-                }, {} as Record<ModulePermission, PermissionLevel>);
+            let finalPermissions = values.permissions;
+            if (role === 'Admin') finalPermissions = permissionsForAdmin;
+            else if (role === 'Dono') finalPermissions = permissionsForDono;
 
-                let finalPermissions = values.permissions;
-                if (role === 'Admin') finalPermissions = permissionsForAdmin;
-                else if (role === 'Dono') finalPermissions = permissionsForDono;
-
-                const employeeForFirestore: Omit<Employee, 'id' | 'password'> = {
-                    username: values.username,
-                    email: fullEmail,
-                    role: values.role,
-                    companyId: companyId,
-                    permissions: finalPermissions
-                };
-
-                const employeeDocRef = doc(firestore, `companies/${companyId}/employees`, newUserId);
-                transaction.set(employeeDocRef, employeeForFirestore);
-
-                const userMapDocRef = doc(firestore, `users/${newUserId}`);
-                transaction.set(userMapDocRef, { companyId: companyId });
+            // A conta de acesso e o registo são criados no servidor (as regras do Firestore
+            // não deixam um Admin criar o mapa de utilizador de outra pessoa).
+            await authedFetch('/api/employees', 'POST', {
+                companyId,
+                username: values.username,
+                email: fullEmail,
+                password: values.password,
+                role: values.role,
+                permissions: finalPermissions,
             });
 
             toast({
@@ -151,12 +127,9 @@ export default function NewUserPage() {
             router.push('/users');
 
         } catch (error: any) {
-            let message = "Ocorreu um erro ao criar a conta.";
-            if (error.code === 'auth/email-already-in-use') {
-                message = `O prefixo de email "${values.email}" já está a ser utilizado nesta empresa.`;
-            } else if (error.code === 'auth/weak-password') {
-                message = "A senha deve ter pelo menos 6 caracteres.";
-            }
+            const message = error?.message === 'Este email já está a ser utilizado.'
+                ? `O prefixo de email "${values.email}" já está a ser utilizado nesta empresa.`
+                : (error?.message || "Ocorreu um erro ao criar a conta.");
             toast({
                 variant: "destructive",
                 title: "Erro de Registo",
@@ -165,7 +138,6 @@ export default function NewUserPage() {
             console.error(error);
         } finally {
             setIsSubmitting(false);
-            await deleteApp(secondaryApp);
         }
     }
 
