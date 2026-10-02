@@ -29,8 +29,8 @@ import { InventoryContext } from "@/context/inventory-context";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { useStorage } from "@/firebase/provider";
+import { getAuth } from "firebase/auth";
+import { uploadProductImage } from "@/lib/upload-product-image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import type { ModulePermission } from "@/lib/types";
@@ -236,12 +236,11 @@ export default function SettingsPage() {
   const [isClient, setIsClient] = useState(false);
   const inventoryContext = useContext(InventoryContext);
   const { toast } = useToast();
-  const { user, clearProductsCollection, confirmAction } = inventoryContext || {};
+  const { user, companyId, clearProductsCollection, confirmAction } = inventoryContext || {};
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState("profile");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const { borderRadius, setBorderRadius } = useTheme();
-  const storage = useStorage();
 
   const [companyDetails, setCompanyDetails] = useState({
     name: '',
@@ -591,9 +590,7 @@ export default function SettingsPage() {
                               if (file) {
                                 try {
                                   toast({ title: "Carregando...", description: "A enviar o logótipo para a nuvem." });
-                                  const storageRef = ref(storage, `logos/${Date.now()}_${file.name}`);
-                                  const snapshot = await uploadBytes(storageRef, file);
-                                  const url = await getDownloadURL(snapshot.ref);
+                                  const url = await uploadProductImage(file, getAuth(), companyId!);
                                   setCompanyDetails(prev => ({ ...prev, logoUrl: url }));
                                   toast({ title: "Logótipo Carregado", description: "A imagem foi carregada e salva com sucesso!" });
                                 } catch (error: any) {
@@ -649,9 +646,7 @@ export default function SettingsPage() {
                               if (file) {
                                 try {
                                   toast({ title: "Carregando...", description: "A enviar a assinatura para a nuvem." });
-                                  const storageRef = ref(storage, `signatures/${Date.now()}_${file.name}`);
-                                  const snapshot = await uploadBytes(storageRef, file);
-                                  const url = await getDownloadURL(snapshot.ref);
+                                  const url = await uploadProductImage(file, getAuth(), companyId!);
                                   setCompanyDetails(prev => ({ ...prev, signatureUrl: url }));
                                   toast({ title: "Assinatura Carregada", description: "O carimbo/assinatura foi salvo com sucesso!" });
                                 } catch (error: any) {

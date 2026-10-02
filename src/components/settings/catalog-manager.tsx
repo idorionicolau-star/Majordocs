@@ -36,7 +36,7 @@ import { doc, setDoc, deleteDoc, updateDoc, collection, writeBatch, query, getDo
 import { Skeleton } from '../ui/skeleton';
 import { AddCatalogProductDialog } from './add-catalog-product-dialog';
 import { initialCatalog } from '@/lib/data';
-import { DataImporter } from './data-importer';
+import { CatalogImporter, type CatalogImportResult } from './catalog-importer';
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
@@ -313,19 +313,28 @@ export function CatalogManager() {
     }
   };
 
-  const handleBulkImport = async (importedProducts: any[]) => {
-    if (!catalogProductsCollectionRef || !firestore) return;
+  const handleBulkImport = async (result: CatalogImportResult) => {
+    if (!catalogProductsCollectionRef || !catalogCategoriesCollectionRef || !firestore) return;
     toast({ title: 'A importar produtos...' });
     try {
-      const batch = writeBatch(firestore);
-      importedProducts.forEach(prod => {
-        const newDocRef = doc(catalogProductsCollectionRef);
-        batch.set(newDocRef, prod);
-      });
-      await batch.commit();
-      toast({ title: 'Importação Concluída', description: `${importedProducts.length} produtos importados.` });
+      // o Firestore aceita no máximo 500 operações por lote
+      const ops: ((b: ReturnType<typeof writeBatch>) => void)[] = [
+        ...result.newCategories.map((name) => (b: ReturnType<typeof writeBatch>) => b.set(doc(catalogCategoriesCollectionRef), { name })),
+        ...result.create.map((prod) => (b: ReturnType<typeof writeBatch>) => b.set(doc(catalogProductsCollectionRef), prod)),
+        ...result.updatePrices.map((u) => (b: ReturnType<typeof writeBatch>) => b.update(doc(catalogProductsCollectionRef, u.id), { price: u.price })),
+      ];
+      for (let i = 0; i < ops.length; i += 400) {
+        const batch = writeBatch(firestore);
+        ops.slice(i, i + 400).forEach((op) => op(batch));
+        await batch.commit();
+      }
+      const parts = [`${result.create.length} produtos importados`];
+      if (result.updatePrices.length) parts.push(`${result.updatePrices.length} preços actualizados`);
+      toast({ title: 'Importação Concluída', description: parts.join(', ') + '.' });
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Erro na importação.' });
+      console.error('Bulk import error:', e);
+      toast({ variant: 'destructive', title: 'Erro', description: 'Erro na importação. Nada foi perdido: tente de novo.' });
+      throw e;
     }
   };
 
@@ -614,7 +623,11 @@ export function CatalogManager() {
         </TabsContent>
 
         <TabsContent value="import" className="mt-4">
-          <DataImporter onImport={handleBulkImport} />
+          <CatalogImporter
+            existing={(products || []).map((p) => ({ id: p.id, name: p.name, price: p.price }))}
+            categories={(categories || []).map((c) => c.name)}
+            onImport={handleBulkImport}
+          />
         </TabsContent>
 
       </Tabs>
