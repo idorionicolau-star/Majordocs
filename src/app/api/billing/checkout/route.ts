@@ -2,10 +2,13 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { initializeAdmin, verifyIdToken } from '@/lib/firebase-admin';
-import { paysuite } from '@/lib/billing-server';
+import { zumbopay } from '@/lib/billing-server';
 import { planById } from '@/lib/plans';
 
-/** Creates a PaySuite payment for the signed-in admin's company and returns the checkout URL. */
+/**
+ * Cria um pagamento na ZumboPay (checkout alojado: M-Pesa, e-Mola e cartão) para a empresa de quem está
+ * autenticado e devolve o `checkout_url` para onde se redirecciona o cliente.
+ */
 export async function POST(req: Request) {
     const decoded: any = await verifyIdToken(req);
     if (!decoded) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
@@ -16,6 +19,9 @@ export async function POST(req: Request) {
     const plan = planById(planId);
     if (!plan) return NextResponse.json({ error: 'Plano inválido.' }, { status: 400 });
 
+    const walletId = process.env.ZUMBOPAY_WALLET_ID;
+    if (!walletId) return NextResponse.json({ error: 'Pagamentos ainda não configurados (ZUMBOPAY_WALLET_ID).' }, { status: 503 });
+
     const admin = initializeAdmin();
     const db = admin.firestore();
     const emp = await db.doc(`companies/${companyId}/employees/${decoded.uid}`).get();
@@ -23,31 +29,42 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Só o administrador da empresa pode pagar a subscrição.' }, { status: 403 });
     }
 
-    const origin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || new URL(req.url).origin;
-    const reference = `MSX${Date.now().toString(36).toUpperCase()}${companyId.slice(0, 4).toUpperCase()}`;
+    const reference = `MSX${Date.now().toString(36).toUpperCase()}${companyId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase()}`;
     const company = await db.doc(`companies/${companyId}`).get();
+    const now = new Date();
 
-    // Reference → company index, so the webhook can find the payment without trusting the payload.
-    await db.doc(`billingRefs/${reference}`).set({ companyId, createdAt: new Date().toISOString() });
+    // Índice referência → empresa, para o webhook encontrar o pagamento sem confiar no que vem no corpo.
+    await db.doc(`billingRefs/${reference}`).set({ companyId, reference, createdAt: now.toISOString() });
     const paymentRef = db.doc(`companies/${companyId}/payments/${reference}`);
     await paymentRef.set({
-        reference, planId: plan.id, months: plan.months, amount: plan.amount,
-        status: 'pending', createdAt: new Date().toISOString(), createdBy: emp.get('username') || decoded.uid,
+        reference, provider: 'zumbopay', planId: plan.id, months: plan.months, amount: plan.amount,
+        status: 'pending', createdAt: now.toISOString(), createdBy: emp.get('username') || decoded.uid,
     });
 
     try {
-        const r = await paysuite<{ data: { id: string; checkout_url: string; status: string } }>('/payments', {
+        const r = await zumbopay<{ data: { id?: string; reference?: string; slug?: string; checkout_url: string } }>('/payments', {
             method: 'POST',
+            headers: { 'Idempotency-Key': reference },
             body: JSON.stringify({
-                amount: plan.amount.toFixed(2),
-                reference,
-                description: `MajorStockX — ${plan.label} — ${company.get('name') || companyId}`.slice(0, 125),
-                return_url: `${origin}/billing?ref=${reference}`,
-                webhook_url: `${origin}/api/billing/webhook`,
+                title: `MajorStockX — ${plan.label}`.slice(0, 80),
+                // a nossa referência vai aqui: se o webhook devolver a descrição, é por ela que se encontra o pagamento
+                description: `${reference} · ${company.get('name') || companyId}`.slice(0, 200),
+                amount: plan.amount,
+                currency: 'MZN',
+                channels: ['mpesa', 'emola', 'card'],
+                wallet_id: walletId,
+                max_uses: 1,
+                expires_at: new Date(now.getTime() + 24 * 3600_000).toISOString(),
             }),
         });
-        await paymentRef.update({ paysuiteId: r.data.id, checkoutUrl: r.data.checkout_url });
-        return NextResponse.json({ reference, checkoutUrl: r.data.checkout_url });
+        const d = r.data;
+        if (!d?.checkout_url) throw new Error('A ZumboPay não devolveu o link de pagamento.');
+        await paymentRef.update({ providerId: d.id || null, providerReference: d.reference || null, slug: d.slug || null, checkoutUrl: d.checkout_url });
+        // todos os identificadores que o webhook possa usar apontam para o mesmo pagamento
+        await Promise.all([d.reference, d.slug, d.id]
+            .filter((k): k is string => !!k && !k.includes('/') && k !== reference)
+            .map((k) => db.doc(`billingRefs/${k}`).set({ companyId, reference, createdAt: now.toISOString() })));
+        return NextResponse.json({ reference, checkoutUrl: d.checkout_url });
     } catch (e: any) {
         await paymentRef.update({ status: 'error', error: String(e?.message || e).slice(0, 300) });
         return NextResponse.json({ error: 'Não foi possível iniciar o pagamento.', details: e?.message }, { status: 502 });
