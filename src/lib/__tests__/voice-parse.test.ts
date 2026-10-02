@@ -1,6 +1,40 @@
 import { describe, it, expect } from 'vitest';
 import { parseVoice } from '../voice-parse';
 
+describe('parseVoice — quantidade dita à vontade (sem "x")', () => {
+  it('número + unidade, antes ou depois do produto', () => {
+    expect(parseVoice('afiador de plástico 15 unidades')[0]).toMatchObject({ qty: 15, term: 'afiador de plastico' });
+    expect(parseVoice('15 unidades de afiador de plástico')[0]).toMatchObject({ qty: 15, term: 'afiador de plastico' });
+    expect(parseVoice('quinze peças de bandoleta')[0]).toMatchObject({ qty: 15, term: 'bandoleta' });
+    expect(parseVoice('15 metros de pavê')[0]).toMatchObject({ qty: 15, term: 'pave' });
+    expect(parseVoice('32 metros de pavê borbulha')[0]).toMatchObject({ qty: 32, term: 'pave borbulha' });
+    expect(parseVoice('pavê borbulha 32 metros')[0]).toMatchObject({ qty: 32, term: 'pave borbulha' });
+    expect(parseVoice('10 metros quadrados de pavê')[0]).toMatchObject({ qty: 10, term: 'pave' });
+  });
+  it('guarda o texto completo para o caso de a unidade fazer parte do nome', () => {
+    expect(parseVoice('dez sacos de cimento')).toEqual([{ qty: 10, term: 'cimento', full: '10 sacos de cimento' }]);
+  });
+  it('número à cabeça seguido do produto', () => {
+    expect(parseVoice('15 afiadores de plástico')[0]).toMatchObject({ qty: 15, term: 'afiadores de plastico' });
+    expect(parseVoice('quinze afiadores de plástico')[0]).toMatchObject({ qty: 15, term: 'afiadores de plastico' });
+  });
+  it('decimais não se partem na vírgula', () => {
+    expect(parseVoice('2,5 metros de cabo')[0]).toMatchObject({ qty: 2.5, term: 'cabo' });
+  });
+  it('a quantidade num grupo à parte liga-se ao artigo anterior', () => {
+    expect(parseVoice('afiador de plástico, 15 unidades')).toEqual([{ qty: 15, term: 'afiador de plastico' }]);
+    expect(parseVoice('afiador de plástico 15 unidades e pavê 32 metros').map((i) => [i.qty, i.term])).toEqual([[15, 'afiador de plastico'], [32, 'pave']]);
+  });
+  it('tamanhos continuam a ser do nome', () => {
+    expect(parseVoice('bloco 15')).toEqual([{ qty: null, term: 'bloco 15' }]);
+    expect(parseVoice('tubo 20 mm')).toEqual([{ qty: null, term: 'tubo 20 mm' }]);
+    expect(parseVoice('15 mm de espessura')[0].qty).toBeNull();
+  });
+  it('produto que começa por número não é quantidade', () => {
+    expect(parseVoice('15 colunas', ['15 Colunas'])).toEqual([{ qty: null, term: '15 colunas' }]);
+  });
+});
+
 describe('parseVoice — a quantidade só conta com "x"', () => {
   it('x depois do produto', () => {
     expect(parseVoice('cimento x 20')).toEqual([{ qty: 20, term: 'cimento' }]);
@@ -17,7 +51,7 @@ describe('parseVoice — a quantidade só conta com "x"', () => {
     expect(parseVoice('x vinte cimento')).toEqual([{ qty: 20, term: 'cimento' }]);
   });
   it('sem x não há quantidade: os números são do nome', () => {
-    expect(parseVoice('dez sacos de cimento')).toEqual([{ qty: null, term: '10 sacos de cimento' }]);
+    expect(parseVoice('cimento 32.5')).toEqual([{ qty: null, term: 'cimento 32.5' }]);
     expect(parseVoice('cimento dez')).toEqual([{ qty: null, term: 'cimento 10' }]);
     expect(parseVoice('bloco quinze')).toEqual([{ qty: null, term: 'bloco 15' }]);
     expect(parseVoice('passadeira oito pistões')).toEqual([{ qty: null, term: 'passadeira 8 pistoes' }]);

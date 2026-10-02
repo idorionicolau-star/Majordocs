@@ -31,6 +31,8 @@ import { BarcodeScanner } from "@/components/scan/barcode-scanner";
 import { VoiceButton } from "@/components/scan/voice-button";
 import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode";
 import { parseVoice } from "@/lib/voice-parse";
+import { resolveVoice } from "@/lib/voice-approx";
+import { VoiceConfirm, type VoiceAsk } from "@/components/scan/voice-confirm";
 import { useBarcodeLink } from "@/hooks/use-barcode-link";
 import {
     ArrowDownToLine,
@@ -105,6 +107,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const [scanOpen, setScanOpen] = useState(false);
     const [pendingCode, setPendingCode] = useState<string | null>(null);
     const [listening, setListening] = useState("");
+    const [voiceAsks, setVoiceAsks] = useState<VoiceAsk[]>([]);
     const { link: linkBarcode, canLink } = useBarcodeLink();
     const [drafts, setDrafts] = useState<Record<QuickMode, Draft>>({ in: {}, out: {}, count: {} });
     const [draftsLoaded, setDraftsLoaded] = useState(false);
@@ -351,17 +354,18 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
         if (!items.length) return;
         const done: string[] = [];
         const missed: string[] = [];
+        const asks: VoiceAsk[] = [];
         for (const it of items) {
             const qty = it.qty ?? 1;
-            const { hit, ambiguous } = pickVoiceMatch(scoped, it.term);
-            if (hit) {
-                addLine(lineFromProduct(hit, qty));
-                done.push(`${fmt(qty)} × ${hit.name}`);
+            const r = resolveVoice(scoped, it);
+            if (r.kind === "hit") {
+                addLine(lineFromProduct(r.product, qty));
+                done.push(`${fmt(qty)} × ${r.product.name}`);
                 continue;
             }
-            if (ambiguous.length) {
-                // Vários parecidos: não adivinha. Deixa o termo na pesquisa para escolher.
-                missed.push(`${it.term} (pode ser ${ambiguous.slice(0, 3).map((a) => a.name).join(", ")})`);
+            if (r.kind === "confirm") {
+                // Parecido mas não certo: o ditado erra, por isso pergunta em vez de adivinhar
+                asks.push({ id: `${Date.now()}-${asks.length}`, said: it.term, qty, options: r.options });
                 continue;
             }
             // Não existe neste local: como no teclado, oferece o de outro local ou do catálogo (sem stock)
@@ -373,12 +377,14 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             }
             missed.push(it.term);
         }
+        if (asks.length) setVoiceAsks((q) => [...q, ...asks]);
+        if (!done.length && !missed.length) return; // só há perguntas: a janela de confirmação já aparece
         // Se só falhou um, deixa-o na caixa de pesquisa: aparecem as sugestões parecidas
         if (missed.length === 1 && !done.length) setText(missed[0]);
         toast({
             variant: missed.length && !done.length ? "destructive" : undefined,
             title: done.length ? `Juntei: ${done.join(", ")}` : "Não encontrei esse produto",
-            description: missed.length ? `Ouvi: «${transcript}». Procurei: ${missed.map((m) => `«${m}»`).join(", ")}.${missed.length === 1 && !done.length ? " Veja as sugestões abaixo ou escreva o nome." : " Para criar um produto novo, escreva o nome."}${missed.some((m) => /\d/.test(m)) ? " Para a quantidade diga «x 20»: o resto é parte do nome." : ""}` : undefined,
+            description: missed.length ? `Ouvi: «${transcript}». Procurei: ${missed.map((m) => `«${m}»`).join(", ")}.${missed.length === 1 && !done.length ? " Veja as sugestões abaixo ou escreva o nome." : " Para criar um produto novo, escreva o nome."}${missed.some((m) => /\d/.test(m)) ? " Pode dizer, por exemplo, «15 unidades de afiador» ou «cimento x 20»." : ""}` : undefined,
         });
     };
 
@@ -604,6 +610,17 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                 <VoiceButton className="h-14 w-14" onInterim={setListening} onResult={handleVoice} onProblem={(m) => { setListening(""); toast({ variant: "destructive", title: "Ditado", description: m }); }} />
                 </div>
                 {listening && <p className="mt-1.5 px-1 text-sm italic text-muted-foreground">🎙 {listening}</p>}
+                <VoiceConfirm
+                    asks={voiceAsks}
+                    fmt={fmt}
+                    onClose={() => setVoiceAsks([])}
+                    onSkip={(a) => setVoiceAsks((q) => q.filter((x) => x.id !== a.id))}
+                    onPick={(a, prod) => {
+                        addLine(lineFromProduct(prod, a.qty));
+                        setVoiceAsks((q) => q.filter((x) => x.id !== a.id));
+                        toast({ title: `Juntei: ${fmt(a.qty)} × ${prod.name}` });
+                    }}
+                />
                 {pendingCode && (
                     <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-sm">
                         <span>Código <b className="tabular-nums">{pendingCode}</b> ainda sem produto — {canLink ? "escreva o nome e toque no produto certo para o associar." : "peça a quem gere o inventário para o associar."}</span>
