@@ -575,8 +575,11 @@ export function useProductActions(core: InventoryCore) {
         const freshToData = toSnap?.exists() ? toSnap.data() as Product : null;
 
         // 2. VALIDATE AND CALCULATE
-        if ((freshFromData.stock || 0) < quantity) {
-          throw new Error(`Stock insuficiente em ${fromLocationId}. Disponível: ${freshFromData.stock}`);
+        // Só se transfere o disponível (stock − reservado): a verificação de fora usa isto, a de dentro (com os dados
+        // frescos) usava só o stock e deixava duas pessoas transferirem material já reservado para clientes.
+        const availableNow = (freshFromData.stock || 0) - (freshFromData.reservedStock || 0);
+        if (availableNow < quantity) {
+          throw new Error(`Stock insuficiente em ${fromLocationId}. Disponível: ${Math.max(0, availableNow)}`);
         }
 
         const newFromStock = freshFromData.stock - quantity;

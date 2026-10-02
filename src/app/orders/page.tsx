@@ -32,6 +32,7 @@ import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { VirtuosoGrid } from 'react-virtuoso';
 import { forwardRef } from 'react';
+import { resolveInventoryProductRef } from "@/lib/product-ref";
 
 
 export default function OrdersPage() {
@@ -114,22 +115,15 @@ export default function OrdersPage() {
       let productName = pendingConclusionOrder.productName;
       let targetProductRef = productRef;
 
-      // Pre-flight check: Try to resolve correct product reference if ID lookup fails
+      // O productId pode ser o do inventário, o do catálogo ou o nome: procura por ID e depois por nome + localização
+      // (antes só por nome, em qualquer localização — o stock podia entrar no local errado ou num produto apagado).
       try {
-        const productSnap = await getDoc(productRef);
-        if (!productSnap.exists()) {
-          // If not found by ID (e.g. productId is the name), try to find by name property
-          const productsQuery = query(
-            collection(firestore, `companies/${companyId}/products`),
-            where('name', '==', pendingConclusionOrder.productName),
-            limit(1)
-          );
-          const querySnap = await getDocs(productsQuery);
-          if (!querySnap.empty) {
-            const bestMatch = querySnap.docs[0];
-            targetProductRef = bestMatch.ref;
-          }
-        }
+        const resolved = await resolveInventoryProductRef(firestore, companyId, {
+          productId: pendingConclusionOrder.productId,
+          productName: pendingConclusionOrder.productName,
+          location: pendingConclusionOrder.location || (inventoryContext?.isMultiLocation ? inventoryContext.locations?.[0]?.id : 'Principal') || 'Principal',
+        });
+        if (resolved) targetProductRef = resolved;
       } catch (err) {
         console.warn("Pre-transaction product lookup failed, proceeding with original ref", err);
       }
