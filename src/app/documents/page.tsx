@@ -4,7 +4,7 @@ import { useContext, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { ChevronDown, Download, FilePlus2, FileText, Plus, Search } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { InventoryContext } from "@/context/inventory-context";
 import { useFirestore } from "@/firebase/provider";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,19 @@ const STATUS: Record<DocStatus, { label: string; cls: string }> = {
     issued: { label: "Emitido", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" },
     cancelled: { label: "Anulado", cls: "bg-rose-500/15 text-rose-700 dark:text-rose-400" },
 };
+
+/** Menu "Novo documento": definido fora da página para não se recriar (e fechar) a cada actualização da lista. */
+function NewMenu({ children, side = "bottom", onPick }: { children: React.ReactNode; side?: "top" | "bottom"; onPick: (t: string) => void }) {
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side={side}>
+                <DropdownMenuLabel className="text-xs text-muted-foreground">Novo documento</DropdownMenuLabel>
+                {DOCUMENT_TYPES.map((t) => <DropdownMenuItem key={t} onSelect={() => onPick(t)}><FilePlus2 className="mr-2 h-4 w-4" />{t}</DropdownMenuItem>)}
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}
 
 export default function DocumentsPage() {
     const inv = useContext(InventoryContext);
@@ -52,6 +65,8 @@ export default function DocumentsPage() {
             (!s || `${d.number} ${d.client?.name ?? ""}`.toLowerCase().includes(s)));
     }, [docs, search, type, status]);
 
+    const openNew = (t: string) => router.push(`/documents/new?tipo=${encodeURIComponent(t)}`);
+
     const download = async (d: AppDocument) => {
         try {
             const { renderDocPDF } = await import("@/lib/doc-pdf");
@@ -68,12 +83,10 @@ export default function DocumentsPage() {
                     <p className="text-sm text-muted-foreground">Cotações, facturas, recibos e guias.</p>
                 </div>
                 {canWrite && (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button className="shrink-0 gap-1.5"><Plus className="h-4 w-4" /> Novo<ChevronDown className="h-4 w-4 opacity-70" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            {DOCUMENT_TYPES.map((t) => <DropdownMenuItem key={t} onSelect={() => router.push(`/documents/new?tipo=${encodeURIComponent(t)}`)}><FilePlus2 className="mr-2 h-4 w-4" />{t}</DropdownMenuItem>)}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    // no computador o botão fica no cabeçalho; no telemóvel passa para o canto inferior direito (ao alcance do polegar)
+                    <NewMenu onPick={openNew}>
+                        <Button className="hidden shrink-0 gap-1.5 md:inline-flex"><Plus className="h-4 w-4" /> Novo<ChevronDown className="h-4 w-4 opacity-70" /></Button>
+                    </NewMenu>
                 )}
             </div>
 
@@ -97,7 +110,7 @@ export default function DocumentsPage() {
             ) : list.length === 0 ? (
                 <Card><CardContent className="flex flex-col items-center gap-2 py-12 text-center text-muted-foreground">
                     <FileText className="h-8 w-8" />
-                    <p>{docs.length === 0 ? "Ainda não criou documentos. Escolha um tipo acima para começar." : "Nenhum documento corresponde ao filtro."}</p>
+                    <p>{docs.length === 0 ? "Ainda não criou documentos. Toque em “Novo” (ou no botão +) para começar." : "Nenhum documento corresponde ao filtro."}</p>
                 </CardContent></Card>
             ) : (
                 <div className="space-y-2">
@@ -119,6 +132,15 @@ export default function DocumentsPage() {
                     ))}
                 </div>
             )}
+
+            {canWrite && (
+                <div className="fixed bottom-20 right-4 z-30 md:hidden" style={{ marginBottom: "env(safe-area-inset-bottom)" }}>
+                    <NewMenu side="top" onPick={openNew}>
+                        <Button size="icon" className="h-14 w-14 rounded-full shadow-lg" aria-label="Novo documento"><Plus className="h-6 w-6" /></Button>
+                    </NewMenu>
+                </div>
+            )}
         </div>
     );
+
 }
