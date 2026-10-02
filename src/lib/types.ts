@@ -75,6 +75,12 @@ export type Company = {
   logoUrl?: string; // Base64 Data URL for the company logo, displayed in email headers
   signatureUrl?: string; // Base64 Data URL or Firebase Storage URL for the signature/stamp
   paymentInfo?: string; // Text containing bank accounts, M-Pesa, etc.
+  /** Aspecto por defeito dos documentos exportados (ver doc-themes.ts) */
+  documentTheme?: 'classico' | 'moderno' | 'minimalista' | 'elegante' | 'corporativo' | 'vibrante';
+  documentAccent?: string; // "#rrggbb"
+  documentFooterNote?: string;
+  documentSignaturePlace?: string; // ex.: "Maputo"
+  documentShowSignatures?: boolean;
   status?: 'active' | 'trial' | 'suspended';
   trialEndsAt?: string;
   /** Quando o teste foi (re)iniciado: empresas novas ao registar; antigas no reinício único. Se existir, não há novo reinício. */

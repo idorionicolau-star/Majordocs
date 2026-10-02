@@ -13,13 +13,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Code, RefreshCw, Trash2, ShieldCheck, ImagePlus, X, Tag, Hash } from "lucide-react";
+import { Menu, Building, Book, Palette, User as UserIcon, MapPin, Mail, Code, RefreshCw, Trash2, ShieldCheck, ImagePlus, X, Tag, Hash, FileText } from "lucide-react";
 
 import { LocationsManager } from "@/components/settings/locations-manager";
 import { AdminMergeTool } from "@/components/admin/admin-merge-tool";
 import { BackupManager } from "@/components/settings/backup-manager";
 import { StartFresh } from "@/components/settings/start-fresh";
 import { FullReset } from "@/components/settings/full-reset";
+import { DocumentsStyle } from "@/components/settings/documents-style";
 import { RecycleBin } from "@/components/settings/recycle-bin";
 import { UnitsCategoriesManager } from "@/components/settings/units-categories-manager";
 import { CategoryMergeTool } from "@/components/settings/category-merge-tool";
@@ -293,6 +294,7 @@ export default function SettingsPage() {
     { value: 'profile', label: 'Perfil', icon: UserIcon, permission: true },
     { value: 'appearance', label: 'Aparência', icon: Palette, permission: true },
     { value: 'company', label: 'Empresa', icon: Building, permission: hasPermission('settings') },
+    { value: 'documents', label: 'Documentos', icon: FileText, permission: hasPermission('settings') },
     { value: 'locations', label: 'Localizações', icon: MapPin, permission: hasPermission('settings') },
     { value: 'classification', label: 'Categorias & Unidades', icon: Tag, permission: hasPermission('settings') },
     // Catalog moved to sidebar
@@ -883,6 +885,10 @@ export default function SettingsPage() {
                     </form>
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="documents">
+                <DocumentsStyle />
               </TabsContent>
 
               <TabsContent value="locations">
