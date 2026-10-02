@@ -13,6 +13,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { MobileNav } from './mobile-nav';
 
 import { BottomNav } from './bottom-nav';
+import { SwipeNav } from './swipe-nav';
 import { PushPrompt } from '@/components/push-notifications';
 import { PriceReviewBanner } from '@/components/price-reviews';
 import { OfflineBanner } from '@/components/pwa-register';
@@ -181,8 +182,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <Sidebar />
           <div className="flex flex-col flex-1 min-w-0 min-h-screen transition-[margin,width] duration-300 ease-in-out md:ml-64">
             <Header onSearchClick={() => setOpenCommandMenu(true)} />
-            <main className="flex-1 relative">
-              <div className="p-4 sm:p-6 md:p-8 pb-24 md:pb-8 main-content">
+            <main className="flex-1 relative overflow-x-clip">
+              <SwipeNav>
                 <OfflineBanner />
                 <PushPrompt />
                 <PriceReviewBanner />
@@ -193,7 +194,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                 }>
                   {children}
                 </Suspense>
-              </div>
+              </SwipeNav>
             </main>
           </div>
           <BottomNav onMenuClick={() => setIsMobileNavOpen(true)} />
