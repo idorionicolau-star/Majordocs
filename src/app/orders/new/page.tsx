@@ -6,6 +6,8 @@ import { useCRM } from '@/context/crm-context';
 import { InventoryContext } from '@/context/inventory-context';
 import { useFirestore } from '@/firebase/provider';
 import { collection, doc, runTransaction } from "firebase/firestore";
+import { resolveInventoryProductRef } from "@/lib/product-ref";
+import { planOrderReservation } from "@/lib/order-stock";
 import {
     Form,
     FormControl,
@@ -80,8 +82,8 @@ export default function NewOrderPage() {
     const inventoryContext = useContext(InventoryContext);
     const { customers, addCustomer } = useCRM();
 
-    const { catalogProducts, catalogCategories, locations, isMultiLocation, companyId, user, addNotification, isReadOnly } = inventoryContext || {
-        catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false, companyId: null, user: null, addNotification: () => { }, isReadOnly: false
+    const { catalogProducts, catalogCategories, locations, isMultiLocation, companyId, user, addNotification, isReadOnly, companyData: companyContext } = inventoryContext || {
+        companyData: null, catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false, companyId: null, user: null, addNotification: () => { }, isReadOnly: false
     };
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -193,6 +195,11 @@ export default function NewOrderPage() {
             const orderRef = doc(collection(firestore, `companies/${companyId}/orders`));
             const saleRef = doc(collection(firestore, `companies/${companyId}/sales`));
             const companyRef = doc(firestore, `companies/${companyId}`);
+            const existingProductRef = await resolveInventoryProductRef(firestore, companyId, {
+                productId: formData.productId,
+                productName: formData.productName,
+                location: formData.location || (isMultiLocation && locations?.[0]?.id) || 'Principal',
+            });
 
             await runTransaction(firestore, async (transaction) => {
                 const companyDoc = await transaction.get(companyRef);
@@ -200,28 +207,26 @@ export default function NewOrderPage() {
                     throw new Error("Empresa não encontrada.");
                 }
 
-                let productRef: any = null;
+                // O artigo vem do catálogo; o stock vive no produto do inventário (outro documento). Reserva-se nele.
+                let productRef: any = existingProductRef;
                 let productData: any = null;
-
-                if (formData.productId) {
-                    const pRef = doc(firestore, `companies/${companyId}/products`, formData.productId);
-                    const pDoc = await transaction.get(pRef);
-                    if (pDoc.exists()) {
-                        productRef = pRef;
-                        productData = pDoc.data();
-
-                        const currentStock = productData.stock || 0;
-                        const currentReserved = productData.reservedStock || 0;
-                        const available = currentStock - currentReserved;
-
-                        if (available < formData.quantity) {
-                            throw new Error(`Stock insuficiente. Disponível: ${available} ${formData.unit}`);
-                        }
-                    }
+                if (productRef) {
+                    const pDoc = await transaction.get(productRef);
+                    if (pDoc.exists()) productData = pDoc.data();
+                    else productRef = null;
+                }
+                const plan = planOrderReservation(productData, formData.quantity, companyContext?.businessType !== 'reseller');
+                if (plan.kind === 'refuse') {
+                    throw new Error(`Stock insuficiente. Disponível: ${plan.available} ${formData.unit}`);
+                }
+                let newProductRef: any = null;
+                if (plan.kind === 'create') {
+                    newProductRef = doc(collection(firestore, `companies/${companyId}/products`));
                 }
 
                 const newOrder: Omit<Order, 'id'> = {
-                    productId: formData.productId || formData.productName,
+                    productId: productRef?.id || newProductRef?.id || formData.productId || formData.productName,
+                    reservedQuantity: formData.quantity,
                     productName: formData.productName,
                     quantity: formData.quantity,
                     unit: formData.unit!,
@@ -254,7 +259,7 @@ export default function NewOrderPage() {
                 const newSale: Omit<Sale, 'id'> = {
                     orderId: orderRef.id,
                     date: new Date().toISOString(),
-                    productId: formData.productId || formData.productName,
+                    productId: productRef?.id || newProductRef?.id || formData.productId || formData.productName,
                     productName: formData.productName,
                     quantity: formData.quantity,
                     unit: formData.unit,
@@ -280,6 +285,22 @@ export default function NewOrderPage() {
                     transaction.update(productRef, {
                         reservedStock: (productData.reservedStock || 0) + formData.quantity,
                         lastUpdated: new Date().toISOString()
+                    });
+                } else if (newProductRef) {
+                    // Fabricante: o produto ainda não existia no inventário — nasce com stock 0 e a reserva da encomenda.
+                    const cp = (catalogProducts || []).find((c: any) => c.id === formData.productId || c.name === formData.productName);
+                    transaction.set(newProductRef, {
+                        name: formData.productName,
+                        category: cp?.category || 'Geral',
+                        stock: 0,
+                        reservedStock: formData.quantity,
+                        price: cp?.price ?? formData.unitPrice ?? 0,
+                        unit: formData.unit || cp?.unit || 'un',
+                        location: formData.location || (isMultiLocation && locations?.[0]?.id) || 'Principal',
+                        lowStockThreshold: cp?.lowStockThreshold || 10,
+                        criticalStockThreshold: cp?.criticalStockThreshold || 5,
+                        ...(cp?.imageUrl ? { imageUrl: cp.imageUrl } : {}),
+                        lastUpdated: new Date().toISOString(),
                     });
                 }
             });

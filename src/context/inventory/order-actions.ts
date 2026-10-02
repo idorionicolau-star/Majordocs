@@ -6,6 +6,7 @@ import { collection, doc, getDocs, query, where, runTransaction, getDoc, serverT
 import { ref } from "firebase/storage";
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { InventoryCore } from './core';
+import { reservedToRelease } from '@/lib/order-stock';
 
 export function useOrderActions(core: InventoryCore) {
   const { isReadOnly, toast, ordersCollectionRef, firestore, companyId, user, assertOnline, ordersData, isMultiLocation, locations } = core;
@@ -60,7 +61,7 @@ export function useOrderActions(core: InventoryCore) {
               if (pDoc.exists()) {
                 const pData = pDoc.data() as Product;
                 const currentReserved = pData.reservedStock || 0;
-                const quantityToRelease = orderData.quantity;
+                const quantityToRelease = reservedToRelease(orderData);
                 const newReserved = Math.max(0, currentReserved - quantityToRelease);
 
                 transaction.update(resolvedProductRef, {
@@ -226,7 +227,7 @@ export function useOrderActions(core: InventoryCore) {
 
           // Stock: + parte produzida agora − entregue (se ainda não saiu). Reserva: libertada.
           const newStock = (freshProductData.stock || 0) + missing - (stockAlreadyOut ? 0 : orderData.quantity);
-          const newReserved = stockAlreadyOut ? (freshProductData.reservedStock || 0) : Math.max(0, (freshProductData.reservedStock || 0) - orderData.quantity);
+          const newReserved = stockAlreadyOut ? (freshProductData.reservedStock || 0) : Math.max(0, (freshProductData.reservedStock || 0) - reservedToRelease(orderData));
           transaction.update(productRef, {
             stock: Math.max(0, newStock),
             reservedStock: newReserved,

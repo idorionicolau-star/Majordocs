@@ -237,6 +237,8 @@ export type Order = {
   deliveryDate?: string;
   location?: string;
   status: 'Pendente' | 'Em produção' | 'Concluída' | 'Entregue';
+  /** Quanto esta encomenda reservou no stock ao ser registada (para libertar o certo). Ausente nas antigas. */
+  reservedQuantity?: number;
   productionStartDate?: string | null;
   quantityProduced: number;
   productionLogs: ProductionLog[];
