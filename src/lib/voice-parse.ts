@@ -85,10 +85,19 @@ export function parseVoice(transcript: string): VoiceItem[] {
     }
     // medida no nome ("bloco 15 x 200"): vários números → a quantidade é o primeiro se estiver à cabeça, senão o último
     const firstIsNum = g[0].kind === 'num';
-    const qtyTok = firstIsNum ? nums[0] : nums[nums.length - 1];
-    const rest = g.filter((t) => t !== qtyTok);
+    const qtyIdx = firstIsNum ? 0 : g.map((t) => t.kind).lastIndexOf('num');
+    const next = g[qtyIdx + 1];
+    const unitAfter = next?.kind === 'word' && UNIT_FILLER.has(next.w);
+    // Um só número, a meio do nome e sem unidade a seguir, é parte do nome: "passadeira oito pistões", não "8 passadeiras".
+    if (!firstIsNum && nums.length === 1 && qtyIdx < g.length - 1 && !unitAfter) {
+      const term = clean(g);
+      if (term) items.push({ qty: null, term });
+      continue;
+    }
+    // "cimento dez sacos": a unidade a seguir ao número não é parte do nome
+    const rest = g.filter((_, i) => i !== qtyIdx && !(i === qtyIdx + 1 && !firstIsNum && unitAfter));
     const term = clean(rest, firstIsNum);
-    if (term) items.push({ qty: qtyTok.value, term });
+    if (term) items.push({ qty: (g[qtyIdx] as { kind: 'num'; value: number }).value, term });
   }
   return items;
 }
