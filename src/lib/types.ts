@@ -77,6 +77,8 @@ export type Company = {
   paymentInfo?: string; // Text containing bank accounts, M-Pesa, etc.
   status?: 'active' | 'trial' | 'suspended';
   trialEndsAt?: string;
+  /** Quando o teste foi (re)iniciado: empresas novas ao registar; antigas no reinício único. Se existir, não há novo reinício. */
+  trialRestartedAt?: string;
   subscriptionEndsAt?: string;
   /** Numeric copy (end + grace) used by Firestore rules */
   paidUntilMs?: number;

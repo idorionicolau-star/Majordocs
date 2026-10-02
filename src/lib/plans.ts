@@ -12,3 +12,6 @@ export const planById = (id: string) => PLANS.find((p) => p.id === id);
 
 /** Days of tolerance after the paid period ends before the account becomes read-only. */
 export const GRACE_DAYS = 2;
+
+/** Duração do teste gratuito de uma empresa nova (dias). Um único sítio: registo com email, registo com Google e reinício. */
+export const TRIAL_DAYS = 14;
