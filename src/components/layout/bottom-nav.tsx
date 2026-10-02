@@ -20,10 +20,8 @@ interface BottomNavProps {
   onMenuClick: () => void;
 }
 
-export function BottomNav({ onMenuClick }: BottomNavProps) {
-  const pathname = usePathname();
-  // Com o teclado aberto a barra de baixo só ocupa espaço — esconde-se.
-  const keyboardOpen = useKeyboardInset() > 0;
+/** Os separadores da barra de baixo (a ordem é a mesma do swipe entre páginas). */
+export function useNavTabs() {
   const { canView, companyData } = useContext(InventoryContext) || {
     canView: () => false,
     companyData: null
@@ -39,46 +37,25 @@ export function BottomNav({ onMenuClick }: BottomNavProps) {
     companyData?.businessType !== 'reseller';
 
   if (showProduction) {
-    fourthItem = {
-      title: "Produção",
-      href: "/production",
-      icon: Factory,
-      id: "production"
-    };
+    fourthItem = { title: "Produção", href: "/production", icon: Factory, id: "production" };
   } else if (showOrders) {
-    fourthItem = {
-      title: "Encomendas",
-      href: "/orders",
-      icon: ShoppingCart,
-      id: "orders"
-    };
+    fourthItem = { title: "Encomendas", href: "/orders", icon: ShoppingCart, id: "orders" };
   }
 
   const items = [
-    {
-      title: "Início",
-      href: "/dashboard",
-      icon: LayoutDashboard,
-      id: "dashboard"
-    },
-    {
-      title: "Inventário",
-      href: "/inventory",
-      icon: Package,
-      id: "inventory"
-    },
-    {
-      title: "Venda Rápida",
-      href: "/pos",
-      icon: Zap,
-      id: "pos"
-    }
+    { title: "Início", href: "/dashboard", icon: LayoutDashboard, id: "dashboard" },
+    { title: "Inventário", href: "/inventory", icon: Package, id: "inventory" },
+    { title: "Venda Rápida", href: "/pos", icon: Zap, id: "pos" },
   ];
+  if (fourthItem) items.push(fourthItem);
+  return items;
+}
 
-  // Insert 4th item if valid
-  if (fourthItem) {
-    items.push(fourthItem);
-  }
+export function BottomNav({ onMenuClick }: BottomNavProps) {
+  const pathname = usePathname();
+  // Com o teclado aberto a barra de baixo só ocupa espaço — esconde-se.
+  const keyboardOpen = useKeyboardInset() > 0;
+  const items = useNavTabs();
 
   if (keyboardOpen) return null;
 
