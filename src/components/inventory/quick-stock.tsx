@@ -347,7 +347,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
 
     const handleVoice = (transcript: string) => {
         setListening("");
-        const items = parseVoice(transcript);
+        const items = parseVoice(transcript, [...names, ...(catalogProducts || []).map((c) => c.name)]);
         if (!items.length) return;
         const done: string[] = [];
         const missed: string[] = [];
@@ -378,7 +378,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
         toast({
             variant: missed.length && !done.length ? "destructive" : undefined,
             title: done.length ? `Juntei: ${done.join(", ")}` : "Não encontrei esse produto",
-            description: missed.length ? `Ouvi: «${transcript}». Procurei: ${missed.map((m) => `«${m}»`).join(", ")}.${missed.length === 1 && !done.length ? " Veja as sugestões abaixo ou escreva o nome." : " Para criar um produto novo, escreva o nome."}` : undefined,
+            description: missed.length ? `Ouvi: «${transcript}». Procurei: ${missed.map((m) => `«${m}»`).join(", ")}.${missed.length === 1 && !done.length ? " Veja as sugestões abaixo ou escreva o nome." : " Para criar um produto novo, escreva o nome."}${missed.some((m) => /\d/.test(m)) ? " Para a quantidade diga «x 20»: o resto é parte do nome." : ""}` : undefined,
         });
     };
 

@@ -207,7 +207,7 @@ export function FastSale() {
 
     const handleVoice = (transcript: string) => {
         setListening("");
-        const items = parseVoice(transcript);
+        const items = parseVoice(transcript, scoped.map((p) => p.name));
         if (!items.length) return;
         const done: string[] = [];
         const missed: string[] = [];
@@ -222,7 +222,7 @@ export function FastSale() {
         toast({
             variant: missed.length && !done.length ? "destructive" : undefined,
             title: done.length ? `Juntei: ${done.join(", ")}` : "Não encontrei esse produto",
-            description: missed.length ? `Não encontrei: ${missed.join(", ")}. Disse: “${transcript}”.` : undefined,
+            description: missed.length ? `Não encontrei: ${missed.join(", ")}. Disse: “${transcript}”.${missed.some((m) => /\d/.test(m)) ? " Para a quantidade diga «x 20»: o resto é parte do nome." : ""}` : undefined,
         });
     };
 

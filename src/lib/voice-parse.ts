@@ -15,8 +15,6 @@ const HUNDREDS: Record<string, number> = { cem: 100, cento: 100, duzentos: 200, 
 
 const isNumWord = (w: string) => w in UNITS_WORDS || w in TENS || w in HUNDREDS || w === 'mil' || w === 'meio' || w === 'meia';
 
-/** Palavras que são só a unidade/embalagem logo a seguir à quantidade ("10 sacos de …"). */
-const UNIT_FILLER = new Set(['saco', 'sacos', 'caixa', 'caixas', 'unidade', 'unidades', 'un', 'peca', 'pecas', 'pacote', 'pacotes', 'lata', 'latas', 'barra', 'barras', 'metro', 'metros', 'm', 'kg', 'quilo', 'quilos', 'litro', 'litros', 'rolo', 'rolos', 'carrinho', 'carrinhos', 'camiao', 'camioes', 'palete', 'paletes', 'frasco', 'frascos', 'par', 'pares']);
 const GLUE = new Set(['de', 'do', 'da', 'dos', 'das', 'um', 'uma', 'o', 'a', 'os', 'as', 'quero', 'preciso', 'poe', 'por', 'favor', 'adiciona', 'adicionar', 'junta', 'juntar', 'vende', 'vender', 'registar', 'regista', 'entrada', 'saida']);
 
 /** Lê um número a partir da posição i. Devolve valor e quantas palavras consumiu. */
@@ -45,72 +43,109 @@ function readNumber(words: string[], i: number): { value: number; used: number }
   return any ? { value: total + current, used } : null;
 }
 
+const MARKS = new Set(['x', '×', 'xis', 'vezes']);
+const isMark = (w: string) => MARKS.has(w);
+const norm = (s: string) => strip(s).replace(/(\d)\s*[x×]\s*(\d)/g, '$1x$2').replace(/[^a-z0-9.x]+/g, ' ').trim();
+
+type Tok = { kind: 'num'; value: number } | { kind: 'word'; w: string } | { kind: 'mark' } | { kind: 'sep' };
+
 /**
- * "dez sacos de cimento e duas latas de tinta branca"  → [{10,'cimento'},{2,'tinta branca'}]
- * "cimento 10"                                          → [{10,'cimento'}]
- * "areia"                                               → [{null,'areia'}]
+ * A QUANTIDADE SÓ CONTA COM "x": "cimento x 20", "x 20 cimento", "20 x cimento", "cimento x20".
+ * Qualquer outro número é parte do nome (tamanho/medida): "bloco quinze" → "bloco 15", "passadeira oito pistões".
+ *
+ *   "cimento x vinte e areia x 5"      → [{20,'cimento'},{5,'areia'}]
+ *   "bloco quinze x duzentos"          → [{200,'bloco 15'}]
+ *   "bloco 15 x 40 x 200"              → [{200,'bloco 15 x 40'}]      (a última é a quantidade)
+ *   "bloco 15 x 40"                    → 40 × 'bloco 15' (a menos que "Bloco 15x40" seja um produto: então é a medida)
+ *   "dez sacos de cimento"             → [{null,'10 sacos de cimento'}]  (sem x não há quantidade)
  */
-export function parseVoice(transcript: string): VoiceItem[] {
-  const text = strip(transcript).replace(/[.,;!?]/g, (m) => (m === ',' || m === ';' ? ' | ' : ' ')).replace(/\s+/g, ' ').trim();
+export function parseVoice(transcript: string, productNames: string[] = []): VoiceItem[] {
+  const text = strip(transcript)
+    .replace(/[.,;!?]/g, (m) => (m === ',' || m === ';' ? ' | ' : ' '))
+    // "x20" / "20x" ditados juntos
+    .replace(/\bx\s*(\d+(?:[.,]\d+)?)\b/g, ' x $1 ')
+    .replace(/\b(\d+(?:[.,]\d+)?)\s*x\b/g, ' $1 x ')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (!text) return [];
   const words = text.split(' ');
 
-  type Tok = { kind: 'num'; value: number } | { kind: 'word'; w: string } | { kind: 'sep' };
   const toks: Tok[] = [];
   for (let i = 0; i < words.length; ) {
     const w = words[i];
     if (w === '|' || w === 'mais' || w === 'depois' || w === 'tambem') { toks.push({ kind: 'sep' }); i++; continue; }
+    if (isMark(w)) { toks.push({ kind: 'mark' }); i++; continue; }
+    // "uma lata de tinta": um/uma são artigos; só são número ao lado de um "x" ("x um", "uma x")
+    if ((w === 'um' || w === 'uma') && !isMark(words[i - 1] || '') && !isMark(words[i + 1] || '')) { toks.push({ kind: 'word', w }); i++; continue; }
     const n = readNumber(words, i);
     if (n) { toks.push({ kind: 'num', value: n.value }); i += n.used; continue; }
     toks.push({ kind: 'word', w }); i++;
   }
 
-  // Um "e" seguido de número separa itens ("… cimento e duas latas"); um "e" entre palavras faz parte do nome.
+  // Itens: vírgula/"mais"/"depois" separam; e um "e" logo a seguir a uma quantidade ("x 20 e …") também.
   const groups: Tok[][] = [[]];
   for (let i = 0; i < toks.length; i++) {
     const t = toks[i];
-    const next = toks[i + 1];
+    const cur = groups[groups.length - 1];
     if (t.kind === 'sep') { groups.push([]); continue; }
-    if (t.kind === 'word' && t.w === 'e' && next?.kind === 'num') { groups.push([]); continue; }
-    groups[groups.length - 1].push(t);
+    if (t.kind === 'word' && t.w === 'e' && cur.length >= 2 && cur[cur.length - 1].kind === 'num' && cur[cur.length - 2].kind === 'mark' && i + 1 < toks.length) {
+      groups.push([]);
+      continue;
+    }
+    cur.push(t);
   }
+
+  const known = productNames.map(norm);
+  const isNameStart = (t: string) => !!t && known.some((n) => (' ' + n).includes(' ' + t));
 
   const items: VoiceItem[] = [];
   for (const g of groups) {
-    const nums = g.filter((t): t is { kind: 'num'; value: number } => t.kind === 'num');
-    if (!nums.length) {
-      const term = clean(g);
-      if (term) items.push({ qty: null, term });
-      continue;
+    if (!g.length) continue;
+    let qty: number | null = null;
+    let body = g;
+
+    const marks = g.map((t, i) => (t.kind === 'mark' ? i : -1)).filter((i) => i >= 0);
+    const last = g.length - 1;
+    // "… x 20" no fim
+    const trailing = last >= 1 && g[last].kind === 'num' && g[last - 1].kind === 'mark';
+    // "20 x …" ou "x 20 …" no princípio
+    const leadingNumMark = g.length >= 3 && g[0].kind === 'num' && g[1].kind === 'mark';
+    const leadingMarkNum = g.length >= 3 && g[0].kind === 'mark' && g[1].kind === 'num';
+
+    if (trailing) {
+      const before = g.slice(0, last - 1);
+      // "bloco 15 x 40": com espaços o ditado escreve igual uma medida e uma quantidade. O "x" é a marca da
+      // quantidade, por isso conta como tal — a não ser que "bloco 15x40" seja um produto que existe.
+      // (Uma medida ditada de outra forma, "15 por 40" ou "15x40" colado, nunca é confundida.)
+      const measureLike = before.length > 0 && before[before.length - 1].kind === 'num' && marks.length === 1;
+      const asName = measureLike && isNameStart(norm(tokensToText(g)));
+      if (!asName) { qty = (g[last] as { kind: 'num'; value: number }).value; body = before; }
+    } else if (leadingNumMark) {
+      qty = (g[0] as { kind: 'num'; value: number }).value;
+      body = g.slice(2);
+    } else if (leadingMarkNum) {
+      qty = (g[1] as { kind: 'num'; value: number }).value;
+      body = g.slice(2);
     }
-    // medida no nome ("bloco 15 x 200"): vários números → a quantidade é o primeiro se estiver à cabeça, senão o último
-    const firstIsNum = g[0].kind === 'num';
-    const qtyIdx = firstIsNum ? 0 : g.map((t) => t.kind).lastIndexOf('num');
-    const next = g[qtyIdx + 1];
-    const unitAfter = next?.kind === 'word' && UNIT_FILLER.has(next.w);
-    // Um só número, a meio do nome e sem unidade a seguir, é parte do nome: "passadeira oito pistões", não "8 passadeiras".
-    if (!firstIsNum && nums.length === 1 && qtyIdx < g.length - 1 && !unitAfter) {
-      const term = clean(g);
-      if (term) items.push({ qty: null, term });
-      continue;
-    }
-    // "cimento dez sacos": a unidade a seguir ao número não é parte do nome
-    const rest = g.filter((_, i) => i !== qtyIdx && !(i === qtyIdx + 1 && !firstIsNum && unitAfter));
-    const term = clean(rest, firstIsNum);
-    if (term) items.push({ qty: (g[qtyIdx] as { kind: 'num'; value: number }).value, term });
+    const term = clean(body);
+    if (term) items.push({ qty, term });
   }
   return items;
 }
 
-function clean(tokens: ({ kind: 'num'; value: number } | { kind: 'word'; w: string } | { kind: 'sep' })[], afterQty = false): string {
+function tokensToText(tokens: Tok[]): string {
+  return tokens.map((t) => (t.kind === 'num' ? String(t.value) : t.kind === 'word' ? t.w : t.kind === 'mark' ? 'x' : '')).join(' ');
+}
+
+function clean(tokens: Tok[]): string {
   const out: string[] = [];
   let leading = true;
   for (const t of tokens) {
     if (t.kind === 'num') { out.push(String(t.value)); leading = false; continue; }
+    if (t.kind === 'mark') { out.push('x'); leading = false; continue; }
     if (t.kind !== 'word') continue;
-    if (leading && afterQty && UNIT_FILLER.has(t.w)) continue; // "10 SACOS de cimento"
     if (leading && GLUE.has(t.w)) continue;
-    if (t.w === 'x' || t.w === 'por') { out.push('x'); leading = false; continue; }
+    if (t.w === 'por') { out.push('x'); leading = false; continue; }
     leading = false;
     out.push(t.w);
   }
