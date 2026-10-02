@@ -10,7 +10,7 @@ import { isOffline, isOfflineReadError, queueBatch, writeDeltas, writeMovements 
 import type { InventoryCore } from './core';
 import type { ProductActions } from './product-actions';
 import { links } from '@/lib/deep-links';
-import { pickActive } from '@/lib/product-ref';
+import { locationIn, pickActive } from '@/lib/product-ref';
 
 export function useSalesActions(core: InventoryCore, deps: { product_actions: ProductActions }) {
   const { isReadOnly, toast, firestore, companyId, productsCollectionRef, companyData, isMultiLocation, locations, user, sendPush, triggerEmailAlert, setLastSaleTimestamp, products, notifyManagers, isManagerUser, productsData } = core;
@@ -69,7 +69,7 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
     const productQuery = query(
       productsCollectionRef,
       where("name", "==", newSaleData.productName),
-      where("location", "==", newSaleData.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
+      where("location", "in", locationIn(newSaleData.location || (isMultiLocation ? locations[0]?.id : 'Principal')))
     );
 
     const salesCollectionRef = collection(firestore, `companies/${companyId}/sales`);
@@ -414,7 +414,7 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
         const pQuery = query(
           productsCollectionRef,
           where("name", "==", item.productName),
-          where("location", "==", targetLocation),
+          where("location", "in", locationIn(targetLocation)),
           limit(1)
         );
         getDocs(pQuery).then(snap => {
@@ -484,7 +484,7 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
       const productQuery = query(
         productsCollectionRef,
         where("name", "==", freshSale.productName),
-        where("location", "==", targetLocation)
+        where("location", "in", locationIn(targetLocation))
       );
       const snap = await getDocs(productQuery);
       if (!snap.empty) {
@@ -630,7 +630,7 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
         const productQuery = query(
           productsCollectionRef,
           where("name", "==", saleData.productName),
-          where("location", "==", saleData.location || (isMultiLocation ? locations[0]?.id : 'Principal'))
+          where("location", "in", locationIn(saleData.location || (isMultiLocation ? locations[0]?.id : 'Principal')))
         );
         const productSnapshot = await getDocs(productQuery);
         productDocRef = pickActive(productSnapshot.docs)?.ref ?? null;
