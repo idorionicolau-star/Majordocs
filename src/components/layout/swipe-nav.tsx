@@ -23,6 +23,11 @@ const OUT_MS = 170;
 const IN_MS = 230;
 const BLOCK = 'input, textarea, select, canvas, table, [data-no-swipe], [role="slider"], [data-radix-scroll-area-viewport]';
 
+const POS_KEY = "msx-swipe-pos";
+const DIR_KEY = "msx-swipe-dir";
+const readPositions = (): Record<string, number> => { try { return JSON.parse(sessionStorage.getItem(POS_KEY) || "{}"); } catch { return {}; } };
+const savePositions = (p: Record<string, number>) => { try { sessionStorage.setItem(POS_KEY, JSON.stringify(p)); } catch { /* sem armazenamento */ } };
+
 const scrollsSideways = (el: HTMLElement | null): boolean => {
     for (let n: HTMLElement | null = el; n && n !== document.body; n = n.parentElement) {
         if (n.scrollWidth > n.clientWidth + 2) {
@@ -39,6 +44,7 @@ export function SwipeNav({ children }: { children: React.ReactNode }) {
     const tabs = useNavTabs();
     const box = useRef<HTMLDivElement>(null);
     const positions = useRef<Record<string, number>>({});
+    const entered = useRef(false);
     const pathRef = useRef(pathname);
     const pending = useRef<{ dir: 1 | -1; timer: number } | null>(null);
     const hrefs = tabs.map((t) => t.href).join("|");
@@ -57,9 +63,25 @@ export function SwipeNav({ children }: { children: React.ReactNode }) {
         return () => window.removeEventListener("scroll", onScroll);
     }, []);
 
+    const slideIn = useCallback((dir: 1 | -1) => {
+        const el = box.current;
+        if (!el) return;
+        el.style.transition = "none";
+        el.style.transform = `translate3d(${dir * 100}%,0,0)`;
+        void el.offsetWidth; // fixa a posição inicial antes de animar
+        el.style.transition = `transform ${IN_MS}ms cubic-bezier(.22,.8,.3,1)`;
+        el.style.transform = "translate3d(0,0,0)";
+        window.setTimeout(() => { el.style.transition = ""; el.style.transform = ""; }, IN_MS + 30);
+    }, []);
+
     // ao mudar de página: scroll certo e, se veio de um swipe, a entrada animada
     useEffect(() => {
         pathRef.current = pathname;
+        // primeira carga desta instância: recupera o que a página anterior guardou (navegação completa, sem rede)
+        if (!entered.current) {
+            entered.current = true;
+            positions.current = { ...readPositions(), ...positions.current };
+        }
         const saved = tabs.some((t) => t.href === pathname) ? positions.current[pathname] ?? 0 : 0;
         // a página pode ainda estar a carregar (curta demais para esse scroll): insiste até 1,5 s
         window.scrollTo(0, saved);
@@ -72,23 +94,17 @@ export function SwipeNav({ children }: { children: React.ReactNode }) {
             };
             requestAnimationFrame(again);
         }
-        const el = box.current;
+        let dir: 1 | -1 | 0 = 0;
         const p = pending.current;
-        if (!el || !p) return;
-        window.clearTimeout(p.timer);
-        pending.current = null;
-        el.style.transition = "none";
-        el.style.transform = `translate3d(${p.dir * 100}%,0,0)`;
-        void el.offsetWidth; // fixa a posição inicial antes de animar
-        el.style.transition = `transform ${IN_MS}ms cubic-bezier(.22,.8,.3,1)`;
-        el.style.transform = "translate3d(0,0,0)";
-        window.setTimeout(() => { el.style.transition = ""; el.style.transform = ""; }, IN_MS + 30);
+        if (p) { window.clearTimeout(p.timer); pending.current = null; dir = p.dir; }
+        else { try { const d = sessionStorage.getItem(DIR_KEY); if (d) { sessionStorage.removeItem(DIR_KEY); dir = d === "1" ? 1 : -1; } } catch { /* ignore */ } }
+        if (dir) slideIn(dir);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pathname]);
 
     // páginas vizinhas já carregadas: a troca fica imediata
     useEffect(() => {
-        if (index < 0) return;
+        if (index < 0 || !navigator.onLine) return;
         [tabs[index - 1], tabs[index + 1]].forEach((t) => t && router.prefetch(t.href));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [index, hrefs]);
@@ -145,8 +161,11 @@ export function SwipeNav({ children }: { children: React.ReactNode }) {
             positions.current[pathname] = window.scrollY;
             el.style.transition = `transform ${OUT_MS}ms ease-in`;
             el.style.transform = `translate3d(${-dir * 100}%,0,0)`;
-            // se a página não chegar a tempo, volta ao sítio em vez de ficar um ecrã vazio
-            pending.current = { dir, timer: window.setTimeout(() => { pending.current = null; reset(true); }, 2500) };
+            // sem rede o router do Next não navega: usa uma navegação normal, servida pela cópia guardada
+            const hardGo = () => { try { sessionStorage.setItem(DIR_KEY, String(dir)); } catch { /* ignore */ } savePositions(positions.current); window.location.assign(next.href); };
+            if (!navigator.onLine) { window.setTimeout(hardGo, OUT_MS); return; }
+            // rede a falhar sem o navegador saber: se a página não chegar a tempo, tenta a navegação normal
+            pending.current = { dir, timer: window.setTimeout(() => { pending.current = null; hardGo(); }, 2500) };
             window.setTimeout(() => router.push(next.href), OUT_MS);
         };
         const cancel = () => { if (mode === "h") reset(true); mode = "idle"; };
