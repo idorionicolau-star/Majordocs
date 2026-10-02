@@ -77,7 +77,7 @@ function BillingInner() {
                 body: JSON.stringify({ planId: selected }),
             });
             const j = await r.json();
-            if (!r.ok || !j.checkoutUrl) throw new Error(j.error || "Erro ao iniciar o pagamento");
+            if (!r.ok || !j.checkoutUrl) throw new Error([j.error || "Erro ao iniciar o pagamento", j.details].filter(Boolean).join(" — "));
             window.location.href = j.checkoutUrl; // checkout ZumboPay: M-Pesa, e-Mola, cartão…
         } catch (e) {
             toast({ variant: "destructive", title: "Não foi possível iniciar o pagamento", description: e instanceof Error ? e.message : "" });
