@@ -163,7 +163,7 @@ export function useSettingsActions(core: InventoryCore) {
           });
         } else {
           const order = snap.data() as Order;
-          const reserves = order.status === 'Pendente' || order.status === 'Em produção';
+          const reserves = order.status === 'Pendente' || order.status === 'Em produção' || order.status === 'Concluída';
           const salesSnap = await getDocs(query(collection(firestore, `companies/${companyId}/sales`), where('orderId', '==', id)));
           const productRef = reserves
             ? await resolveInventoryProductRef(firestore, companyId, { productId: order.productId, productName: order.productName, location: stockLocation(order.location) })

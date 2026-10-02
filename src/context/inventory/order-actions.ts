@@ -7,6 +7,7 @@ import { ref } from "firebase/storage";
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { InventoryCore } from './core';
 import { reservedToRelease } from '@/lib/order-stock';
+import { resolveInventoryProductRef } from '@/lib/product-ref';
 
 export function useOrderActions(core: InventoryCore) {
   const { isReadOnly, toast, ordersCollectionRef, firestore, companyId, user, assertOnline, ordersData, isMultiLocation, locations } = core;
@@ -33,27 +34,14 @@ export function useOrderActions(core: InventoryCore) {
         const associatedSaleRef = !saleSnap.empty ? saleSnap.docs[0].ref : null;
 
         // If order is pending or in production, we need to release the Reserved Stock
-        if ((orderData.status === 'Pendente' || orderData.status === 'Em produção') && orderData.productId) {
-          // Resolve product reference with fallback
-          let resolvedProductRef: DocumentReference | null = null;
-          const directRef = doc(firestore, `companies/${companyId}/products`, orderData.productId);
-          const directSnap = await getDoc(directRef);
-          if (directSnap.exists()) {
-            resolvedProductRef = directRef;
-          } else {
-            // Fallback: productId might be the product name
-            const targetLoc = orderData.location || 'Principal';
-            const pQuery = query(
-              collection(firestore, `companies/${companyId}/products`),
-              where('name', '==', orderData.productName),
-              where('location', '==', targetLoc),
-              limit(1)
-            );
-            const pSnap = await getDocs(pQuery);
-            if (!pSnap.empty) {
-              resolvedProductRef = pSnap.docs[0].ref;
-            }
-          }
+        // Concluída = já produzida mas ainda por entregar: a reserva continua presa até à entrega, por isso também se liberta
+        if ((orderData.status === 'Pendente' || orderData.status === 'Em produção' || orderData.status === 'Concluída') && orderData.productId) {
+          // ID do inventário, ID do catálogo ou nome → o produto do inventário (activo) nessa localização
+          const resolvedProductRef: DocumentReference | null = await resolveInventoryProductRef(firestore, companyId, {
+            productId: orderData.productId,
+            productName: orderData.productName,
+            location: orderData.location || 'Principal',
+          });
 
           await runTransaction(firestore, async (transaction) => {
             if (resolvedProductRef) {
@@ -108,24 +96,15 @@ export function useOrderActions(core: InventoryCore) {
       const salesSnap = await getDocs(q);
       const saleDoc = salesSnap.docs[0];
 
-      // O productId de encomendas antigas pode ser o NOME do produto — resolver o documento real.
+      // O productId pode ser o do inventário, o do catálogo ou o nome (encomendas antigas): resolve o produto activo
       const orderPre = ordersData?.find(o => o.id === orderId);
-      let resolvedProductRef: DocumentReference | null = null;
-      if (orderPre?.productId) {
-        const directRef = doc(firestore, `companies/${companyId}/products`, orderPre.productId);
-        if ((await getDoc(directRef)).exists()) {
-          resolvedProductRef = directRef;
-        } else {
-          const targetLoc = orderPre.location || (isMultiLocation ? locations[0]?.id : 'Principal');
-          const pSnap = await getDocs(query(
-            collection(firestore, `companies/${companyId}/products`),
-            where('name', '==', orderPre.productName),
-            where('location', '==', targetLoc || ''),
-            limit(1)
-          ));
-          if (!pSnap.empty) resolvedProductRef = pSnap.docs[0].ref;
-        }
-      }
+      const resolvedProductRef: DocumentReference | null = orderPre
+        ? await resolveInventoryProductRef(firestore, companyId, {
+            productId: orderPre.productId,
+            productName: orderPre.productName,
+            location: orderPre.location || (isMultiLocation ? locations[0]?.id : 'Principal') || 'Principal',
+          })
+        : null;
 
       await runTransaction(firestore, async (transaction) => {
         // --- READS ---
