@@ -45,3 +45,18 @@ describe('aviso do teste', () => {
         expect(trialMessage(10)).toContain('período de teste');
     });
 });
+
+import { isSnoozed, trialSnoozeMs } from '@/lib/trial';
+
+describe('fechar o aviso do teste', () => {
+    it('esconde um dia enquanto falta muito, 5 horas na última semana', () => {
+        expect(trialSnoozeMs(12)).toBe(24 * 3_600_000);
+        expect(trialSnoozeMs(6)).toBe(5 * 3_600_000);
+        expect(trialSnoozeMs(1)).toBe(5 * 3_600_000);
+    });
+    it('volta a aparecer quando o tempo passa', () => {
+        expect(isSnoozed(2_000, 1_000)).toBe(true);
+        expect(isSnoozed(1_000, 2_000)).toBe(false);
+        expect(isSnoozed(null, 1_000)).toBe(false);
+    });
+});
