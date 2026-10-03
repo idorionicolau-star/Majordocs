@@ -109,3 +109,50 @@ describe('sincronizar inventário', () => {
         expect(buildSyncPlan([{ name: 'bloco 15' }], cat, []).products).toEqual([]);
     });
 });
+
+import { copyName, findBarcodeClash, marginPct, MAX_PRICE_HISTORY, pushPriceHistory, sameCodeKey } from '../catalog-view';
+describe('código de barras, margem, histórico e cópias', () => {
+    const withCode = [
+        { id: 'a', name: 'Cola', barcode: '5601234567890', price: 100, cost: 70 },
+        { id: 'b', name: 'Prego', barcode: '012345678905', price: 5 },
+        { id: 'c', name: 'Sem código', price: 5 },
+    ];
+    it('procura por código lido, mesmo com espaços ou zero à esquerda', () => {
+        expect(searchCatalog(withCode, '5601234567890').map((i) => i.id)).toEqual(['a']);
+        expect(searchCatalog(withCode, '5601234567890 '.trim()).length).toBe(1);
+        expect(searchCatalog(withCode, '0012345678905').map((i) => i.id)).toEqual(['b']); // UPC-A / EAN-13
+    });
+    it('código repetido entre produtos', () => {
+        expect(findBarcodeClash(withCode, '5601 234 567 890')?.id).toBe('a');
+        expect(findBarcodeClash(withCode, '5601234567890', 'a')).toBeUndefined();
+        expect(findBarcodeClash(withCode, '')).toBeUndefined();
+        expect(sameCodeKey('0012-345')).toBe('12345');
+        expect(sameCodeKey('ab-12')).toBe('AB12');
+    });
+    it('margem sobre o preço de venda', () => {
+        expect(marginPct(100, 70)).toBe(30);
+        expect(marginPct(250, 100)).toBe(60);
+        expect(marginPct(100, 120)).toBe(-20); // a vender com prejuízo
+        expect(marginPct(100, 0)).toBeNull();
+        expect(marginPct(0, 50)).toBeNull();
+        expect(marginPct(undefined, undefined)).toBeNull();
+    });
+    it('histórico de preços: só quando muda, e no máximo 20', () => {
+        const at = '2026-01-01';
+        expect(pushPriceHistory(undefined, { at, from: 10, to: 10 })).toEqual([]);
+        const one = pushPriceHistory(undefined, { at, from: 10, to: 12, by: 'ana' });
+        expect(one).toEqual([{ at, from: 10, to: 12, by: 'ana' }]);
+        let h = one;
+        for (let i = 0; i < 30; i++) h = pushPriceHistory(h, { at, from: i, to: i + 1 });
+        expect(h.length).toBe(MAX_PRICE_HISTORY);
+        expect(h[h.length - 1].to).toBe(30);
+    });
+    it('nome da cópia nunca repete', () => {
+        const l = [{ name: 'Bloco 15' }];
+        expect(copyName(l, 'Bloco 15')).toBe('Bloco 15 (cópia)');
+        const l2 = [...l, { name: 'Bloco 15 (cópia)' }];
+        expect(copyName(l2, 'Bloco 15')).toBe('Bloco 15 (cópia 2)');
+        expect(copyName(l2, 'Bloco 15 (cópia)')).toBe('Bloco 15 (cópia 2)'); // copiar uma cópia
+        expect(copyName([{ name: 'Pavê X' }, { name: 'pave x (copia)' }], 'Pavê X')).toBe('Pavê X (cópia 2)');
+    });
+});
