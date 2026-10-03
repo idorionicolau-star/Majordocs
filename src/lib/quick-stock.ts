@@ -32,7 +32,7 @@ export type QuickLine = {
     /** A categoria ainda não existe no catálogo: criá-la. */
     addCategory?: boolean;
     /** When the product already exists in another location: copy its data instead of creating a bare one. */
-    template?: Pick<Product, "category" | "price" | "cost" | "unit" | "lowStockThreshold" | "criticalStockThreshold" | "imageUrl">;
+    template?: Pick<Product, "category" | "price" | "cost" | "unit" | "lowStockThreshold" | "criticalStockThreshold" | "imageUrl" | "barcode">;
 };
 
 export const lineKey = (name: string, location: string) =>
@@ -243,6 +243,7 @@ export async function commitQuickStock({ firestore, companyId, user, mode, lines
                 lowStockThreshold: t?.lowStockThreshold || 0,
                 criticalStockThreshold: t?.criticalStockThreshold || 0,
                 ...(t?.imageUrl ? { imageUrl: t.imageUrl } : {}),
+                ...(t?.barcode ? { barcode: t.barcode } : {}),
                 lastUpdated: now,
             });
             const movement: Omit<StockMovement, "id" | "timestamp"> = {

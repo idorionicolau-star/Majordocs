@@ -30,6 +30,7 @@ import { links } from "@/lib/deep-links";
 import { BarcodeScanner } from "@/components/scan/barcode-scanner";
 import { VoiceButton } from "@/components/scan/voice-button";
 import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode";
+import { findBarcodeClash } from "@/lib/catalog-view";
 import { parseVoice } from "@/lib/voice-parse";
 import { resolveVoice } from "@/lib/voice-approx";
 import { VoiceConfirm, type VoiceAsk } from "@/components/scan/voice-confirm";
@@ -289,7 +290,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             category: plan.category,
             addToCatalog: plan.addProduct,
             addCategory: plan.addCategory,
-            ...(from ? { template: { category: from.category, price: from.price, cost: from.cost, unit: from.unit, lowStockThreshold: from.lowStockThreshold, criticalStockThreshold: from.criticalStockThreshold, imageUrl: from.imageUrl } } : {}),
+            ...(from ? { template: { category: from.category, price: from.price, cost: from.cost, unit: from.unit, lowStockThreshold: from.lowStockThreshold, criticalStockThreshold: from.criticalStockThreshold, imageUrl: from.imageUrl, barcode: from.barcode } } : {}),
         };
     };
 
@@ -339,6 +340,15 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             addLine(lineFromProduct(p, have + 1), true);
             setText("");
             return `✓ ${p.name} × ${fmt(have + 1)}`;
+        }
+        // Não está no inventário, mas pode estar no catálogo com este código: entra como produto do catálogo (sem stock ainda)
+        const fromCatalog = mode !== "out" ? findBarcodeClash((catalogProducts || []).filter((c) => !c.deletedAt), code) : undefined;
+        if (fromCatalog) {
+            const asProduct: Product = { ...fromCatalog, instanceId: `catalog-${fromCatalog.id || fromCatalog.name}`, stock: 0, reservedStock: 0, lastUpdated: "", location: "" };
+            const have = lines[lineKey(fromCatalog.name, location)]?.qty || 0;
+            addLine(newLine(fromCatalog.name, have + 1, undefined, asProduct), true);
+            setText("");
+            return `✓ ${fromCatalog.name} × ${fmt(have + 1)} (do catálogo)`;
         }
         setPendingCode(code);
         setText("");

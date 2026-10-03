@@ -1,6 +1,7 @@
 // Lógica do catálogo de produtos, pura (sem Firebase nem React) para ser testada: pesquisa, filtros, ordenação,
 // duplicados e ajuste de preços em massa.
 import { normalizeString } from '@/lib/utils';
+import { looksLikeBarcode, normalizeBarcode } from '@/lib/barcode';
 import { searchProducts } from '@/lib/quick-stock';
 import { approxProducts } from '@/lib/voice-approx';
 
@@ -11,6 +12,8 @@ export type CatalogLike = {
     price?: number;
     unit?: string;
     imageUrl?: string;
+    cost?: number;
+    barcode?: string;
     deletedAt?: string | null;
 };
 
@@ -39,6 +42,12 @@ const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompar
 export function searchCatalog<T extends CatalogLike>(items: T[], term: string): T[] {
     const t = term.trim();
     if (!t) return items;
+    // um código lido (ou colado) procura por código de barras
+    if (looksLikeBarcode(t)) {
+        const code = sameCodeKey(t);
+        const byCode = items.filter((i) => i.barcode && sameCodeKey(i.barcode) === code);
+        if (byCode.length) return byCode;
+    }
     const byNameHits = searchProducts(items, t, items.length);
     const seen = new Set<T>(byNameHits);
     // também por categoria: "tintas" mostra a categoria Tintas
@@ -115,4 +124,43 @@ export function buildSyncPlan(inventory: InventoryLite[], catalog: { name: strin
     }));
     const newCategories = [...new Set(products.map((p) => p.category))].filter((c) => !haveCats.has(nameKey(c)));
     return { products, newCategories };
+}
+
+/** Código sem espaços/hífenes e sem zeros à esquerda (UPC-A e EAN-13 do mesmo produto comparam iguais). */
+export const sameCodeKey = (raw: string) => {
+    const c = normalizeBarcode(raw);
+    return /^\d+$/.test(c) ? c.replace(/^0+/, '') : c;
+};
+
+/** Outro produto do catálogo com o mesmo código de barras. */
+export function findBarcodeClash<T extends { id?: string; barcode?: string }>(items: T[], code: string, exceptId?: string): T | undefined {
+    const key = sameCodeKey(code);
+    if (!key) return undefined;
+    return items.find((i) => i.id !== exceptId && i.barcode && sameCodeKey(i.barcode) === key);
+}
+
+/** Margem em % sobre o preço de venda (null se não houver custo ou preço). */
+export function marginPct(price?: number, cost?: number): number | null {
+    const p = Number(price) || 0, c = Number(cost) || 0;
+    if (p <= 0 || c <= 0) return null;
+    return Math.round(((p - c) / p) * 1000) / 10;
+}
+
+export type PriceChange = { at: string; from: number; to: number; by?: string };
+export const MAX_PRICE_HISTORY = 20;
+
+/** Acrescenta uma alteração de preço ao histórico (guarda só as últimas 20; ignora quem não mudou o preço). */
+export function pushPriceHistory(history: PriceChange[] | undefined, change: PriceChange): PriceChange[] {
+    const list = history || [];
+    if (change.from === change.to) return list;
+    return [...list, change].slice(-MAX_PRICE_HISTORY);
+}
+
+/** Nome para uma cópia ("Bloco 15 (cópia)", "Bloco 15 (cópia 2)"…) que ainda não exista. */
+export function copyName(items: { name: string }[], name: string): string {
+    const base = name.replace(/\s*\(cópia(?: \d+)?\)\s*$/i, '').trim();
+    const taken = new Set(items.map((i) => nameKey(i.name)));
+    let candidate = `${base} (cópia)`;
+    for (let n = 2; taken.has(nameKey(candidate)); n++) candidate = `${base} (cópia ${n})`;
+    return candidate;
 }

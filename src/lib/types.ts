@@ -121,6 +121,8 @@ export type Product = {
   targetStock?: number;
   /** Código de barras (EAN/UPC/Code128…) — lido com a câmara ou um leitor */
   barcode?: string;
+  /** Catálogo: últimas alterações de preço (mais recente no fim; no máximo 20). */
+  priceHistory?: { at: string; from: number; to: number; by?: string }[];
 };
 
 
