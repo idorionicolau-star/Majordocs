@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronLeft, GraduationCap, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { holeFor, placePopover, routeMatches, shadesAround, type Box } from "@/lib/guide-layout";
+import { cn } from "@/lib/utils";
+import { holeFor, keyboardOpen, placePopover, routeMatches, shadesAround, type Box } from "@/lib/guide-layout";
 import { GUIDES } from "./guides";
 import { guideStore, markGuideDone, useGuideState } from "./guide-store";
 import { findTarget } from "./types";
@@ -25,6 +26,8 @@ export function GuideHost() {
     const [mounted, setMounted] = useState(false);
     const [box, setBox] = useState<Box | null>(null);
     const [vp, setVp] = useState({ w: 1024, h: 768 });
+    /** a parte do ecrã que se vê (com o teclado do telemóvel aberto, a de baixo fica tapada) */
+    const [visible, setVisible] = useState({ top: 0, height: 768 });
     const [missing, setMissing] = useState(false);
     const [popH, setPopH] = useState(220);
     const targetRef = useRef<HTMLElement | null>(null);
@@ -104,6 +107,8 @@ export function GuideHost() {
         let alive = true;
         let raf = 0;
         let scrolled = false;
+        let blurred = false;
+        let lastKb = false;
         const t0 = Date.now();
         let onPageAt = 0; // quando chegou à página do passo (a página pode demorar a abrir)
         let grace = 1200; // já estava na página quando o passo começou → o elemento ou existe já, ou não existe: espera pouco
@@ -117,13 +122,30 @@ export function GuideHost() {
             const vw = window.innerWidth;
             const vh = window.innerHeight;
             setVp((p) => (p.w === vw && p.h === vh ? p : { w: vw, h: vh }));
+            const vv = window.visualViewport;
+            const vis = vv ? { top: Math.round(vv.offsetTop), height: Math.round(vv.height) } : { top: 0, height: vh };
+            setVisible((p) => (p.top === vis.top && p.height === vis.height ? p : vis));
+            const kb = keyboardOpen(vh, vis);
             const el = step.target ? findTarget(step.target) : null;
             targetRef.current = el;
             if (el) {
+                // um campo de outro passo ainda com o teclado aberto → fecha-o (senão o teclado tapa o passo novo)
+                if (!blurred) {
+                    blurred = true;
+                    const a = document.activeElement as HTMLElement | null;
+                    if (a && a !== document.body && !el.contains(a) && !rootRef.current?.contains(a) && a.matches("input, textarea, select, [contenteditable='true']")) a.blur();
+                }
                 const r = el.getBoundingClientRect();
+                const vTop = vis.top;
+                const vBottom = vis.top + vis.height;
                 if (!scrolled) {
                     scrolled = true;
-                    if (r.top < 72 || r.bottom > vh - 96) el.scrollIntoView({ block: r.height > vh * 0.6 ? "start" : "center", behavior: "smooth" });
+                    if (r.top < vTop + 72 || r.bottom > vBottom - 96) el.scrollIntoView({ block: r.height > vis.height * 0.6 ? "start" : "center", behavior: "smooth" });
+                }
+                // o teclado abriu ou fechou e o elemento ficou fora do que se vê → volta a mostrá-lo
+                if (kb !== lastKb) {
+                    lastKb = kb;
+                    if (r.bottom < vTop + 8 || r.top > vBottom - 8) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
                 }
                 const b = { top: r.top, left: r.left, width: r.width, height: r.height };
                 setBox((p) => (sameBox(p, b) ? p : b));
@@ -210,11 +232,14 @@ export function GuideHost() {
     // passo opcional ainda à procura do elemento: não mostra o balão (ou aparece, ou o passo é saltado)
     const optionalNow = step.optional ?? (!!guide.path && !!step.target && step.advance !== "auto" && step.advance !== "click");
     const searching = optionalNow && !hole;
-    const place = placePopover(hole, vp.w, vp.h, popH);
+    const place = placePopover(hole, vp.w, vp.h, popH, 360, visible);
+    const kbOpen = keyboardOpen(vp.h, visible);
     const action = (step.advance === "click" || step.advance === "auto") && !missing && !!step.target;
     const last = index >= total - 1;
     // As janelas (Radix) fecham-se com um toque fora delas: o toque no guia não pode chegar ao documento.
     const keep = (e: React.SyntheticEvent) => e.stopPropagation();
+    // Tocar nos botões do balão não tira o foco ao campo (o teclado não fecha e o ecrã não salta).
+    const keepFocus = (e: React.MouseEvent) => { e.stopPropagation(); e.preventDefault(); };
     const badgeTop = hole ? (hole.top > 44 ? hole.top - 34 : hole.top + hole.height + 8) : 0;
 
     return createPortal(
@@ -236,8 +261,9 @@ export function GuideHost() {
                 aria-modal="false"
                 aria-label={step.title}
                 data-guide-popover
-                className="pointer-events-auto fixed z-[302] rounded-2xl border border-primary/30 bg-card p-4 text-card-foreground shadow-2xl"
-                style={{ top: place.top, bottom: place.bottom, left: place.left, width: place.width }}
+                onMouseDown={keepFocus}
+                className={cn("pointer-events-auto fixed z-[302] overflow-y-auto overscroll-contain rounded-2xl border border-primary/30 bg-card text-card-foreground shadow-2xl", kbOpen ? "p-3" : "p-4")}
+                style={{ top: place.top, bottom: place.bottom, left: place.left, width: place.width, maxHeight: Math.max(120, visible.height - 16) }}
             >
                 <div className="flex items-center justify-between gap-2">
                     <p className="flex min-w-0 items-center gap-1.5 truncate text-[11px] font-semibold uppercase tracking-wide text-primary">

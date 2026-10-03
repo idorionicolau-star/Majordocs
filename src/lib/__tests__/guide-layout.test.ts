@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { holeFor, placePopover, routeMatches, shadesAround } from '@/lib/guide-layout';
+import { holeFor, keyboardOpen, placePopover, routeMatches, shadesAround } from '@/lib/guide-layout';
 
 describe('guias: geometria', () => {
     it('buraco com folga, sem sair do ecrã', () => {
@@ -26,5 +26,25 @@ describe('guias: geometria', () => {
         expect(routeMatches('/pos?demo=1', '/pos', '')).toBe(false);
         expect(routeMatches('/catalog', '/catalog', '?x=1')).toBe(true);
         expect(routeMatches('/catalog', '/pos', '')).toBe(false);
+    });
+    it('telemóvel com teclado aberto: o balão fica na parte visível, junto ao campo', () => {
+        const visible = { top: 0, height: 420 }; // teclado tapa a metade de baixo
+        expect(keyboardOpen(844, visible)).toBe(true);
+        expect(keyboardOpen(844, { top: 0, height: 844 })).toBe(false);
+        // campo em cima → balão por baixo dele, acima do teclado
+        const a = placePopover({ top: 80, left: 10, width: 300, height: 50 }, 390, 844, 150, 360, visible);
+        expect(a.side).toBe('below');
+        expect(a.top! + 150).toBeLessThanOrEqual(420);
+        // campo em baixo da área visível → balão por cima dele
+        expect(placePopover({ top: 330, left: 10, width: 300, height: 50 }, 390, 844, 150, 360, visible).side).toBe('above');
+        // sem espaço nenhum → encosta ao topo da área visível (nunca atrás do teclado)
+        const c = placePopover({ top: 150, left: 10, width: 300, height: 120 }, 390, 844, 200, 360, visible);
+        expect(c.side).toBe('dock-top');
+        expect(c.top).toBe(8);
+    });
+    it('telemóvel sem teclado: encostado em baixo usa top (não fica por trás de nada)', () => {
+        const p = placePopover({ top: 100, left: 10, width: 300, height: 50 }, 390, 844, 200);
+        expect(p.side).toBe('dock-bottom');
+        expect(p.top).toBe(844 - 200 - 12);
     });
 });
