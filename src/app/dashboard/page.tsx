@@ -16,6 +16,7 @@ import { TopSales } from "@/components/dashboard/top-sales";
 import { StockAlerts } from "@/components/dashboard/stock-alerts";
 import { EmptyStateWelcome } from "@/components/dashboard/empty-state";
 import { MajorAssistant } from "@/components/assistant/major-assistant";
+import { GettingStartedCard } from "@/components/onboarding/getting-started-card";
 
 // Removed dynamic imports to prevent circular dependency issues in production build
 // The loading state is handled by the main component logic below
@@ -46,6 +47,8 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in duration-700 pb-10 main-content">
+
+      {isPrivilegedUser && <GettingStartedCard />}
 
       {/* 1. Hoje · Atalhos · Atenção — o que se precisa ao abrir a app */}
       <BusinessSummary />

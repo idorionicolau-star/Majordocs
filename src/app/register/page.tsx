@@ -15,12 +15,13 @@ import { InventoryContext } from '@/context/inventory-context';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
+import { deriveUsername } from '@/lib/onboarding';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const registerSchema = z.object({
   companyName: z.string().min(3, 'O nome da empresa deve ter pelo menos 3 caracteres.').refine(s => !s.includes('@'), 'O nome da empresa não pode conter "@".'),
-  adminUsername: z.string().min(3, 'O nome de utilizador deve ter pelo menos 3 caracteres.').refine(s => !s.includes('@'), 'O nome de utilizador não pode conter "@".'),
+  adminUsername: z.string().optional(), // já não se pede: sai do email (ver deriveUsername)
   adminEmail: z.string().email("O email do administrador não é válido."),
   adminPassword: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.'),
   businessType: z.enum(['manufacturer', 'reseller'], { required_error: 'Por favor, selecione o tipo de negócio.' }),
@@ -61,7 +62,7 @@ export default function RegisterPage() {
     }
 
     try {
-      const success = await context.registerCompany(data.companyName, data.adminUsername, data.adminEmail, data.adminPassword, data.businessType);
+      const success = await context.registerCompany(data.companyName, data.adminUsername?.trim() || deriveUsername(data.adminEmail), data.adminEmail, data.adminPassword, data.businessType);
       if (success) {
         toast({
           title: 'Empresa Registada com Sucesso!',
@@ -171,17 +172,6 @@ export default function RegisterPage() {
                         </FormItem>
                       </RadioGroup>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="adminUsername"
-                render={({ field }) => (
-                  <FormItem>
-                    <Label htmlFor="adminUsername">Nome de Utilizador do Administrador</Label>
-                    <Input id="adminUsername" {...field} placeholder="Ex: admin" />
                     <FormMessage />
                   </FormItem>
                 )}

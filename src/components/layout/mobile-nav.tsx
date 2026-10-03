@@ -7,7 +7,9 @@ import { useContext } from "react";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { useNavGroups } from "./use-nav-groups";
-import { LogOut, Settings, User as UserIcon } from "lucide-react";
+import { HelpCircle, LogOut, Settings, User as UserIcon } from "lucide-react";
+import { openTour } from "@/components/onboarding/app-tour";
+import { MenuModeToggle } from "./menu-mode-toggle";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -30,7 +32,7 @@ export function MobileNav({ onLinkClick }: MobileNavProps) {
         onLinkClick();
     };
 
-    const { groups, isActive } = useNavGroups();
+    const { groups, isActive, simple, hiddenCount, setSimple } = useNavGroups();
 
     return (
         <aside className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
@@ -79,6 +81,7 @@ export function MobileNav({ onLinkClick }: MobileNavProps) {
                         })}
                     </div>
                 ))}
+                <MenuModeToggle simple={simple} hiddenCount={hiddenCount} onChange={setSimple} />
             </nav>
 
             {/* User Section */}
@@ -122,6 +125,10 @@ export function MobileNav({ onLinkClick }: MobileNavProps) {
                                 <span>Configurações</span>
                             </DropdownMenuItem>
                         </Link>
+                        <DropdownMenuItem className="cursor-pointer" onClick={() => { openTour(); onLinkClick(); }}>
+                            <HelpCircle className="mr-2 h-4 w-4" />
+                            <span>Como a app funciona</span>
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-700 dark:text-red-400 dark:focus:text-red-300" onClick={() => { logout(); onLinkClick(); }}>
                             <LogOut className="mr-2 h-4 w-4" />

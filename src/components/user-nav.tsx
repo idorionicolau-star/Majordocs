@@ -1,7 +1,8 @@
 "use client"
 
 import { useContext } from "react"
-import { LogOut, User as UserIcon, Settings } from "lucide-react"
+import { LogOut, User as UserIcon, Settings, HelpCircle } from "lucide-react"
+import { openTour } from "@/components/onboarding/app-tour"
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button"
@@ -60,6 +61,10 @@ export function UserNav() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => openTour()}>
+          <HelpCircle className="mr-2 h-4 w-4" />
+          <span>Como a app funciona</span>
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={logout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Sair</span>
