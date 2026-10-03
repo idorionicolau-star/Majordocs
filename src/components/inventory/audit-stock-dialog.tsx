@@ -72,6 +72,8 @@ function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProp
   const systemStock = product.stock;
   const physicalCount = form.watch('physicalCount');
   const adjustment = physicalCount - systemStock;
+  const reserved = product.reservedStock || 0;
+  const belowReserved = reserved > 0 && physicalCount < reserved;
 
   return (
     <>
@@ -107,6 +109,11 @@ function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProp
               </FormItem>
             )}
           />
+          {belowReserved && (
+            <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+              Atenção: há {reserved} reservado{reserved > 1 ? 's' : ''} (vendas pagas por levantar ou encomendas) e a contagem é {physicalCount}. O disponível ficará negativo.
+            </p>
+          )}
           <FormField
             control={form.control}
             name="reason"

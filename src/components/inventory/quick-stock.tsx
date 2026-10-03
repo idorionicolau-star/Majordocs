@@ -881,6 +881,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                                         </p>
                                         <p className={cn("text-xs", after < 0 ? "font-semibold text-red-600" : "text-muted-foreground")}>
                                             {fmt(l.systemStock)} → {fmt(after)} {l.unit}{after < 0 && " · stock insuficiente"}
+                                            {after >= 0 && l.reservedStock > 0 && after < l.reservedStock && <span className="font-semibold text-amber-600"> · abaixo do reservado ({fmt(l.reservedStock)})</span>}
                                         </p>
                                     </div>
                                     <input

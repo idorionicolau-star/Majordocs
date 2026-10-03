@@ -204,6 +204,7 @@ export function FastCountGrid() {
     };
 
     const changedCount = Object.keys(editedRows).length;
+    const belowReserved = Object.values(editedRows).filter((r) => r.hasChanged && r.reservedStock > 0 && (parseFloat(r.stock) || 0) < r.reservedStock);
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -321,6 +322,12 @@ export function FastCountGrid() {
                     {changedCount > 0 && (
                         <div className="text-sm font-medium text-primary">
                             {changedCount} alteração{changedCount > 1 ? 'ões' : ''} pendente{changedCount > 1 ? 's' : ''}
+                        </div>
+                    )}
+
+                    {belowReserved.length > 0 && (
+                        <div className="text-sm font-medium text-amber-600" title={belowReserved.map((r) => `${r.name}: reservado ${r.reservedStock}`).join("\n")}>
+                            {belowReserved.length} abaixo do reservado
                         </div>
                     )}
 
