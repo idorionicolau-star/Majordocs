@@ -483,7 +483,7 @@ export default function SettingsPage() {
         <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="hidden md:block">
             <ScrollArea className="w-full whitespace-nowrap" ref={scrollRef}>
-              <TabsList className="inline-flex h-auto items-center justify-start rounded-2xl bg-muted p-1.5 text-muted-foreground w-max">
+              <TabsList data-tour="set-tabs" className="inline-flex h-auto items-center justify-start rounded-2xl bg-muted p-1.5 text-muted-foreground w-max">
                 {settingsTabs.map(tab => (
                   <TabsTrigger key={tab.value} value={tab.value} id={`tab-trigger-${tab.value}`}>
                     <tab.icon className="mr-2 h-4 w-4" />{tab.label}
@@ -497,7 +497,7 @@ export default function SettingsPage() {
           <div className="md:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
+                <Button data-tour="set-tabs" variant="outline" className="w-full justify-between">
                   <span>{settingsTabs.find(t => t.value === activeTab)?.label || 'Menu'}</span>
                   <Menu className="h-4 w-4" />
                 </Button>

@@ -12,6 +12,7 @@ import { mainNavItems } from "@/lib/data";
 import { SheetTrigger } from "../ui/sheet";
 import { ConnectionStatus } from "../connection-status";
 import { useTheme } from "../theme-provider";
+import { PageHelpButton } from "@/components/guide/page-help";
 import React from "react";
 
 export function Header({ onSearchClick }: { onSearchClick: () => void }) {
@@ -70,8 +71,9 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
       </div>
 
       {/* Centered Page Title on mobile */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 md:hidden">
-        <h1 className="text-lg font-bold">{pageTitle}</h1>
+      {/* Título no telemóvel: ocupa o espaço entre os botões (com nomes compridos corta com "…" em vez de tapar o "?") */}
+      <div className="min-w-0 flex-1 text-center md:hidden">
+        <h1 className="truncate text-base font-bold">{pageTitle}</h1>
       </div>
 
       {/* Search bar for desktop, hidden on mobile */}
@@ -106,6 +108,7 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
             <Button variant="ghost" size="icon" disabled />
           )}
         </div>
+        <PageHelpButton />
         <NotificationsDropdown />
         <UserNav />
       </div>

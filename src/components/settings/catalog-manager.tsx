@@ -85,7 +85,13 @@ export function CatalogManager() {
     if (!ctx) return <div className="p-4 text-muted-foreground">A carregar o catálogo…</div>;
 
     // ---------- produtos ----------
+    /** A categoria escolhida ainda não existe (ex.: "Geral" numa empresa nova, ou uma escrita na hora) → cria-a. */
+    const ensureCategory = (name?: string) => {
+        const n = (name || "").trim();
+        if (n && !categories.some((c) => nameKey(c.name) === nameKey(n))) ctx.addCatalogCategory(n);
+    };
     const commitAdd = (data: Omit<CatalogProduct, "id">) => {
+        ensureCategory(data.category);
         ctx.addCatalogProduct(data);
         toast({ title: "Produto adicionado", description: `«${data.name}» está no catálogo.${offline() ? " Fica guardado neste aparelho até haver internet." : ""}` });
     };
@@ -101,6 +107,7 @@ export function CatalogManager() {
     /** Produto com variações: uma entrada no catálogo por variação, todas com o mesmo `variantGroup`. */
     const handleAddVariants = (base: Omit<CatalogProduct, "id">, variants: { name: string; values: Record<string, string>; price: number }[], existing: string[]) => {
         if (readOnly) return;
+        ensureCategory(base.category);
         const group = base.name.trim();
         for (const v of variants) {
             ctx.addCatalogProduct({ ...base, name: v.name, price: v.price, variantGroup: group, variantValues: v.values });
@@ -286,18 +293,18 @@ export function CatalogManager() {
         <>
             <Tabs value={tab} onValueChange={setTab} className="mt-4">
                 <div className="flex items-center gap-2">
-                    <TabsList className="grid flex-1 grid-cols-3">
+                    <TabsList className="grid flex-1 grid-cols-3" data-tour="catalog-tabs">
                         <TabsTrigger value="products">Produtos</TabsTrigger>
                         <TabsTrigger value="categories">Categorias</TabsTrigger>
                         <TabsTrigger value="import">Importar</TabsTrigger>
                     </TabsList>
                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="h-10 w-10 shrink-0" aria-label="Mais opções do catálogo"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="h-10 w-10 shrink-0" aria-label="Mais opções do catálogo" data-tour="catalog-more"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem onSelect={startSync} disabled={readOnly || syncing !== null}><RefreshCw className="mr-2 h-4 w-4" /> Sincronizar com o inventário</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    {!readOnly && <Button className="hidden shrink-0 md:inline-flex" onClick={() => { setAddPrefill(""); setAddOpen(true); }}><Plus className="mr-1.5 h-4 w-4" /> Novo produto</Button>}
+                    {!readOnly && <Button data-tour="catalog-new" className="hidden shrink-0 md:inline-flex" onClick={() => { setAddPrefill(""); setAddOpen(true); }}><Plus className="mr-1.5 h-4 w-4" /> Novo produto</Button>}
                 </div>
 
                 {syncing && (

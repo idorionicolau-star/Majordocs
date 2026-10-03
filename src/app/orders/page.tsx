@@ -407,7 +407,7 @@ export default function OrdersPage() {
           <div>
             <h1 className="text-2xl md:text-3xl font-headline font-bold">Encomendas de Produção</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" data-tour="orders-print">
             <Button onClick={handleDownloadPdfReport} variant="outline" className="h-12">
               <Download className="mr-2 h-4 w-4" />
               Baixar PDF
@@ -419,7 +419,7 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        <Card className="glass-panel p-4 mb-6 border-none">
+        <Card className="glass-panel p-4 mb-6 border-none" data-tour="orders-filters">
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row items-center gap-2">
               <Input
@@ -506,6 +506,7 @@ export default function OrdersPage() {
         ) : (
           <Button
             asChild
+            data-tour="orders-add"
             className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
             size="icon"
           >

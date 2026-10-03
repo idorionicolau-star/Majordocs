@@ -149,7 +149,7 @@ const RawMaterialsManager = () => {
                                 <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Matéria-Prima
                             </Button>
                         ) : (
-                            <Button asChild className="w-full sm:w-auto bg-primary text-white">
+                            <Button asChild data-tour="rm-add" className="w-full sm:w-auto bg-primary text-white">
                                 <Link href="/raw-materials/new">
                                     <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Matéria-Prima
                                 </Link>
@@ -685,7 +685,7 @@ export default function RawMaterialsPage() {
                 </p>
             </div>
             <Tabs defaultValue="materials">
-                <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto">
+                <TabsList data-tour="rm-tabs" className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto">
                     <TabsTrigger value="materials">Insumos</TabsTrigger>
                     <TabsTrigger value="recipes">Receitas</TabsTrigger>
                     <TabsTrigger value="production">Produção</TabsTrigger>

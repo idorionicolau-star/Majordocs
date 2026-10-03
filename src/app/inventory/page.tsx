@@ -606,7 +606,7 @@ export default function InventoryPage() {
         {/* Acções principais — só o que se usa todos os dias fica à vista */}
         <div className="flex items-center gap-2">
           {canEditInventory && (
-            <Button variant="default" className="h-12 flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white" asChild>
+            <Button data-tour="inv-quick" variant="default" className="h-12 flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white" asChild>
               <Link href="/inventory/quick">
                 <LayoutGrid className="mr-2 h-4 w-4" />
                 <span>Stock Rápido</span>
@@ -614,7 +614,7 @@ export default function InventoryPage() {
             </Button>
           )}
           {canEditInventory && (
-            <Button variant="outline" className="h-12 flex-1 sm:flex-none border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30" asChild>
+            <Button data-tour="inv-count" variant="outline" className="h-12 flex-1 sm:flex-none border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30" asChild>
               <Link href="/inventory/quick?modo=contagem">
                 <ClipboardList className="mr-2 h-4 w-4" />
                 <span>Contagem</span>
@@ -626,7 +626,7 @@ export default function InventoryPage() {
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-12 px-3 shrink-0 sm:ml-auto" aria-label="Mais opções">
+              <Button data-tour="inv-more" variant="outline" className="h-12 px-3 shrink-0 sm:ml-auto" aria-label="Mais opções">
                 <MoreHorizontal className="h-5 w-5" />
                 <span className="ml-2 hidden sm:inline">Mais</span>
               </Button>
@@ -668,6 +668,7 @@ export default function InventoryPage() {
           <div className="relative w-full">
             <ScanBarcode className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
+              data-tour="inv-search"
               placeholder="Procurar por nome ou código..."
               value={nameFilter}
               onChange={(event) => setNameFilter(event.target.value)}
@@ -675,7 +676,7 @@ export default function InventoryPage() {
             />
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto overflow-y-hidden pb-1 -mx-1 px-1">
+          <div data-tour="inv-filters" className="flex items-center gap-2 overflow-x-auto overflow-y-hidden pb-1 -mx-1 px-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="h-10 shrink-0 gap-1.5 px-3">
@@ -761,7 +762,7 @@ export default function InventoryPage() {
             </div>
 
             {/* Lista / Cartões — também no telemóvel */}
-            <div className="ml-auto flex shrink-0 items-center rounded-lg border p-0.5">
+            <div data-tour="inv-view" className="ml-auto flex shrink-0 items-center rounded-lg border p-0.5">
               <Button variant={currentView === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => handleSetView('list')} className="h-9 px-2.5" aria-label="Vista de lista">
                 <List className="h-4 w-4" />
                 <span className="ml-1.5 hidden sm:inline">Lista</span>
@@ -812,7 +813,7 @@ export default function InventoryPage() {
 
         {currentView === 'list' && !isDesktop ? (
           filteredProducts.length > 0 ? (
-            <div className="overflow-hidden rounded-xl border bg-card pb-0 mb-20">
+            <div data-tour="inv-list" className="overflow-hidden rounded-xl border bg-card pb-0 mb-20">
               <Virtuoso
                 useWindowScroll
                 increaseViewportBy={500}
@@ -835,6 +836,7 @@ export default function InventoryPage() {
             </Card>
           )
         ) : currentView === 'list' ? (
+          <div data-tour="inv-list">
           <InventoryDataTable
             columns={columns({
               onAttemptDelete: handleConfirmDeleteProduct,
@@ -847,6 +849,7 @@ export default function InventoryPage() {
             data={filteredProducts}
             useVirtualization
           />
+          </div>
         ) : (
           filteredProducts.length > 0 ? (
             // Grelha normal, carregada aos poucos: a grelha virtual re-media os cartões (com e sem
@@ -900,6 +903,7 @@ export default function InventoryPage() {
         ) : (
           <Button
             asChild
+            data-tour="inv-add"
             className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
             size="icon"
           >

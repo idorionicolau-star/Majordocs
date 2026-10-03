@@ -57,12 +57,12 @@ export default function DashboardPage() {
         <>
           {/* 2. Análise detalhada — para quem quer ir mais fundo */}
           <h2 className="mt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Números e gráficos</h2>
-          <PrimaryKPIs />
+          <div data-tour="dash-kpis"><PrimaryKPIs /></div>
 
 
           {/* 3. Charts & Insights Section - Row 1 */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-3" data-tour="dash-chart">
               <MonthlySalesChart className="h-full" />
             </div>
             <div className="lg:col-span-1">
@@ -79,7 +79,7 @@ export default function DashboardPage() {
 
           {/* Row 3 - Assistant + Stock Alerts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:h-[450px]">
-            <MajorAssistant variant="card" className="h-[400px] md:h-full md:order-2" />
+            <div data-tour="dash-assistant" className="md:order-2"><MajorAssistant variant="card" className="h-[400px] md:h-full" /></div>
             <StockAlerts className="md:h-full md:order-1" />
           </div>
         </>

@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useInventory } from "@/context/inventory-context";
 import { useCRM } from "@/context/crm-context";
 import { useToast } from "@/hooks/use-toast";
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn, formatCurrency, normalizeString, plural } from "@/lib/utils";
 import type { CartItem, Product, Sale } from "@/lib/types";
 import { parseQuickInput, searchProducts, toNumber } from "@/lib/quick-stock";
-import { Check, ChevronDown, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, Truck, X } from "lucide-react";
+import { Check, ChevronDown, GraduationCap, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, Truck, X } from "lucide-react";
 import { BarcodeScanner } from "@/components/scan/barcode-scanner";
 import { VoiceButton } from "@/components/scan/voice-button";
 import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode";
@@ -23,6 +24,7 @@ import { VoiceConfirm, type VoiceAsk } from "@/components/scan/voice-confirm";
 import { useBarcodeLink } from "@/hooks/use-barcode-link";
 import { useCuring } from "@/hooks/use-curing";
 import { isCountableSale } from '@/lib/sale-filters';
+import { DEMO_PRODUCTS, markDemoSaleDone } from '@/lib/demo-data';
 
 type Line = {
     key: string;
@@ -96,7 +98,11 @@ export function FastSale() {
 
     const searchRef = useRef<HTMLInputElement>(null);
     const qtyRefs = useRef<Map<string, HTMLInputElement>>(new Map());
-    const cartKey = companyId ? `majorstockx-fastsale-${companyId}` : "";
+    // /pos?demo=1: venda de demonstração — produtos fictícios e nada é gravado (nem venda, nem stock, nem cliente)
+    const searchParams = useSearchParams();
+    const demo = searchParams?.get("demo") === "1";
+    const [demoDone, setDemoDone] = useState<{ total: number; items: number; client: string } | null>(null);
+    const cartKey = companyId && !demo ? `majorstockx-fastsale-${companyId}` : "";
 
     useEffect(() => {
         if (location || !locations.length) return;
@@ -114,11 +120,17 @@ export function FastSale() {
     useEffect(() => {
         if (cartKey) save(cartKey, lines);
     }, [cartKey, lines]);
+    // ao entrar na demonstração começa com o carrinho vazio (o carrinho verdadeiro fica guardado e volta ao sair)
+    useEffect(() => {
+        if (!demo) return;
+        setLines([]); setClient(""); setPaidText(""); setDiscountText(""); setNotes(""); setText(""); setDemoDone(null); setLastSale(null);
+    }, [demo]);
 
     const scoped = useMemo(() => {
+        if (demo) return DEMO_PRODUCTS;
         const list = products.filter((p) => !p.deletedAt);
         return isMultiLocation && location ? list.filter((p) => (p.location || "") === location) : list;
-    }, [products, isMultiLocation, location]);
+    }, [products, isMultiLocation, location, demo]);
 
     const catalogPrice = useMemo(() => {
         const m = new Map<string, number>();
@@ -184,7 +196,7 @@ export function FastSale() {
     };
 
     const pickProduct = (p: Product, qty?: number | null) => {
-        if (pendingCode) {
+        if (pendingCode && !demo) {
             const ok = linkBarcode(p, pendingCode);
             toast({ title: ok ? `Código ligado a ${p.name}` : "Não foi possível guardar o código", description: ok ? "Da próxima vez basta ler." : "Sem permissão para editar produtos — a venda continua." });
             setPendingCode(null);
@@ -290,6 +302,14 @@ export function FastSale() {
     const customerNames = useMemo(() => Array.from(new Set(customers.map((c) => c.name))).sort((a, b) => a.localeCompare(b, "pt")), [customers]);
 
     const confirm = async () => {
+        if (demo) {
+            if (!canConfirm) return;
+            // demonstração: mostra como ficaria, sem gravar nada
+            setDemoDone({ total, items: lines.length, client: client.trim() });
+            markDemoSaleDone(companyId);
+            setLines([]); setClient(""); setPaidText(""); setDiscountText(""); setNotes(""); setPickedUp(true); setDocType("Venda a Dinheiro"); setMore(false);
+            return;
+        }
         if (isReadOnly) {
             toast({ variant: "destructive", title: "Conta em modo leitura", description: "Contacte o suporte para reactivar o acesso completo." });
             return;
@@ -332,7 +352,7 @@ export function FastSale() {
                 amountPaid: isProforma ? 0 : Math.min(paid, total),
             });
             save("majorstockx-fastsale-location", location);
-            if (firstEver) window.dispatchEvent(new CustomEvent("msx:tour", { detail: { celebrate: true } }));
+            if (firstEver) toast({ title: "🎉 Primeira venda registada!", description: "Está no Histórico de Vendas, com o documento para imprimir ou enviar." });
             setLastSale({ total, items: lines.length, client: name });
             setLines([]);
             setClient("");
@@ -381,7 +401,7 @@ export function FastSale() {
                             <Link href="/sales/carga"><Truck className="mr-1.5 h-4 w-4" />Carga</Link>
                         </Button>
                     )}
-                    <Button asChild variant="outline" size="sm">
+                    <Button asChild variant="outline" size="sm" data-tour="pos-catalog">
                         <Link href="/pos/catalogo"><LayoutGrid className="mr-1.5 h-4 w-4" />Catálogo</Link>
                     </Button>
                 </div>
@@ -394,7 +414,37 @@ export function FastSale() {
                 </Select>
             )}
 
-            {lastSale && lines.length === 0 && (
+            {demo && (
+                <div data-tour="pos-demo-banner" className="mt-3 rounded-2xl border-2 border-amber-500/60 bg-amber-500/10 p-3">
+                    <div className="flex items-start gap-2.5">
+                        <GraduationCap className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                        <div className="min-w-0 flex-1">
+                            <p className="font-bold text-amber-700 dark:text-amber-400">Modo demonstração</p>
+                            <p className="text-sm">Os produtos são de exemplo e <b>nada do que fizer aqui é gravado</b>: nem vendas, nem stock, nem clientes. Experimente à vontade.</p>
+                        </div>
+                        <Button asChild variant="outline" size="sm" className="shrink-0"><Link href="/pos">Sair</Link></Button>
+                    </div>
+                </div>
+            )}
+
+            {demo && demoDone && lines.length === 0 && (
+                <div data-tour="pos-demo-done" className="mt-3 rounded-2xl border-2 border-emerald-500/50 bg-emerald-500/10 p-4">
+                    <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">✓ Venda de demonstração concluída</p>
+                    <p className="mt-0.5 text-sm">{formatCurrency(demoDone.total)} · {plural(demoDone.items, "produto", "produtos")}{demoDone.client ? ` · ${demoDone.client}` : ""}</p>
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                        <li>Numa venda a sério, o <b className="text-foreground">stock desce sozinho</b>.</li>
+                        <li>A venda aparece no <b className="text-foreground">Histórico de Vendas</b>, com o documento para imprimir ou enviar por WhatsApp.</li>
+                        <li>O dinheiro entra no <b className="text-foreground">Financeiro</b> e conta para os relatórios.</li>
+                    </ul>
+                    <p className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-400">Esta foi só uma demonstração: nada foi gravado.</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        <Button type="button" size="sm" variant="outline" onClick={() => { setDemoDone(null); focusSearch(); }}>Repetir a demonstração</Button>
+                        <Button asChild size="sm"><Link href="/pos">Sair da demonstração</Link></Button>
+                    </div>
+                </div>
+            )}
+
+            {!demo && lastSale && lines.length === 0 && (
                 <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3">
                     <p className="text-sm"><b className="text-emerald-600">✓ Venda registada</b> · {formatCurrency(lastSale.total)}{lastSale.client ? ` · ${lastSale.client}` : ""}</p>
                     <button type="button" aria-label="Fechar" onClick={() => setLastSale(null)} className="text-muted-foreground"><X className="h-4 w-4" /></button>
@@ -404,7 +454,7 @@ export function FastSale() {
             {/* Search */}
             <div className="sticky top-0 z-20 -mx-4 mt-3 bg-background px-4 py-2">
                 <div className="flex items-center gap-2">
-                <div className="relative min-w-0 flex-1">
+                <div className="relative min-w-0 flex-1" data-tour="pos-search">
                     <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         ref={searchRef}
@@ -425,6 +475,7 @@ export function FastSale() {
                 </div>
                 <button
                     type="button"
+                    data-tour="pos-scan"
                     aria-label="Ler código de barras com a câmara"
                     title="Ler código de barras (F8)"
                     onMouseDown={(e) => e.preventDefault()}
@@ -433,7 +484,7 @@ export function FastSale() {
                 >
                     <ScanBarcode className="h-6 w-6" />
                 </button>
-                <VoiceButton className="h-14 w-14" onInterim={setListening} onResult={handleVoice} onProblem={(m) => { setListening(""); toast({ variant: "destructive", title: "Ditado", description: m }); }} />
+                <span data-tour="pos-voice" className="shrink-0"><VoiceButton className="h-14 w-14" onInterim={setListening} onResult={handleVoice} onProblem={(m) => { setListening(""); toast({ variant: "destructive", title: "Ditado", description: m }); }} /></span>
                 </div>
                 {listening && <p className="mt-1.5 px-1 text-sm italic text-muted-foreground">🎙 {listening}</p>}
                 <VoiceConfirm
@@ -467,7 +518,7 @@ export function FastSale() {
                         const a = avail(p);
                         const c = inCart(p);
                         return (
-                            <button key={p.instanceId} type="button" onClick={() => pickProduct(p, parsed.qty)} onMouseEnter={() => setHighlight(i)} disabled={a <= 0}
+                            <button key={p.instanceId} type="button" data-tour="pos-result" onClick={() => pickProduct(p, parsed.qty)} onMouseEnter={() => setHighlight(i)} disabled={a <= 0}
                                 className={cn("flex w-full items-center justify-between gap-3 border-b px-4 py-3 text-left last:border-0 disabled:opacity-50", i === highlight && "bg-muted")}>
                                 <div className="min-w-0">
                                     <p className="truncate font-medium">{p.name}</p>
@@ -481,11 +532,11 @@ export function FastSale() {
                 </div>
             ) : (
                 favourites.length > 0 && (
-                    <div className="mt-1">
-                        <p className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Mais vendidos — um toque junta 1</p>
+                    <div className="mt-1" data-tour="pos-favourites">
+                        <p className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{demo ? "Produtos de exemplo" : "Mais vendidos"} — um toque junta 1</p>
                         <div className={cn("-mx-4 flex gap-2 px-4 pb-1", lines.length ? "overflow-x-auto overflow-y-hidden" : "flex-wrap")}>
                             {favourites.map((p) => (
-                                <button key={p.instanceId} type="button" onClick={() => add(p)} className="shrink-0 whitespace-nowrap rounded-full border bg-card px-3 py-2 text-left text-sm hover:border-primary">
+                                <button key={p.instanceId} type="button" data-tour="pos-favourite" onClick={() => add(p)} className="shrink-0 whitespace-nowrap rounded-full border bg-card px-3 py-2 text-left text-sm hover:border-primary">
                                     <span className="font-medium">{p.name}</span>
                                     <span className="ml-1.5 text-xs text-muted-foreground">{formatCurrency(priceOf(p))} · {fmtQ(avail(p))} disp.</span>
                                 </button>
@@ -504,7 +555,7 @@ export function FastSale() {
                             const liveA = liveAvail(l);
                             const over = l.qty > liveA && !isProforma;
                             return (
-                                <div key={l.key} className={cn("border-b px-3 py-3 last:border-0", over && "bg-red-500/10")}>
+                                <div key={l.key} data-tour="pos-cart-line" className={cn("border-b px-3 py-3 last:border-0", over && "bg-red-500/10")}>
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="min-w-0">
                                             <p className="truncate text-sm font-semibold">{l.name}</p>
@@ -515,7 +566,7 @@ export function FastSale() {
                                         <button type="button" aria-label="Remover" onClick={() => remove(l.key)} className="shrink-0 p-1 text-muted-foreground"><Trash2 className="h-4 w-4" /></button>
                                     </div>
                                     <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                                        <div className="flex items-center rounded-xl border">
+                                        <div className="flex items-center rounded-xl border" data-tour="pos-qty">
                                             <button type="button" aria-label="Menos" onMouseDown={(e) => e.preventDefault()} onClick={() => (l.qty > 1 ? setLine(l.key, { qty: l.qty - 1 }) : remove(l.key))} className="h-10 w-10 text-muted-foreground"><Minus className="mx-auto h-4 w-4" /></button>
                                             <input
                                                 ref={(el) => { if (el) qtyRefs.current.set(l.key, el); else qtyRefs.current.delete(l.key); }}
@@ -531,6 +582,8 @@ export function FastSale() {
                                         </div>
                                         <span className="text-xs text-muted-foreground">{l.unit} ×</span>
                                         <input
+                                            data-tour="pos-price"
+                                            aria-label={`Preço de ${l.name}`}
                                             inputMode="decimal"
                                             defaultValue={l.price ? String(l.price) : ""}
                                             placeholder="preço"
@@ -554,13 +607,13 @@ export function FastSale() {
 
                     {/* Checkout — all on one screen, sensible defaults */}
                     <div className="mt-4 space-y-4 rounded-2xl border bg-card p-4">
-                        <div>
+                        <div data-tour="pos-client">
                             <label className="text-xs font-semibold text-muted-foreground">Cliente {debt > 0 ? <span className="text-red-500">(obrigatório — fica a dever)</span> : "(opcional)"}</label>
                             <Input list="fastsale-customers" value={client} onChange={(e) => setClient(e.target.value)} placeholder="Nome do cliente" className="mt-1 h-11 rounded-xl" />
                             <datalist id="fastsale-customers">{customerNames.map((n) => <option key={n} value={n} />)}</datalist>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-2" data-tour="pos-pickup">
                             {[{ v: true, t: "Levou agora", d: "sai do stock" }, { v: false, t: "Levanta depois", d: "fica reservado" }].map((o) => (
                                 <button key={String(o.v)} type="button" onClick={() => setPickedUp(o.v)}
                                     className={cn("rounded-xl border-2 p-2.5 text-left", pickedUp === o.v ? "border-primary bg-primary/5" : "border-border")}>
@@ -589,7 +642,7 @@ export function FastSale() {
                         )}
 
                         {!isProforma && (
-                            <>
+                            <div className="space-y-4" data-tour="pos-payment">
                                 <div className="flex flex-wrap gap-1.5">
                                     {PAYMENTS.map((p) => (
                                         <button key={p} type="button" onClick={() => setPayment(p)}
@@ -602,10 +655,10 @@ export function FastSale() {
                                     {debt > 0 && <p className="mt-1 text-xs font-semibold text-amber-600">Fica a dever {formatCurrency(debt)}.</p>}
                                     {change > 0 && <p className="mt-1 text-xs font-semibold text-emerald-600">Troco: {formatCurrency(change)}</p>}
                                 </div>
-                            </>
+                            </div>
                         )}
 
-                        <div>
+                        <div data-tour="pos-date">
                             <label className="text-xs font-semibold text-muted-foreground">Data da venda</label>
                             <div className="mt-1 flex items-center gap-2">
                                 <Input type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value || todayISO())} className="h-11 rounded-xl" />
@@ -614,7 +667,7 @@ export function FastSale() {
                             {date !== todayISO() && <p className="mt-1 text-xs text-amber-600">A registar uma venda de {new Date(`${date}T12:00:00`).toLocaleDateString("pt-PT")}.</p>}
                         </div>
 
-                        <button type="button" onClick={() => setMore((m) => !m)} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground">
+                        <button type="button" data-tour="pos-more" onClick={() => setMore((m) => !m)} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground">
                             <ChevronDown className={cn("h-4 w-4 transition", more && "rotate-180")} /> Mais opções (documento, desconto, nota)
                         </button>
                         {more && (
@@ -641,7 +694,7 @@ export function FastSale() {
                 </div>
             )}
 
-            {lines.length === 0 && !parsed.term && !lastSale && (
+            {lines.length === 0 && !parsed.term && !lastSale && !demoDone && (
                 <div className="mt-6 rounded-2xl border border-dashed p-5 text-sm text-muted-foreground">
                     <p className="font-medium text-foreground">Como vender em segundos</p>
                     <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -657,13 +710,13 @@ export function FastSale() {
             {lines.length > 0 && (
                 <div className={cn("fixed inset-x-0 z-40 border-t bg-background p-3 md:bottom-0 md:left-64", !keyboardInset && "bottom-16")} style={keyboardInset ? { bottom: keyboardInset } : undefined}>
                     <div className="mx-auto flex max-w-3xl items-center gap-3">
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1" data-tour="pos-total">
                             <p className="text-[11px] text-muted-foreground">{plural(lines.length, "produto", "produtos")}{discount > 0 ? ` · desconto ${formatCurrency(discount)}` : ""}</p>
                             <p className="text-xl font-bold tabular-nums">{formatCurrency(total)}</p>
                         </div>
-                        <Button type="button" onClick={confirm} disabled={!canConfirm} className="h-12 shrink-0 rounded-xl bg-emerald-600 px-5 text-base text-white hover:bg-emerald-700">
+                        <Button type="button" data-tour="pos-confirm" onClick={confirm} disabled={!canConfirm} className="h-12 shrink-0 rounded-xl bg-emerald-600 px-5 text-base text-white hover:bg-emerald-700">
                             {saving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Check className="mr-2 h-5 w-5" />}
-                            {isProforma ? "Emitir proforma" : "Confirmar venda"}
+                            {isProforma ? "Emitir proforma" : demo ? "Confirmar (demonstração)" : "Confirmar venda"}
                         </Button>
                     </div>
                     {!canConfirm && !saving && (

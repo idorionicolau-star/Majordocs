@@ -237,7 +237,7 @@ export default function SalesPage() {
             <p className="text-muted-foreground">Consulte o histórico de vendas e saídas de stock.</p>
           </div>
           {canEditSales && (
-            <Button asChild className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+            <Button asChild data-tour="sales-add" className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
               <Link href="/sales/new">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Adicionar Venda
@@ -250,18 +250,19 @@ export default function SalesPage() {
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row items-center gap-2">
               <Input
+                data-tour="sales-search"
                 placeholder="Filtrar por produto (nome)..."
                 value={nameFilter}
                 onChange={(event) => setNameFilter(event.target.value)}
                 className="w-full sm:max-w-xs shadow-sm h-12 text-sm bg-background/50"
               />
-              <div className="flex flex-col w-full sm:flex-row sm:w-auto items-center gap-2">
+              <div className="flex flex-col w-full sm:flex-row sm:w-auto items-center gap-2" data-tour="sales-date">
                 <DatePicker date={dateFilter} setDate={setDateFilter} />
               </div>
             </div>
 
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t border-border/50 pt-4">
-              <div className="hidden md:flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2" data-tour="sales-view">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -306,7 +307,7 @@ export default function SalesPage() {
                 </TooltipProvider>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" data-tour="sales-filter">
                 <DropdownMenu>
                   <TooltipProvider>
                     <Tooltip>
@@ -378,7 +379,7 @@ export default function SalesPage() {
                 onClear={clearLinkFocus}
               />
             )}
-            <div className="space-y-4">
+            <div className="space-y-4" data-tour="sales-list">
               {view === 'list' ? (
                 <SalesDataTable
                   columns={columns({

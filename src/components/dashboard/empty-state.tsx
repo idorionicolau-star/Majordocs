@@ -8,16 +8,16 @@ import { InventoryContext } from "@/context/inventory-context";
 import { uploadProductImage } from "@/lib/upload-product-image";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { FirstSaleWizard } from "@/components/dashboard/first-sale-wizard";
+import { GettingStartedCard } from "@/components/onboarding/getting-started-card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type Details = { name: string; taxId: string; phone: string; address: string; logoUrl: string };
 
-function StepBadge({ n, done }: { n: number; done: boolean }) {
+function StepBadge({ icon: Icon, done }: { icon: React.ElementType; done: boolean }) {
     return (
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${done ? "bg-emerald-500 text-white" : "bg-primary/10 text-primary"}`}>
-            {done ? <Check className="h-4 w-4" /> : n}
+            {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
         </span>
     );
 }
@@ -85,15 +85,15 @@ export function EmptyStateWelcome() {
             <div className="text-center">
                 {companyData?.logoUrl && <img src={companyData.logoUrl} alt="" className="mx-auto mb-3 h-14 max-w-[180px] object-contain" />}
                 <h2 className="text-2xl font-bold tracking-tight md:text-3xl">Bem-vindo{companyData?.name ? `, ${companyData.name}` : ""}! 🚀</h2>
-                <p className="mt-2 text-muted-foreground">Vamos fazer a sua primeira venda. Leva menos de um minuto.</p>
+                <p className="mt-2 text-muted-foreground">Vamos pôr a empresa a funcionar. Em cada passo mostramos-lhe onde tocar.</p>
             </div>
 
-            <FirstSaleWizard />
+            <GettingStartedCard />
 
             {/* 1. Empresa */}
             <section className="rounded-2xl border bg-card p-4">
                 <div className="flex items-start gap-3">
-                    <StepBadge n={2} done={profileDone} />
+                    <StepBadge icon={Building2} done={profileDone} />
                     <div className="min-w-0 flex-1">
                         <h3 className="flex items-center gap-2 font-semibold"><Building2 className="h-4 w-4" /> Dados da empresa <span className="text-xs font-normal text-muted-foreground">(pode fazer depois)</span></h3>
                         <p className="text-sm text-muted-foreground">NUIT, contactos e logótipo aparecem nas facturas, guias e e-mails.</p>
@@ -143,7 +143,7 @@ export function EmptyStateWelcome() {
             {/* 2. Produtos */}
             <section className="rounded-2xl border bg-card p-4">
                 <div className="flex items-start gap-3">
-                    <StepBadge n={3} done={productsDone} />
+                    <StepBadge icon={PackagePlus} done={productsDone} />
                     <div className="min-w-0 flex-1">
                         <h3 className="flex items-center gap-2 font-semibold"><PackagePlus className="h-4 w-4" /> Já tem uma lista de produtos?</h3>
                         <p className="text-sm text-muted-foreground">Adicione vários de uma vez, em vez de um a um.</p>

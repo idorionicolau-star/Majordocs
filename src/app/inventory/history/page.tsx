@@ -260,7 +260,7 @@ export default function InventoryHistoryPage() {
             </Button>
           </div>
         </div>
-        <div className="flex flex-col md:flex-row gap-2">
+        <div className="flex flex-col md:flex-row gap-2" data-tour="hist-filters">
           <Input
             placeholder="Pesquisar por produto, utilizador, motivo..."
             value={searchFilter}
@@ -270,7 +270,7 @@ export default function InventoryHistoryPage() {
           <DatePicker date={selectedDate} setDate={setSelectedDate} />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" data-tour="hist-list">
           {filteredMovements.length > 0 ? (
             filteredMovements.map(movement => (
               <MovementCard key={movement.id} movement={movement} locationMap={locationMap} />

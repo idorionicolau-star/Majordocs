@@ -30,7 +30,7 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, vi
     const isPartiallyPaid = sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue;
 
     return (
-        <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 shadow-sm">
+        <Card data-tour="sales-item" className="glass-card flex flex-col h-full group p-2 sm:p-4 shadow-sm">
             <CardHeader className="p-1 sm:p-2">
                 <div className="flex justify-between items-start">
                     <CardTitle className="text-xs font-bold truncate leading-tight">
@@ -78,7 +78,7 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, vi
                     </div>
                 </div>
 
-                <div className={cn("mt-2 flex justify-center items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold",
+                <div data-tour="sales-status" className={cn("mt-2 flex justify-center items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold",
                     sale.status === 'Levantado'
                         ? 'bg-[hsl(var(--chart-2))]/10 text-[hsl(var(--chart-2))]'
                         : 'bg-primary/10 text-primary'

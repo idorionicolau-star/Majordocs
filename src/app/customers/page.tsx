@@ -79,7 +79,7 @@ export default function CustomersPage() {
                             Base de clientes e histórico de compras.
                         </p>
                     </div>
-                    <Button onClick={() => router.push('/customers/new')} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all active:scale-95">
+                    <Button data-tour="cust-add" onClick={() => router.push('/customers/new')} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all active:scale-95">
                         <Plus className="w-4 h-4 mr-2" />
                         Novo Cliente
                     </Button>
@@ -98,7 +98,7 @@ export default function CustomersPage() {
                 </Card>
 
                 <div className="md:col-span-2 flex items-end">
-                    <div className="relative w-full">
+                    <div className="relative w-full" data-tour="cust-search">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <Input
                             placeholder={searchPlaceholder}
@@ -113,7 +113,7 @@ export default function CustomersPage() {
 
             {/* Table */}
             {/* Desktop Table */}
-            <div className="hidden md:block rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+            <div data-tour="cust-list" className="hidden md:block rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
                 <Table>
                     <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
                         <TableRow>
@@ -180,7 +180,7 @@ export default function CustomersPage() {
             </div>
 
             {/* Mobile Cards */}
-            <div className="md:hidden space-y-4">
+            <div className="md:hidden space-y-4" data-tour="cust-list">
                 {filteredCustomers.length === 0 ? (
                     <Card className="p-8 text-center text-slate-500 bg-white/50 dark:bg-slate-900/50 border-dashed">
                         {loading ? 'A carregar...' : 'Nenhum cliente encontrado.'}
