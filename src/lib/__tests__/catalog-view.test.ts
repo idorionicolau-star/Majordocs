@@ -89,3 +89,23 @@ describe('lixeira, duplicados e preços', () => {
         expect(nameKey(' Pavê  X ')).toBe('pave x');
     });
 });
+
+import { buildSyncPlan } from '../catalog-view';
+describe('sincronizar inventário', () => {
+    it('só o que falta, um por nome, sem a lixeira', () => {
+        const inv = [
+            { name: 'Cimento Cola', category: 'Cimentos', price: 450 },       // já existe
+            { name: 'Parafuso M8', category: 'Ferragens', price: 5 },
+            { name: 'parafuso  m8', category: 'Ferragens', price: 5 },        // mesmo nome noutro local
+            { name: 'Serra', price: 90, deletedAt: '2026-01-01' },            // lixeira
+            { name: 'Lixa', price: 0 },                                       // sem categoria
+        ];
+        const plan = buildSyncPlan(inv, cat, ['Cimentos', 'Tintas']);
+        expect(plan.products.map((p) => p.name)).toEqual(['Parafuso M8', 'Lixa']);
+        expect(plan.products[1].category).toBe('Geral');
+        expect(plan.newCategories.sort()).toEqual(['Ferragens', 'Geral']);
+    });
+    it('nada em falta', () => {
+        expect(buildSyncPlan([{ name: 'bloco 15' }], cat, []).products).toEqual([]);
+    });
+});

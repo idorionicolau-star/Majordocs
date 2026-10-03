@@ -65,7 +65,9 @@ export function useSettingsActions(core: InventoryCore) {
     for (let i = 0; i < ops.length; i += 400) {
       const batch = writeBatch(firestore);
       ops.slice(i, i + 400).forEach((o) => batch.update(doc(firestore, `companies/${companyId}/catalogProducts`, o.id), o.data));
-      await batch.commit();
+      // sem internet o commit só termina quando a ligação volta: a alteração já está guardada neste aparelho, não se espera
+      if (typeof navigator !== 'undefined' && !navigator.onLine) batch.commit().catch(() => { });
+      else await batch.commit();
     }
     return ops.length;
   }, [firestore, companyId]);
@@ -114,7 +116,9 @@ export function useSettingsActions(core: InventoryCore) {
       return false;
     }
     try {
-      await deleteDoc(doc(firestore, `companies/${companyId}/catalogCategories`, categoryId));
+      const ref = doc(firestore, `companies/${companyId}/catalogCategories`, categoryId);
+      if (typeof navigator !== 'undefined' && !navigator.onLine) deleteDoc(ref).catch(() => { });
+      else await deleteDoc(ref);
       return true;
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Não foi possível apagar a categoria', description: e?.message });

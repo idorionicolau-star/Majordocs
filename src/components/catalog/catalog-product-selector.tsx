@@ -12,12 +12,15 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn, normalizeString, calculateSimilarity } from '@/lib/utils';
-import { useFuse } from '@/hooks/use-fuse';
+import { cn, normalizeString, calculateSimilarity, formatCurrency } from '@/lib/utils';
+import { searchCatalog } from '@/lib/catalog-view';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { ScrollArea } from '../ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import dynamic from 'next/dynamic';
+
+const MAX_SHOWN = 50;
+const RECENT_KEY = 'msx-recent-products';
 
 const QuickCreateProductDialog = dynamic(() => import('./quick-create-product-dialog').then(mod => mod.QuickCreateProductDialog), {
   loading: () => null,
@@ -39,12 +42,32 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
   const [open, setOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const isDesktop = useMediaQuery("(min-width: 768px)"); const categoryFilteredProducts = useMemo(() => {
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const [recentNames, setRecentNames] = useState<string[]>([]);
+  useEffect(() => {
+    try { setRecentNames(JSON.parse(localStorage.getItem(RECENT_KEY) || '[]')); } catch { /* sem armazenamento */ }
+  }, [open]);
+
+  const sortedCategories = useMemo(() => [...categories].sort((a, b) => a.name.localeCompare(b.name)), [categories]);
+  const categoryFilteredProducts = useMemo(() => {
     if (categoryFilter === 'all') return products;
     return products.filter(p => p.category === categoryFilter);
   }, [products, categoryFilter]);
 
-  const filteredProducts = useFuse(categoryFilteredProducts, searchQuery, { keys: ['name'] });
+  // Pesquisa igual à do resto da app (sem acentos, plural, gralhas, também por categoria).
+  // Só se desenham MAX_SHOWN: com centenas de produtos, desenhá-los todos tornava abrir a lista lento no telemóvel.
+  const { shown, total } = useMemo(() => {
+    const q = searchQuery.trim();
+    if (q) {
+      const hits = searchCatalog(categoryFilteredProducts, q);
+      return { shown: hits.slice(0, MAX_SHOWN), total: hits.length };
+    }
+    const alpha = [...categoryFilteredProducts].sort((a, b) => a.name.localeCompare(b.name, 'pt', { numeric: true }));
+    const recents = recentNames.map(n => alpha.find(p => p.name === n)).filter((p): p is CatalogProduct => !!p).slice(0, 6);
+    const rest = alpha.filter(p => !recents.includes(p));
+    return { shown: [...recents, ...rest].slice(0, MAX_SHOWN), total: alpha.length };
+  }, [categoryFilteredProducts, searchQuery, recentNames]);
+  const filteredProducts = shown;
 
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [quickCreateName, setQuickCreateName] = useState('');
@@ -57,6 +80,10 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
   };
 
   const handleSelect = useCallback((name: string, product?: CatalogProduct) => {
+    try {
+      const next = [name, ...(JSON.parse(localStorage.getItem(RECENT_KEY) || '[]') as string[]).filter((n) => n !== name)].slice(0, 12);
+      localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+    } catch { /* sem armazenamento */ }
     onValueChange(name, product);
     setOpen(false);
     setSearchQuery('');
@@ -100,7 +127,7 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as Categorias</SelectItem>
-                {categories.sort((a, b) => a.name.localeCompare(b.name)).map(cat => (
+                {sortedCategories.map(cat => (
                   <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -157,7 +184,7 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
                       <span>Criar "{searchQuery}"</span>
                     </CommandItem>
                   )}
-                  {filteredProducts.sort((a, b) => a.name.localeCompare(b.name)).map((product) => (
+                  {filteredProducts.map((product) => (
                     <CommandItem
                       key={product.id}
                       value={product.name}
@@ -169,7 +196,7 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
                           selectedValue === product.name ? "opacity-100" : "opacity-0"
                         )}
                       />
-                      <div className="flex items-center gap-2">
+                      <div className="flex w-full items-center gap-2">
                         {product.imageUrl ? (
                           <img src={product.imageUrl} alt="" className="h-6 w-6 rounded object-cover shrink-0" />
                         ) : (
@@ -177,10 +204,14 @@ export function CatalogProductSelector({ products, categories, selectedValue, on
                             <PackageCheck className="h-3 w-3 opacity-40" />
                           </div>
                         )}
-                        {product.name}
+                        <span className="min-w-0 flex-1 truncate">{product.name}</span>
+                        {!!product.price && <span className="shrink-0 pl-2 text-xs tabular-nums text-muted-foreground">{formatCurrency(product.price)}</span>}
                       </div>
                     </CommandItem>
                   ))}
+                  {total > filteredProducts.length && (
+                    <p className="px-3 py-2 text-center text-xs text-muted-foreground">A mostrar {filteredProducts.length} de {total} — escreva para filtrar.</p>
+                  )}
                 </CommandGroup>
               </div>
             </CommandList>

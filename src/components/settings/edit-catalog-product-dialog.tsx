@@ -98,7 +98,7 @@ function EditCatalogProductDialogContent({ product, categories, units, onUpdate,
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Categoria</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione uma categoria" />
@@ -157,7 +157,7 @@ function EditCatalogProductDialogContent({ product, categories, units, onUpdate,
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Unidade</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione..." />
@@ -215,15 +215,24 @@ function EditCatalogProductDialogContent({ product, categories, units, onUpdate,
   )
 }
 
-export function EditCatalogProductDialog(props: EditCatalogProductDialogProps) {
-  const [open, setOpen] = useState(false);
+export function EditCatalogProductDialog({ open: openProp, onOpenChange, hideTrigger, ...props }: EditCatalogProductDialogProps & {
+  /** Modo controlado: a página decide quando abre (ex.: tocar num cartão). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
+}) {
+  const [innerOpen, setInnerOpen] = useState(false);
+  const open = openProp ?? innerOpen;
+  const setOpen = (o: boolean) => { setInnerOpen(o); onOpenChange?.(o); };
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Edit className="h-4 w-4 text-muted-foreground" />
-        </Button>
-      </DialogTrigger>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Editar ${props.product.name}`}>
+            <Edit className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        </DialogTrigger>
+      )}
       {open && <EditCatalogProductDialogContent {...props} setOpen={setOpen} />}
     </Dialog>
   );

@@ -5,7 +5,7 @@ import { searchProducts } from '@/lib/quick-stock';
 import { approxProducts } from '@/lib/voice-approx';
 
 export type CatalogLike = {
-    id: string;
+    id?: string;
     name: string;
     category?: string;
     price?: number;
@@ -40,10 +40,10 @@ export function searchCatalog<T extends CatalogLike>(items: T[], term: string): 
     const t = term.trim();
     if (!t) return items;
     const byNameHits = searchProducts(items, t, items.length);
-    const seen = new Set(byNameHits.map((i) => i.id));
+    const seen = new Set<T>(byNameHits);
     // também por categoria: "tintas" mostra a categoria Tintas
     const tokens = nameKey(t).split(' ').filter(Boolean);
-    const byCategory = items.filter((i) => !seen.has(i.id) && i.category && tokens.every((tok) => nameKey(i.category!).includes(tok)));
+    const byCategory = items.filter((i) => !seen.has(i) && i.category && tokens.every((tok) => nameKey(i.category!).includes(tok)));
     const hits = [...byNameHits, ...byCategory];
     if (hits.length) return hits;
     return approxProducts(items, t, 30).filter((s) => s.score >= 0.6).map((s) => s.product);
@@ -87,4 +87,32 @@ export function categoryCounts(items: { category?: string }[]): Map<string, numb
 export function parsePct(raw: string): number | null {
     const n = parseFloat(String(raw).replace(',', '.'));
     return Number.isFinite(n) && n > -100 && n <= 1000 ? n : null;
+}
+
+type InventoryLite = { name: string; category?: string; price?: number; unit?: string; lowStockThreshold?: number; criticalStockThreshold?: number; deletedAt?: string | null };
+
+/**
+ * "Sincronizar inventário": o que falta no catálogo. Um produto por nome (ignora acentos/maiúsculas), mesmo que
+ * esteja em vários locais, e só os que não estão na lixeira. Devolve também as categorias que ainda não existem.
+ */
+export function buildSyncPlan(inventory: InventoryLite[], catalog: { name: string }[], categories: string[]) {
+    const have = new Set(catalog.map((c) => nameKey(c.name)));
+    const haveCats = new Set(categories.map(nameKey));
+    const toAdd = new Map<string, InventoryLite>();
+    for (const p of inventory) {
+        if (p.deletedAt) continue;
+        const key = nameKey(p.name);
+        if (!key || have.has(key) || toAdd.has(key)) continue;
+        toAdd.set(key, p);
+    }
+    const products = [...toAdd.values()].map((p) => ({
+        name: p.name.trim(),
+        category: (p.category || '').trim() || 'Geral',
+        price: p.price || 0,
+        unit: p.unit || 'un',
+        lowStockThreshold: p.lowStockThreshold || 0,
+        criticalStockThreshold: p.criticalStockThreshold || 0,
+    }));
+    const newCategories = [...new Set(products.map((p) => p.category))].filter((c) => !haveCats.has(nameKey(c)));
+    return { products, newCategories };
 }
