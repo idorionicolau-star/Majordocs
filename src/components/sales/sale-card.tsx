@@ -1,4 +1,5 @@
 
+import { formatSaleMoment } from "@/lib/sale-time";
 import { Calendar, User, CheckCircle, PackageCheck, MapPin } from "lucide-react";
 import { SaleActions } from "./columns";
 import { Button } from "../ui/button";
@@ -63,7 +64,7 @@ export function SaleCard({ sale, onUpdateSale, onConfirmPickup, onDeleteSale, vi
                 <div className={cn("text-xs text-muted-foreground space-y-1", isCondensed && "text-center")}>
                     <div className="flex items-center gap-1.5 justify-center">
                         <Calendar size={12} />
-                        <span>{new Date(sale.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
+                        <span>{formatSaleMoment(sale).replace(' às ', ' · ')}</span>
                     </div>
                     {locationName && (
                         <div className="flex items-center gap-1.5 justify-center">
