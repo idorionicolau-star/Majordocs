@@ -666,7 +666,7 @@ export function useProductActions(core: InventoryCore) {
         } else {
           let productDataToUse: any = {};
           if (catalogProduct) {
-            const { id, ...rest } = catalogProduct;
+            const { id, priceHistory, ...rest } = catalogProduct; // o histórico de preços fica no catálogo
             productDataToUse = rest;
           } else {
             const blueprint = products.find(p => p.name === productName);

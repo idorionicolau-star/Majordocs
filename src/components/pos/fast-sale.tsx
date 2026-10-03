@@ -16,6 +16,7 @@ import { Check, ChevronDown, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarco
 import { BarcodeScanner } from "@/components/scan/barcode-scanner";
 import { VoiceButton } from "@/components/scan/voice-button";
 import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode";
+import { findBarcodeClash } from "@/lib/catalog-view";
 import { parseVoice } from "@/lib/voice-parse";
 import { resolveVoice } from "@/lib/voice-approx";
 import { VoiceConfirm, type VoiceAsk } from "@/components/scan/voice-confirm";
@@ -199,6 +200,12 @@ export function FastSale() {
             add(p, have + 1, true);
             setText("");
             return `✓ ${p.name} × ${fmtQ(have + 1)}`;
+        }
+        // Está no catálogo mas ainda não há stock: diz o produto em vez de "código novo"
+        const inCatalog = findBarcodeClash((catalogProducts || []).filter((c) => !c.deletedAt), code);
+        if (inCatalog) {
+            toast({ variant: "destructive", title: "Sem stock", description: `${inCatalog.name} está no catálogo mas ainda não tem stock para vender.` });
+            return `✗ ${inCatalog.name} — sem stock`;
         }
         setPendingCode(code);
         setText("");

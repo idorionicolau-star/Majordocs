@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { buildImportPrompt, parseText, planImport, rowsFromTable, type ImportRow, type PlannedRow } from "@/lib/catalog-import";
 
 export type CatalogImportResult = {
-    create: { name: string; category: string; price: number; unit: string; lowStockThreshold: number; criticalStockThreshold: number; barcode?: string; imageUrl?: string }[];
+    create: { name: string; category: string; price: number; cost?: number; unit: string; lowStockThreshold: number; criticalStockThreshold: number; barcode?: string; imageUrl?: string }[];
     updatePrices: { id: string; price: number }[];
     newCategories: string[];
 };
@@ -114,6 +114,7 @@ export function CatalogImporter({ existing, categories, onImport }: Props) {
                     name: r.row.name,
                     category: summary.catOf(r),
                     price: r.row.price ?? 0,
+                    ...(r.row.cost ? { cost: r.row.cost } : {}),
                     unit: r.row.unit || "un",
                     lowStockThreshold: 10,
                     criticalStockThreshold: 5,

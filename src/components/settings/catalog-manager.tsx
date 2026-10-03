@@ -22,7 +22,7 @@ import { CatalogCategoriesView, type CategoryRow } from "@/components/catalog/ca
 import { AddCatalogProductDialog } from "./add-catalog-product-dialog";
 import { EditCatalogProductDialog } from "./edit-catalog-product-dialog";
 import { CatalogImporter, type CatalogImportResult } from "./catalog-importer";
-import { adjustPrice, buildSyncPlan, categoryCounts, copyName, findBarcodeClash, findDuplicate, nameKey, parsePct, pushPriceHistory } from "@/lib/catalog-view";
+import { adjustPrice, buildSyncPlan, categoryCounts, copyName, findBarcodeClash, findDuplicate, nameKey, parsePct, pushPriceHistory, sameCodeKey } from "@/lib/catalog-view";
 import { CatalogProductDetail } from "@/components/catalog/catalog-product-detail";
 import { formatCurrency } from "@/lib/utils";
 import type { Product } from "@/lib/types";
@@ -211,8 +211,21 @@ export function CatalogManager() {
         } finally { setSyncing(null); }
     };
     // ---------- importação (como antes) ----------
-    const handleBulkImport = async (result: CatalogImportResult) => {
+    const handleBulkImport = async (rawResult: CatalogImportResult) => {
         if (!firestore || !companyId) return;
+        // um código de barras só pode ter um produto: os repetidos (no catálogo ou na própria lista) entram sem código
+        const used = new Set(catalog.filter((c) => c.barcode).map((c) => sameCodeKey(c.barcode!)));
+        let droppedCodes = 0;
+        const result: CatalogImportResult = {
+            ...rawResult,
+            create: rawResult.create.map((c) => {
+                if (!c.barcode) return c;
+                const k = sameCodeKey(c.barcode);
+                if (used.has(k)) { droppedCodes++; const { barcode, ...rest } = c; return rest; }
+                used.add(k);
+                return c;
+            }),
+        };
         toast({ title: "A importar produtos…" });
         try {
             const ops: ((b: ReturnType<typeof writeBatch>) => void)[] = [
@@ -230,6 +243,7 @@ export function CatalogManager() {
             }
             const parts = [`${result.create.length} produtos importados`];
             if (result.updatePrices.length) parts.push(`${result.updatePrices.length} preços actualizados`);
+            if (droppedCodes) parts.push(`${droppedCodes} código${droppedCodes === 1 ? "" : "s"} de barras repetido${droppedCodes === 1 ? "" : "s"} ignorado${droppedCodes === 1 ? "" : "s"}`);
             toast({ title: "Importação concluída", description: parts.join(", ") + "." });
             setTab("products");
         } catch (e) {
