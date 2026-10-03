@@ -29,7 +29,11 @@ service cloud.firestore {
       return !(status in ['suspended', 'inactive']) && (
         status != 'trial' ||
         ends == null ||
-        (ends is string && string(request.time) < ends) ||
+        // 'trialEndsAt' é texto ISO ("2026-10-17T07:50:12.123Z"). string(request.time) NÃO existe nas regras (dava erro e recusava
+        // tudo), por isso lê-se a data do texto e compara-se como timestamp (UTC).
+        (ends is string && ends.size() >= 19 && request.time < (
+          timestamp.date(int(ends[0:4]), int(ends[5:7]), int(ends[8:10]))
+          + duration.time(int(ends[11:13]), int(ends[14:16]), int(ends[17:19]), 0))) ||
         (ends is int && request.time < timestamp.value(ends)) ||
         (ends is timestamp && request.time < ends)
       ) && (

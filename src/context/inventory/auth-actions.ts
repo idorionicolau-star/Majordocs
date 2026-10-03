@@ -1,8 +1,8 @@
 'use client';
 
 import type { ModulePermission, PermissionLevel } from '@/lib/types';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { collection, doc, writeBatch, getDocs, query, where, getDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { collection, doc, writeBatch, getDoc } from 'firebase/firestore';
 import { allPermissions } from '@/lib/data';
 import type { InventoryCore } from './core';
 import { trialEndFrom } from '@/lib/trial';
@@ -137,12 +137,9 @@ export function useAuthActions(core: InventoryCore) {
     if (!firestore) return false;
 
     try {
+      // Nota: não se verifica se o nome da empresa já existe. Essa pesquisa (listar `companies`) é proibida pelas regras
+      // do Firestore para quem ainda não tem conta, e fazia o registo falhar sempre. A empresa é identificada pelo ID, não pelo nome.
       const companiesRef = collection(firestore, 'companies');
-      const companyQuery = query(companiesRef, where('name', '==', companyName));
-      const existingCompanySnapshot = await getDocs(companyQuery);
-      if (!existingCompanySnapshot.empty) {
-        throw new Error('Uma empresa com este nome já existe.');
-      }
 
       const userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPass);
       const newUserId = userCredential.user.uid;
@@ -245,13 +242,8 @@ export function useAuthActions(core: InventoryCore) {
         return false;
       }
 
+      // (sem verificação do nome da empresa: ver registerCompany)
       const companiesRef = collection(firestore, 'companies');
-      const companyQuery = query(companiesRef, where('name', '==', companyName));
-      const existingCompanySnapshot = await getDocs(companyQuery);
-      if (!existingCompanySnapshot.empty) {
-        await auth.signOut();
-        throw new Error('Uma empresa com este nome já existe.');
-      }
 
       const newCompanyRef = doc(companiesRef);
 
