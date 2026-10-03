@@ -20,6 +20,7 @@ export type QuickLine = {
     sourceIds: string[];
     /** Stock the system had when the line was created (for previews and audits) */
     systemStock: number;
+    reservedStock: number;
     unit: string;
     /** Quantity entered / removed, or the physical count in count mode */
     qty: number;
@@ -173,6 +174,7 @@ export function lineFromProduct(p: Product, qty: number): QuickLine {
         location: p.location || "",
         sourceIds: p.sourceIds?.length ? p.sourceIds : p.id ? [p.id] : [],
         systemStock: p.stock || 0,
+        reservedStock: p.reservedStock || 0,
         unit: p.unit || "un",
         qty,
         price: p.price,
@@ -266,7 +268,8 @@ export async function commitQuickStock({ firestore, companyId, user, mode, lines
 
         let movement: Omit<StockMovement, "id" | "timestamp">;
         if (mode === "count") {
-            b.update(primaryRef, { stock: line.qty, lastUpdated: now });
+            // A reserva dos documentos repetidos passa para o principal antes de os zerar.
+            b.update(primaryRef, { stock: line.qty, ...(others.length ? { reservedStock: line.reservedStock } : {}), lastUpdated: now });
             for (const id of others) b.update(doc(productsRef, id), { stock: 0, reservedStock: 0, lastUpdated: now });
             movement = {
                 productId: primaryId,
