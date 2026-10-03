@@ -15,6 +15,7 @@ export function useOrderActions(core: InventoryCore) {
 
 
   const deleteOrder = useCallback(async (orderId: string) => {
+    assertOnline('apagar a encomenda');
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
@@ -107,6 +108,9 @@ export function useOrderActions(core: InventoryCore) {
           })
         : null;
 
+      // Quanto faltou no stock ao entregar (o stock não fica negativo, mas o gestor tem de saber)
+      let shortfall = 0;
+
       await runTransaction(firestore, async (transaction) => {
         // --- READS ---
 
@@ -136,6 +140,10 @@ export function useOrderActions(core: InventoryCore) {
           if (productSnap.exists()) {
             freshProductData = productSnap.data() as Product;
           }
+        }
+        // Sem produto no inventário não há de onde tirar o stock: entregar aqui deixava a encomenda "Entregue" sem mexer em nada.
+        if (!productRef || !freshProductData) {
+          throw new Error(`O produto "${orderData.productName}" já não existe no inventário. Volte a criá-lo ou corrija o nome antes de entregar.`);
         }
         // Se a venda já foi levantada pelo ecrã de Vendas, o stock já saiu — não descontar outra vez.
         const stockAlreadyOut = freshSaleData?.status === 'Levantado';
@@ -216,6 +224,7 @@ export function useOrderActions(core: InventoryCore) {
           // Stock: + parte produzida agora − entregue (se ainda não saiu). Reserva: libertada.
           const newStock = (freshProductData.stock || 0) + missing - (stockAlreadyOut ? 0 : orderData.quantity);
           const newReserved = stockAlreadyOut ? (freshProductData.reservedStock || 0) : Math.max(0, (freshProductData.reservedStock || 0) - reservedToRelease(orderData));
+          shortfall = Math.max(0, -newStock);
           transaction.update(productRef, {
             stock: Math.max(0, newStock),
             reservedStock: newReserved,
@@ -224,7 +233,9 @@ export function useOrderActions(core: InventoryCore) {
         }
       });
 
-      toast({ title: 'Encomenda Finalizada', description: 'A produção foi registada e o stock atualizado.' });
+      toast(shortfall > 0
+        ? { variant: 'destructive', title: 'Encomenda entregue, mas faltava stock', description: `O stock não chegava: faltavam ${shortfall} un. O stock ficou a 0 — faça uma auditoria ao produto.` }
+        : { title: 'Encomenda Finalizada', description: 'A produção foi registada e o stock atualizado.' });
 
     } catch (e: any) {
       console.error("Error finalizing order:", e);
