@@ -42,6 +42,32 @@ export function PwaRegister() {
     return null;
 }
 
+/**
+ * "Há uma versão nova": o service worker novo assume o controlo sozinho, mas o ecrã aberto continua com o código antigo
+ * até recarregar. Avisa e deixa o utilizador escolher o momento (recarregar a meio de uma venda perdia o que escrevia).
+ */
+export function UpdateNotice() {
+    const [ready, setReady] = useState(false);
+    useEffect(() => {
+        if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
+        // Só conta como actualização se já havia um service worker a controlar: na 1.ª visita também há "controllerchange"
+        const hadController = !!navigator.serviceWorker.controller;
+        const onChange = () => { if (hadController) setReady(true); };
+        navigator.serviceWorker.addEventListener("controllerchange", onChange);
+        return () => navigator.serviceWorker.removeEventListener("controllerchange", onChange);
+    }, []);
+    if (!ready) return null;
+    return (
+        <div role="status" className="mb-3 flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
+            <RefreshCw className="h-4 w-4 shrink-0 text-emerald-600" />
+            <p className="min-w-0 flex-1"><b>Há uma versão nova.</b> Atualize quando terminar o que está a fazer.</p>
+            <button type="button" onClick={() => window.location.reload()} className="shrink-0 rounded-lg border border-emerald-500/40 px-3 py-1 text-xs font-semibold">
+                Atualizar
+            </button>
+        </div>
+    );
+}
+
 /** Faixa que avisa quando não há internet — e tranquiliza: o trabalho fica guardado e segue sozinho. */
 export function OfflineBanner() {
     const [online, setOnline] = useState(true);
