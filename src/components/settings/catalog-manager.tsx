@@ -22,7 +22,8 @@ import { CatalogCategoriesView, type CategoryRow } from "@/components/catalog/ca
 import { AddCatalogProductDialog } from "./add-catalog-product-dialog";
 import { EditCatalogProductDialog } from "./edit-catalog-product-dialog";
 import { CatalogImporter, type CatalogImportResult } from "./catalog-importer";
-import { adjustPrice, buildSyncPlan, categoryCounts, findDuplicate, nameKey, parsePct } from "@/lib/catalog-view";
+import { adjustPrice, buildSyncPlan, categoryCounts, copyName, findBarcodeClash, findDuplicate, nameKey, parsePct, pushPriceHistory } from "@/lib/catalog-view";
+import { CatalogProductDetail } from "@/components/catalog/catalog-product-detail";
 import { formatCurrency } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 
@@ -39,6 +40,9 @@ export function CatalogManager() {
     const allCatalog = useMemo(() => (ctx?.allCatalogProducts || []) as CatalogProduct[], [ctx?.allCatalogProducts]);
     const categories = useMemo(() => (ctx?.catalogCategories || []) as { id: string; name: string }[], [ctx?.catalogCategories]);
     const inventory = ctx?.products;
+    const sales = ctx?.sales;
+    const locations = ctx?.locations;
+    const username = ctx?.user?.username;
     const companyId = ctx?.companyId;
     const readOnly = !!ctx?.isReadOnly;
     const loading = !ctx || !!ctx.loading;
@@ -50,6 +54,8 @@ export function CatalogManager() {
     const [addOpen, setAddOpen] = useState(false);
     const [addPrefill, setAddPrefill] = useState("");
     const [editId, setEditId] = useState<string | null>(null);
+    const [detailId, setDetailId] = useState<string | null>(null);
+    const [dupSource, setDupSource] = useState<CatalogProduct | null>(null);
     const [dup, setDup] = useState<{ data: Omit<CatalogProduct, "id">; existing: CatalogProduct } | null>(null);
     const [bulk, setBulk] = useState<{ kind: "category" | "price" | "delete"; ids: string[] } | null>(null);
     const [bulkCat, setBulkCat] = useState("");
@@ -69,6 +75,7 @@ export function CatalogManager() {
         [categories, counts],
     );
     const editing = editId ? catalog.find((p) => p.id === editId) : undefined;
+    const detail = detailId ? catalog.find((p) => p.id === detailId) || null : null;
     const byId = useMemo(() => new Map(catalog.map((p) => [p.id, p])), [catalog]);
 
     if (!ctx) return <div className="p-4 text-muted-foreground">A carregar o catálogo…</div>;
@@ -79,6 +86,10 @@ export function CatalogManager() {
         toast({ title: "Produto adicionado", description: `«${data.name}» está no catálogo.${offline() ? " Fica guardado neste aparelho até haver internet." : ""}` });
     };
     const handleAdd = (data: Omit<CatalogProduct, "id">) => {
+        if (data.barcode) {
+            const clash = findBarcodeClash(catalog, data.barcode);
+            if (clash) { toast({ variant: "destructive", title: "Esse código de barras já existe", description: `Pertence a «${clash.name}». Cada produto tem o seu código.` }); return; }
+        }
         const existing = findDuplicate(catalog, data.name);
         if (existing) { setDup({ data, existing }); return; } // pergunta antes de criar um repetido
         commitAdd(data);
@@ -88,7 +99,16 @@ export function CatalogManager() {
             const clash = findDuplicate(catalog, data.name, id);
             if (clash) { toast({ variant: "destructive", title: "Esse nome já existe", description: `Já há «${clash.name}» no catálogo. Escolha outro nome.` }); return; }
         }
-        const n = await ctx.updateCatalogProducts([{ id, data }]);
+        if (data.barcode) {
+            const clash = findBarcodeClash(catalog, data.barcode, id);
+            if (clash) { toast({ variant: "destructive", title: "Esse código de barras já existe", description: `Pertence a «${clash.name}».` }); return; }
+        }
+        const before = byId.get(id);
+        const patch: Partial<CatalogProduct> = { ...data };
+        if (before && typeof data.price === "number" && data.price !== (before.price || 0)) {
+            patch.priceHistory = pushPriceHistory(before.priceHistory, { at: new Date().toISOString(), from: before.price || 0, to: data.price, by: username });
+        }
+        const n = await ctx.updateCatalogProducts([{ id, data: patch }]);
         if (n) toast({ title: "Produto atualizado" });
     };
     const askBulk = (kind: "category" | "price" | "delete", ids: string[]) => {
@@ -123,7 +143,13 @@ export function CatalogManager() {
         if (!bulk || pct === null || pct === 0) return;
         const ids = bulk.ids;
         setBulk(null);
-        const n = await ctx.updateCatalogProducts(ids.flatMap((id) => { const p = byId.get(id); return p ? [{ id, data: { price: adjustPrice(p.price || 0, pct) } }] : []; }));
+        const at = new Date().toISOString();
+        const n = await ctx.updateCatalogProducts(ids.flatMap((id) => {
+            const p = byId.get(id);
+            if (!p) return [];
+            const to = adjustPrice(p.price || 0, pct);
+            return [{ id, data: { price: to, priceHistory: pushPriceHistory(p.priceHistory, { at, from: p.price || 0, to, by: username }) } }];
+        }));
         if (n) toast({ title: `Preço ${pct > 0 ? "subiu" : "desceu"} ${Math.abs(pct)}% em ${n} produto${n === 1 ? "" : "s"}` });
     };
 
@@ -192,7 +218,10 @@ export function CatalogManager() {
             const ops: ((b: ReturnType<typeof writeBatch>) => void)[] = [
                 ...result.newCategories.map((name) => (b: ReturnType<typeof writeBatch>) => b.set(doc(collectionRef("catalogCategories")), { name })),
                 ...result.create.map((prod) => (b: ReturnType<typeof writeBatch>) => b.set(doc(collectionRef("catalogProducts")), prod)),
-                ...result.updatePrices.map((u) => (b: ReturnType<typeof writeBatch>) => b.update(doc(firestore, `companies/${companyId}/catalogProducts`, u.id), { price: u.price })),
+                ...result.updatePrices.map((u) => (b: ReturnType<typeof writeBatch>) => {
+                    const old = byId.get(u.id);
+                    b.update(doc(firestore, `companies/${companyId}/catalogProducts`, u.id), { price: u.price, ...(old ? { priceHistory: pushPriceHistory(old.priceHistory, { at: new Date().toISOString(), from: old.price || 0, to: u.price, by: username }) } : {}) });
+                }),
             ];
             for (let i = 0; i < ops.length; i += 400) {
                 const batch = writeBatch(firestore);
@@ -246,6 +275,7 @@ export function CatalogManager() {
                         term={term} onTerm={setTerm}
                         category={category} onCategory={setCategory}
                         onAdd={(name) => { setAddPrefill(name || ""); setAddOpen(true); }}
+                        onOpen={(p) => setDetailId(p.id)}
                         onEdit={(p) => setEditId(p.id)}
                         onDelete={(p) => askBulk("delete", [p.id])}
                         onBulk={askBulk}
@@ -276,12 +306,14 @@ export function CatalogManager() {
             {/* adicionar / editar */}
             <AddCatalogProductDialog
                 open={addOpen}
-                onOpenChange={setAddOpen}
+                onOpenChange={(o) => { setAddOpen(o); if (!o) setDupSource(null); }}
                 hideTrigger
                 categories={categoryNames}
                 units={ctx.availableUnits || []}
                 defaultCategory={category !== "all" ? category : undefined}
                 defaultName={addPrefill}
+                catalog={catalog}
+                initial={dupSource ? { name: copyName(catalog, dupSource.name), category: dupSource.category, price: dupSource.price, cost: dupSource.cost || 0, unit: dupSource.unit || "un", imageUrl: dupSource.imageUrl || "", barcode: "", lowStockThreshold: dupSource.lowStockThreshold, criticalStockThreshold: dupSource.criticalStockThreshold } : undefined}
                 onAdd={handleAdd}
             />
             {editing && (
@@ -290,11 +322,24 @@ export function CatalogManager() {
                     hideTrigger
                     onOpenChange={(o) => { if (!o) setEditId(null); }}
                     product={editing}
+                    catalog={catalog}
                     categories={categoryNames}
                     units={ctx.availableUnits || []}
                     onUpdate={handleUpdate}
                 />
             )}
+
+            <CatalogProductDetail
+                product={detail}
+                inventory={inventory || []}
+                sales={sales || []}
+                locations={locations || []}
+                readOnly={readOnly}
+                onClose={() => setDetailId(null)}
+                onEdit={(p) => { setDetailId(null); setEditId(p.id || null); }}
+                onDuplicate={(p) => { setDetailId(null); setAddPrefill(""); setDupSource(p as CatalogProduct); setAddOpen(true); }}
+                onDelete={(p) => { setDetailId(null); if (p.id) askBulk("delete", [p.id]); }}
+            />
 
             {/* produto repetido */}
             <AlertDialog open={!!dup} onOpenChange={(o) => !o && setDup(null)}>

@@ -32,6 +32,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductImageField } from "@/components/catalog/product-image-field";
+import { CostBarcodeFields } from "@/components/catalog/cost-barcode-fields";
 import { Plus } from "lucide-react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,6 +52,12 @@ const formSchema = z.object({
   }, z.number().min(0, { message: "O preço não pode ser negativo." })),
   unit: z.string().optional(),
   imageUrl: z.string().optional(),
+  cost: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0, { message: "O custo não pode ser negativo." })),
+  barcode: z.string().optional(),
   lowStockThreshold: z.preprocess((val) => {
     if (val === undefined || val === "" || val === null) return 0;
     const num = Number(val);
@@ -70,6 +77,8 @@ interface AddCatalogProductDialogProps {
   categories: string[];
   units: string[];
   onAdd: (product: Omit<CatalogProduct, 'id'>) => void;
+  /** Produtos já no catálogo (para avisar de códigos de barras repetidos). */
+  catalog?: { id?: string; name: string; barcode?: string }[];
 }
 
 function AddCatalogProductForm({
@@ -79,10 +88,12 @@ function AddCatalogProductForm({
   setOpen,
   form,
   namePlaceholder,
-  pricePlaceholder
+  pricePlaceholder,
+  catalog
 }: AddCatalogProductDialogProps & { setOpen: (open: boolean) => void; form: any; namePlaceholder: string; pricePlaceholder: string }) {
   function onSubmit(values: FormValues) {
-    onAdd(values);
+    // sem "undefined" (o Firestore recusa): custo 0 e código '' querem dizer "não tem"
+    onAdd({ ...values, cost: values.cost || 0, barcode: (values.barcode || '').trim() } as Omit<CatalogProduct, 'id'>);
     setOpen(false);
   }
 
@@ -173,6 +184,7 @@ function AddCatalogProductForm({
             )}
           />
         </div>
+        <CostBarcodeFields catalog={catalog || []} />
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -210,7 +222,7 @@ function AddCatalogProductForm({
   );
 }
 
-export function AddCatalogProductDialog({ categories, units, onAdd, open: openProp, onOpenChange, hideTrigger, defaultCategory, defaultName }: AddCatalogProductDialogProps & {
+export function AddCatalogProductDialog({ categories, units, onAdd, catalog, open: openProp, onOpenChange, hideTrigger, defaultCategory, defaultName, initial }: AddCatalogProductDialogProps & {
   /** Modo controlado: a página decide quando abre (ex.: botão + no telemóvel). */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -219,6 +231,8 @@ export function AddCatalogProductDialog({ categories, units, onAdd, open: openPr
   defaultCategory?: string;
   /** Nome pré-preenchido (ex.: o que se procurou e não existe). */
   defaultName?: string;
+  /** Valores de partida (ex.: duplicar um produto). */
+  initial?: Partial<FormValues>;
 }) {
   const [innerOpen, setInnerOpen] = useState(false);
   const open = openProp ?? innerOpen;
@@ -232,6 +246,8 @@ export function AddCatalogProductDialog({ categories, units, onAdd, open: openPr
       price: 0,
       unit: 'un',
       imageUrl: '',
+      cost: 0,
+      barcode: '',
       lowStockThreshold: 10,
       criticalStockThreshold: 5,
     },
@@ -242,7 +258,7 @@ export function AddCatalogProductDialog({ categories, units, onAdd, open: openPr
 
   // sempre que abre, o formulário começa limpo (antes ficava com o produto anterior)
   useEffect(() => {
-    if (open) form.reset({ name: defaultName || '', category: defaultCategory || categories[0] || '', price: 0, unit: 'un', imageUrl: '', lowStockThreshold: 10, criticalStockThreshold: 5 });
+    if (open) form.reset({ name: defaultName || '', category: defaultCategory || categories[0] || '', price: 0, unit: 'un', imageUrl: '', cost: 0, barcode: '', lowStockThreshold: 10, criticalStockThreshold: 5, ...(initial || {}) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -266,6 +282,7 @@ export function AddCatalogProductDialog({ categories, units, onAdd, open: openPr
           categories={categories}
           units={units}
           onAdd={onAdd}
+          catalog={catalog}
           setOpen={setOpen}
           form={form}
           namePlaceholder={namePlaceholder}

@@ -1,24 +1,25 @@
 "use client";
 
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpDown, Edit, ImageOff, PackagePlus, Percent, Plus, Search, Tag, Trash2, X } from "lucide-react";
+import { ArrowUpDown, Edit, ImageOff, ScanBarcode, PackagePlus, Percent, Plus, Search, Tag, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, formatCurrency } from "@/lib/utils";
-import { filterCatalog, SORT_LABELS, type CatalogSort } from "@/lib/catalog-view";
+import { filterCatalog, marginPct, SORT_LABELS, type CatalogSort } from "@/lib/catalog-view";
 
-export type CatalogRow = { id: string; name: string; category?: string; price?: number; unit?: string; imageUrl?: string };
+export type CatalogRow = { id: string; name: string; category?: string; price?: number; unit?: string; imageUrl?: string; cost?: number; barcode?: string };
 
 const PAGE = 50;
 
-const Row = memo(function Row({ p, selected, readOnly, onToggle, onEdit, onDelete }: {
+const Row = memo(function Row({ p, selected, readOnly, onToggle, onOpen, onEdit, onDelete }: {
     p: CatalogRow; selected: boolean; readOnly: boolean;
-    onToggle: (id: string, on: boolean) => void; onEdit: (p: CatalogRow) => void; onDelete: (p: CatalogRow) => void;
+    onToggle: (id: string, on: boolean) => void; onOpen: (p: CatalogRow) => void; onEdit: (p: CatalogRow) => void; onDelete: (p: CatalogRow) => void;
 }) {
     const unit = p.unit && p.unit !== "un" ? `/${p.unit}` : "";
+    const margin = marginPct(p.price, p.cost);
     return (
         <div
             data-testid="catalog-row"
@@ -31,9 +32,13 @@ const Row = memo(function Row({ p, selected, readOnly, onToggle, onEdit, onDelet
             ) : (
                 <div className="flex h-11 w-11 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground"><ImageOff className="h-4 w-4 opacity-50" /></div>
             )}
-            <button type="button" onClick={() => !readOnly && onEdit(p)} disabled={readOnly} className="min-w-0 text-left">
+            <button type="button" onClick={() => onOpen(p)} className="min-w-0 text-left" aria-label={`Abrir ${p.name}`}>
                 <span className="block truncate font-medium">{p.name}</span>
-                <span className="block truncate text-xs text-muted-foreground md:hidden">{p.category || "Sem categoria"}</span>
+                <span className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+                    <span className="truncate md:hidden">{p.category || "Sem categoria"}</span>
+                    {margin !== null && <span className={cn("shrink-0 rounded px-1 font-medium", margin < 0 ? "bg-destructive/10 text-destructive" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400")} title="Margem sobre o preço de venda">{margin < 0 ? "abaixo do custo" : `margem ${margin}%`}</span>}
+                    {p.barcode && <ScanBarcode className="h-3 w-3 shrink-0" aria-label="Tem código de barras" />}
+                </span>
             </button>
             <span className="hidden truncate text-sm text-muted-foreground md:block">{p.category || "Sem categoria"}</span>
             <span className="whitespace-nowrap text-right text-sm font-semibold tabular-nums">{formatCurrency(p.price || 0)}<span className="text-xs font-normal text-muted-foreground">{unit}</span></span>
@@ -49,7 +54,7 @@ const Row = memo(function Row({ p, selected, readOnly, onToggle, onEdit, onDelet
  * Lista de produtos do catálogo: pesquisa tolerante, filtro por categoria, ordenação, 50 de cada vez
  * (rolagem contínua), selecção com acções em massa. Funciona igual no telemóvel (cartões) e no computador (linhas).
  */
-export function CatalogProductsView({ products, categories, loading, readOnly, term, onTerm, category, onCategory, onAdd, onEdit, onDelete, onBulk }: {
+export function CatalogProductsView({ products, categories, loading, readOnly, term, onTerm, category, onCategory, onAdd, onOpen, onEdit, onDelete, onBulk }: {
     products: CatalogRow[];
     categories: string[];
     loading: boolean;
@@ -57,6 +62,7 @@ export function CatalogProductsView({ products, categories, loading, readOnly, t
     term: string; onTerm: (t: string) => void;
     category: string; onCategory: (c: string) => void;
     onAdd: (prefillName?: string) => void;
+    onOpen: (p: CatalogRow) => void;
     onEdit: (p: CatalogRow) => void;
     onDelete: (p: CatalogRow) => void;
     onBulk: (action: "category" | "price" | "delete", ids: string[]) => void;
@@ -94,7 +100,7 @@ export function CatalogProductsView({ products, categories, loading, readOnly, t
             <div className="space-y-2">
                 <div className="relative">
                     <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                    <Input value={term} onChange={(e) => onTerm(e.target.value)} placeholder="Pesquisar por nome ou categoria…" className="h-11 pl-9 pr-9" aria-label="Pesquisar no catálogo" />
+                    <Input value={term} onChange={(e) => onTerm(e.target.value)} placeholder="Pesquisar por nome, categoria ou código…" className="h-11 pl-9 pr-9" aria-label="Pesquisar no catálogo" />
                     {term && <button type="button" onClick={() => onTerm("")} aria-label="Limpar pesquisa" className="absolute right-3 top-3.5 text-muted-foreground"><X className="h-4 w-4" /></button>}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -138,7 +144,7 @@ export function CatalogProductsView({ products, categories, loading, readOnly, t
                             <Checkbox checked={allSelected} onCheckedChange={(c) => toggleAll(!!c)} aria-label="Selecionar todos os resultados" />
                             <span className="text-muted-foreground">Selecionar todos ({filtered.length})</span>
                         </label>
-                        {shown.map((p) => <Row key={p.id} p={p} selected={selected.has(p.id)} readOnly={readOnly} onToggle={toggle} onEdit={onEdit} onDelete={onDelete} />)}
+                        {shown.map((p) => <Row key={p.id} p={p} selected={selected.has(p.id)} readOnly={readOnly} onToggle={toggle} onOpen={onOpen} onEdit={onEdit} onDelete={onDelete} />)}
                         {visible < filtered.length && (
                             <div ref={sentinel} className="p-3 text-center">
                                 <Button variant="ghost" size="sm" onClick={() => setVisible((v) => v + PAGE)}>A mostrar {shown.length} de {filtered.length} · mostrar mais</Button>
