@@ -1,5 +1,6 @@
 "use client"
 
+import { ReservedBadge } from "./reserved-dialog";
 import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table"
 import { Product, Location } from "@/lib/types"
@@ -131,9 +132,9 @@ export const columns = (options: ColumnsOptions): ColumnDef<Product>[] => {
         const reserved = row.original.reservedStock;
         return (
           <div className="text-center">
-            <span className="text-base font-black text-primary">
-              {reserved > 0 ? reserved : '-'}
-            </span>
+            {reserved > 0
+              ? <ReservedBadge product={row.original} className="cursor-pointer text-base font-black text-primary underline decoration-dotted underline-offset-4">{reserved}</ReservedBadge>
+              : <span className="text-base font-black text-primary">-</span>}
           </div>
         );
       },

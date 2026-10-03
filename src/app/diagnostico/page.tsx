@@ -40,6 +40,7 @@ export default function DiagnosticoPage() {
       customers: crm?.customers || [],
       stockMovements: inv.stockMovements,
       businessType: inv.companyData?.businessType,
+      multiLocation: inv.isMultiLocation,
     });
   }, [inv, crm?.customers]);
 

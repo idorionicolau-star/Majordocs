@@ -10,6 +10,7 @@ import { getStockStatus } from "./columns";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { AuditStockDialog } from "./audit-stock-dialog";
+import { ReservedBadge } from "./reserved-dialog";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -65,19 +66,10 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                     <span className="text-[10px] sm:text-xs font-bold text-muted-foreground">/{product.unit || 'un'}</span>
                 </div>
                 {product.reservedStock > 0 && (
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Link href={`/sales?nameFilter=${encodeURIComponent(product.name)}&statusFilter=Pago`} className="flex items-center justify-center gap-1.5 text-xs text-primary font-semibold cursor-pointer hover:underline">
-                                    <PackageCheck className="h-3 w-3" />
-                                    <span>{product.reservedStock} reservado{product.reservedStock === 1 ? "" : "s"}</span>
-                                </Link>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Stock vendido e pago, aguardando levantamento. Clique para ver as vendas.</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
+                    <ReservedBadge product={product} className="flex items-center justify-center gap-1.5 text-xs text-primary font-semibold cursor-pointer hover:underline">
+                        <PackageCheck className="h-3 w-3" />
+                        <span>{product.reservedStock} reservado{product.reservedStock === 1 ? "" : "s"}</span>
+                    </ReservedBadge>
                 )}
                 <div className="text-center">
                     <p className={cn("font-medium text-muted-foreground", isCondensed ? "text-xs" : "text-sm")}>{formatCurrency(product.price)}</p>

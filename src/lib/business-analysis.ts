@@ -2,6 +2,7 @@
  * Offline business analysis engine — one source of truth for Diagnóstico,
  * the dashboard insights and the Major Assistant. Pure functions, no network.
  */
+import { reservedDrifts } from "@/lib/reserved-stock";
 import type { Customer, Order, Product, Production, Sale, StockMovement } from "@/lib/types";
 import { daysAgo, formatCurrency, normalizeString, plural } from "@/lib/utils";
 import { links } from "@/lib/deep-links";
@@ -46,6 +47,8 @@ export type Analysis = {
         productCount: number; valueAtPrice: number; valueAtCost: number | null;
         outOfStock: Product[]; critical: Product[]; low: Product[]; negative: Product[];
         reservedOverStock: Product[];
+        /** reservado sem nenhuma venda paga por levantar nem encomenda por trás (reserva presa) */
+        reservedDrift: { product: Product; drift: number }[];
         runout: ProductRisk[];
         dead: { count: number; value: number; pctOfValue: number; examples: string[] };
         healthScore: number;
@@ -90,6 +93,8 @@ export function analyzeBusiness(input: {
     stockMovements?: StockMovement[];
     /** 'reseller' = comércio (não fabrica, não tem encomendas): o diagnóstico não fala de produção. */
     businessType?: 'manufacturer' | 'reseller';
+    /** vários locais de stock: as reservas contam por local */
+    multiLocation?: boolean;
     now?: Date;
 }): Analysis {
     const reseller = input.businessType === 'reseller';
@@ -167,6 +172,9 @@ export function analyzeBusiness(input: {
     const low = products.filter((p) => available(p) > (p.criticalStockThreshold || 0) && available(p) <= (p.lowStockThreshold || 0));
     const negative = products.filter((p) => (p.stock || 0) < 0);
     const reservedOverStock = products.filter((p) => (p.reservedStock || 0) > (p.stock || 0) && (p.reservedStock || 0) > 0);
+    const reservedDrift = reservedDrifts(products.filter((p) => (p.reservedStock || 0) > 0), input.sales || [], input.orders || [], !!input.multiLocation)
+        .filter((d) => d.drift > 0)
+        .map((d) => ({ product: d.product as Product, drift: d.drift }));
     const valueAtPrice = products.reduce((t, p) => t + Math.max(0, p.stock || 0) * (p.price || 0), 0);
     const costKnown = products.filter((p) => (p.cost || 0) > 0);
     const valueAtCost = costKnown.length ? costKnown.reduce((t, p) => t + Math.max(0, p.stock || 0) * (p.cost || 0), 0) : null;
@@ -311,7 +319,8 @@ export function analyzeBusiness(input: {
         const stale = pendingPickups.filter((p) => p.days > 7);
         alerts.push({ id: "pickups", severity: "warning", title: `${plural(stale.length, "venda paga", "vendas pagas")} por levantar há mais de 7 dias`, detail: "O material está reservado e não pode ser vendido a outros. Confirme o levantamento ou contacte o cliente.", items: stale.slice(0, 5).map((p) => `${p.sale.productName} — ${p.sale.clientName || "cliente"} (${p.days} dias)`), itemLinks: stale.slice(0, 5).map((p) => links.sale(p.sale.guideNumber || p.sale.productName)), action: { label: "Ver vendas por levantar", href: links.salesByStatus("Pago") } });
     }
-    if (reservedOverStock.length) alerts.push({ id: "reserved", severity: "warning", title: `${plural(reservedOverStock.length, "produto tem", "produtos têm")} mais reservado do que em stock`, detail: "Normalmente são reservas antigas presas. Em Ajustes → \"Recalcular stock reservado\" corrige.", items: reservedOverStock.slice(0, 5).map((p) => `${p.name}: stock ${fmtQty(p.stock)}, reservado ${fmtQty(p.reservedStock)}`), itemLinks: reservedOverStock.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Abrir Ajustes", href: "/settings" } });
+    if (reservedDrift.length) alerts.push({ id: "reserved-orphan", severity: "warning", title: `${plural(reservedDrift.length, "produto tem", "produtos têm")} reserva sem venda nem encomenda por trás`, detail: "Fica reservado mas nada o justifica, por isso essa quantidade não pode ser vendida. No Inventário, toque em \"N reservados\" do produto para ver e libertar.", items: reservedDrift.slice(0, 5).map((d) => `${d.product.name}: ${fmtQty(d.drift)} reservado${d.drift === 1 ? "" : "s"} sem origem`), itemLinks: reservedDrift.slice(0, 5).map((d) => links.product(d.product.name, d.product.location)), action: { label: "Abrir Inventário", href: "/inventory" } });
+    if (reservedOverStock.some((p) => !reservedDrift.some((d) => d.product.name === p.name)) ) alerts.push({ id: "reserved", severity: "warning", title: `${plural(reservedOverStock.length, "produto tem", "produtos têm")} mais reservado do que em stock`, detail: "Normalmente são reservas antigas presas. Em Ajustes → \"Recalcular stock reservado\" corrige.", items: reservedOverStock.slice(0, 5).map((p) => `${p.name}: stock ${fmtQty(p.stock)}, reservado ${fmtQty(p.reservedStock)}`), itemLinks: reservedOverStock.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Abrir Ajustes", href: "/settings" } });
     if (receivablesList.length) {
         const total = receivablesList.reduce((t, r) => t + r.amount, 0);
         alerts.push({ id: "debts", severity: "warning", title: `${formatCurrency(total)} por receber`, detail: `${plural(receivablesList.length, "venda", "vendas")} com pagamento em falta.`, items: receivablesList.slice(0, 5).map((r) => `${r.client}: ${formatCurrency(r.amount)} (${r.days} dias)`), action: { label: "Ver vendas por pagar", href: links.salesByStatus("Pendente") } });
@@ -349,7 +358,7 @@ export function analyzeBusiness(input: {
         },
         stock: {
             productCount: products.length, valueAtPrice, valueAtCost,
-            outOfStock, critical, low, negative, reservedOverStock, runout,
+            outOfStock, critical, low, negative, reservedOverStock, reservedDrift, runout,
             dead: { count: deadList.length, value: deadValue, pctOfValue: valueAtPrice > 0 ? Math.round((deadValue / valueAtPrice) * 100) : 0, examples: deadList.slice(0, 5).map((p) => p.name) },
             healthScore, pendingPickups, lastCountDate, daysSinceCount,
         },

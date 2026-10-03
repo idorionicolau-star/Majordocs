@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from 'react';
 import { useState, useContext } from 'react';
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import {
@@ -52,7 +53,6 @@ function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProp
   });
 
   async function onSubmit(values: AuditStockFormValues) {
-    console.log("AuditStockDialog onSubmit triggered", values);
     if (!auditStock) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Erro interno: Função de auditoria não encontrada.' });
       return;
@@ -132,26 +132,33 @@ function AuditStockDialogContent({ product, setOpen }: Omit<AuditStockDialogProp
 
 
 
-const AuditStockTrigger = ({ trigger, disabled }: { trigger: 'icon' | 'button' | 'card-button'; disabled?: boolean }) => {
-  const buttonClasses = "text-amber-500 hover:bg-amber-500/10 hover:text-amber-600 dark:text-yellow-500 dark:hover:bg-yellow-500/10 dark:hover:text-yellow-400";
-  if (trigger === 'icon') {
+/**
+ * O botão que abre a auditoria. Tem de reencaminhar as propriedades e a ref que o DialogTrigger lhe entrega
+ * (onClick, aria-*…): sem isso o toque no botão não fazia nada e a janela nunca abria.
+ */
+const AuditStockTrigger = React.forwardRef<HTMLButtonElement, { trigger: 'icon' | 'button' | 'card-button'; disabled?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>>(
+  function AuditStockTrigger({ trigger, disabled, ...rest }, ref) {
+    const buttonClasses = "text-amber-500 hover:bg-amber-500/10 hover:text-amber-600 dark:text-yellow-500 dark:hover:bg-yellow-500/10 dark:hover:text-yellow-400";
+    if (trigger === 'icon') {
+      return (
+        <TooltipTrigger asChild>
+          <Button ref={ref} {...rest} disabled={disabled} variant="ghost" size="icon" className={`p-3 h-auto w-auto rounded-xl transition-all ${buttonClasses}`}>
+            <FileCheck className="h-4 w-4" />
+            <span className="sr-only">Auditar Stock</span>
+          </Button>
+        </TooltipTrigger>
+      );
+    }
     return (
       <TooltipTrigger asChild>
-        <Button disabled={disabled} variant="ghost" size="icon" className={`p-3 h-auto w-auto rounded-xl transition-all ${buttonClasses}`}>
+        <Button ref={ref} {...rest} disabled={disabled} variant="outline" size="icon" className={`flex-1 h-8 sm:h-9 ${buttonClasses}`}>
           <FileCheck className="h-4 w-4" />
           <span className="sr-only">Auditar Stock</span>
         </Button>
       </TooltipTrigger>
     );
-  }
-  return (
-    <TooltipTrigger asChild>
-      <Button disabled={disabled} variant="outline" size="icon" className={`flex-1 h-8 sm:h-9 ${buttonClasses}`}>
-        <FileCheck className="h-4 w-4" />
-      </Button>
-    </TooltipTrigger>
-  )
-}
+  },
+);
 
 export function AuditStockDialog({ product, trigger, disabled }: AuditStockDialogProps) {
   const [open, setOpen] = useState(false);
