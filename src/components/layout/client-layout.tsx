@@ -18,6 +18,7 @@ import { PushPrompt } from '@/components/push-notifications';
 import { PriceReviewBanner } from '@/components/price-reviews';
 import { OfflineBanner, UpdateNotice } from '@/components/pwa-register';
 import { InstallPrompt } from '@/components/install-prompt';
+import { TourHost } from '@/components/onboarding/app-tour';
 
 import { LoadingBar } from './loading-bar';
 import { SubscriptionExpired } from './subscription-expired';
@@ -201,6 +202,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             </main>
           </div>
           <BottomNav onMenuClick={() => setIsMobileNavOpen(true)} />
+          <TourHost />
           <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
         </div>
         <SheetContent side="left" className="p-0 glass-panel border-r border-white/10">

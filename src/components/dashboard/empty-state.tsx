@@ -2,12 +2,13 @@
 
 import { useContext, useEffect, useState } from "react";
 import Link from "next/link";
-import { Building2, Check, ImagePlus, Loader2, PackagePlus, ShoppingCart, Users, Zap, X } from "lucide-react";
+import { Building2, Check, ImagePlus, Loader2, PackagePlus, Users, Zap, X } from "lucide-react";
 import { getAuth } from "firebase/auth";
 import { InventoryContext } from "@/context/inventory-context";
 import { uploadProductImage } from "@/lib/upload-product-image";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { FirstSaleWizard } from "@/components/dashboard/first-sale-wizard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -49,9 +50,6 @@ export function EmptyStateWelcome() {
 
     const profileDone = !!(companyData?.taxId && (companyData?.phone || companyData?.address));
     const productsDone = (products?.length || 0) > 0 || (catalogProducts?.length || 0) > 0;
-    const doneCount = [profileDone, productsDone].filter(Boolean).length;
-    // abre o formulário logo no início, se ainda falta preencher
-    useEffect(() => { if (companyData && !profileDone && canEditCompany) setEditing(true); }, [companyData, profileDone, canEditCompany]);
 
     const set = (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement>) => setDetails((d) => ({ ...d, [k]: e.target.value }));
 
@@ -87,18 +85,17 @@ export function EmptyStateWelcome() {
             <div className="text-center">
                 {companyData?.logoUrl && <img src={companyData.logoUrl} alt="" className="mx-auto mb-3 h-14 max-w-[180px] object-contain" />}
                 <h2 className="text-2xl font-bold tracking-tight md:text-3xl">Bem-vindo{companyData?.name ? `, ${companyData.name}` : ""}! 🚀</h2>
-                <p className="mt-2 text-muted-foreground">Três passos rápidos e a empresa fica pronta a vender. {doneCount} de 2 feitos.</p>
-                <div className="mx-auto mt-3 h-1.5 max-w-xs overflow-hidden rounded-full bg-muted">
-                    <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(doneCount / 2) * 100}%` }} />
-                </div>
+                <p className="mt-2 text-muted-foreground">Vamos fazer a sua primeira venda. Leva menos de um minuto.</p>
             </div>
+
+            <FirstSaleWizard />
 
             {/* 1. Empresa */}
             <section className="rounded-2xl border bg-card p-4">
                 <div className="flex items-start gap-3">
-                    <StepBadge n={1} done={profileDone} />
+                    <StepBadge n={2} done={profileDone} />
                     <div className="min-w-0 flex-1">
-                        <h3 className="flex items-center gap-2 font-semibold"><Building2 className="h-4 w-4" /> Dados da empresa</h3>
+                        <h3 className="flex items-center gap-2 font-semibold"><Building2 className="h-4 w-4" /> Dados da empresa <span className="text-xs font-normal text-muted-foreground">(pode fazer depois)</span></h3>
                         <p className="text-sm text-muted-foreground">NUIT, contactos e logótipo aparecem nas facturas, guias e e-mails.</p>
                     </div>
                     {!editing && canEditCompany && <Button variant="outline" size="sm" onClick={() => setEditing(true)}>{profileDone ? "Editar" : "Preencher"}</Button>}
@@ -131,7 +128,7 @@ export function EmptyStateWelcome() {
                         </div>
                         <div className="flex justify-end gap-2">
                             {profileDone && <Button variant="ghost" onClick={() => setEditing(false)}>Cancelar</Button>}
-                            <Button onClick={save} disabled={saving || uploading || !details.taxId.trim()}>
+                            <Button onClick={save} disabled={saving || uploading || !(details.taxId.trim() || details.phone.trim() || details.address.trim() || details.logoUrl)}>
                                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Guardar
                             </Button>
                         </div>
@@ -146,10 +143,10 @@ export function EmptyStateWelcome() {
             {/* 2. Produtos */}
             <section className="rounded-2xl border bg-card p-4">
                 <div className="flex items-start gap-3">
-                    <StepBadge n={2} done={productsDone} />
+                    <StepBadge n={3} done={productsDone} />
                     <div className="min-w-0 flex-1">
-                        <h3 className="flex items-center gap-2 font-semibold"><PackagePlus className="h-4 w-4" /> Adicione os seus produtos</h3>
-                        <p className="text-sm text-muted-foreground">Escolha a forma mais rápida para si.</p>
+                        <h3 className="flex items-center gap-2 font-semibold"><PackagePlus className="h-4 w-4" /> Já tem uma lista de produtos?</h3>
+                        <p className="text-sm text-muted-foreground">Adicione vários de uma vez, em vez de um a um.</p>
                         <div className="mt-3 grid gap-2 sm:grid-cols-2">
                             <Button asChild variant="outline" className="h-auto justify-start whitespace-normal py-3 text-left">
                                 <Link href="/inventory/quick"><Zap className="mr-2 h-4 w-4 shrink-0" /><span><b className="block">Stock Rápido</b><span className="text-xs font-normal text-muted-foreground">Regista o produto e a quantidade de uma vez</span></span></Link>
@@ -159,18 +156,6 @@ export function EmptyStateWelcome() {
                             </Button>
                         </div>
                     </div>
-                </div>
-            </section>
-
-            {/* 3. Vender */}
-            <section className={`rounded-2xl border bg-card p-4 ${productsDone ? "" : "opacity-60"}`}>
-                <div className="flex items-start gap-3">
-                    <StepBadge n={3} done={false} />
-                    <div className="min-w-0 flex-1">
-                        <h3 className="flex items-center gap-2 font-semibold"><ShoppingCart className="h-4 w-4" /> Faça a primeira venda</h3>
-                        <p className="text-sm text-muted-foreground">{productsDone ? "Já tem produtos: experimente a Venda Rápida." : "Fica disponível depois de adicionar produtos."}</p>
-                    </div>
-                    {productsDone && <Button asChild size="sm"><Link href="/pos">Vender</Link></Button>}
                 </div>
             </section>
 

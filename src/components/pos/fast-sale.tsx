@@ -105,8 +105,11 @@ export function FastSale() {
     }, [locations, location]);
 
     // Keep the cart on the device (page reload, phone locked, bad connection)
+    const [restored, setRestored] = useState(false);
     useEffect(() => {
-        if (cartKey) setLines(load<Line[]>(cartKey, []));
+        if (!cartKey) return;
+        setLines(load<Line[]>(cartKey, []));
+        setRestored(true);
     }, [cartKey]);
     useEffect(() => {
         if (cartKey) save(cartKey, lines);
@@ -188,6 +191,19 @@ export function FastSale() {
         }
         add(p, qty);
     };
+
+    // "/pos?add=Cimento" (vem do assistente da primeira venda): o produto já entra no carrinho, só falta confirmar
+    const preloaded = useRef(false);
+    useEffect(() => {
+        if (preloaded.current || typeof window === "undefined" || !restored) return; // espera pelo carrinho guardado, para não ser substituído por ele
+        const wanted = new URLSearchParams(window.location.search).get("add");
+        if (!wanted) { preloaded.current = true; return; }
+        const p = scoped.find((x) => normalizeString(x.name) === normalizeString(wanted));
+        if (!p) return; // os produtos ainda estão a chegar
+        preloaded.current = true;
+        window.history.replaceState(null, "", window.location.pathname);
+        add(p, 1, true);
+    });
 
     /** Código lido (câmara ou leitor): junta o produto, ou guarda o código para associar ao próximo produto escolhido. */
     const handleCode = (raw: string, fromCamera = false): string | undefined => {
@@ -301,6 +317,7 @@ export function FastSale() {
                 subtotal: l.qty * l.price,
             }));
             const isToday = date === todayISO();
+            const firstEver = sales.length === 0; // a primeira venda da empresa: mostra "como a app funciona"
             await addBulkSale(items, {
                 customerId,
                 clientName: name,
@@ -315,6 +332,7 @@ export function FastSale() {
                 amountPaid: isProforma ? 0 : Math.min(paid, total),
             });
             save("majorstockx-fastsale-location", location);
+            if (firstEver) window.dispatchEvent(new CustomEvent("msx:tour", { detail: { celebrate: true } }));
             setLastSale({ total, items: lines.length, client: name });
             setLines([]);
             setClient("");
