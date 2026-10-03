@@ -84,7 +84,8 @@
     --destructive-foreground: 210 40% 98%;
 
     --border: 217 33% 17%;
-    --input: 217 33% 17%;
+    /* Mais claro que o fundo dos cartões (215 28% 17%): com o mesmo tom, o contorno dos campos ficava invisível no modo escuro. */
+    --input: 215 20% 32%;
     --ring: 217 91% 60%;
 
     /* Sales Chart - Neon Green (Dark Mode) */
