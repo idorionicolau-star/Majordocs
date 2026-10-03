@@ -611,7 +611,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
         <div className="mx-auto w-full max-w-3xl pb-40">
             <BarcodeScanner open={scanOpen} onClose={() => { setScanOpen(false); focusSearch(); }} onScan={(c) => handleCode(c, true)} />
             {/* Mode switch */}
-            <div className="grid grid-cols-3 gap-2 rounded-2xl bg-muted p-1.5">
+            <div data-tour="qs-modes" className="grid grid-cols-3 gap-2 rounded-2xl bg-muted p-1.5">
                 {MODES.map((m) => {
                     const Icon = m.icon;
                     const active = m.id === mode;
@@ -633,7 +633,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             </div>
 
             {isMultiLocation && locations.length > 0 && (
-                <div className="mt-3">
+                <div className="mt-3" data-tour="qs-location">
                     <Select value={location} onValueChange={setLocation}>
                         <SelectTrigger className="h-11">
                             <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -651,7 +651,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             {/* Search */}
             <div className="sticky top-0 z-20 -mx-4 mt-3 bg-background px-4 py-2">
                 <div className="flex items-center gap-2">
-                <div className="relative min-w-0 flex-1">
+                <div className="relative min-w-0 flex-1" data-tour="qs-search">
                     <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         ref={searchRef}
@@ -672,6 +672,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                         </button>
                     )}
                 </div>
+                <div className="flex shrink-0 items-center gap-2" data-tour="qs-scan-voice">
                 <button
                     type="button"
                     aria-label="Ler código de barras com a câmara"
@@ -682,6 +683,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                     <ScanBarcode className="h-6 w-6" />
                 </button>
                 <VoiceButton className="h-14 w-14" onInterim={setListening} onResult={handleVoice} onProblem={(m) => { setListening(""); toast({ variant: "destructive", title: "Ditado", description: m }); }} />
+                </div>
                 </div>
                 {listening && <p className="mt-1.5 px-1 text-sm italic text-muted-foreground">🎙 {listening}</p>}
                 <VoiceConfirm
@@ -710,7 +712,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
 
             {/* Quantity panel for the picked product */}
             {picked && (
-                <div className={cn("mt-2 rounded-2xl border-2 bg-card p-4 shadow-sm", current.tone)}>
+                <div data-tour="qs-panel" className={cn("mt-2 rounded-2xl border-2 bg-card p-4 shadow-sm", current.tone)}>
                     <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                             <p className="truncate text-base font-semibold text-foreground">{picked.product?.name || picked.newName}</p>
@@ -815,7 +817,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
 
             {/* Search results (entry / exit) */}
             {!picked && mode !== "count" && parsed.term && (
-                <div className="mt-2 overflow-hidden rounded-2xl border bg-card">
+                <div data-tour="qs-results" className="mt-2 overflow-hidden rounded-2xl border bg-card">
                     {results.map((p, i) => {
                         const inLot = lines[lineKey(p.name, p.location || "")];
                         return (
@@ -867,7 +869,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
 
             {/* Count mode: full list, type the number, Enter goes to the next */}
             {mode === "count" && !picked && (
-                <div className="mt-2">
+                <div className="mt-2" data-tour="qs-count-list">
                     {/* Folhas fotografadas → a IA da pessoa transcreve → cola-se aqui e confere-se */}
                     <div className="mb-2">
                         <PhotoCount
@@ -954,7 +956,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
 
             {/* The batch being built (entry / exit) */}
             {mode !== "count" && lineList.length > 0 && (
-                <div className="mt-5">
+                <div className="mt-5" data-tour="qs-lot">
                     <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lote a registar ({lineList.length})</p>
                     <div className="overflow-hidden rounded-2xl border bg-card">
                         {lineList.map((l) => {
@@ -992,7 +994,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             )}
 
             {mode !== "count" && lineList.length === 0 && !parsed.term && !picked && (
-                <div className="mt-6 rounded-2xl border border-dashed p-5 text-sm text-muted-foreground">
+                <div data-tour="qs-help" className="mt-6 rounded-2xl border border-dashed p-5 text-sm text-muted-foreground">
                     <p className="font-medium text-foreground">Como usar</p>
                     <ul className="mt-2 list-disc space-y-1 pl-5">
                         <li>Escreva parte do nome e a quantidade: <b>cimento 20</b>, <b>bloco 15 x 200</b> — Enter adiciona ao lote.</li>
@@ -1008,7 +1010,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
 
             {/* Sticky confirm bar */}
             {lineList.length > 0 && (
-                <div className={cn("fixed inset-x-0 z-40 border-t bg-background p-3 md:bottom-0 md:left-64", !keyboardInset && "bottom-16")} style={keyboardInset ? { bottom: keyboardInset } : undefined}>
+                <div data-tour="qs-confirm" className={cn("fixed inset-x-0 z-40 border-t bg-background p-3 md:bottom-0 md:left-64", !keyboardInset && "bottom-16")} style={keyboardInset ? { bottom: keyboardInset } : undefined}>
                     <div className="mx-auto flex max-w-3xl flex-col gap-2">
                         {mode === "out" && (
                             <div className="flex gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5">

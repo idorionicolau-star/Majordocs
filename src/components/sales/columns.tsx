@@ -115,7 +115,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
     };
 
     return (
-        <div className="flex items-center justify-end gap-1">
+        <div className="flex items-center justify-end gap-1" data-tour="sales-actions">
             <TooltipProvider>
                 <Tooltip>
                     <SaleDetailsDialog

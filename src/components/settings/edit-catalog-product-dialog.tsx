@@ -100,7 +100,7 @@ function EditCatalogProductDialogContent({ product, categories, units, onUpdate,
       </DialogHeader>
       <ScrollArea className="md:max-h-[70vh] md:-mr-3 md:pr-3">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
+          <form data-tour="catalog-edit-form" onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
             <FormField
               control={form.control}
               name="category"
@@ -216,7 +216,7 @@ function EditCatalogProductDialogContent({ product, categories, units, onUpdate,
             </div>
             <DialogFooter className="pt-4">
               <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button type="submit">Salvar Alterações</Button>
+              <Button type="submit" data-tour="catalog-edit-submit">Salvar Alterações</Button>
             </DialogFooter>
           </form>
         </Form>

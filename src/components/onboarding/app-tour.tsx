@@ -1,8 +1,7 @@
 "use client";
 
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Banknote, Boxes, ChevronLeft, ChevronRight, ClipboardList, PartyPopper, PlayCircle, Smartphone, Users, X, Zap, type LucideIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -86,21 +85,12 @@ export function TourHost() {
     const [i, setI] = useState(0);
     /** o tour ficou a meio (a pessoa foi ver um ecrã): em que passo continuar; null = não há tour a meio */
     const [resume, setResumeState] = useState<number | null>(null);
-    const pathname = usePathname();
-    const autoDone = useRef(false);
 
     // grava só quando a pessoa age (um efeito a gravar sempre apagava o valor guardado antes de ele ser lido)
     const setResume = (v: number | null) => { setResumeState(v); writeResume(companyId, v); };
     useEffect(() => { if (companyId && !isTourSeen(companyId)) setResumeState(readResume(companyId)); }, [companyId]);
 
-    // Empresa nova (ainda sem vendas): o tour abre sozinho, uma vez, no primeiro dashboard — antes dos "primeiros passos".
-    useEffect(() => {
-        if (autoDone.current || !ctx || ctx.loading || !companyId || pathname !== "/dashboard") return;
-        autoDone.current = true;
-        const privileged = ctx.user?.role === "Admin" || ctx.user?.role === "Dono";
-        if (!privileged || isTourSeen(companyId) || readResume(companyId) !== null || (ctx.sales?.length || 0) > 0) return;
-        setCelebrate(false); setI(0); setOpen(true);
-    }, [ctx, companyId, pathname]);
+    // (a primeira entrada é tratada pelas boas-vindas: venda de demonstração → catálogo; este resumo abre a pedido)
 
     useEffect(() => {
         const on = (e: Event) => {

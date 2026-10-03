@@ -57,7 +57,7 @@ export function CatalogProductDetail({ product, inventory, sales, locations, rea
         <Sheet open={!!product} onOpenChange={(o) => !o && onClose()}>
             <SheetContent side={isDesktop ? "right" : "bottom"} className={isDesktop ? "w-[420px] overflow-y-auto sm:max-w-[420px]" : "max-h-[90vh] overflow-y-auto rounded-t-2xl"}>
                 {product && (
-                    <div className="space-y-5 pb-4">
+                    <div className="space-y-5 pb-4" data-tour="catalog-detail">
                         <SheetHeader className="text-left">
                             <div className="flex gap-3">
                                 {product.imageUrl ? (
@@ -80,7 +80,7 @@ export function CatalogProductDetail({ product, inventory, sales, locations, rea
                             <div className={`rounded-xl border p-2.5 ${margin !== null && margin < 0 ? "border-destructive/50 bg-destructive/5" : ""}`}><p className="text-[11px] text-muted-foreground">Margem</p><p className="text-sm font-bold tabular-nums">{margin === null ? "—" : `${margin}%`}</p></div>
                         </div>
 
-                        <section aria-label="Stock">
+                        <section aria-label="Stock" data-tour="catalog-detail-stock">
                             <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold"><Warehouse className="h-4 w-4" /> Stock no inventário</h3>
                             {stock.length === 0 ? (
                                 <p className="rounded-xl bg-muted/40 p-3 text-sm text-muted-foreground">Ainda não há stock deste produto. Faça uma entrada no Stock Rápido.</p>
@@ -145,8 +145,8 @@ export function CatalogProductDetail({ product, inventory, sales, locations, rea
                             </section>
                         )}
 
-                        <div className="flex flex-wrap gap-2 pt-1">
-                            <Button disabled={readOnly} onClick={() => onEdit(product)}><Edit className="mr-1.5 h-4 w-4" /> Editar</Button>
+                        <div className="flex flex-wrap gap-2 pt-1" data-tour="catalog-detail-actions">
+                            <Button data-tour="catalog-detail-edit" disabled={readOnly} onClick={() => onEdit(product)}><Edit className="mr-1.5 h-4 w-4" /> Editar</Button>
                             {product.variantGroup
                                 ? <Button variant="outline" disabled={readOnly} onClick={() => onAddVariant(product)}><Plus className="mr-1.5 h-4 w-4" /> Nova variação</Button>
                                 : <Button variant="outline" disabled={readOnly} onClick={() => onCreateVariants(product)}><Layers className="mr-1.5 h-4 w-4" /> Criar variações</Button>}

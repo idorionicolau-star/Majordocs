@@ -2,38 +2,46 @@
 
 import { useContext, useEffect, useState } from "react";
 import Link from "next/link";
-import { Building2, Check, PackagePlus, PlayCircle, ShoppingCart, X, type LucideIcon } from "lucide-react";
+import { Boxes, Building2, Check, GraduationCap, PackagePlus, ShoppingCart, X, type LucideIcon } from "lucide-react";
 import { InventoryContext } from "@/context/inventory-context";
 import { Button } from "@/components/ui/button";
 import { gettingStarted, type StepId } from "@/lib/onboarding";
-import { openTour, useTourSeen } from "@/components/onboarding/app-tour";
+import { isDemoSaleDone } from "@/lib/demo-data";
+import { startGuide } from "@/components/guide/guide-store";
 
 const dismissKey = (companyId?: string | null) => `majorstockx-started-hidden-${companyId || "x"}`;
 
-const COPY: Record<StepId, { icon: LucideIcon; title: string; hint: string; action: string; href?: string }> = {
-    products: { icon: PackagePlus, title: "Adicionar produtos", hint: "Um a um no Stock Rápido, ou vários de uma vez no Catálogo.", action: "Adicionar", href: "/inventory/quick" },
-    sale: { icon: ShoppingCart, title: "Fazer a primeira venda", hint: "Leva segundos na Venda Rápida.", action: "Vender", href: "/pos" },
+/** Cada passo: o que é, porquê, e o botão que leva lá (um guia com destaque visual, ou uma página). */
+const COPY: Record<StepId, { icon: LucideIcon; title: string; hint: string; action: string; guide?: string; href?: string }> = {
+    demo: { icon: GraduationCap, title: "Ver uma venda de demonstração", hint: "Passo a passo, com produtos de exemplo. Nada é gravado.", action: "Ver", guide: "venda-demo" },
+    catalog: { icon: PackagePlus, title: "Pôr os seus produtos no catálogo", hint: "Nome, preço, custo e foto — mostramos onde tocar.", action: "Adicionar", guide: "catalogo" },
+    stock: { icon: Boxes, title: "Dar entrada do stock", hint: "Quanto tem de cada produto, no Stock Rápido.", action: "Abrir", guide: "pagina-stock-rapido" },
+    sale: { icon: ShoppingCart, title: "Fazer a primeira venda a sério", hint: "Na Venda Rápida, com os seus produtos.", action: "Vender", href: "/pos" },
     company: { icon: Building2, title: "Completar os dados da empresa", hint: "NUIT, contactos e logótipo aparecem nos documentos.", action: "Preencher", href: "/settings#company" },
-    tour: { icon: PlayCircle, title: "Ver como a app funciona", hint: "Um minuto, seis ecrãs.", action: "Ver" },
 };
 
-/** "Primeiros passos" no dashboard: fica até a empresa fazer o essencial (ou até a pessoa o esconder). */
+/** "Primeiros passos": fica no início até a empresa fazer o essencial (ou até a pessoa o esconder). */
 export function GettingStartedCard() {
     const ctx = useContext(InventoryContext);
     const companyId = ctx?.companyId;
-    const tourSeen = useTourSeen(companyId);
     const [hidden, setHidden] = useState(true); // escondido até ler a escolha guardada (evita um piscar)
+    const [demoDone, setDemoDone] = useState(false);
     useEffect(() => {
         try { setHidden(localStorage.getItem(dismissKey(companyId)) === "1"); } catch { setHidden(false); }
+        const update = () => setDemoDone(isDemoSaleDone(companyId));
+        update();
+        window.addEventListener("msx:guide-done", update);
+        return () => window.removeEventListener("msx:guide-done", update);
     }, [companyId]);
 
     if (!ctx || ctx.loading || hidden) return null;
     const c = ctx.companyData;
     const g = gettingStarted({
-        products: ctx.products.length,
+        demoDone,
+        catalog: (ctx.catalogProducts || []).length,
+        stock: ctx.products.length,
         sales: ctx.sales.length,
         companyDone: !!(c?.taxId && (c?.phone || c?.address)),
-        tourSeen,
     });
     if (g.finished) return null;
 
@@ -43,7 +51,7 @@ export function GettingStartedCard() {
     };
 
     return (
-        <section aria-label="Primeiros passos" className="rounded-2xl border bg-card p-4">
+        <section aria-label="Primeiros passos" data-tour="dash-started" className="rounded-2xl border bg-card p-4">
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                     <h2 className="font-semibold">Primeiros passos <span className="font-normal text-muted-foreground">· {g.done} de {g.total}</span></h2>
@@ -54,6 +62,7 @@ export function GettingStartedCard() {
             <ul className="mt-3 divide-y">
                 {g.steps.map((s) => {
                     const t = COPY[s.id];
+                    const primary = g.next === s.id;
                     return (
                         <li key={s.id} className="flex items-center gap-3 py-2.5">
                             <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${s.done ? "bg-emerald-500 text-white" : "bg-primary/10 text-primary"}`}>
@@ -63,9 +72,9 @@ export function GettingStartedCard() {
                                 <p className={`text-sm font-medium ${s.done ? "text-muted-foreground line-through" : ""}`}>{t.title}</p>
                                 {!s.done && <p className="text-xs text-muted-foreground">{t.hint}</p>}
                             </div>
-                            {!s.done && (t.href
-                                ? <Button asChild size="sm" variant={g.next === s.id ? "default" : "outline"}><Link href={t.href}>{t.action}</Link></Button>
-                                : <Button size="sm" variant={g.next === s.id ? "default" : "outline"} onClick={() => openTour()}>{t.action}</Button>)}
+                            {!s.done && (t.guide
+                                ? <Button size="sm" variant={primary ? "default" : "outline"} data-tour={`started-${s.id}`} onClick={() => startGuide(t.guide!)}>{t.action}</Button>
+                                : <Button asChild size="sm" variant={primary ? "default" : "outline"} data-tour={`started-${s.id}`}><Link href={t.href!}>{t.action}</Link></Button>)}
                         </li>
                     );
                 })}

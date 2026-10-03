@@ -270,7 +270,7 @@ export default function ProductionPage() {
           <div>
             <h1 className="text-2xl md:text-3xl font-headline font-bold">Produção</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" data-tour="prod-print">
             <Button onClick={handleDownloadPdfReport} variant="outline" className="h-12">
               <Download className="mr-2 h-4 w-4" />
               Baixar PDF
@@ -282,7 +282,7 @@ export default function ProductionPage() {
           </div>
         </div>
 
-        <Card className="glass-panel p-4 mb-6 border-none">
+        <Card className="glass-panel p-4 mb-6 border-none" data-tour="prod-filters">
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row items-center gap-2">
               <Input
@@ -380,7 +380,7 @@ export default function ProductionPage() {
           </div>
         </Card>
 
-        <div className="hidden md:block">
+        <div className="hidden md:block" data-tour="prod-list">
           {view === 'list' ? (
             <ProductionDataTable columns={columns({ onDeleteProduction: handleDeleteProduction, canEdit: canEditProduction })} data={filteredProductions} />
           ) : (
@@ -428,7 +428,7 @@ export default function ProductionPage() {
           )}
         </div>
 
-        <div className="md:hidden">
+        <div className="md:hidden" data-tour="prod-list">
           {filteredProductions.length > 0 ? (
             <Virtuoso
               useWindowScroll
@@ -460,6 +460,7 @@ export default function ProductionPage() {
         {canEditProduction && (
           <>
             <Button
+              data-tour="prod-add"
               onClick={() => router.push('/production/new')}
               disabled={isReadOnly}
               title={isReadOnly ? "Indisponível em modo leitura" : ""}

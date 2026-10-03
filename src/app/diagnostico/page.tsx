@@ -62,7 +62,7 @@ export default function DiagnosticoPage() {
 
       {/* Headline — the one thing to know */}
       {a.headline.length > 0 && (
-        <div className={cn("rounded-2xl border p-4 md:p-5", salesStale ? SEV.critical.box : "border-border bg-muted/30")}>
+        <div data-tour="diag-headline" className={cn("rounded-2xl border p-4 md:p-5", salesStale ? SEV.critical.box : "border-border bg-muted/30")}>
           <p className={cn("text-base md:text-lg font-semibold", salesStale && "text-red-600 dark:text-red-400")}>{a.headline[0]}</p>
           {a.headline.slice(1).map((h) => (
             <p key={h} className="mt-1 text-sm text-muted-foreground">{h}</p>
@@ -76,7 +76,7 @@ export default function DiagnosticoPage() {
       )}
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-tour="diag-kpis">
         <Kpi label="Vendas este mês" value={formatCurrency(a.sales.month)} sub={`${plural(a.sales.monthTickets, "venda", "vendas")} · mês passado ${formatCurrency(a.sales.lastMonth)}`} icon={ShoppingCart} />
         <Kpi
           label="Últimos 30 dias"
@@ -91,7 +91,7 @@ export default function DiagnosticoPage() {
 
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Data quality — pushes the user to register what is missing */}
-        <Card className="min-w-0 rounded-2xl lg:col-span-2">
+        <Card className="min-w-0 rounded-2xl lg:col-span-2" data-tour="diag-quality">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg"><ClipboardCheck className="h-5 w-5 text-primary" /> Confiança dos números</CardTitle>
             <p className="text-sm text-muted-foreground">
@@ -124,13 +124,13 @@ export default function DiagnosticoPage() {
         </Card>
 
         {/* Alerts */}
-        <div className="flex min-w-0 flex-col gap-3 lg:col-span-3">
+        <div className="flex min-w-0 flex-col gap-3 lg:col-span-3" data-tour="diag-alerts">
           <h2 className="flex items-center gap-2 text-lg font-semibold"><AlertTriangle className="h-5 w-5 text-amber-500" /> Alertas principais</h2>
           {a.alerts.map((al) => <AlertCard key={al.id} alert={al} />)}
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2" data-tour="diag-details">
         {/* Stock */}
         <Card className="min-w-0 rounded-2xl">
           <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-lg"><Package className="h-5 w-5 text-primary" /> Stock</CardTitle></CardHeader>

@@ -14,11 +14,13 @@ describe('onboarding', () => {
         expect(checkFirstProduct({ name: 'cimento  32,5', price: '1 200,50', qty: '10' })).toEqual({ ok: true, value: { name: 'Cimento 32,5', price: 1200.5, qty: 10 } });
     });
     it('lista de primeiros passos', () => {
-        const a = gettingStarted({ products: 0, sales: 0, companyDone: false, tourSeen: false });
-        expect(a.done).toBe(0); expect(a.next).toBe('products'); expect(a.finished).toBe(false);
-        const b = gettingStarted({ products: 3, sales: 0, companyDone: true, tourSeen: false });
-        expect(b.next).toBe('sale');
-        expect(gettingStarted({ products: 1, sales: 1, companyDone: true, tourSeen: true }).finished).toBe(true);
+        const a = gettingStarted({ demoDone: false, catalog: 0, stock: 0, sales: 0, companyDone: false });
+        expect(a.done).toBe(0); expect(a.next).toBe('demo'); expect(a.finished).toBe(false); expect(a.total).toBe(5);
+        const b = gettingStarted({ demoDone: true, catalog: 3, stock: 0, sales: 0, companyDone: true });
+        expect(b.next).toBe('stock');
+        // quem já vende não precisa da demonstração, e ter stock conta como ter produtos
+        const c = gettingStarted({ demoDone: false, catalog: 0, stock: 2, sales: 1, companyDone: true });
+        expect(c.finished).toBe(true);
     });
     it('menu simples só para empresas sem vendas, a não ser que tenham escolhido', () => {
         expect(menuMode(null, 0)).toBe('simple');

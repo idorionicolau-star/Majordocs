@@ -69,7 +69,7 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
     const estimatedCompletionDate = calculateEstimatedCompletionDate();
 
     return (
-        <Card className="glass-card flex flex-col h-full group p-4 shadow-sm">
+        <Card data-tour="orders-card" className="glass-card flex flex-col h-full group p-4 shadow-sm">
             <CardHeader className="p-2">
                 <div className="flex items-start justify-between">
                     <div>
@@ -103,7 +103,7 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
             </CardHeader>
             <CardContent className="flex-grow space-y-3 p-2">
                 <div className="relative">
-                    <Progress value={progress} className="h-8" />
+                    <Progress data-tour="orders-progress" value={progress} className="h-8" />
                     <div className="absolute inset-0 flex items-center justify-center">
                         <span className="text-white text-xs font-bold drop-shadow-md">
                             {order.quantityProduced} / {order.quantity} ({progress.toFixed(0)}%)
@@ -136,7 +136,7 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
                     )}
                 </div>
             </CardContent>
-            {canEdit && <CardFooter className="flex flex-col sm:flex-row justify-center gap-2 p-2 pt-4">
+            {canEdit && <CardFooter data-tour="orders-actions" className="flex flex-col sm:flex-row justify-center gap-2 p-2 pt-4">
                 {order.status === 'Pendente' && (
                     <Button onClick={() => onUpdateStatus(order.id, 'Em produção')} className="flex-1" variant="outline">
                         <Play className="mr-2 h-4 w-4" />

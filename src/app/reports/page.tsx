@@ -322,7 +322,7 @@ export default function ReportsPage() {
 
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
         <div className="flex flex-col w-full md:flex-row justify-between items-start gap-4">
-          <div className="flex flex-col w-full gap-2 sm:flex-row sm:flex-wrap md:items-center">
+          <div data-tour="rep-period" className="flex flex-col w-full gap-2 sm:flex-row sm:flex-wrap md:items-center">
             <Select value={period} onValueChange={(value: Period) => setPeriod(value)}>
               <SelectTrigger className="h-12 w-full sm:w-[180px]">
                 <SelectValue placeholder="Selecionar Período" />
@@ -337,7 +337,7 @@ export default function ReportsPage() {
             <div className="w-full sm:w-auto">
               <DatePicker date={selectedDate} setDate={setSelectedDate} />
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+            <div data-tour="rep-export" className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
               <Button onClick={handleGeneratePdf} variant="outline" className="h-12 flex-1 sm:flex-none" disabled={!selectedDate || isProcessing}>
                 <Download className="mr-2 h-4 w-4" />
                 {isProcessing ? 'A processar...' : 'Exportar PDF'}
@@ -350,7 +350,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div data-tour="rep-stats" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard icon={Hash} title="Total de Vendas" value={reportSummary.totalSales} />
           {isPrivilegedUser ? (
             <>
@@ -384,7 +384,7 @@ export default function ReportsPage() {
           <StatCard icon={Trophy} title="Mais Vendido" value={reportSummary.bestSellingProduct.name} subValue={`${reportSummary.bestSellingProduct.quantity} un.`} />
         </div>
 
-        <Card>
+        <Card data-tour="rep-details">
           <CardHeader className="text-center">
             <CardTitle>Detalhes das Vendas do Período</CardTitle>
             <CardDescription>

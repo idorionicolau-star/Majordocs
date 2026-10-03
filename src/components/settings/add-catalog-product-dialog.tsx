@@ -74,6 +74,7 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+const NEW_CATEGORY = "__nova_categoria__";
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
 interface AddCatalogProductDialogProps {
@@ -100,6 +101,8 @@ function AddCatalogProductForm({
   setVariants,
 }: AddCatalogProductDialogProps & { setOpen: (open: boolean) => void; form: any; namePlaceholder: string; pricePlaceholder: string; variants: VariantsState; setVariants: (v: VariantsState) => void }) {
   const { toast } = useToast();
+  const [typingCategory, setTypingCategory] = useState(false);
+  const categoryOptions = Array.from(new Set(["Geral", ...categories]));
   const baseName = String(form.watch('name') || '');
   const basePrice = Number(form.watch('price')) || 0;
   const withVariants = variants.enabled && !!onAddVariants;
@@ -128,25 +131,30 @@ function AddCatalogProductForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
+      <form data-tour="catalog-form" onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
         <FormField
           control={form.control}
           name="category"
           render={({ field }) => (
-            <FormItem>
+            <FormItem data-tour="catalog-f-category">
               <FormLabel>Categoria</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              {/* Empresa nova não tem categorias: "Geral" está sempre lá e pode criar-se uma nova aqui mesmo. */}
+              <Select onValueChange={(v) => { if (v === NEW_CATEGORY) { setTypingCategory(true); field.onChange(""); } else { setTypingCategory(false); field.onChange(v); } }} value={typingCategory ? NEW_CATEGORY : field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma categoria" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {categories.map(category => (
+                  {categoryOptions.map(category => (
                     <SelectItem key={category} value={category}>{category}</SelectItem>
                   ))}
+                  <SelectItem value={NEW_CATEGORY}>＋ Nova categoria…</SelectItem>
                 </SelectContent>
               </Select>
+              {typingCategory && (
+                <Input autoFocus placeholder="Nome da nova categoria (ex.: Cimentos)" value={field.value} onChange={(e) => field.onChange(e.target.value)} />
+              )}
               <FormMessage />
             </FormItem>
           )}
@@ -155,7 +163,7 @@ function AddCatalogProductForm({
           control={form.control}
           name="name"
           render={({ field }) => (
-            <FormItem>
+            <FormItem data-tour="catalog-f-name">
               <FormLabel>Nome do Produto</FormLabel>
               <FormControl>
                 <Input placeholder={namePlaceholder} {...field} />
@@ -168,13 +176,13 @@ function AddCatalogProductForm({
           control={form.control}
           name="imageUrl"
           render={({ field }) => (
-            <FormItem>
+            <FormItem data-tour="catalog-f-photo">
               <FormLabel>Foto (opcional)</FormLabel>
               <ProductImageField value={field.value} onChange={field.onChange} />
             </FormItem>
           )}
         />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4" data-tour="catalog-f-price">
           <FormField
             control={form.control}
             name="price"
@@ -213,8 +221,8 @@ function AddCatalogProductForm({
             )}
           />
         </div>
-        <CostBarcodeFields catalog={catalog || []} noBarcode={withVariants} />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4" data-tour="catalog-f-cost"><CostBarcodeFields catalog={catalog || []} noBarcode={withVariants} /></div>
+        <div className="grid grid-cols-2 gap-4" data-tour="catalog-f-alerts">
           <FormField
             control={form.control}
             name="lowStockThreshold"
@@ -243,11 +251,11 @@ function AddCatalogProductForm({
           />
         </div>
         {onAddVariants && (
-          <VariantsEditor state={variants} onChange={setVariants} baseName={baseName} basePrice={basePrice} existingNames={(catalog || []).map((c) => c.name)} />
+          <div data-tour="catalog-f-variants"><VariantsEditor state={variants} onChange={setVariants} baseName={baseName} basePrice={basePrice} existingNames={(catalog || []).map((c) => c.name)} /></div>
         )}
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
           <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button type="submit">{withVariants ? 'Criar variações' : 'Adicionar ao Catálogo'}</Button>
+          <Button type="submit" data-tour="catalog-f-submit">{withVariants ? 'Criar variações' : 'Adicionar ao Catálogo'}</Button>
         </div>
       </form>
     </Form>
@@ -277,7 +285,7 @@ export function AddCatalogProductDialog({ categories, units, onAdd, onAddVariant
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      category: categories[0] || '',
+      category: categories[0] || 'Geral',
       price: 0,
       unit: 'un',
       imageUrl: '',
@@ -294,7 +302,7 @@ export function AddCatalogProductDialog({ categories, units, onAdd, onAddVariant
   // sempre que abre, o formulário começa limpo (antes ficava com o produto anterior)
   useEffect(() => {
     if (open) setVariants({ ...EMPTY_VARIANTS, enabled: !!startWithVariants });
-    if (open) form.reset({ name: defaultName || '', category: defaultCategory || categories[0] || '', price: 0, unit: 'un', imageUrl: '', cost: 0, barcode: '', lowStockThreshold: 10, criticalStockThreshold: 5, ...(initial || {}) });
+    if (open) form.reset({ name: defaultName || '', category: defaultCategory || categories[0] || 'Geral', price: 0, unit: 'un', imageUrl: '', cost: 0, barcode: '', lowStockThreshold: 10, criticalStockThreshold: 5, ...(initial || {}) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 

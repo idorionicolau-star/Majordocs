@@ -165,7 +165,7 @@ const BusinessSummaryInner = ({ context }: { context: NonNullable<React.ContextT
     ].filter(sc => sc.show);
 
     return (
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-white via-slate-50/50 to-blue-50/30 dark:from-slate-900 dark:via-slate-900/80 dark:to-blue-950/20 p-4 md:p-5 shadow-sm">
+        <div data-tour="dash-today" className="rounded-2xl border border-border/60 bg-gradient-to-br from-white via-slate-50/50 to-blue-50/30 dark:from-slate-900 dark:via-slate-900/80 dark:to-blue-950/20 p-4 md:p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
                 <Sun className="h-4 w-4 text-primary" />
                 <h2 className="text-sm font-bold text-foreground tracking-wide">Hoje</h2>
@@ -178,7 +178,7 @@ const BusinessSummaryInner = ({ context }: { context: NonNullable<React.ContextT
             </div>
 
             {/* 1. Hoje — os números do dia */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-tour="dash-tiles">
                 <Tile href="/sales" icon={TrendingUp} label="Vendido hoje" tone="emerald"
                     value={formatCurrency(a.sales.today, { compact: true })}
                     sub={a.sales.todayTickets === 0 ? 'ainda nenhuma venda' : plural(a.sales.todayTickets, 'venda', 'vendas')} />
@@ -195,7 +195,7 @@ const BusinessSummaryInner = ({ context }: { context: NonNullable<React.ContextT
 
             {/* 2. Atalhos — o que se faz todos os dias */}
             {shortcuts.length > 0 && (
-                <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2" data-tour="dash-shortcuts">
                     {shortcuts.map(sc => (
                         <Link key={sc.href} href={sc.href}
                             className={cn("flex items-center justify-center gap-2 h-11 rounded-xl border border-border/60 text-sm font-semibold transition-colors", sc.tone)}>
@@ -206,7 +206,7 @@ const BusinessSummaryInner = ({ context }: { context: NonNullable<React.ContextT
             )}
 
             {/* 3. Atenção — o que precisa de ser resolvido, com link directo */}
-            <div className="mt-4">
+            <div className="mt-4" data-tour="dash-attention">
                 <div className="flex items-center gap-2 mb-2">
                     <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Atenção</h3>
@@ -249,7 +249,7 @@ const BusinessSummaryInner = ({ context }: { context: NonNullable<React.ContextT
             </div>
 
             {/* AI Insights - Collapsible */}
-            <Collapsible open={insightsOpen} onOpenChange={setInsightsOpen} className="mt-4">
+            <Collapsible open={insightsOpen} onOpenChange={setInsightsOpen} className="mt-4" data-tour="dash-insights">
                 <div className="flex items-center gap-2">
                     <CollapsibleTrigger asChild>
                         <button className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-950/30 dark:to-indigo-950/30 border border-sky-100 dark:border-sky-900/30 hover:shadow-sm transition-all group text-left">

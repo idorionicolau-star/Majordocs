@@ -153,7 +153,7 @@ export default function FinancePage() {
                     <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                             <DialogTrigger asChild>
-                                <Button className="flex-1 sm:flex-none bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 transition-all active:scale-95">
+                                <Button data-tour="fin-expense" className="flex-1 sm:flex-none bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 transition-all active:scale-95">
                                     <Plus className="w-4 h-4 mr-2" />
                                     Registar Despesa
                                 </Button>
@@ -204,7 +204,7 @@ export default function FinancePage() {
                 </div>
 
                 {/* Period Selector and Action Buttons */}
-                <div className="flex flex-col w-full gap-2 sm:flex-row sm:flex-wrap md:items-center">
+                <div data-tour="fin-period" className="flex flex-col w-full gap-2 sm:flex-row sm:flex-wrap md:items-center">
                     <Select value={period} onValueChange={(value: Period) => setPeriod(value)}>
                         <SelectTrigger className="h-10 w-full sm:w-[150px]">
                             <SelectValue placeholder="Selecionar Período" />
@@ -221,7 +221,7 @@ export default function FinancePage() {
                     </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2" data-tour="fin-print">
                     <Button
                         variant="outline"
                         size="sm"
@@ -270,7 +270,7 @@ export default function FinancePage() {
             </div>
 
             {/* KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6" data-tour="fin-kpis">
                 <Card className="border-green-100 bg-green-50/50 dark:bg-green-900/10 dark:border-green-800">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center gap-2">
@@ -326,7 +326,7 @@ export default function FinancePage() {
                 </div>
 
                 <Tabs defaultValue="entradas" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsList data-tour="fin-tabs" className="grid w-full grid-cols-2 mb-4">
                         <TabsTrigger value="entradas" className="data-[state=active]:bg-green-100 data-[state=active]:text-green-800 dark:data-[state=active]:bg-green-900/30 dark:data-[state=active]:text-green-400">
                             <TrendingUp className="w-4 h-4 mr-2" /> Entradas
                         </TabsTrigger>

@@ -85,12 +85,12 @@ export default function DocumentsPage() {
                 {canWrite && (
                     // no computador o botão fica no cabeçalho; no telemóvel passa para o canto inferior direito (ao alcance do polegar)
                     <NewMenu onPick={openNew}>
-                        <Button className="hidden shrink-0 gap-1.5 md:inline-flex"><Plus className="h-4 w-4" /> Novo<ChevronDown className="h-4 w-4 opacity-70" /></Button>
+                        <Button data-tour="docs-new" className="hidden shrink-0 gap-1.5 md:inline-flex"><Plus className="h-4 w-4" /> Novo<ChevronDown className="h-4 w-4 opacity-70" /></Button>
                     </NewMenu>
                 )}
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:flex">
+            <div className="grid grid-cols-2 gap-2 sm:flex" data-tour="docs-filters">
                 <div className="relative col-span-2 min-w-[200px] flex-1">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input className="pl-9" placeholder="Procurar por número ou cliente…" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -108,12 +108,12 @@ export default function DocumentsPage() {
             {docs === null ? (
                 <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
             ) : list.length === 0 ? (
-                <Card><CardContent className="flex flex-col items-center gap-2 py-12 text-center text-muted-foreground">
+                <Card data-tour="docs-list"><CardContent className="flex flex-col items-center gap-2 py-12 text-center text-muted-foreground">
                     <FileText className="h-8 w-8" />
                     <p>{docs.length === 0 ? "Ainda não criou documentos. Toque em “Novo” (ou no botão +) para começar." : "Nenhum documento corresponde ao filtro."}</p>
                 </CardContent></Card>
             ) : (
-                <div className="space-y-2">
+                <div className="space-y-2" data-tour="docs-list">
                     {list.map((d) => (
                         <Card key={d.id} className="cursor-pointer transition-colors hover:bg-muted/40" onClick={() => router.push(`/documents/${d.id}`)}>
                             <CardContent className="flex items-center gap-3 p-4">
@@ -136,7 +136,7 @@ export default function DocumentsPage() {
             {canWrite && (
                 <div className="fixed bottom-20 right-4 z-30 md:hidden" style={{ marginBottom: "env(safe-area-inset-bottom)" }}>
                     <NewMenu side="top" onPick={openNew}>
-                        <Button size="icon" className="h-14 w-14 rounded-full shadow-lg" aria-label="Novo documento"><Plus className="h-6 w-6" /></Button>
+                        <Button data-tour="docs-new" size="icon" className="h-14 w-14 rounded-full shadow-lg" aria-label="Novo documento"><Plus className="h-6 w-6" /></Button>
                     </NewMenu>
                 </div>
             )}

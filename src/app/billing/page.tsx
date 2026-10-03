@@ -115,7 +115,7 @@ function BillingInner() {
                 <p className="rounded-2xl border p-4 text-sm text-muted-foreground">Só o administrador da empresa pode pagar a subscrição.</p>
             ) : (
                 <>
-                    <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="grid gap-3 sm:grid-cols-3" data-tour="bill-plans">
                         {PLANS.map((p) => (
                             <button key={p.id} type="button" onClick={() => setSelected(p.id)}
                                 className={cn("relative rounded-2xl border-2 p-4 text-left transition", selected === p.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
@@ -127,7 +127,7 @@ function BillingInner() {
                         ))}
                     </div>
 
-                    <Button onClick={pay} disabled={busy} className="h-12 rounded-xl text-base">
+                    <Button data-tour="bill-pay" onClick={pay} disabled={busy} className="h-12 rounded-xl text-base">
                         {busy ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CreditCard className="mr-2 h-5 w-5" />}
                         Pagar {formatCurrency(PLANS.find((p) => p.id === selected)!.amount)}
                     </Button>

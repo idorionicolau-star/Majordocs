@@ -94,14 +94,14 @@ export default function LossesPage() {
                     <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight"><ShieldAlert className="h-6 w-6 text-red-500" /> Perdas e faltas</h1>
                     <p className="text-sm text-muted-foreground">O que as contagens encontraram a menos e as saídas registadas como perda ou quebra.</p>
                 </div>
-                <Button asChild><Link href="/inventory/quick?modo=contagem"><ClipboardCheck className="mr-2 h-4 w-4" />Fazer contagem</Link></Button>
+                <Button asChild data-tour="loss-count"><Link href="/inventory/quick?modo=contagem"><ClipboardCheck className="mr-2 h-4 w-4" />Fazer contagem</Link></Button>
             </div>
 
             {onlyProduct && (
                 <DeepLinkBanner title={`Registos de “${onlyProduct}” (${events.length})`} hint="Só este produto — contagens, faltas e saídas." count={events.length} onClear={() => router.replace("/inventory/perdas")} />
             )}
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2" data-tour="loss-period">
                 {PERIODS.map((d) => (
                     <button key={d} type="button" onClick={() => setDays(d)} className={cn("rounded-full border px-3 py-1.5 text-sm", days === d ? "border-primary bg-primary text-primary-foreground" : "bg-muted/40")}>
                         {d === 365 ? "1 ano" : `${d} dias`}
@@ -115,7 +115,7 @@ export default function LossesPage() {
                 )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4" data-tour="loss-tiles">
                 <Tile label="Total perdido" value={formatCurrency(lost)} tone="bad" />
                 <Tile label="Faltas em contagens" value={formatCurrency(sum("falta"))} sub={`${events.filter((e) => e.kind === "falta").length} registos`} />
                 <Tile label="Perdas / quebras declaradas" value={formatCurrency(sum("perda"))} sub={`${events.filter((e) => e.kind === "perda").length} registos`} />

@@ -121,7 +121,7 @@ export default function UsersPage() {
       </AlertDialog>
       <div className="flex flex-col md:flex-row justify-end items-start md:items-center gap-4">
         {isAdmin && (
-          <Button asChild>
+          <Button asChild data-tour="users-add">
             <Link href="/users/new">
               <PlusCircle className="mr-2 h-4 w-4" />
               Adicionar Funcionário
@@ -136,13 +136,13 @@ export default function UsersPage() {
           onClear={() => router.replace('/users')}
         />
       )}
-      <div className="hidden md:block">
+      <div className="hidden md:block" data-tour="users-list">
         <UsersDataTable
           columns={tableColumns}
           data={shownEmployees}
         />
       </div>
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden space-y-3" data-tour="users-list">
         {(shownEmployees.length > 0) ? (
           shownEmployees.map(employee => (
             <EmployeeCard

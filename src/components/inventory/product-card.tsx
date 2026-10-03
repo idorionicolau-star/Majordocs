@@ -46,7 +46,7 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
     const availableStock = product.stock - product.reservedStock;
 
     return (
-        <Card className="glass-card flex flex-col h-full group p-2 sm:p-4 shadow-sm">
+        <Card data-tour="inv-card" className="glass-card flex flex-col h-full group p-2 sm:p-4 shadow-sm">
             {/* Sem foto não ocupa meio cartão com um "Sem foto" — só mostra quando existe. */}
             {product.imageUrl && (
                 <ProductPhoto src={product.imageUrl} alt={product.name} className="w-full h-32 mb-2 rounded-md shrink-0" />
@@ -58,7 +58,7 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                 </div>
             </CardHeader>
             <CardContent className="flex-grow space-y-2 p-1 sm:p-2">
-                <div className={cn(
+                <div data-tour="inv-stock" className={cn(
                     "flex items-baseline justify-center text-center py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50",
                     isCondensed ? "flex-col" : ""
                 )}>
@@ -94,7 +94,7 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                     </div>
                 )}
             </CardContent>
-            <CardFooter className="flex justify-center gap-1.5 sm:gap-2 p-1 sm:p-2 pt-2">
+            <CardFooter data-tour="inv-card-actions" className="flex justify-center gap-1.5 sm:gap-2 p-1 sm:p-2 pt-2">
                 <TooltipProvider>
                     {canEdit ? (
                         <>

@@ -26,16 +26,21 @@ export function checkFirstProduct(i: FirstProductInput): { ok: true; value: Firs
   return { ok: true, value: { name: name.charAt(0).toUpperCase() + name.slice(1), price, qty } };
 }
 
-export type StepId = 'products' | 'sale' | 'company' | 'tour';
-export type Step = { id: StepId; done: boolean; required: boolean };
+export type StepId = 'demo' | 'catalog' | 'stock' | 'sale' | 'company';
+export type Step = { id: StepId; done: boolean };
 
-/** A lista de "Primeiros passos" do dashboard. */
-export function gettingStarted(s: { products: number; sales: number; companyDone: boolean; tourSeen: boolean }): { steps: Step[]; done: number; total: number; finished: boolean; next?: StepId } {
+/**
+ * A lista de "Primeiros passos": ver a venda de demonstração, pôr os produtos no catálogo, dar entrada do stock,
+ * fazer a primeira venda a sério e completar os dados da empresa. A demonstração conta como feita se já houver
+ * vendas a sério (quem já vende não precisa dela).
+ */
+export function gettingStarted(s: { demoDone: boolean; catalog: number; stock: number; sales: number; companyDone: boolean }): { steps: Step[]; done: number; total: number; finished: boolean; next?: StepId } {
   const steps: Step[] = [
-    { id: 'products', done: s.products > 0, required: true },
-    { id: 'sale', done: s.sales > 0, required: true },
-    { id: 'company', done: s.companyDone, required: true },
-    { id: 'tour', done: s.tourSeen, required: true },
+    { id: 'demo', done: s.demoDone || s.sales > 0 },
+    { id: 'catalog', done: s.catalog > 0 || s.stock > 0 },
+    { id: 'stock', done: s.stock > 0 },
+    { id: 'sale', done: s.sales > 0 },
+    { id: 'company', done: s.companyDone },
   ];
   const done = steps.filter((x) => x.done).length;
   return { steps, done, total: steps.length, finished: done === steps.length, next: steps.find((x) => !x.done)?.id };
