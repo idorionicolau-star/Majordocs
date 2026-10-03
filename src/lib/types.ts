@@ -430,7 +430,8 @@ export interface InventoryContextType {
   markAllAsRead: () => void;
   clearNotifications: () => void;
   addNotification: (notification: Omit<AppNotification, 'id' | 'date' | 'read'>) => void;
-  recalculateReservedStock: () => Promise<void>;
+  /** Acerta o reservado com as vendas por levantar e as encomendas. `only`: ids dos documentos de produto a corrigir. */
+  recalculateReservedStock: (only?: string[]) => Promise<void>;
   /** Vendas feitas sem internet que ainda não receberam o número oficial. */
   pendingOfflineSales: number;
   syncOfflineSales: () => Promise<void>;

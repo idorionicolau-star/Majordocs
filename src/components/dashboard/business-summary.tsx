@@ -83,7 +83,7 @@ const BusinessSummaryInner = ({ context }: { context: NonNullable<React.ContextT
         return analyzeBusiness({
             products, sales, customers: customers || [],
             orders: inv.orders || [], productions: inv.productions || [],
-            stockMovements: inv.stockMovements || [], businessType: companyData?.businessType,
+            stockMovements: inv.stockMovements || [], businessType: companyData?.businessType, multiLocation: inv.isMultiLocation,
         });
     }, [loading, sales, products, customers, inv.orders, inv.productions, inv.stockMovements, companyData?.businessType]);
 

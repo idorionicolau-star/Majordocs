@@ -512,7 +512,8 @@ export function useInventoryCore() {
     const activeProducts = productsData.filter(p => !p.deletedAt);
 
     activeProducts.forEach(p => {
-      const key = `${p.name}|${p.location || 'default'}`;
+      // "Principal" e "sem local" são o mesmo sítio (o Stock Rápido criava com ""): sem isto o mesmo produto aparecia em dois cartões
+      const key = `${p.name}|${!p.location || p.location === 'Principal' ? 'Principal' : p.location}`;
       // Ensure instanceId is ALWAYS present and unique-ish for React keys
       const productWithInstanceId = { ...p, instanceId: p.id || `inst-${p.name}-${p.location}` } as Product;
 

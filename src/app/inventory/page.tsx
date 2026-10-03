@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ProductCard } from "@/components/inventory/product-card";
 import { ProductRow } from "@/components/inventory/product-row";
+import { ReservedDriftBanner } from "@/components/inventory/reserved-drift-banner";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
 import { useInventory } from "@/context/inventory-context";
@@ -601,6 +602,7 @@ export default function InventoryPage() {
       </AlertDialog>
 
       <div className="flex flex-col gap-4">
+        <ReservedDriftBanner />
         {/* Acções principais — só o que se usa todos os dias fica à vista */}
         <div className="flex items-center gap-2">
           {canEditInventory && (

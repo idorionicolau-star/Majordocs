@@ -1,5 +1,6 @@
 "use client";
 
+import { ReservedBadge } from "./reserved-dialog";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import type { Product } from "@/lib/types";
@@ -33,7 +34,7 @@ export function ProductRow({ product, canEdit, locationName }: { product: Produc
                     {product.category && ` · ${product.category}`}
                     {locationName && ` · ${locationName}`}
                     {noCost && <span className="text-amber-600 dark:text-amber-400"> · sem custo</span>}
-                    {product.reservedStock > 0 && <span className="text-primary"> · {product.reservedStock} reservado{product.reservedStock === 1 ? "" : "s"}</span>}
+                    {product.reservedStock > 0 && <> · <ReservedBadge product={product} className="text-primary underline decoration-dotted underline-offset-2">{product.reservedStock} reservado{product.reservedStock === 1 ? "" : "s"}</ReservedBadge></>}
                 </p>
             </div>
             <div className="shrink-0 text-right">

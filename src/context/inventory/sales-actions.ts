@@ -11,9 +11,10 @@ import type { InventoryCore } from './core';
 import type { ProductActions } from './product-actions';
 import { links } from '@/lib/deep-links';
 import { locationIn, pickActive } from '@/lib/product-ref';
+import { expectedReserved } from '@/lib/reserved-stock';
 
 export function useSalesActions(core: InventoryCore, deps: { product_actions: ProductActions }) {
-  const { isReadOnly, toast, firestore, companyId, productsCollectionRef, companyData, isMultiLocation, locations, user, sendPush, triggerEmailAlert, setLastSaleTimestamp, products, notifyManagers, isManagerUser, productsData } = core;
+  const { isReadOnly, toast, firestore, companyId, productsCollectionRef, companyData, isMultiLocation, locations, user, sendPush, triggerEmailAlert, setLastSaleTimestamp, products, notifyManagers, isManagerUser, productsData, salesData, ordersData } = core;
   const { checkStockAndNotify } = deps.product_actions;
 
 
@@ -704,72 +705,49 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, toast, user, notifyManagers, isManagerUser]);
 
 
-  const recalculateReservedStock = useCallback(async () => {
-    if (!firestore || !companyId || !productsData) {
+  /**
+   * Acerta o stock reservado com o que as vendas pagas por levantar e as encomendas activas justificam
+   * (ver lib/reserved-stock). `only`: só estes documentos de produto; sem isso, todos.
+   * Deixa um registo no histórico de movimentos por cada produto corrigido.
+   */
+  const recalculateReservedStock = useCallback(async (only?: string[]) => {
+    if (!firestore || !companyId || !productsData || !salesData || !ordersData) {
       toast({ variant: 'destructive', title: 'Erro', description: 'A base de dados não está pronta para esta operação.' });
       return;
     }
-
-    toast({ title: 'A recalcular stock reservado...', description: 'Isto pode demorar um momento.' });
-
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return;
+    }
     try {
-      // 1. Fetch all 'Paid' and 'Pending' sales directly from Firestore
-      const salesRef = collection(firestore, `companies/${companyId}/sales`);
-      // We use "in" query to get both Paid and Pending
-      // Só vendas pagas e ainda por levantar reservam stock (proformas "Pendente" não reservam).
-      const q = query(salesRef, where("status", "==", "Pago"));
-      const salesSnapshot = await getDocs(q);
-      const sales = salesSnapshot.docs.map(doc => doc.data() as Sale);
-
-      // 2. Calculate the correct reserved stock for each product instance (name + location)
-      const correctReservedMap = new Map<string, number>(); // Key: 'productName|locationId'
-      sales.forEach(sale => {
-        // Exclude deleted sales
-        if (sale.deletedAt) return;
-
-        // Exclude Proformas (usually don't reserve stock)
-        if (sale.documentType === 'Factura Proforma') return;
-
-        // Use an empty string for undefined location to ensure consistency
-        const locationKey = sale.location || '';
-        const key = `${sale.productName}|${locationKey}`;
-        const currentReserved = correctReservedMap.get(key) || 0;
-        correctReservedMap.set(key, currentReserved + sale.quantity);
-      });
-
-      // 3. Compare with existing data and prepare batch update
-      const batch = writeBatch(firestore);
-      let updatesCount = 0;
-
-      // Produtos duplicados (mesmo nome + local) são somados na app: a reserva fica toda no 1.º documento.
-      const seenKeys = new Set<string>();
-      productsData.forEach(product => {
-        if (product.deletedAt) return;
-        const locationKey = product.location || '';
-        const key = `${product.name}|${locationKey}`;
-        const correctReserved = seenKeys.has(key) ? 0 : (correctReservedMap.get(key) || 0);
-        seenKeys.add(key);
-
-        if (product.reservedStock !== correctReserved) {
-          const productRef = doc(firestore, `companies/${companyId}/products`, product.id);
-          batch.update(productRef, { reservedStock: correctReserved });
-          updatesCount++;
-        }
-      });
-
-      // 4. Commit batch if needed
-      if (updatesCount > 0) {
-        await batch.commit();
-        toast({ title: 'Sucesso!', description: `${updatesCount} registo(s) de stock reservado foram corrigidos.` });
-      } else {
-        toast({ title: 'Tudo certo!', description: 'Nenhuma inconsistência encontrada no stock reservado.' });
+      const plan = expectedReserved(productsData as any[], salesData, ordersData, isMultiLocation)
+        .filter((x) => x.current !== x.expected && (!only || only.includes(x.id)));
+      if (!plan.length) {
+        toast({ title: 'Tudo certo!', description: 'O stock reservado bate certo com as vendas e encomendas.' });
+        return;
       }
-
+      const byId = new Map(productsData.map((p) => [p.id, p]));
+      const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+      for (let i = 0; i < plan.length; i += 200) {
+        const batch = writeBatch(firestore);
+        plan.slice(i, i + 200).forEach((x) => {
+          const p = byId.get(x.id)!;
+          batch.update(doc(firestore, `companies/${companyId}/products`, x.id), { reservedStock: x.expected, lastUpdated: new Date().toISOString() });
+          batch.set(doc(movementsRef), {
+            productId: x.id, productName: p.name, type: 'ADJUSTMENT', quantity: 0, toLocationId: p.location,
+            reason: `Reserva corrigida: de ${x.current} para ${x.expected} (${x.current > x.expected ? 'sem venda nem encomenda por trás' : 'havia vendas/encomendas por reservar'})`,
+            userId: user?.id || 'sistema', userName: user?.username || 'Sistema', timestamp: serverTimestamp(),
+          });
+        });
+        // sem internet o commit só termina quando a ligação volta: já está guardado neste aparelho
+        if (isOffline()) batch.commit().catch(() => { }); else await batch.commit();
+      }
+      toast({ title: 'Reservas corrigidas', description: `${plan.length} produto${plan.length === 1 ? '' : 's'} com o stock reservado acertado.` });
     } catch (error: any) {
       console.error("Error recalculating reserved stock:", error);
-      toast({ variant: 'destructive', title: 'Erro ao Recalcular', description: 'Não foi possível completar a operação.' });
+      toast({ variant: 'destructive', title: 'Erro ao recalcular', description: 'Não foi possível completar a operação. Tente de novo.' });
     }
-  }, [firestore, companyId, productsData, toast]);
+  }, [firestore, companyId, productsData, salesData, ordersData, isMultiLocation, isReadOnly, toast, user]);
   return { addSale, addBulkSale, confirmSalePickup, deleteSale, recalculateReservedStock };
 }
 
