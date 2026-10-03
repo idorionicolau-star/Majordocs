@@ -2,12 +2,13 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Copy, Edit, ImageOff, ScanBarcode, Trash2, TrendingDown, TrendingUp, Warehouse } from "lucide-react";
+import { Copy, Edit, ImageOff, Layers, Plus, ScanBarcode, Trash2, TrendingDown, TrendingUp, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { marginPct, nameKey } from "@/lib/catalog-view";
 import { formatCurrency } from "@/lib/utils";
+import { siblingsOf } from "@/lib/variants";
 import type { Location, Product, Sale } from "@/lib/types";
 
 type Item = Omit<Product, "stock" | "instanceId" | "reservedStock" | "location" | "lastUpdated"> & { id?: string };
@@ -19,16 +20,21 @@ const fmtQty = (n: number) => new Intl.NumberFormat("pt-PT", { maximumFractionDi
  * Ficha do produto do catálogo: foto, preço, custo e margem, código de barras, quanto há em cada local,
  * últimas vendas e histórico de preços. Abre ao tocar num produto; daqui edita-se, duplica-se ou apaga-se.
  */
-export function CatalogProductDetail({ product, inventory, sales, locations, readOnly, onClose, onEdit, onDuplicate, onDelete }: {
+export function CatalogProductDetail({ product, inventory, sales, locations, readOnly, family, onClose, onEdit, onDuplicate, onDelete, onOpenSibling, onAddVariant, onCreateVariants }: {
     product: Item | null;
     inventory: Product[];
     sales: Sale[];
     locations: Location[];
     readOnly: boolean;
+    /** todos os produtos do catálogo (para achar as outras variações da família) */
+    family: Item[];
     onClose: () => void;
     onEdit: (p: Item) => void;
     onDuplicate: (p: Item) => void;
     onDelete: (p: Item) => void;
+    onOpenSibling: (p: Item) => void;
+    onAddVariant: (p: Item) => void;
+    onCreateVariants: (p: Item) => void;
 }) {
     const isDesktop = useMediaQuery("(min-width: 768px)");
     const key = product ? nameKey(product.name) : "";
@@ -37,6 +43,9 @@ export function CatalogProductDetail({ product, inventory, sales, locations, rea
         () => (product ? sales.filter((s) => !s.deletedAt && nameKey(s.productName || "") === key).sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 5) : []),
         [sales, key, product],
     );
+    const siblings = useMemo(() => (product ? siblingsOf(product, family) : []), [family, product]);
+    // stock total de cada variação (somado nos locais)
+    const stockOf = (name: string) => inventory.filter((p) => !p.deletedAt && nameKey(p.name) === nameKey(name)).reduce((t, p) => t + (p.stock || 0), 0);
     const margin = product ? marginPct(product.price, product.cost) : null;
     const history = [...(product?.priceHistory || [])].reverse().slice(0, 6);
     const locName = (id?: string) => (!id || id === "Principal" ? locations.find((l) => l.id === id)?.name || "Principal" : locations.find((l) => l.id === id)?.name || id);
@@ -88,6 +97,23 @@ export function CatalogProductDetail({ product, inventory, sales, locations, rea
                             )}
                         </section>
 
+                        {product.variantGroup && siblings.length > 0 && (
+                            <section aria-label="Variações">
+                                <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold"><Layers className="h-4 w-4" /> Variações de {product.variantGroup} <span className="font-normal text-muted-foreground">({siblings.length})</span></h3>
+                                <ul className="divide-y rounded-xl border text-sm">
+                                    {siblings.map((s) => (
+                                        <li key={s.id || s.name}>
+                                            <button type="button" onClick={() => s.id !== product.id && onOpenSibling(s)} className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left ${s.id === product.id ? "bg-primary/5 font-medium" : "hover:bg-muted/40"}`}>
+                                                <span className="min-w-0 truncate">{Object.values(s.variantValues || {}).join(" / ") || s.name}</span>
+                                                <span className="shrink-0 tabular-nums text-muted-foreground">{formatCurrency(s.price || 0)} · <b className="text-foreground">{fmtQty(stockOf(s.name))}</b> {s.unit || "un"}</span>
+                                            </button>
+                                        </li>
+                                    ))}
+                                    <li className="flex items-center justify-between bg-muted/30 px-3 py-2 font-medium"><span>Total</span><span className="tabular-nums">{fmtQty(siblings.reduce((t, s) => t + stockOf(s.name), 0))} {product.unit || "un"}</span></li>
+                                </ul>
+                            </section>
+                        )}
+
                         {recent.length > 0 && (
                             <section aria-label="Últimas vendas">
                                 <h3 className="mb-2 text-sm font-semibold">Últimas vendas</h3>
@@ -121,6 +147,9 @@ export function CatalogProductDetail({ product, inventory, sales, locations, rea
 
                         <div className="flex flex-wrap gap-2 pt-1">
                             <Button disabled={readOnly} onClick={() => onEdit(product)}><Edit className="mr-1.5 h-4 w-4" /> Editar</Button>
+                            {product.variantGroup
+                                ? <Button variant="outline" disabled={readOnly} onClick={() => onAddVariant(product)}><Plus className="mr-1.5 h-4 w-4" /> Nova variação</Button>
+                                : <Button variant="outline" disabled={readOnly} onClick={() => onCreateVariants(product)}><Layers className="mr-1.5 h-4 w-4" /> Criar variações</Button>}
                             <Button variant="outline" disabled={readOnly} onClick={() => onDuplicate(product)}><Copy className="mr-1.5 h-4 w-4" /> Duplicar</Button>
                             <Button variant="outline" asChild><Link href={`/inventory?search=${encodeURIComponent(product.name)}`}>Ver no inventário</Link></Button>
                             <Button variant="ghost" className="text-destructive" disabled={readOnly} onClick={() => onDelete(product)}><Trash2 className="mr-1.5 h-4 w-4" /> Apagar</Button>
