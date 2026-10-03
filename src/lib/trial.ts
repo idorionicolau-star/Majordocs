@@ -41,3 +41,16 @@ export function trialMessage(daysLeft: number): string {
     if (daysLeft <= 7) return `O teste gratuito termina em ${daysLeft} dias. Subscreva para não ficar sem poder registar vendas e stock.`;
     return 'Está no período de teste gratuito do MajorStockX.';
 }
+
+/**
+ * Fechar o aviso do teste esconde-o por um tempo e depois volta: um dia enquanto falta muito,
+ * 5 horas na última semana (quanto mais perto do fim, mais vezes lembra).
+ */
+export function trialSnoozeMs(daysLeft: number): number {
+    return trialTone(daysLeft) === 'calm' ? 24 * 3_600_000 : 5 * 3_600_000;
+}
+
+/** O aviso está escondido agora? (`until` = até quando foi fechado, em ms) */
+export function isSnoozed(until: number | null | undefined, now: number): boolean {
+    return typeof until === 'number' && until > now;
+}
