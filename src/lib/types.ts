@@ -123,6 +123,9 @@ export type Product = {
   barcode?: string;
   /** Catálogo: últimas alterações de preço (mais recente no fim; no máximo 20). */
   priceHistory?: { at: string; from: number; to: number; by?: string }[];
+  /** Variações: o nome base da família ("Pavê Borbulha") e o valor de cada tipo ({ Cor: "Vermelho" }). Ver lib/variants.ts */
+  variantGroup?: string;
+  variantValues?: Record<string, string>;
 };
 
 

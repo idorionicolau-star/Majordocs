@@ -16,7 +16,7 @@ import { formatCurrency } from "@/lib/utils";
  * ou pela câmara). Avisa se o código já pertence a outro produto do catálogo.
  * Usa o formulário que o rodeia (react-hook-form), por isso serve para "adicionar" e "editar".
  */
-export function CostBarcodeFields({ catalog, exceptId }: { catalog: { id?: string; name: string; barcode?: string }[]; exceptId?: string }) {
+export function CostBarcodeFields({ catalog, exceptId, noBarcode }: { catalog: { id?: string; name: string; barcode?: string }[]; exceptId?: string; /** produto com variações: cada variação tem o seu código, definido depois */ noBarcode?: boolean }) {
     const form = useFormContext();
     const [scan, setScan] = useState(false);
     const price = Number(form.watch("price")) || 0;
@@ -41,7 +41,7 @@ export function CostBarcodeFields({ catalog, exceptId }: { catalog: { id?: strin
                             : <span>Margem <b className="tabular-nums">{margin}%</b> <span className="text-muted-foreground">· lucro {formatCurrency(price - cost)}</span></span>}
                 </div>
             </div>
-            <FormField control={form.control} name="barcode" render={({ field }) => (
+            {!noBarcode && <FormField control={form.control} name="barcode" render={({ field }) => (
                 <FormItem>
                     <FormLabel>Código de barras (opcional)</FormLabel>
                     <div className="flex gap-2">
@@ -51,7 +51,7 @@ export function CostBarcodeFields({ catalog, exceptId }: { catalog: { id?: strin
                     {clash && <p className="text-sm text-destructive">Este código já é de «{clash.name}».</p>}
                     <FormMessage />
                 </FormItem>
-            )} />
+            )} />}
             <BarcodeScanner open={scan} onClose={() => setScan(false)} onScan={(c) => { form.setValue("barcode", normalizeBarcode(c), { shouldDirty: true }); setScan(false); return "Código lido"; }} />
         </>
     );

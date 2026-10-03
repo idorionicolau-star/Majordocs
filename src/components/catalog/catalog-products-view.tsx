@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpDown, Edit, ImageOff, ScanBarcode, PackagePlus, Percent, Plus, Search, Tag, Trash2, X } from "lucide-react";
+import { ArrowUpDown, Edit, ImageOff, Layers, ScanBarcode, PackagePlus, Percent, Plus, Search, Tag, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn, formatCurrency } from "@/lib/utils";
 import { filterCatalog, marginPct, SORT_LABELS, type CatalogSort } from "@/lib/catalog-view";
 
-export type CatalogRow = { id: string; name: string; category?: string; price?: number; unit?: string; imageUrl?: string; cost?: number; barcode?: string };
+export type CatalogRow = { id: string; name: string; category?: string; price?: number; unit?: string; imageUrl?: string; cost?: number; barcode?: string; variantGroup?: string };
 
 const PAGE = 50;
 
@@ -37,6 +37,7 @@ const Row = memo(function Row({ p, selected, readOnly, onToggle, onOpen, onEdit,
                 <span className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
                     <span className="truncate md:hidden">{p.category || "Sem categoria"}</span>
                     {margin !== null && <span className={cn("shrink-0 rounded px-1 font-medium", margin < 0 ? "bg-destructive/10 text-destructive" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400")} title="Margem sobre o preço de venda">{margin < 0 ? "abaixo do custo" : `margem ${margin}%`}</span>}
+                    {p.variantGroup && <span className="inline-flex shrink-0 items-center gap-0.5 rounded bg-primary/10 px-1 font-medium text-primary" title={`Variação de ${p.variantGroup}`}><Layers className="h-3 w-3" />variação</span>}
                     {p.barcode && <ScanBarcode className="h-3 w-3 shrink-0" aria-label="Tem código de barras" />}
                 </span>
             </button>

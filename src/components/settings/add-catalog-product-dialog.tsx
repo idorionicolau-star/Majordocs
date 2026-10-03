@@ -34,6 +34,9 @@ import { Input } from "@/components/ui/input";
 import { ProductImageField } from "@/components/catalog/product-image-field";
 import { CostBarcodeFields } from "@/components/catalog/cost-barcode-fields";
 import { Plus } from "lucide-react";
+import { VariantsEditor, EMPTY_VARIANTS, type VariantsState } from "@/components/catalog/variants-editor";
+import { cleanOptions, planVariants } from "@/lib/variants";
+import { useToast } from "@/hooks/use-toast";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -77,6 +80,8 @@ interface AddCatalogProductDialogProps {
   categories: string[];
   units: string[];
   onAdd: (product: Omit<CatalogProduct, 'id'>) => void;
+  /** Produto com variações: cria uma entrada por variação (cada uma com o seu stock e preço). */
+  onAddVariants?: (base: Omit<CatalogProduct, 'id'>, variants: { name: string; values: Record<string, string>; price: number }[], existing: string[]) => void;
   /** Produtos já no catálogo (para avisar de códigos de barras repetidos). */
   catalog?: { id?: string; name: string; barcode?: string }[];
 }
@@ -85,13 +90,37 @@ function AddCatalogProductForm({
   categories,
   units,
   onAdd,
+  onAddVariants,
   setOpen,
   form,
   namePlaceholder,
   pricePlaceholder,
-  catalog
-}: AddCatalogProductDialogProps & { setOpen: (open: boolean) => void; form: any; namePlaceholder: string; pricePlaceholder: string }) {
+  catalog,
+  variants,
+  setVariants,
+}: AddCatalogProductDialogProps & { setOpen: (open: boolean) => void; form: any; namePlaceholder: string; pricePlaceholder: string; variants: VariantsState; setVariants: (v: VariantsState) => void }) {
+  const { toast } = useToast();
+  const baseName = String(form.watch('name') || '');
+  const basePrice = Number(form.watch('price')) || 0;
+  const withVariants = variants.enabled && !!onAddVariants;
+
   function onSubmit(values: FormValues) {
+    if (withVariants) {
+      const options = cleanOptions(variants.options);
+      const plan = planVariants(values.name, options, (catalog || []).map((c) => c.name));
+      if (plan.tooMany) { toast({ variant: 'destructive', title: 'Variações a mais', description: 'Tire alguns valores: o máximo de uma vez é 60.' }); return; }
+      if (!plan.create.length) {
+        toast({ variant: 'destructive', title: 'Nenhuma variação para criar', description: plan.existing.length ? 'Todas estas variações já existem no catálogo.' : 'Acrescente pelo menos um valor (ex.: uma cor).' });
+        return;
+      }
+      const base = { ...values, cost: values.cost || 0, barcode: '' } as Omit<CatalogProduct, 'id'>;
+      onAddVariants!(base, plan.create.map((v) => {
+        const typed = Number(variants.prices[v.name]);
+        return { ...v, price: variants.prices[v.name] !== undefined && variants.prices[v.name] !== '' && Number.isFinite(typed) && typed >= 0 ? typed : values.price };
+      }), plan.existing);
+      setOpen(false);
+      return;
+    }
     // sem "undefined" (o Firestore recusa): custo 0 e código '' querem dizer "não tem"
     onAdd({ ...values, cost: values.cost || 0, barcode: (values.barcode || '').trim() } as Omit<CatalogProduct, 'id'>);
     setOpen(false);
@@ -184,7 +213,7 @@ function AddCatalogProductForm({
             )}
           />
         </div>
-        <CostBarcodeFields catalog={catalog || []} />
+        <CostBarcodeFields catalog={catalog || []} noBarcode={withVariants} />
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -213,16 +242,19 @@ function AddCatalogProductForm({
             )}
           />
         </div>
+        {onAddVariants && (
+          <VariantsEditor state={variants} onChange={setVariants} baseName={baseName} basePrice={basePrice} existingNames={(catalog || []).map((c) => c.name)} />
+        )}
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
           <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button type="submit">Adicionar ao Catálogo</Button>
+          <Button type="submit">{withVariants ? 'Criar variações' : 'Adicionar ao Catálogo'}</Button>
         </div>
       </form>
     </Form>
   );
 }
 
-export function AddCatalogProductDialog({ categories, units, onAdd, catalog, open: openProp, onOpenChange, hideTrigger, defaultCategory, defaultName, initial }: AddCatalogProductDialogProps & {
+export function AddCatalogProductDialog({ categories, units, onAdd, onAddVariants, catalog, open: openProp, onOpenChange, hideTrigger, defaultCategory, defaultName, initial, startWithVariants }: AddCatalogProductDialogProps & {
   /** Modo controlado: a página decide quando abre (ex.: botão + no telemóvel). */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -233,8 +265,11 @@ export function AddCatalogProductDialog({ categories, units, onAdd, catalog, ope
   defaultName?: string;
   /** Valores de partida (ex.: duplicar um produto). */
   initial?: Partial<FormValues>;
+  /** Abre já com "tem variações" ligado (ex.: criar variações de um produto que já existe). */
+  startWithVariants?: boolean;
 }) {
   const [innerOpen, setInnerOpen] = useState(false);
+  const [variants, setVariants] = useState<VariantsState>(EMPTY_VARIANTS);
   const open = openProp ?? innerOpen;
   const setOpen = (o: boolean) => { setInnerOpen(o); onOpenChange?.(o); };
 
@@ -258,6 +293,7 @@ export function AddCatalogProductDialog({ categories, units, onAdd, catalog, ope
 
   // sempre que abre, o formulário começa limpo (antes ficava com o produto anterior)
   useEffect(() => {
+    if (open) setVariants({ ...EMPTY_VARIANTS, enabled: !!startWithVariants });
     if (open) form.reset({ name: defaultName || '', category: defaultCategory || categories[0] || '', price: 0, unit: 'un', imageUrl: '', cost: 0, barcode: '', lowStockThreshold: 10, criticalStockThreshold: 5, ...(initial || {}) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -282,6 +318,9 @@ export function AddCatalogProductDialog({ categories, units, onAdd, catalog, ope
           categories={categories}
           units={units}
           onAdd={onAdd}
+          onAddVariants={onAddVariants}
+          variants={variants}
+          setVariants={setVariants}
           catalog={catalog}
           setOpen={setOpen}
           form={form}

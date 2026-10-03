@@ -24,6 +24,8 @@ import { EditCatalogProductDialog } from "./edit-catalog-product-dialog";
 import { CatalogImporter, type CatalogImportResult } from "./catalog-importer";
 import { adjustPrice, buildSyncPlan, categoryCounts, copyName, findBarcodeClash, findDuplicate, nameKey, parsePct, pushPriceHistory, sameCodeKey } from "@/lib/catalog-view";
 import { CatalogProductDetail } from "@/components/catalog/catalog-product-detail";
+import { AddVariantDialog } from "@/components/catalog/add-variant-dialog";
+import { siblingsOf } from "@/lib/variants";
 import { formatCurrency } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 
@@ -56,6 +58,8 @@ export function CatalogManager() {
     const [editId, setEditId] = useState<string | null>(null);
     const [detailId, setDetailId] = useState<string | null>(null);
     const [dupSource, setDupSource] = useState<CatalogProduct | null>(null);
+    const [variantSource, setVariantSource] = useState<CatalogProduct | null>(null);
+    const [newVariantOf, setNewVariantOf] = useState<string | null>(null);
     const [dup, setDup] = useState<{ data: Omit<CatalogProduct, "id">; existing: CatalogProduct } | null>(null);
     const [bulk, setBulk] = useState<{ kind: "category" | "price" | "delete"; ids: string[] } | null>(null);
     const [bulkCat, setBulkCat] = useState("");
@@ -93,6 +97,29 @@ export function CatalogManager() {
         const existing = findDuplicate(catalog, data.name);
         if (existing) { setDup({ data, existing }); return; } // pergunta antes de criar um repetido
         commitAdd(data);
+    };
+    /** Produto com variações: uma entrada no catálogo por variação, todas com o mesmo `variantGroup`. */
+    const handleAddVariants = (base: Omit<CatalogProduct, "id">, variants: { name: string; values: Record<string, string>; price: number }[], existing: string[]) => {
+        if (readOnly) return;
+        const group = base.name.trim();
+        for (const v of variants) {
+            ctx.addCatalogProduct({ ...base, name: v.name, price: v.price, variantGroup: group, variantValues: v.values });
+        }
+        toast({
+            title: `${variants.length} variaç${variants.length === 1 ? "ão criada" : "ões criadas"}`,
+            description: `«${group}»: ${variants.map((v) => Object.values(v.values).join(" / ")).slice(0, 4).join(", ")}${variants.length > 4 ? "…" : ""}.${existing.length ? ` ${existing.length} já existia${existing.length === 1 ? "" : "m"}.` : ""}${offline() ? " Ficam guardadas neste aparelho até haver internet." : ""}`,
+        });
+    };
+    /** Mais uma variação para uma família que já existe: herda preço, custo, unidade, categoria e foto de uma irmã. */
+    const handleAddOneVariant = (values: Record<string, string>, name: string) => {
+        const group = newVariantOf;
+        setNewVariantOf(null);
+        if (!group || readOnly) return;
+        const model = siblingsOf({ name: group, variantGroup: group }, catalog)[0];
+        if (!model) return;
+        const { id: _id, priceHistory: _ph, barcode: _bc, variantValues: _vv, ...rest } = model;
+        ctx.addCatalogProduct({ ...rest, name, barcode: "", variantGroup: group, variantValues: values });
+        toast({ title: "Variação criada", description: `«${name}» está no catálogo.` });
     };
     const handleUpdate = async (id: string, data: Partial<CatalogProduct>) => {
         if (data.name) {
@@ -320,15 +347,17 @@ export function CatalogManager() {
             {/* adicionar / editar */}
             <AddCatalogProductDialog
                 open={addOpen}
-                onOpenChange={(o) => { setAddOpen(o); if (!o) setDupSource(null); }}
+                onOpenChange={(o) => { setAddOpen(o); if (!o) { setDupSource(null); setVariantSource(null); } }}
                 hideTrigger
                 categories={categoryNames}
                 units={ctx.availableUnits || []}
                 defaultCategory={category !== "all" ? category : undefined}
                 defaultName={addPrefill}
                 catalog={catalog}
-                initial={dupSource ? { name: copyName(catalog, dupSource.name), category: dupSource.category, price: dupSource.price, cost: dupSource.cost || 0, unit: dupSource.unit || "un", imageUrl: dupSource.imageUrl || "", barcode: "", lowStockThreshold: dupSource.lowStockThreshold, criticalStockThreshold: dupSource.criticalStockThreshold } : undefined}
+                initial={variantSource ? { name: variantSource.name, category: variantSource.category, price: variantSource.price, cost: variantSource.cost || 0, unit: variantSource.unit || "un", imageUrl: variantSource.imageUrl || "", barcode: "", lowStockThreshold: variantSource.lowStockThreshold, criticalStockThreshold: variantSource.criticalStockThreshold } : dupSource ? { name: copyName(catalog, dupSource.name), category: dupSource.category, price: dupSource.price, cost: dupSource.cost || 0, unit: dupSource.unit || "un", imageUrl: dupSource.imageUrl || "", barcode: "", lowStockThreshold: dupSource.lowStockThreshold, criticalStockThreshold: dupSource.criticalStockThreshold } : undefined}
+                startWithVariants={!!variantSource}
                 onAdd={handleAdd}
+                onAddVariants={handleAddVariants}
             />
             {editing && (
                 <EditCatalogProductDialog
@@ -349,10 +378,22 @@ export function CatalogManager() {
                 sales={sales || []}
                 locations={locations || []}
                 readOnly={readOnly}
+                family={catalog}
                 onClose={() => setDetailId(null)}
+                onOpenSibling={(p) => setDetailId(p.id || null)}
+                onAddVariant={(p) => { setDetailId(null); setNewVariantOf(p.variantGroup || null); }}
+                onCreateVariants={(p) => { setDetailId(null); setAddPrefill(""); setVariantSource(p as CatalogProduct); setAddOpen(true); }}
                 onEdit={(p) => { setDetailId(null); setEditId(p.id || null); }}
                 onDuplicate={(p) => { setDetailId(null); setAddPrefill(""); setDupSource(p as CatalogProduct); setAddOpen(true); }}
                 onDelete={(p) => { setDetailId(null); if (p.id) askBulk("delete", [p.id]); }}
+            />
+
+            <AddVariantDialog
+                group={newVariantOf}
+                members={newVariantOf ? siblingsOf({ name: newVariantOf, variantGroup: newVariantOf }, catalog) : []}
+                catalogNames={catalog.map((p) => p.name)}
+                onClose={() => setNewVariantOf(null)}
+                onCreate={handleAddOneVariant}
             />
 
             {/* produto repetido */}
