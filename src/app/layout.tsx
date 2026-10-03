@@ -26,8 +26,11 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: [{ url: '/icon-192.png', sizes: '192x192', type: 'image/png' }, { url: '/logo.svg', type: 'image/svg+xml' }],
-    apple: '/icon-192.png',
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
+  // iPhone: abre como app (sem a barra do Safari) e com o nome certo no ecrã principal
+  appleWebApp: { capable: true, title: 'MajorStockX', statusBarStyle: 'black-translucent' },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {

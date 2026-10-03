@@ -17,7 +17,7 @@ import {
 import { pt } from 'date-fns/locale';
 import { Timestamp } from "firebase/firestore";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { isCountableSale } from '@/lib/sale-filters';
+import { isCountableSale, saleIncome } from '@/lib/sale-filters';
 
 type Period = 'daily' | 'weekly' | 'monthly';
 
@@ -117,14 +117,14 @@ export const PrimaryKPIs = () => {
         const currentCOGS = currentPeriodSales.reduce((sum, s) => sum + (s.quantity * (s.unitCost || 0)), 0);
         const prevCOGS = previousPeriodSales.reduce((sum, s) => sum + (s.quantity * (s.unitCost || 0)), 0);
 
-        const currentProfit = currentPeriodSales.reduce((sum, s) => sum + (s.amountPaid || s.totalValue), 0) - currentCOGS - currentExpensesVal;
-        const prevProfit = previousPeriodSales.reduce((sum, s) => sum + (s.amountPaid || s.totalValue), 0) - prevCOGS - prevExpensesVal;
+        const currentProfit = currentPeriodSales.reduce((sum, s) => sum + saleIncome(s), 0) - currentCOGS - currentExpensesVal;
+        const prevProfit = previousPeriodSales.reduce((sum, s) => sum + saleIncome(s), 0) - prevCOGS - prevExpensesVal;
 
         const profitGrowth = prevProfit !== 0 ? ((currentProfit - prevProfit) / Math.abs(prevProfit)) * 100 : (currentProfit > 0 ? 100 : 0);
 
 
-        const currentSalesValue = currentPeriodSales.reduce((sum, s) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);
-        const previousSalesValue = previousPeriodSales.reduce((sum, s) => sum + (s.amountPaid ?? s.totalValue ?? 0), 0);
+        const currentSalesValue = currentPeriodSales.reduce((sum, s) => sum + saleIncome(s), 0);
+        const previousSalesValue = previousPeriodSales.reduce((sum, s) => sum + saleIncome(s), 0);
 
         const salesGrowth = previousSalesValue > 0
             ? ((currentSalesValue - previousSalesValue) / previousSalesValue) * 100

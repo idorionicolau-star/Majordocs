@@ -16,7 +16,8 @@ import { BottomNav } from './bottom-nav';
 import { SwipeNav } from './swipe-nav';
 import { PushPrompt } from '@/components/push-notifications';
 import { PriceReviewBanner } from '@/components/price-reviews';
-import { OfflineBanner } from '@/components/pwa-register';
+import { OfflineBanner, UpdateNotice } from '@/components/pwa-register';
+import { InstallPrompt } from '@/components/install-prompt';
 
 import { LoadingBar } from './loading-bar';
 import { SubscriptionExpired } from './subscription-expired';
@@ -185,6 +186,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             <main className="flex-1 relative overflow-x-clip">
               <SwipeNav>
                 <OfflineBanner />
+                <UpdateNotice />
+                <InstallPrompt />
                 <PushPrompt />
                 <PriceReviewBanner />
                 <Suspense fallback={

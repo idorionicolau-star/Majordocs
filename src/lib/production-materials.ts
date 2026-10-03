@@ -3,15 +3,20 @@
 import { doc, type DocumentReference, type Firestore, type Transaction } from 'firebase/firestore';
 import type { RawMaterial, Recipe } from '@/lib/types';
 import { ingredientRequiredQty } from '@/lib/order-stock';
+import { nameKey } from '@/lib/catalog-view';
 
 export type MaterialUse = { ref: DocumentReference; data: RawMaterial; qty: number };
+
+/** A receita do produto: ignora acentos, maiúsculas e espaços a mais ("Pavê Borbulha" = "pave borbulha"). */
+export const findRecipe = <T extends { productName: string }>(recipes: T[] | undefined, productName: string): T | undefined =>
+    recipes?.find((r) => nameKey(r.productName || '') === nameKey(productName || ''));
 
 /** LER (tem de vir antes de qualquer escrita da transacção): as matérias-primas da receita do produto. */
 export async function readMaterialUse(
     transaction: Transaction, firestore: Firestore, companyId: string,
     recipes: Recipe[] | undefined, productName: string, quantity: number,
 ): Promise<MaterialUse[]> {
-    const recipe = recipes?.find((r) => r.productName === productName);
+    const recipe = findRecipe(recipes, productName);
     const uses: MaterialUse[] = [];
     for (const ing of recipe?.ingredients || []) {
         const ref = doc(firestore, `companies/${companyId}/rawMaterials`, ing.rawMaterialId);

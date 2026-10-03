@@ -9,3 +9,9 @@ const NON_SALE_TYPES = ['Factura Proforma', 'Cotação'];
  */
 export const isCountableSale = (s: Pick<Sale, 'documentType'> & { deletedAt?: string }) =>
     !s.deletedAt && !NON_SALE_TYPES.includes(s.documentType);
+
+/**
+ * Dinheiro que a venda já trouxe: o que foi pago. Venda sem `amountPaid` (antiga) conta como paga por inteiro.
+ * Atenção: `amountPaid || totalValue` estava errado — um 0 (venda a crédito por pagar) virava o valor total.
+ */
+export const saleIncome = (s: Pick<Sale, 'amountPaid' | 'totalValue'>): number => Number(s.amountPaid ?? s.totalValue) || 0;

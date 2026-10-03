@@ -35,6 +35,7 @@ import { formatCurrency, normalizeString } from '@/lib/utils';
 import { Search, Plus, TrendingUp, TrendingDown, DollarSign, Calendar, Trash2, Printer, Download, CreditCard, ShoppingBag } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
 import { pt, ptBR } from 'date-fns/locale';
+import { isCountableSale, saleIncome } from '@/lib/sale-filters';
 import { printFinancialReport } from '@/lib/report-utils';
 import { useToast } from '@/hooks/use-toast';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -48,7 +49,7 @@ export default function FinancePage() {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [isAddOpen, setIsAddOpen] = useState(false);
-    const [formData, setFormData] = useState({ description: '', amount: '', category: 'Outros' });
+    const [formData, setFormData] = useState({ description: '', amount: '', category: 'Outros', date: format(new Date(), 'yyyy-MM-dd') });
 
     // Date filtering state
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -92,10 +93,10 @@ export default function FinancePage() {
     }, [period]);
 
     // Filter using boundaries
-    const periodSales = sales.filter(s => isWithinInterval(new Date(s.date), dateBoundaries));
+    const periodSales = sales.filter(s => isCountableSale(s) && isWithinInterval(new Date(s.date), dateBoundaries));
     const periodExpenses = expenses.filter(e => isWithinInterval(new Date(e.date), dateBoundaries));
 
-    const totalIncome = periodSales.reduce((acc, s) => acc + (s.amountPaid || s.totalValue), 0);
+    const totalIncome = periodSales.reduce((acc, s) => acc + saleIncome(s), 0);
     const totalExpenses = periodExpenses.reduce((acc, e) => acc + e.amount, 0);
     const netProfit = totalIncome - totalExpenses;
 
@@ -114,16 +115,22 @@ export default function FinancePage() {
     const handleAddSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.description || !formData.amount) return;
+        const amount = parseFloat(formData.amount);
+        if (!Number.isFinite(amount) || amount <= 0) {
+            toast({ variant: 'destructive', title: 'Valor inválido', description: 'O valor da despesa tem de ser maior que zero.' });
+            return;
+        }
         try {
             await addExpense({
                 description: formData.description,
-                amount: parseFloat(formData.amount),
+                amount,
                 category: formData.category,
-                date: new Date().toISOString(),
+                // a data escolhida (ao meio-dia, para o fuso horário não a empurrar para outro dia); sem data = agora
+                date: formData.date ? new Date(`${formData.date}T12:00:00`).toISOString() : new Date().toISOString(),
                 status: 'Pago', // Default to Paid for simplicity now
             });
             setIsAddOpen(false);
-            setFormData({ description: '', amount: '', category: 'Outros' });
+            setFormData({ description: '', amount: '', category: 'Outros', date: format(new Date(), 'yyyy-MM-dd') });
         } catch (e) { }
     };
 
@@ -163,7 +170,7 @@ export default function FinancePage() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label>Valor (MZN)</Label>
-                                            <Input type="number" step="0.01" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} required placeholder="0.00" />
+                                            <Input type="number" step="0.01" min="0.01" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} required placeholder="0.00" />
                                         </div>
                                         <div className="space-y-2">
                                             <Label>Categoria</Label>
@@ -182,6 +189,10 @@ export default function FinancePage() {
                                                 </SelectContent>
                                             </Select>
                                         </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Data da despesa</Label>
+                                        <Input type="date" max={format(new Date(), 'yyyy-MM-dd')} value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
                                     </div>
                                     <DialogFooter>
                                         <Button type="submit" className="w-full bg-red-500 hover:bg-red-600">Confirmar Despesa</Button>
