@@ -2,8 +2,8 @@
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo } from 'react';
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
-import { Firestore, getFirestore, initializeFirestore, persistentLocalCache } from 'firebase/firestore';
-import { Auth, getAuth } from 'firebase/auth';
+import { Firestore, getFirestore, initializeFirestore, persistentLocalCache, connectFirestoreEmulator } from 'firebase/firestore';
+import { Auth, getAuth, connectAuthEmulator } from 'firebase/auth';
 import { Messaging, getMessaging, isSupported } from 'firebase/messaging';
 import { firebaseConfig } from '@/firebase/config';
 
@@ -47,6 +47,13 @@ function getFirebaseServices() {
 
   if (!storage) {
     storage = getStorage(firebaseApp);
+  }
+
+  // TESTE LOCAL (não commitar): emuladores
+  if (process.env.NEXT_PUBLIC_EMULATOR && !(globalThis as any).__emuConnected) {
+    (globalThis as any).__emuConnected = true;
+    try { connectAuthEmulator(getAuth(firebaseApp), 'http://127.0.0.1:9099', { disableWarnings: true }); } catch (e) { console.warn('auth emu', e); }
+    try { connectFirestoreEmulator(firestore, '127.0.0.1', 8080); } catch (e) { console.warn('fs emu', e); }
   }
 
   return {

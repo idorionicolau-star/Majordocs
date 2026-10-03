@@ -452,7 +452,6 @@ export function useProductActions(core: InventoryCore) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
     }
-    console.log("auditStock called", { product, physicalCount, reason, firestore: !!firestore, companyId, user: !!user });
 
     if (!firestore) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Erro de conexão: Firestore não disponível.' });
@@ -473,15 +472,9 @@ export function useProductActions(core: InventoryCore) {
 
     const productRef = doc(firestore, `companies/${companyId}/products`, product.id);
     const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
-
-    const systemCountBefore = product.stock;
-    const adjustment = physicalCount - systemCountBefore;
-
-    // If adjustment is 0, we still log the audit confirmation.
-    if (adjustment === 0) {
-      // toast({ title: 'Stock Verificado', description: 'A contagem física confirma o stock do sistema.' });
-      // Proceed to log
-    }
+    // Produtos repetidos (mesmo nome e local) aparecem somados num só cartão: a contagem é do total, por isso
+    // o stock todo fica no documento principal e os outros ficam a zero (antes ficavam por somar por cima).
+    const otherRefs = (product.sourceIds || []).filter((id) => id !== product.id).map((id) => doc(firestore, `companies/${companyId}/products`, id));
 
     try {
       await runTransaction(firestore, async (transaction) => {
@@ -491,11 +484,13 @@ export function useProductActions(core: InventoryCore) {
           throw new Error("Produto não encontrado na base de dados para auditoria.");
         }
         const freshData = pSnap.data() as Product;
-        const currentSystemStock = freshData.stock || 0;
+        const others = (await Promise.all(otherRefs.map((r) => transaction.get(r)))).filter((s) => s.exists());
+        const currentSystemStock = (freshData.stock || 0) + others.reduce((t, s) => t + ((s.data() as Product).stock || 0), 0);
         const realAdjustment = physicalCount - currentSystemStock;
 
         // 2. WRITE LAST
         transaction.update(productRef, { stock: physicalCount, lastUpdated: new Date().toISOString() });
+        others.forEach((s) => transaction.update(s.ref, { stock: 0, lastUpdated: new Date().toISOString() }));
 
         const movement: Omit<StockMovement, 'id' | 'timestamp'> = {
           productId: product.id!,
