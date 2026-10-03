@@ -63,12 +63,20 @@ function ValuesInput({ values, suggestions, onChange }: { values: string[]; sugg
  * "Este produto tem variações?" — o utilizador escolhe os tipos (Cor, Textura…), os valores de cada um e vê já
  * as variações que vão ser criadas (cada uma com o seu stock), podendo pôr preços diferentes.
  */
-export function VariantsEditor({ state, onChange, baseName, basePrice, existingNames }: {
+export function VariantsEditor({ state, onChange, baseName, basePrice, existingNames, quantities, onQuantities, unit, valueHints, hideSwitch }: {
     state: VariantsState;
     onChange: (s: VariantsState) => void;
     baseName: string;
     basePrice: number;
     existingNames: string[];
+    /** Stock Rápido: cada variação leva também a quantidade que entra (nome da variação → texto). */
+    quantities?: Record<string, string>;
+    onQuantities?: (q: Record<string, string>) => void;
+    unit?: string;
+    /** Valores já usados pela família (aparecem como sugestões antes das habituais). */
+    valueHints?: Record<string, string[]>;
+    /** Sem o interruptor: a pessoa já escolheu criar variações (ex.: "Nova variação de…"). */
+    hideSwitch?: boolean;
 }) {
     const set = (patch: Partial<VariantsState>) => onChange({ ...state, ...patch });
     const setOption = (i: number, patch: Partial<VariantOption>) => set({ options: state.options.map((o, j) => (j === i ? { ...o, ...patch } : o)) });
@@ -78,7 +86,7 @@ export function VariantsEditor({ state, onChange, baseName, basePrice, existingN
 
     return (
         <section className="rounded-xl border p-3" aria-label="Variações">
-            <div className="flex items-start justify-between gap-3">
+            {!hideSwitch && <div className="flex items-start justify-between gap-3">
                 <Label htmlFor="has-variants" className="flex cursor-pointer items-start gap-2">
                     <Layers className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <span>
@@ -87,7 +95,7 @@ export function VariantsEditor({ state, onChange, baseName, basePrice, existingN
                     </span>
                 </Label>
                 <Switch id="has-variants" checked={state.enabled} onCheckedChange={(enabled) => set({ enabled })} />
-            </div>
+            </div>}
 
             {state.enabled && (
                 <div className="mt-3 space-y-4">
@@ -106,7 +114,7 @@ export function VariantsEditor({ state, onChange, baseName, basePrice, existingN
                                     <Button type="button" variant="ghost" size="sm" className="ml-auto text-muted-foreground" onClick={() => set({ options: state.options.filter((_, j) => j !== i) })}>Tirar este tipo</Button>
                                 )}
                             </div>
-                            <ValuesInput values={o.values} suggestions={SUGGESTED_VALUES[o.name.trim()] || []} onChange={(values) => setOption(i, { values })} />
+                            <ValuesInput values={o.values} suggestions={Array.from(new Set([...(valueHints?.[o.name.trim()] || []), ...(SUGGESTED_VALUES[o.name.trim()] || [])]))} onChange={(values) => setOption(i, { values })} />
                         </div>
                     ))}
                     <datalist id="variant-option-names">{SUGGESTED_OPTIONS.map((n) => <option key={n} value={n} />)}</datalist>
@@ -127,6 +135,16 @@ export function VariantsEditor({ state, onChange, baseName, basePrice, existingN
                             {plan.create.map((v) => (
                                 <li key={v.name} className="flex items-center gap-2 px-3 py-1.5">
                                     <span className="min-w-0 flex-1 truncate">{v.name}</span>
+                                    {quantities && onQuantities && (
+                                        <Input
+                                            type="number" step="any" min="0" inputMode="decimal"
+                                            value={quantities[v.name] ?? ""}
+                                            onChange={(e) => onQuantities({ ...quantities, [v.name]: e.target.value })}
+                                            placeholder={unit || "Qtd"}
+                                            aria-label={`Quantidade de ${v.name}`}
+                                            className="h-8 w-24 text-center font-semibold tabular-nums"
+                                        />
+                                    )}
                                     <Input
                                         type="number" step="0.01" min="0" inputMode="decimal"
                                         value={state.prices[v.name] ?? ""}
@@ -139,7 +157,7 @@ export function VariantsEditor({ state, onChange, baseName, basePrice, existingN
                             ))}
                         </ul>
                     )}
-                    <p className="text-xs text-muted-foreground">Deixe o preço vazio para usar o preço do produto. O código de barras de cada variação define-se depois, ao editá-la.</p>
+                    <p className="text-xs text-muted-foreground">{quantities ? "Só as variações com quantidade entram no lote. " : ""}Deixe o preço vazio para usar o preço do produto. O código de barras de cada variação define-se depois, ao editá-la.</p>
                 </div>
             )}
         </section>

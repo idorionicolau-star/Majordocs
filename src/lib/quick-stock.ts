@@ -32,6 +32,9 @@ export type QuickLine = {
     addToCatalog?: boolean;
     /** A categoria ainda não existe no catálogo: criá-la. */
     addCategory?: boolean;
+    /** Variação de uma família ("Pavê - Vermelho"): o nome base e o valor de cada tipo. Ver lib/variants.ts */
+    variantGroup?: string;
+    variantValues?: Record<string, string>;
     /** When the product already exists in another location: copy its data instead of creating a bare one. */
     template?: Pick<Product, "category" | "price" | "cost" | "unit" | "lowStockThreshold" | "criticalStockThreshold" | "imageUrl" | "barcode">;
 };
@@ -246,6 +249,7 @@ export async function commitQuickStock({ firestore, companyId, user, mode, lines
                 criticalStockThreshold: t?.criticalStockThreshold || 0,
                 ...(t?.imageUrl ? { imageUrl: t.imageUrl } : {}),
                 ...(t?.barcode ? { barcode: t.barcode } : {}),
+                ...(line.variantGroup ? { variantGroup: line.variantGroup, variantValues: line.variantValues || {} } : {}),
                 lastUpdated: now,
             });
             const movement: Omit<StockMovement, "id" | "timestamp"> = {
@@ -318,6 +322,7 @@ export async function commitQuickStock({ firestore, companyId, user, mode, lines
                 unit: t?.unit || line.unit || "un",
                 lowStockThreshold: t?.lowStockThreshold || 0,
                 criticalStockThreshold: t?.criticalStockThreshold || 0,
+                ...(line.variantGroup ? { variantGroup: line.variantGroup, variantValues: line.variantValues || {} } : {}),
             });
             catalogOps++;
         }

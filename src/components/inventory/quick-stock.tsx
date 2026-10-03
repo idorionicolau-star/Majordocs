@@ -9,10 +9,12 @@ import { useKeepFocusedAboveBar, useKeyboardInset } from "@/hooks/use-keyboard-i
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn, plural } from "@/lib/utils";
+import { cn, normalizeString, plural } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 import { NewProductFields } from "@/components/inventory/new-product-fields";
 import { PhotoCount } from "@/components/inventory/photo-count";
+import { VariantsEditor, EMPTY_VARIANTS, type VariantsState } from "@/components/catalog/variants-editor";
+import { optionsOfFamily, planVariants } from "@/lib/variants";
 import { cleanProductName, findNameMatches, guessUnit, planCatalogWrites, suggestCategory, type NameMatch } from "@/lib/new-product";
 import {
     commitQuickStock,
@@ -30,7 +32,7 @@ import { links } from "@/lib/deep-links";
 import { BarcodeScanner } from "@/components/scan/barcode-scanner";
 import { VoiceButton } from "@/components/scan/voice-button";
 import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode";
-import { findBarcodeClash } from "@/lib/catalog-view";
+import { findBarcodeClash, nameKey } from "@/lib/catalog-view";
 import { parseVoice } from "@/lib/voice-parse";
 import { resolveVoice } from "@/lib/voice-approx";
 import { VoiceConfirm, type VoiceAsk } from "@/components/scan/voice-confirm";
@@ -105,6 +107,11 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const [newUnit, setNewUnit] = useState("un");
     const [unitTouched, setUnitTouched] = useState(false);
     const [ackDuplicate, setAckDuplicate] = useState(false);
+    // Produto novo com variações: tipos e valores, e a quantidade que entra de cada variação
+    const [variants, setVariants] = useState<VariantsState>(EMPTY_VARIANTS);
+    const [variantQtys, setVariantQtys] = useState<Record<string, string>>({});
+    /** "Nova variação de …": os valores que a família já usa (null = produto novo normal) */
+    const [familyHints, setFamilyHints] = useState<Record<string, string[]> | null>(null);
     const [scanOpen, setScanOpen] = useState(false);
     const [pendingCode, setPendingCode] = useState<string | null>(null);
     const [listening, setListening] = useState("");
@@ -220,6 +227,38 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
         setCategoryTouched(false);
         setUnitTouched(false);
         setAckDuplicate(false);
+        setVariants(EMPTY_VARIANTS);
+        setVariantQtys({});
+        setFamilyHints(null);
+    };
+
+    // Famílias de variações que o texto escrito pode ser ("pavê" → Pavê Borbulha): oferece acrescentar uma variação nova
+    const families = useMemo(() => {
+        const t = normalizeString(parsed.term.trim());
+        if (mode !== "in" || t.length < 2) return [] as string[];
+        const groups = new Map<string, string>();
+        for (const c of [...(catalogProducts || []).filter((x) => !x.deletedAt), ...liveProducts]) {
+            if (!c.variantGroup) continue;
+            const g = normalizeString(c.variantGroup);
+            if (g.includes(t) || t.includes(g)) groups.set(g, c.variantGroup);
+        }
+        return [...groups.values()].slice(0, 2);
+    }, [mode, parsed.term, catalogProducts, liveProducts]);
+
+    const openFamily = (group: string) => {
+        const members = [...(catalogProducts || []).filter((x) => !x.deletedAt), ...liveProducts].filter((c) => c.variantGroup && nameKey(c.variantGroup) === nameKey(group));
+        const model = members[0];
+        const opts = optionsOfFamily(members);
+        setNewName(group);
+        setNewCategory(model?.category || "Geral"); setCategoryTouched(true);
+        setNewUnit(model?.unit || "un"); setUnitTouched(true);
+        setNewPrice(model?.price ? String(model.price) : "");
+        setAckDuplicate(true);
+        setVariants({ enabled: true, options: opts.length ? opts.map((o) => ({ name: o.name, values: [] })) : [{ name: "Cor", values: [] }], prices: {} });
+        setVariantQtys({});
+        setFamilyHints(Object.fromEntries(opts.map((o) => [o.name, o.values])));
+        setQtyText("");
+        setPicked({ newName: group });
     };
 
     useEffect(() => setHighlight(0), [parsed.term]);
@@ -273,7 +312,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
         requestAnimationFrame(() => qtyRef.current?.focus());
     };
 
-    const newLine = (name: string, qty: number, price?: number, from?: Product, extra?: { category?: string; unit?: string }): QuickLine => {
+    const newLine = (name: string, qty: number, price?: number, from?: Product, extra?: { category?: string; unit?: string; variantGroup?: string; variantValues?: Record<string, string> }): QuickLine => {
         const finalName = from ? from.name : cleanProductName(name);
         const category = from?.category || extra?.category || "Geral";
         const plan = planCatalogWrites({ name: finalName, category, catalogProducts: catalogProducts || [], catalogCategories: (catalogCategories || []).map((c) => c.name) });
@@ -291,6 +330,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             category: plan.category,
             addToCatalog: plan.addProduct,
             addCategory: plan.addCategory,
+            ...((extra?.variantGroup || from?.variantGroup) ? { variantGroup: extra?.variantGroup || from?.variantGroup, variantValues: extra?.variantValues || from?.variantValues || {} } : {}),
             ...(from ? { template: { category: from.category, price: from.price, cost: from.cost, unit: from.unit, lowStockThreshold: from.lowStockThreshold, criticalStockThreshold: from.criticalStockThreshold, imageUrl: from.imageUrl, barcode: from.barcode } } : {}),
         };
     };
@@ -402,8 +442,31 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     // Buttons next to the quantity field must not steal focus (keeps Enter working and the phone keyboard open).
     const keepFocus = (e: React.MouseEvent) => e.preventDefault();
 
+    /** Produto novo com variações: cada variação com quantidade vira uma linha do lote (e entra no catálogo). */
+    const confirmVariants = () => {
+        const clean = cleanProductName(newName);
+        if (clean.length < 2) return;
+        const plan = planVariants(clean, variants.options, [...(catalogProducts || []).map((c) => c.name), ...liveProducts.map((p) => p.name)]);
+        if (plan.tooMany) { toast({ variant: "destructive", title: "Variações a mais", description: "Tire alguns valores: o máximo de uma vez é 60." }); return; }
+        const entries = plan.create.map((v) => ({ v, q: toNumber(variantQtys[v.name] || "") })).filter((e) => e.q > 0);
+        if (!entries.length) {
+            toast({ variant: "destructive", title: "Falta a quantidade", description: plan.create.length ? "Escreva a quantidade de pelo menos uma variação." : "Acrescente pelo menos um valor (ex.: uma cor)." });
+            return;
+        }
+        const basePrice = toNumber(newPrice) || undefined;
+        for (const { v, q } of entries) {
+            const own = toNumber(variants.prices[v.name] || "");
+            addLine(newLine(v.name, q, own > 0 ? own : basePrice, undefined, { category: newCategory.trim() || "Geral", unit: newUnit, variantGroup: clean, variantValues: v.values }));
+        }
+        toast({ title: `${entries.length} variaç${entries.length === 1 ? "ão" : "ões"} no lote`, description: `«${clean}»: ${entries.map((e) => Object.values(e.v.values).join(" / ")).slice(0, 4).join(", ")}${entries.length > 4 ? "…" : ""}` });
+        setPicked(null);
+        setText("");
+        focusSearch();
+    };
+
     const confirmPicked = () => {
         if (!picked) return;
+        if (creating && mode === "in" && variants.enabled) { confirmVariants(); return; }
         const q = toNumber(qtyText);
         if (!(q >= 0) || (mode !== "count" && q === 0)) {
             qtyRef.current?.focus();
@@ -684,7 +747,25 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                         />
                     )}
 
-                    <div className="mt-3 flex items-center gap-2">
+                    {creating && mode === "in" && (
+                        <div className="mt-3 text-foreground">
+                            {familyHints && <p className="mb-2 text-sm text-muted-foreground">Nova variação de <b className="text-foreground">{newName}</b>: escreva a cor/textura e a quantidade que entrou.</p>}
+                            <VariantsEditor
+                                state={variants}
+                                onChange={setVariants}
+                                baseName={newName}
+                                basePrice={toNumber(newPrice) || 0}
+                                existingNames={[...(catalogProducts || []).map((c) => c.name), ...liveProducts.map((p) => p.name)]}
+                                quantities={variantQtys}
+                                onQuantities={setVariantQtys}
+                                unit={newUnit}
+                                valueHints={familyHints || undefined}
+                                hideSwitch={!!familyHints}
+                            />
+                        </div>
+                    )}
+
+                    {!(creating && mode === "in" && variants.enabled) && <div className="mt-3 flex items-center gap-2">
                         {mode !== "count" && (
                             <Button type="button" variant="outline" size="icon" className="h-14 w-14 shrink-0 rounded-xl"
                                 onMouseDown={keepFocus} onClick={() => setQtyText((v) => fmt(Math.max(0, (toNumber(v) || 0) - 1)))}>
@@ -707,9 +788,9 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                                 <Plus className="h-5 w-5" />
                             </Button>
                         )}
-                    </div>
+                    </div>}
 
-                    {mode !== "count" && (
+                    {mode !== "count" && !(creating && mode === "in" && variants.enabled) && (
                         <div className="mt-2 flex flex-wrap gap-2">
                             {STEPS.map((s) => (
                                 <button key={s} type="button" onMouseDown={keepFocus} onClick={() => setQtyText((v) => fmt((toNumber(v) || 0) + s))}
@@ -775,6 +856,11 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                             {(() => { const sg = suggestCategory(parsed.term, categoryNames, liveProducts); return sg.source !== "none" ? <span className="text-xs text-muted-foreground">· {sg.category}</span> : null; })()}
                         </button>
                     )}
+                    {families.map((g) => (
+                        <button key={`fam-${g}`} type="button" onClick={() => openFamily(g)} className="flex w-full items-center gap-2 border-t px-4 py-3 text-left text-sm">
+                            <Plus className="h-4 w-4 text-primary" /> Nova variação de <b>“{g}”</b>
+                        </button>
+                    ))}
                     {results.length === 0 && !canCreate && elsewhere.length === 0 && <p className="px-4 py-3 text-sm text-muted-foreground">Nenhum artigo encontrado.</p>}
                 </div>
             )}
