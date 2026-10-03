@@ -8,7 +8,7 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { InventoryCore } from './core';
 import { locationIn, pickActive, resolveInventoryProductRef } from '@/lib/product-ref';
 import { ingredientRequiredQty } from '@/lib/order-stock';
-import { applyMaterialUse, assertMaterialEnough, readMaterialUse } from '@/lib/production-materials';
+import { applyMaterialUse, assertMaterialEnough, findRecipe, readMaterialUse } from '@/lib/production-materials';
 import { isProductionInStock } from '@/lib/production';
 
 export function useProductionActions(core: InventoryCore) {
@@ -24,6 +24,11 @@ export function useProductionActions(core: InventoryCore) {
     if (!firestore || !companyId || !user) throw new Error("Contexto não pronto.");
 
     const { productName, quantity, location, orderId, unit } = prodData;
+    if (!Number.isFinite(Number(quantity)) || Number(quantity) <= 0) {
+      const description = 'A quantidade produzida tem de ser maior que zero.';
+      toast({ variant: 'destructive', title: 'Quantidade inválida', description });
+      throw new Error(description);
+    }
     const targetLocation = location || (isMultiLocation && locations.length > 0 ? locations[0].id : 'Principal');
 
     // 1. Move product lookup OUTSIDE the transaction because transactions don't support queries
@@ -41,7 +46,7 @@ export function useProductionActions(core: InventoryCore) {
         const pDoc = await transaction.get(productDocRef);
 
         // 3. Check for Recipe and Read all Raw Materials
-        const recipe = recipesData?.find(r => r.productName === productName);
+        const recipe = findRecipe(recipesData ?? undefined, productName);
         const ingredientDocs: { ref: DocumentReference, data: RawMaterial, requiredQty: number }[] = [];
 
         if (recipe) {
@@ -160,6 +165,10 @@ export function useProductionActions(core: InventoryCore) {
 
     const orderToUpdate = ordersData.find(o => o.id === orderId);
     if (!orderToUpdate) return;
+    if (!Number.isFinite(Number(logData.quantity)) || Number(logData.quantity) <= 0) {
+      toast({ variant: 'destructive', title: 'Quantidade inválida', description: 'A quantidade produzida tem de ser maior que zero.' });
+      return;
+    }
 
     try {
       const orderDocRef = doc(firestore, `companies/${companyId}/orders`, orderId);
@@ -174,7 +183,7 @@ export function useProductionActions(core: InventoryCore) {
         location: logLocation || 'Principal',
       });
       const newProductRef = resolvedProductRef ? null : doc(collection(firestore, `companies/${companyId}/products`));
-      const recipe = recipesData?.find(r => r.productName === orderToUpdate.productName);
+      const recipe = findRecipe(recipesData ?? undefined, orderToUpdate.productName);
 
       await runTransaction(firestore, async (transaction) => {
         // --- READS ---
