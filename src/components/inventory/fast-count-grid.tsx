@@ -43,6 +43,7 @@ interface FastCountRow {
     location: string;
     price: number;
     originalStock: number;
+    reservedStock: number;
     stock: string; // The editable field, kept as string while editing
     hasChanged: boolean;
     sourceIds: string[];
@@ -103,6 +104,7 @@ export function FastCountGrid() {
                 location: p.location || 'N/A',
                 price: p.price || 0,
                 originalStock: p.stock || 0,
+                reservedStock: p.reservedStock || 0,
                 stock: (p.stock || 0).toString(),
                 hasChanged: false,
                 sourceIds: p.sourceIds || [p.id!],
@@ -220,8 +222,10 @@ export function FastCountGrid() {
                 const primaryId = row.sourceIds[0];
                 const primaryDocRef = doc(firestore, `companies/${companyId}/products`, primaryId);
 
+                // Com documentos repetidos, a reserva dos outros passa para o principal (senão perdia-se ao zerá-los).
                 batch.update(primaryDocRef, {
                     stock: newStockNum,
+                    ...(row.sourceIds.length > 1 ? { reservedStock: row.reservedStock } : {}),
                     lastUpdated: new Date().toISOString()
                 });
                 operationsCount++;

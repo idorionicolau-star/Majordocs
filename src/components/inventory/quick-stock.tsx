@@ -283,6 +283,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             location,
             sourceIds: [],
             systemStock: 0,
+            reservedStock: 0,
             unit: from?.unit || extra?.unit || "un",
             qty,
             isNew: true,
