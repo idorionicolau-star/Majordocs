@@ -22,7 +22,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function RecycleBin() {
-    const { allProducts: products, allSales: sales, allOrders: orders, allProductions: productions, restoreItem, hardDelete, user, confirmAction } = useContext(InventoryContext) || { allProducts: [], allSales: [], allOrders: [], allProductions: [] };
+    const { allProducts: products, allSales: sales, allOrders: orders, allProductions: productions, allCatalogProducts: catalog, restoreItem, hardDelete, user, confirmAction } = useContext(InventoryContext) || { allProducts: [], allSales: [], allOrders: [], allProductions: [], allCatalogProducts: [] };
     const [searchQuery, setSearchQuery] = useState('');
 
 
@@ -61,6 +61,9 @@ export function RecycleBin() {
         return productions?.filter(p => p.deletedAt) || [];
     }, [productions]);
 
+    const deletedCatalog = useMemo(() => (catalog || []).filter((p: any) => p.deletedAt), [catalog]);
+    const filteredCatalog = deletedCatalog.filter((p: any) => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
     const filteredProducts = deletedProducts.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -79,7 +82,7 @@ export function RecycleBin() {
         (p.productName || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const handleRestore = async (item: { id: string, name: string, type: 'product' | 'sale' | 'order' | 'production' }) => {
+    const handleRestore = async (item: { id: string, name: string, type: 'product' | 'sale' | 'order' | 'production' | 'catalog' }) => {
         if (!restoreItem) return;
 
         if (window.confirm(`Tem a certeza que deseja restaurar "${item.name}"?`)) {
@@ -89,6 +92,7 @@ export function RecycleBin() {
                 case 'sale': collection = 'sales'; break;
                 case 'order': collection = 'orders'; break;
                 case 'production': collection = 'productions'; break;
+                case 'catalog': collection = 'catalogProducts'; break;
             }
             if (collection) {
                 await restoreItem(collection, item.id);
@@ -96,7 +100,7 @@ export function RecycleBin() {
         }
     };
 
-    const handleHardDelete = async (item: { id: string, name: string, type: 'product' | 'sale' | 'order' | 'production' }) => {
+    const handleHardDelete = async (item: { id: string, name: string, type: 'product' | 'sale' | 'order' | 'production' | 'catalog' }) => {
         if (!hardDelete) return;
 
         const performDelete = async () => {
@@ -106,6 +110,7 @@ export function RecycleBin() {
                 case 'sale': collection = 'sales'; break;
                 case 'order': collection = 'orders'; break;
                 case 'production': collection = 'productions'; break;
+                case 'catalog': collection = 'catalogProducts'; break;
             }
             if (collection) {
                 await hardDelete(collection, item.id);
@@ -157,11 +162,12 @@ export function RecycleBin() {
             </CardHeader>
             <CardContent>
                 <Tabs defaultValue="products">
-                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5">
                         <TabsTrigger value="products">Produtos ({deletedProducts.length})</TabsTrigger>
                         <TabsTrigger value="sales">Vendas ({deletedSales.length})</TabsTrigger>
                         <TabsTrigger value="orders">Encomendas ({deletedOrders.length})</TabsTrigger>
                         <TabsTrigger value="production">Produção ({deletedProductions.length})</TabsTrigger>
+                        <TabsTrigger value="catalog">Catálogo ({deletedCatalog.length})</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="products">
@@ -182,6 +188,34 @@ export function RecycleBin() {
                                                     <RefreshCw className="h-4 w-4" />
                                                 </Button>
                                                 <Button variant="outline" size="icon" className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleHardDelete({ id: product.id || product.instanceId, name: product.name, type: 'product' })} title="Apagar Permanentemente">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </ScrollArea>
+                    </TabsContent>
+
+                    <TabsContent value="catalog">
+                        <ScrollArea className="h-[300px] border rounded-md bg-background">
+                            {filteredCatalog.length === 0 ? (
+                                <p className="text-center p-4 text-muted-foreground text-sm">Nenhum produto do catálogo na lixeira.</p>
+                            ) : (
+                                <div className="divide-y">
+                                    {filteredCatalog.map((product: any) => (
+                                        <div key={product.id} className="p-3 flex items-center justify-between hover:bg-muted/50">
+                                            <div>
+                                                <p className="font-medium text-sm">{product.name}</p>
+                                                <p className="text-xs text-muted-foreground">{product.category} · apagado a {product.deletedAt ? format(new Date(product.deletedAt), "dd/MM/yyyy HH:mm", { locale: pt }) : 'N/A'}</p>
+                                                <p className="text-xs text-muted-foreground">Por: {product.deletedBy || 'Desconhecido'}</p>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button variant="outline" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleRestore({ id: product.id, name: product.name, type: 'catalog' })} title="Restaurar">
+                                                    <RefreshCw className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="outline" size="icon" className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleHardDelete({ id: product.id, name: product.name, type: 'catalog' })} title="Apagar Permanentemente">
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>

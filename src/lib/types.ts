@@ -361,6 +361,8 @@ export interface InventoryContextType {
   allOrders: Order[]; // Included for Recycle Bin
   stockMovements: StockMovement[];
   catalogProducts: CatalogProduct[];
+  /** Catálogo incluindo os produtos na lixeira (para a Lixeira). */
+  allCatalogProducts: CatalogProduct[];
   catalogCategories: CatalogCategory[];
   rawMaterials: RawMaterial[];
   recipes: Recipe[];
@@ -434,6 +436,12 @@ export interface InventoryContextType {
   notifyManagers: (msg: { title: string; body: string; link?: string; type?: string; dedupeId?: string; always?: boolean }) => void;
   addCatalogProduct: (productData: Omit<CatalogProduct, 'id'>) => Promise<void>;
   addCatalogCategory: (categoryName: string) => Promise<void>;
+  /** Move produtos do catálogo para a lixeira (podem ser restaurados). Devolve quantos moveu. */
+  deleteCatalogProducts: (ids: string[]) => Promise<number>;
+  /** Altera vários produtos do catálogo de uma vez (em lotes). Devolve quantos alterou. */
+  updateCatalogProducts: (updates: { id: string; data: Partial<CatalogProduct> }[]) => Promise<number>;
+  /** Apaga uma categoria — só se estiver vazia. Devolve true se apagou. */
+  deleteCatalogCategory: (categoryId: string) => Promise<boolean>;
 
   // Raw Materials & Recipes
   addRawMaterial: (material: Omit<RawMaterial, 'id'>) => Promise<void>;

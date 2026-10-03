@@ -18,7 +18,7 @@ export const InventoryContext = createContext<InventoryContextType | undefined>(
 
 export function InventoryProvider({ children }: { children: ReactNode }) {
   const core = useInventoryCore();
-  const { loading, productsLoading, salesLoading, productionsLoading, ordersLoading, stockMovementsLoading, catalogProductsLoading, catalogCategoriesLoading, rawMaterialsLoading, recipesLoading, companyId, firestore, user, productsData, salesData, stockMovementsData, lastSaleTimestamp, firebaseUser, isReadOnly, isTrial, daysLeft, renewInDays, subscriptionReason, logout, profilePicture, handleSetProfilePicture, canView, canEdit, companyData, products, productionsData, ordersData, catalogProductsData, catalogCategoriesData, rawMaterialsData, recipesData, locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats, businessStartDate, chatHistory, setChatHistory, updateCompany, markNotificationAsRead, markAllAsRead, clearNotifications, addNotification, categorizeProductWithAI, notifyManagers } = core;
+  const { loading, productsLoading, salesLoading, productionsLoading, ordersLoading, stockMovementsLoading, catalogProductsLoading, catalogCategoriesLoading, rawMaterialsLoading, recipesLoading, companyId, firestore, user, productsData, salesData, stockMovementsData, lastSaleTimestamp, firebaseUser, isReadOnly, isTrial, daysLeft, renewInDays, subscriptionReason, logout, profilePicture, handleSetProfilePicture, canView, canEdit, companyData, products, productionsData, ordersData, catalogProductsData, catalogProductsRaw, catalogCategoriesData, rawMaterialsData, recipesData, locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats, businessStartDate, chatHistory, setChatHistory, updateCompany, markNotificationAsRead, markAllAsRead, clearNotifications, addNotification, categorizeProductWithAI, notifyManagers } = core;
   const authActions = useAuthActions(core);
   const { login, loginWithGoogle, resetPassword, changePassword, registerCompany, registerCompanyWithGoogle } = authActions;
   const productActions = useProductActions(core);
@@ -31,7 +31,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const orderActions = useOrderActions(core);
   const { deleteOrder, finalizeOrder } = orderActions;
   const settingsActions = useSettingsActions(core);
-  const { addCatalogProduct, addCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem: restoreItemBase, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts } = settingsActions;
+  const { addCatalogProduct, addCatalogCategory, deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem: restoreItemBase, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts } = settingsActions;
   // Restaurar uma produção refaz o stock e a matéria-prima; o resto da lixeira usa a regra geral
   const restoreItem = useCallback((collectionName: string, id: string) => (collectionName === 'productions' ? restoreProduction(id) : restoreItemBase(collectionName, id)), [restoreProduction, restoreItemBase]);
 
@@ -160,6 +160,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     allOrders: ordersData || [],
     stockMovements: stockMovementsData || [],
     catalogProducts: catalogProductsData || [],
+    allCatalogProducts: catalogProductsRaw || [], // inclui a lixeira
     catalogCategories: catalogCategoriesData || [],
     rawMaterials: rawMaterialsData || [],
     recipes: recipesData || [],
@@ -173,6 +174,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     mergeProducts,
     restoreItem,
     hardDelete,
+    deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory,
     exportCompanyData,
     syncSmartThresholds,
     setAutoThresholds,
@@ -198,7 +200,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     user, firebaseUser, companyId, isDataLoading, isReadOnly, isTrial, daysLeft, renewInDays, subscriptionReason,
     login, loginWithGoogle, logout, resetPassword, registerCompany, registerCompanyWithGoogle, profilePicture, handleSetProfilePicture,
     canView, canEdit,
-    companyData, productsData, salesData, productionsData, ordersData, stockMovementsData, catalogProductsData, catalogCategoriesData,
+    companyData, productsData, salesData, productionsData, ordersData, stockMovementsData, catalogProductsData, catalogProductsRaw, catalogCategoriesData,
     rawMaterialsData, recipesData,
     locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
     businessStartDate,
@@ -215,7 +217,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     addRecipe,
     updateRecipe,
     mergeProducts,
-    restoreItem,
+    restoreItem, deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory,
     exportCompanyData,
     availableUnits, addUnit,
     availableCategories, addCategory,
