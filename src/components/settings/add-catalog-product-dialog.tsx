@@ -95,7 +95,7 @@ function AddCatalogProductForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Categoria</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma categoria" />
@@ -154,7 +154,7 @@ function AddCatalogProductForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Unidade</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione..." />
@@ -210,8 +210,19 @@ function AddCatalogProductForm({
   );
 }
 
-export function AddCatalogProductDialog({ categories, units, onAdd }: AddCatalogProductDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddCatalogProductDialog({ categories, units, onAdd, open: openProp, onOpenChange, hideTrigger, defaultCategory, defaultName }: AddCatalogProductDialogProps & {
+  /** Modo controlado: a página decide quando abre (ex.: botão + no telemóvel). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
+  /** Categoria pré-escolhida (ex.: a que está filtrada na lista). */
+  defaultCategory?: string;
+  /** Nome pré-preenchido (ex.: o que se procurou e não existe). */
+  defaultName?: string;
+}) {
+  const [innerOpen, setInnerOpen] = useState(false);
+  const open = openProp ?? innerOpen;
+  const setOpen = (o: boolean) => { setInnerOpen(o); onOpenChange?.(o); };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -229,6 +240,12 @@ export function AddCatalogProductDialog({ categories, units, onAdd }: AddCatalog
   const namePlaceholder = useDynamicPlaceholder('product');
   const pricePlaceholder = useDynamicPlaceholder('money');
 
+  // sempre que abre, o formulário começa limpo (antes ficava com o produto anterior)
+  useEffect(() => {
+    if (open) form.reset({ name: defaultName || '', category: defaultCategory || categories[0] || '', price: 0, unit: 'un', imageUrl: '', lowStockThreshold: 10, criticalStockThreshold: 5 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const trigger = (
     <Button size="icon" className="rounded-full h-9 w-9" title="Adicionar Produto ao Catálogo">
       <Plus className="h-5 w-5" />
@@ -242,7 +259,7 @@ export function AddCatalogProductDialog({ categories, units, onAdd }: AddCatalog
       onOpenChange={setOpen}
       title="Adicionar Produto ao Catálogo"
       description="Crie um novo produto base que poderá ser usado no inventário."
-      trigger={trigger}
+      trigger={hideTrigger ? undefined : trigger}
     >
       <div className="md:max-h-[85vh] md:overflow-y-auto md:pr-2">
         <AddCatalogProductForm

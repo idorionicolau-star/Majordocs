@@ -1,636 +1,416 @@
-
-
 "use client";
 
-import { useState, useEffect, useContext, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlusCircle, Trash2, Edit, Search, ChevronsDown, RefreshCw } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { Label } from '../ui/label';
-import { Input } from '../ui/input';
-import type { Product } from '@/lib/types';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { EditCatalogProductDialog } from './edit-catalog-product-dialog';
-import { InventoryContext } from '@/context/inventory-context';
-import { useFirestore, useMemoFirebase } from '@/firebase/provider';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { doc, setDoc, deleteDoc, updateDoc, collection, writeBatch, query, getDocs, where, addDoc } from 'firebase/firestore';
-import { Skeleton } from '../ui/skeleton';
-import { AddCatalogProductDialog } from './add-catalog-product-dialog';
-import { initialCatalog } from '@/lib/data';
-import { CatalogImporter, type CatalogImportResult } from './catalog-importer';
-import { Checkbox } from '../ui/checkbox';
-import { cn } from '@/lib/utils';
-import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
+import { useContext, useMemo, useState } from "react";
+import { collection, doc, writeBatch } from "firebase/firestore";
+import { MoreHorizontal, Plus, RefreshCw } from "lucide-react";
+import { InventoryContext } from "@/context/inventory-context";
+import { useFirestore } from "@/firebase/provider";
+import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { useToast } from "@/hooks/use-toast";
+import { useDynamicPlaceholder } from "@/hooks/use-dynamic-placeholder";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToastAction } from "@/components/ui/toast";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { CatalogProductsView, type CatalogRow } from "@/components/catalog/catalog-products-view";
+import { CatalogCategoriesView, type CategoryRow } from "@/components/catalog/catalog-categories-view";
+import { AddCatalogProductDialog } from "./add-catalog-product-dialog";
+import { EditCatalogProductDialog } from "./edit-catalog-product-dialog";
+import { CatalogImporter, type CatalogImportResult } from "./catalog-importer";
+import { adjustPrice, buildSyncPlan, categoryCounts, findDuplicate, nameKey, parsePct } from "@/lib/catalog-view";
+import { formatCurrency } from "@/lib/utils";
+import type { Product } from "@/lib/types";
 
-type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'> & { id: string };
-type CatalogCategory = { id: string; name: string };
-type ProductImportData = Omit<CatalogProduct, 'id'>;
-
+type CatalogProduct = Omit<Product, "stock" | "instanceId" | "reservedStock" | "location" | "lastUpdated"> & { id: string };
+const offline = () => typeof navigator !== "undefined" && !navigator.onLine;
+const NEW = "__new__";
 
 export function CatalogManager() {
-  const { toast } = useToast();
-  const inventoryContext = useContext(InventoryContext);
-  const firestore = useFirestore();
+    const { toast } = useToast();
+    const ctx = useContext(InventoryContext);
+    const firestore = useFirestore();
 
-  const { companyId, products: inventoryProducts, addCatalogProduct, addCatalogCategory, catalogCategories: contextCatalogCategories, isReadOnly } = inventoryContext || {};
+    const catalog = useMemo(() => (ctx?.catalogProducts || []) as CatalogProduct[], [ctx?.catalogProducts]);
+    const allCatalog = useMemo(() => (ctx?.allCatalogProducts || []) as CatalogProduct[], [ctx?.allCatalogProducts]);
+    const categories = useMemo(() => (ctx?.catalogCategories || []) as { id: string; name: string }[], [ctx?.catalogCategories]);
+    const inventory = ctx?.products;
+    const companyId = ctx?.companyId;
+    const readOnly = !!ctx?.isReadOnly;
+    const loading = !ctx || !!ctx.loading;
 
-  const [activeTab, setActiveTab] = useState("categories");
-  const [highlightProductsTab, setHighlightProductsTab] = useState(false);
+    const [tab, setTab] = useState("products");
+    const [term, setTerm] = useState("");
+    const [category, setCategory] = useState("all");
 
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSyncing, setIsSyncing] = useState(false);
+    const [addOpen, setAddOpen] = useState(false);
+    const [addPrefill, setAddPrefill] = useState("");
+    const [editId, setEditId] = useState<string | null>(null);
+    const [dup, setDup] = useState<{ data: Omit<CatalogProduct, "id">; existing: CatalogProduct } | null>(null);
+    const [bulk, setBulk] = useState<{ kind: "category" | "price" | "delete"; ids: string[] } | null>(null);
+    const [bulkCat, setBulkCat] = useState("");
+    const [bulkNewCat, setBulkNewCat] = useState("");
+    const [bulkPct, setBulkPct] = useState("");
+    const [catDialog, setCatDialog] = useState<{ mode: "add" | "rename"; cat?: CategoryRow } | null>(null);
+    const [catName, setCatName] = useState("");
+    const [delCat, setDelCat] = useState<CategoryRow | null>(null);
+    const [syncPlan, setSyncPlan] = useState<ReturnType<typeof buildSyncPlan> | null>(null);
+    const [syncing, setSyncing] = useState<{ done: number; total: number } | null>(null);
+    const categoryPlaceholder = useDynamicPlaceholder("category", !!catDialog);
 
-  const [currentProductPage, setCurrentProductPage] = useState(1);
-  const [currentCategoryPage, setCurrentCategoryPage] = useState(1);
-  const itemsPerPage = 5;
-
-  const catalogProductsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId) return null;
-    return collection(firestore, `companies/${companyId}/catalogProducts`);
-  }, [firestore, companyId]);
-
-  const catalogCategoriesCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId) return null;
-    return collection(firestore, `companies/${companyId}/catalogCategories`);
-  }, [firestore, companyId]);
-
-  const { data: products, isLoading: productsLoading } = useCollection<CatalogProduct>(catalogProductsCollectionRef);
-  const { data: categories, isLoading: categoriesLoading } = useCollection<CatalogCategory>(catalogCategoriesCollectionRef);
-
-  const [categoryToEdit, setCategoryToEdit] = useState<CatalogCategory | null>(null);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
-  const categoryPlaceholder = useDynamicPlaceholder('category', showAddCategoryDialog);
-
-  // Track if the catalog was empty on initial load
-  const wasCatalogEmpty = useMemo(() => !categoriesLoading && categories?.length === 0, [categories, categoriesLoading]);
-
-  useEffect(() => {
-    if (activeTab === 'products') {
-      setHighlightProductsTab(false);
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    setSelectedProducts([]);
-  }, [products]);
-
-  useEffect(() => {
-    setSelectedCategories([]);
-  }, [categories]);
-
-  useEffect(() => {
-    setCurrentProductPage(1);
-    setCurrentCategoryPage(1);
-  }, [searchQuery]);
-
-
-  // Hooks sempre antes de qualquer 'return' antecipado (senão a ordem dos hooks muda entre renders)
-  const filteredProducts = useMemo(() => {
-    if (!products) return [];
-    return products.filter(p =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase()))
+    const categoryNames = useMemo(() => categories.map((c) => c.name).sort((a, b) => a.localeCompare(b, "pt")), [categories]);
+    const counts = useMemo(() => categoryCounts(catalog), [catalog]);
+    const catRows: CategoryRow[] = useMemo(
+        () => [...categories].sort((a, b) => a.name.localeCompare(b.name, "pt")).map((c) => ({ id: c.id, name: c.name, count: counts.get(c.name) || 0 })),
+        [categories, counts],
     );
-  }, [products, searchQuery]);
+    const editing = editId ? catalog.find((p) => p.id === editId) : undefined;
+    const byId = useMemo(() => new Map(catalog.map((p) => [p.id, p])), [catalog]);
 
-  const filteredCategories = useMemo(() => {
-    if (!categories) return [];
-    return categories.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [categories, searchQuery]);
+    if (!ctx) return <div className="p-4 text-muted-foreground">A carregar o catálogo…</div>;
 
-  if (!inventoryContext) {
-    return <div>A carregar gestor de catálogo...</div>
-  }
-
-  const handleAddCategory = async () => {
-    if (!catalogCategoriesCollectionRef) return;
-    if (!newCategoryName.trim()) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'O nome da categoria não pode estar em branco.' });
-      return;
-    }
-
-    if (categories?.some(c => c.name.toLowerCase() === newCategoryName.trim().toLowerCase())) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Essa categoria já existe.' });
-      return;
-    }
-
-    toast({ title: 'A adicionar categoria...' });
-    const newCategory = { name: newCategoryName.trim() };
-    try {
-      await addDoc(catalogCategoriesCollectionRef, newCategory);
-
-      // Only highlight if it was the very first category
-      if (wasCatalogEmpty) {
-        setHighlightProductsTab(true);
-      }
-
-      toast({ title: 'Categoria Adicionada', description: `A categoria "${newCategoryName.trim()}" foi adicionada.` });
-      setNewCategoryName('');
-      setShowAddCategoryDialog(false);
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível adicionar a categoria.' });
-    }
-  };
-
-  const handleSyncMissingProducts = async () => {
-    if (!inventoryProducts || !products) return;
-
-    setIsSyncing(true);
-    const catalogNames = new Set(products.map((p) => p.name.toLowerCase().trim()));
-
-    // Group by name to avoid duplicates if inventory has multiple instances of same product name
-    const uniqueMissingProducts = new Map<string, Product>();
-    for (const p of inventoryProducts) {
-      const normName = p.name.toLowerCase().trim();
-      if (!catalogNames.has(normName) && !uniqueMissingProducts.has(normName)) {
-        uniqueMissingProducts.set(normName, p);
-      }
-    }
-
-    const missingProducts = Array.from(uniqueMissingProducts.values());
-
-    if (missingProducts.length === 0) {
-      toast({ title: 'Tudo sincronizado', description: 'Nenhum produto em falta no catálogo.' });
-      setIsSyncing(false);
-      return;
-    }
-
-    toast({ title: 'A sincronizar...', description: `A adicionar ${missingProducts.length} produto(s) em falta ao catálogo.` });
-
-    let addedCount = 0;
-    for (const missing of missingProducts) {
-      try {
-        const categoryName = missing.category || 'Geral';
-        const catExists = contextCatalogCategories?.some((c: any) => c.name.toLowerCase() === categoryName.toLowerCase());
-        if (!catExists && addCatalogCategory) {
-          await addCatalogCategory(categoryName);
+    // ---------- produtos ----------
+    const commitAdd = (data: Omit<CatalogProduct, "id">) => {
+        ctx.addCatalogProduct(data);
+        toast({ title: "Produto adicionado", description: `«${data.name}» está no catálogo.${offline() ? " Fica guardado neste aparelho até haver internet." : ""}` });
+    };
+    const handleAdd = (data: Omit<CatalogProduct, "id">) => {
+        const existing = findDuplicate(catalog, data.name);
+        if (existing) { setDup({ data, existing }); return; } // pergunta antes de criar um repetido
+        commitAdd(data);
+    };
+    const handleUpdate = async (id: string, data: Partial<CatalogProduct>) => {
+        if (data.name) {
+            const clash = findDuplicate(catalog, data.name, id);
+            if (clash) { toast({ variant: "destructive", title: "Esse nome já existe", description: `Já há «${clash.name}» no catálogo. Escolha outro nome.` }); return; }
         }
+        const n = await ctx.updateCatalogProducts([{ id, data }]);
+        if (n) toast({ title: "Produto atualizado" });
+    };
+    const askBulk = (kind: "category" | "price" | "delete", ids: string[]) => {
+        setBulk({ kind, ids }); setBulkCat(""); setBulkNewCat(""); setBulkPct("");
+    };
 
-        if (addCatalogProduct) {
-          await addCatalogProduct({
-            name: missing.name,
-            category: categoryName,
-            price: missing.price || 0,
-            unit: missing.unit || 'un',
-            lowStockThreshold: missing.lowStockThreshold || 0,
-            criticalStockThreshold: missing.criticalStockThreshold || 0,
-          });
-          addedCount++;
+    const confirmDelete = async () => {
+        if (!bulk) return;
+        const ids = bulk.ids;
+        setBulk(null);
+        const n = await ctx.deleteCatalogProducts(ids);
+        if (!n) return;
+        toast({
+            title: `${n} produto${n === 1 ? "" : "s"} movido${n === 1 ? "" : "s"} para a lixeira`,
+            description: "Podem ser restaurados em Definições → Lixeira.",
+            action: <ToastAction altText="Desfazer" onClick={() => ctx.updateCatalogProducts(ids.map((id) => ({ id, data: { deletedAt: null, deletedBy: null } as unknown as Partial<CatalogProduct> })))}>Desfazer</ToastAction>,
+        });
+    };
+    const confirmCategory = async () => {
+        if (!bulk) return;
+        const target = bulkCat === NEW ? bulkNewCat.trim() : bulkCat;
+        if (!target) return;
+        if (bulkCat === NEW && !categories.some((c) => nameKey(c.name) === nameKey(target))) await ctx.addCatalogCategory(target);
+        const name = categories.find((c) => nameKey(c.name) === nameKey(target))?.name || target;
+        const ids = bulk.ids;
+        setBulk(null);
+        const n = await ctx.updateCatalogProducts(ids.map((id) => ({ id, data: { category: name } })));
+        if (n) toast({ title: `${n} produto${n === 1 ? "" : "s"} em «${name}»` });
+    };
+    const pct = parsePct(bulkPct);
+    const confirmPrice = async () => {
+        if (!bulk || pct === null || pct === 0) return;
+        const ids = bulk.ids;
+        setBulk(null);
+        const n = await ctx.updateCatalogProducts(ids.flatMap((id) => { const p = byId.get(id); return p ? [{ id, data: { price: adjustPrice(p.price || 0, pct) } }] : []; }));
+        if (n) toast({ title: `Preço ${pct > 0 ? "subiu" : "desceu"} ${Math.abs(pct)}% em ${n} produto${n === 1 ? "" : "s"}` });
+    };
+
+    // ---------- categorias ----------
+    const confirmCategoryDialog = () => {
+        if (!catDialog) return;
+        const name = catName.trim();
+        if (!name) { toast({ variant: "destructive", title: "Escreva o nome da categoria" }); return; }
+        const clash = categories.find((c) => nameKey(c.name) === nameKey(name) && c.id !== catDialog.cat?.id);
+        if (clash) { toast({ variant: "destructive", title: "Essa categoria já existe", description: `«${clash.name}»` }); return; }
+        if (catDialog.mode === "add") {
+            ctx.addCatalogCategory(name);
+            toast({ title: "Categoria adicionada", description: `«${name}»` });
+        } else if (catDialog.cat && firestore && companyId) {
+            const old = catDialog.cat;
+            updateDocumentNonBlocking(doc(firestore, `companies/${companyId}/catalogCategories`, old.id), { name });
+            // também os da lixeira, para não voltarem com a categoria antiga
+            ctx.updateCatalogProducts(allCatalog.filter((p) => p.category === old.name).map((p) => ({ id: p.id, data: { category: name } })));
+            if (category === old.name) setCategory(name);
+            toast({ title: "Categoria renomeada", description: `«${old.name}» → «${name}»` });
         }
-      } catch (e) {
-        console.error("Failed to sync", missing.name, e);
-      }
-    }
+        setCatDialog(null); setCatName("");
+    };
+    const confirmDeleteCategory = async () => {
+        if (!delCat) return;
+        const c = delCat;
+        setDelCat(null);
+        if (await ctx.deleteCatalogCategory(c.id)) toast({ title: "Categoria apagada", description: `«${c.name}»` });
+    };
 
-    toast({ title: 'Sincronização Concluída', description: `${addedCount} produto(s) adicionado(s) ao catálogo.` });
-    setIsSyncing(false);
-  };
+    const collectionRef = (name: string) => collection(firestore!, `companies/${companyId}/${name}`);
 
-  const handleAddProduct = async (productData: Omit<CatalogProduct, 'id'>) => {
-    if (!catalogProductsCollectionRef) return;
-    toast({ title: 'A adicionar produto ao catálogo...' });
-    try {
-      await addDoc(catalogProductsCollectionRef, productData);
-      toast({ title: 'Produto Adicionado', description: `O produto "${productData.name}" foi adicionado ao catálogo.` });
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível adicionar o produto ao catálogo.' });
-    }
-  };
+    // ---------- sincronizar com o inventário ----------
+    const startSync = () => {
+        const plan = buildSyncPlan(inventory || [], catalog, categories.map((c) => c.name));
+        if (!plan.products.length) { toast({ title: "Tudo sincronizado", description: "Todos os produtos do inventário já estão no catálogo." }); return; }
+        setSyncPlan(plan);
+    };
+    const runSync = async () => {
+        if (!syncPlan || !firestore || !companyId) return;
+        const plan = syncPlan;
+        setSyncPlan(null);
+        const total = plan.newCategories.length + plan.products.length;
+        setSyncing({ done: 0, total });
+        try {
+            const ops: ((b: ReturnType<typeof writeBatch>) => void)[] = [
+                ...plan.newCategories.map((name) => (b: ReturnType<typeof writeBatch>) => b.set(doc(collectionRef("catalogCategories")), { name })),
+                ...plan.products.map((p) => (b: ReturnType<typeof writeBatch>) => b.set(doc(collectionRef("catalogProducts")), p)),
+            ];
+            for (let i = 0; i < ops.length; i += 400) {
+                const batch = writeBatch(firestore);
+                ops.slice(i, i + 400).forEach((op) => op(batch));
+                if (offline()) batch.commit().catch(() => { }); else await batch.commit();
+                setSyncing({ done: Math.min(i + 400, ops.length), total });
+            }
+            toast({ title: "Sincronização concluída", description: `${plan.products.length} produto${plan.products.length === 1 ? "" : "s"} adicionado${plan.products.length === 1 ? "" : "s"} ao catálogo.` });
+        } catch (e: any) {
+            toast({ variant: "destructive", title: "Erro ao sincronizar", description: e?.message || "Tente de novo: o que já foi gravado não se perde." });
+        } finally { setSyncing(null); }
+    };
+    // ---------- importação (como antes) ----------
+    const handleBulkImport = async (result: CatalogImportResult) => {
+        if (!firestore || !companyId) return;
+        toast({ title: "A importar produtos…" });
+        try {
+            const ops: ((b: ReturnType<typeof writeBatch>) => void)[] = [
+                ...result.newCategories.map((name) => (b: ReturnType<typeof writeBatch>) => b.set(doc(collectionRef("catalogCategories")), { name })),
+                ...result.create.map((prod) => (b: ReturnType<typeof writeBatch>) => b.set(doc(collectionRef("catalogProducts")), prod)),
+                ...result.updatePrices.map((u) => (b: ReturnType<typeof writeBatch>) => b.update(doc(firestore, `companies/${companyId}/catalogProducts`, u.id), { price: u.price })),
+            ];
+            for (let i = 0; i < ops.length; i += 400) {
+                const batch = writeBatch(firestore);
+                ops.slice(i, i + 400).forEach((op) => op(batch));
+                await batch.commit();
+            }
+            const parts = [`${result.create.length} produtos importados`];
+            if (result.updatePrices.length) parts.push(`${result.updatePrices.length} preços actualizados`);
+            toast({ title: "Importação concluída", description: parts.join(", ") + "." });
+            setTab("products");
+        } catch (e) {
+            console.error("Bulk import error:", e);
+            toast({ variant: "destructive", title: "Erro", description: "Erro na importação. Nada foi perdido: tente de novo." });
+            throw e;
+        }
+    };
 
-  const handleEditCategory = async () => {
-    if (!categoryToEdit || !newCategoryName.trim() || !firestore || !companyId) return;
+    const rows: CatalogRow[] = catalog;
 
-    if (categories?.some(c => c.name.toLowerCase() === newCategoryName.trim().toLowerCase() && c.id !== categoryToEdit.id)) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Essa categoria já existe.' });
-      return;
-    }
+    return (
+        <>
+            <Tabs value={tab} onValueChange={setTab} className="mt-4">
+                <div className="flex items-center gap-2">
+                    <TabsList className="grid flex-1 grid-cols-3">
+                        <TabsTrigger value="products">Produtos</TabsTrigger>
+                        <TabsTrigger value="categories">Categorias</TabsTrigger>
+                        <TabsTrigger value="import">Importar</TabsTrigger>
+                    </TabsList>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="h-10 w-10 shrink-0" aria-label="Mais opções do catálogo"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={startSync} disabled={readOnly || syncing !== null}><RefreshCw className="mr-2 h-4 w-4" /> Sincronizar com o inventário</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    {!readOnly && <Button className="hidden shrink-0 md:inline-flex" onClick={() => { setAddPrefill(""); setAddOpen(true); }}><Plus className="mr-1.5 h-4 w-4" /> Novo produto</Button>}
+                </div>
 
-    toast({ title: 'A atualizar categoria...' });
-    try {
-      const categoryDocRef = doc(firestore, `companies/${companyId}/catalogCategories`, categoryToEdit.id);
-      await updateDoc(categoryDocRef, { name: newCategoryName.trim() });
-
-      const q = query(collection(firestore, `companies/${companyId}/catalogProducts`), where("category", "==", categoryToEdit.name));
-      const querySnapshot = await getDocs(q);
-      const batch = writeBatch(firestore);
-      querySnapshot.forEach((doc) => {
-        batch.update(doc.ref, { category: newCategoryName.trim() });
-      });
-      await batch.commit();
-
-      toast({ title: 'Categoria Atualizada' });
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar a categoria.' });
-    }
-
-    setCategoryToEdit(null);
-    setNewCategoryName('');
-  };
-
-  const startEditingCategory = (category: CatalogCategory) => {
-    setCategoryToEdit(category);
-    setNewCategoryName(category.name);
-  }
-
-
-  const totalProductPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const paginatedProducts = filteredProducts.slice((currentProductPage - 1) * itemsPerPage, currentProductPage * itemsPerPage);
-
-  const isAllProductsSelected = paginatedProducts.length > 0 && paginatedProducts.every(p => selectedProducts.includes(p.id));
-
-  const handleToggleSelectProduct = (productId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedProducts(prev => [...prev, productId]);
-    } else {
-      setSelectedProducts(prev => prev.filter(id => id !== productId));
-    }
-  };
-
-  const handleToggleSelectAllProducts = (checked: boolean) => {
-    if (checked) {
-      const currentPageIds = paginatedProducts.map(p => p.id);
-      setSelectedProducts(prev => Array.from(new Set([...prev, ...currentPageIds])));
-    } else {
-      const currentPageIds = paginatedProducts.map(p => p.id);
-      setSelectedProducts(prev => prev.filter(id => !currentPageIds.includes(id)));
-    }
-  };
-
-  const handleUpdateProduct = async (productId: string, updatedData: Partial<CatalogProduct>) => {
-    if (!firestore || !companyId) return;
-    try {
-      const productRef = doc(firestore, `companies/${companyId}/catalogProducts`, productId);
-      await updateDoc(productRef, updatedData);
-      toast({ title: 'Produto Atualizado' });
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar o produto.' });
-    }
-  };
-
-
-  const totalCategoryPages = Math.ceil(filteredCategories.length / itemsPerPage);
-  const paginatedCategories = filteredCategories.slice((currentCategoryPage - 1) * itemsPerPage, currentCategoryPage * itemsPerPage);
-
-  const isAllCategoriesSelected = paginatedCategories.length > 0 && paginatedCategories.every(c => selectedCategories.includes(c.id));
-
-  const handleToggleSelectCategory = (categoryId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedCategories(prev => [...prev, categoryId]);
-    } else {
-      setSelectedCategories(prev => prev.filter(id => id !== categoryId));
-    }
-  };
-
-  const handleToggleSelectAllCategories = (checked: boolean) => {
-    if (checked) {
-      const currentPageIds = paginatedCategories.map(c => c.id);
-      setSelectedCategories(prev => Array.from(new Set([...prev, ...currentPageIds])));
-    } else {
-      const currentPageIds = paginatedCategories.map(c => c.id);
-      setSelectedCategories(prev => prev.filter(id => !currentPageIds.includes(id)));
-    }
-  };
-
-  const handleBulkImport = async (result: CatalogImportResult) => {
-    if (!catalogProductsCollectionRef || !catalogCategoriesCollectionRef || !firestore) return;
-    toast({ title: 'A importar produtos...' });
-    try {
-      // o Firestore aceita no máximo 500 operações por lote
-      const ops: ((b: ReturnType<typeof writeBatch>) => void)[] = [
-        ...result.newCategories.map((name) => (b: ReturnType<typeof writeBatch>) => b.set(doc(catalogCategoriesCollectionRef), { name })),
-        ...result.create.map((prod) => (b: ReturnType<typeof writeBatch>) => b.set(doc(catalogProductsCollectionRef), prod)),
-        ...result.updatePrices.map((u) => (b: ReturnType<typeof writeBatch>) => b.update(doc(catalogProductsCollectionRef, u.id), { price: u.price })),
-      ];
-      for (let i = 0; i < ops.length; i += 400) {
-        const batch = writeBatch(firestore);
-        ops.slice(i, i + 400).forEach((op) => op(batch));
-        await batch.commit();
-      }
-      const parts = [`${result.create.length} produtos importados`];
-      if (result.updatePrices.length) parts.push(`${result.updatePrices.length} preços actualizados`);
-      toast({ title: 'Importação Concluída', description: parts.join(', ') + '.' });
-    } catch (e) {
-      console.error('Bulk import error:', e);
-      toast({ variant: 'destructive', title: 'Erro', description: 'Erro na importação. Nada foi perdido: tente de novo.' });
-      throw e;
-    }
-  };
-
-  return (
-    <>
-      <AlertDialog open={!!categoryToEdit} onOpenChange={(open) => !open && setCategoryToEdit(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Editar Categoria</AlertDialogTitle>
-            <AlertDialogDescription>
-              Renomeie a categoria. Todos os produtos associados serão atualizados.
-            </AlertDialogDescription>
-            <div className="pt-4">
-              <Label htmlFor="category-name-edit">Nome da Categoria</Label>
-              <Input
-                id="category-name-edit"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                className="mt-2"
-              />
-            </div>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setNewCategoryName('')}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleEditCategory}>Salvar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog >
-
-      <AlertDialog open={showAddCategoryDialog} onOpenChange={setShowAddCategoryDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Adicionar Nova Categoria</AlertDialogTitle>
-            <AlertDialogDescription>
-              Digite o nome para a nova categoria de produtos.
-            </AlertDialogDescription>
-            <div className="pt-4">
-              <Label htmlFor="category-name-add">Nome da Categoria</Label>
-              <Input
-                id="category-name-add"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                className="mt-2"
-                placeholder={categoryPlaceholder}
-              />
-            </div>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setNewCategoryName('')}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleAddCategory}>Adicionar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="categories" className="mt-6">
-        <div className="relative mt-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="categories">Categorias</TabsTrigger>
-            <TabsTrigger value="products" className={cn(highlightProductsTab && 'animate-shake')}>Produtos</TabsTrigger>
-            <TabsTrigger value="import">Importar</TabsTrigger>
-          </TabsList>
-          {highlightProductsTab && (
-            <div className="absolute top-[-24px] left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce-down pointer-events-none">
-              <ChevronsDown className="h-6 w-6 text-primary" strokeWidth={2.5} />
-            </div>
-          )}
-        </div>
-
-        <div className="relative mt-4">
-
-          <Input
-            placeholder="Pesquisar no catálogo..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-
-          />
-        </div>
-
-        <TabsContent value="products" className="mt-4">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <div className='flex items-center gap-4'>
-                <p className="text-sm text-muted-foreground">A gerir {products?.length || 0} produtos base do catálogo.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleSyncMissingProducts} disabled={isSyncing || isReadOnly} title={isReadOnly ? "Indisponível em modo leitura" : ""}>
-                  <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
-                  {isSyncing ? "A Sincronizar..." : "Sincronizar Inventário"}
-                </Button>
-                {isReadOnly ? (
-                  <Button disabled size="sm" title="Indisponível em modo leitura" className="bg-primary text-white">
-                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Produto
-                  </Button>
-                ) : (
-                  <AddCatalogProductDialog
-                    categories={categories?.map(c => c.name) || []}
-                    units={inventoryContext?.availableUnits || []}
-                    onAdd={handleAddProduct}
-                  />
+                {syncing && (
+                    <div className="mt-3 rounded-xl border p-3 text-sm" role="status">
+                        <div className="mb-2 flex justify-between"><span>A sincronizar com o inventário…</span><span className="tabular-nums">{syncing.done} / {syncing.total}</span></div>
+                        <Progress value={(syncing.done / Math.max(1, syncing.total)) * 100} />
+                    </div>
                 )}
-              </div>
-            </div>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px] px-4">
-                      <Checkbox
-                        checked={isAllProductsSelected}
-                        onCheckedChange={(checked) => handleToggleSelectAllProducts(!!checked)}
-                        aria-label="Selecionar tudo"
-                      />
-                    </TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead className="text-right">Preço</TableHead>
-                    <TableHead><span className="sr-only">Ações</span></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {productsLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center">
-                        <Skeleton className="h-6 w-full" />
-                      </TableCell>
-                    </TableRow>
-                  ) : paginatedProducts && paginatedProducts.length > 0 ? paginatedProducts.map(product => (
-                    <TableRow key={product.id} data-state={selectedProducts.includes(product.id) && "selected"}>
-                      <TableCell className="px-4">
-                        <Checkbox
-                          checked={selectedProducts.includes(product.id)}
-                          onCheckedChange={(checked) => handleToggleSelectProduct(product.id, !!checked)}
-                          aria-label={`Selecionar ${product.name}`}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell>{product.category}</TableCell>
-                      <TableCell className="text-right">{product.price.toFixed(2)} MT</TableCell>
-                      <TableCell className="text-right flex items-center justify-end gap-2">
-                        {isReadOnly ? (
-                          <Button disabled variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" title="Indisponível em modo leitura">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <EditCatalogProductDialog
-                            product={product}
-                            categories={categories?.map(c => c.name) || []}
-                            units={inventoryContext?.availableUnits || []}
-                            onUpdate={handleUpdateProduct}
-                          />
+
+                <TabsContent value="products" className="mt-4">
+                    <CatalogProductsView
+                        products={rows}
+                        categories={categoryNames}
+                        loading={loading}
+                        readOnly={readOnly}
+                        term={term} onTerm={setTerm}
+                        category={category} onCategory={setCategory}
+                        onAdd={(name) => { setAddPrefill(name || ""); setAddOpen(true); }}
+                        onEdit={(p) => setEditId(p.id)}
+                        onDelete={(p) => askBulk("delete", [p.id])}
+                        onBulk={askBulk}
+                    />
+                </TabsContent>
+
+                <TabsContent value="categories" className="mt-4">
+                    <CatalogCategoriesView
+                        rows={catRows}
+                        loading={loading}
+                        readOnly={readOnly}
+                        onAdd={() => { setCatName(""); setCatDialog({ mode: "add" }); }}
+                        onRename={(c) => { setCatName(c.name); setCatDialog({ mode: "rename", cat: c }); }}
+                        onDelete={setDelCat}
+                        onOpen={(name) => { setCategory(name); setTerm(""); setTab("products"); }}
+                    />
+                </TabsContent>
+
+                <TabsContent value="import" className="mt-4">
+                    <CatalogImporter
+                        existing={catalog.map((p) => ({ id: p.id, name: p.name, price: p.price }))}
+                        categories={categoryNames}
+                        onImport={handleBulkImport}
+                    />
+                </TabsContent>
+            </Tabs>
+
+            {/* adicionar / editar */}
+            <AddCatalogProductDialog
+                open={addOpen}
+                onOpenChange={setAddOpen}
+                hideTrigger
+                categories={categoryNames}
+                units={ctx.availableUnits || []}
+                defaultCategory={category !== "all" ? category : undefined}
+                defaultName={addPrefill}
+                onAdd={handleAdd}
+            />
+            {editing && (
+                <EditCatalogProductDialog
+                    open
+                    hideTrigger
+                    onOpenChange={(o) => { if (!o) setEditId(null); }}
+                    product={editing}
+                    categories={categoryNames}
+                    units={ctx.availableUnits || []}
+                    onUpdate={handleUpdate}
+                />
+            )}
+
+            {/* produto repetido */}
+            <AlertDialog open={!!dup} onOpenChange={(o) => !o && setDup(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Este produto já existe</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Já há «{dup?.existing.name}» no catálogo ({dup?.existing.category}, {formatCurrency(dup?.existing.price || 0)}). Quer criar «{dup?.data.name}» mesmo assim?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => { if (dup) commitAdd(dup.data); setDup(null); }}>Criar mesmo assim</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* apagar produtos */}
+            <AlertDialog open={bulk?.kind === "delete"} onOpenChange={(o) => !o && setBulk(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Apagar {bulk?.ids.length} produto{bulk?.ids.length === 1 ? "" : "s"}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {bulk && bulk.ids.length === 1 ? `«${byId.get(bulk.ids[0])?.name}» vai` : "Vão"} para a lixeira e deixam de aparecer em vendas, encomendas e entradas. O stock do inventário não muda. Pode restaurar em Definições → Lixeira.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Apagar</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* mudar categoria */}
+            <AlertDialog open={bulk?.kind === "category"} onOpenChange={(o) => !o && setBulk(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Mudar categoria de {bulk?.ids.length} produto{bulk?.ids.length === 1 ? "" : "s"}</AlertDialogTitle>
+                        <AlertDialogDescription>Escolha a categoria de destino.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="space-y-3">
+                        <Select value={bulkCat} onValueChange={setBulkCat}>
+                            <SelectTrigger aria-label="Categoria de destino"><SelectValue placeholder="Escolha a categoria…" /></SelectTrigger>
+                            <SelectContent>
+                                {categoryNames.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                <SelectItem value={NEW}>＋ Nova categoria…</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        {bulkCat === NEW && <Input autoFocus value={bulkNewCat} onChange={(e) => setBulkNewCat(e.target.value)} placeholder="Nome da nova categoria" aria-label="Nome da nova categoria" />}
+                    </div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmCategory} disabled={!bulkCat || (bulkCat === NEW && !bulkNewCat.trim())}>Mudar</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* ajustar preço */}
+            <AlertDialog open={bulk?.kind === "price"} onOpenChange={(o) => !o && setBulk(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Ajustar o preço de {bulk?.ids.length} produto{bulk?.ids.length === 1 ? "" : "s"}</AlertDialogTitle>
+                        <AlertDialogDescription>Escreva a percentagem: «10» sobe 10%, «-5» desce 5%.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="space-y-3">
+                        <div className="space-y-1.5"><Label htmlFor="bulk-pct">Percentagem (%)</Label><Input id="bulk-pct" autoFocus inputMode="decimal" value={bulkPct} onChange={(e) => setBulkPct(e.target.value)} placeholder="Ex.: 10" /></div>
+                        {bulkPct.trim() !== "" && pct === null && <p className="text-sm text-destructive">Valor inválido.</p>}
+                        {pct !== null && pct !== 0 && bulk && (
+                            <ul className="space-y-1 rounded-lg bg-muted/40 p-3 text-sm" aria-label="Exemplos">
+                                {bulk.ids.slice(0, 3).map((id) => { const p = byId.get(id); return p ? <li key={id} className="flex justify-between gap-3"><span className="truncate">{p.name}</span><span className="whitespace-nowrap tabular-nums">{formatCurrency(p.price || 0)} → <b>{formatCurrency(adjustPrice(p.price || 0, pct))}</b></span></li> : null; })}
+                                {bulk.ids.length > 3 && <li className="text-muted-foreground">e mais {bulk.ids.length - 3}…</li>}
+                            </ul>
                         )}
-                      </TableCell>
-                    </TableRow>
-                  )) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                        Nenhum produto base no catálogo.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            <div className="flex items-center justify-between pt-4">
-              <div className="text-sm text-muted-foreground">
-                {selectedProducts.length} de{" "}
-                {filteredProducts.length} produto(s) selecionados.
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-muted-foreground">
-                  Página {currentProductPage} de {totalProductPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentProductPage(p => p - 1)}
-                  disabled={currentProductPage === 1}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentProductPage(p => p + 1)}
-                  disabled={currentProductPage >= totalProductPages}
-                >
-                  Próximo
-                </Button>
-              </div>
-            </div>
-          </div>
-        </TabsContent>
+                    </div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmPrice} disabled={pct === null || pct === 0}>Aplicar</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
-        <TabsContent value="categories" className="mt-4">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <p className="text-sm text-muted-foreground">A gerir {categories?.length || 0} categorias de produtos.</p>
-              </div>
-              <Button
-                size="sm"
-                onClick={() => setShowAddCategoryDialog(true)}
-                disabled={isReadOnly}
-                title={isReadOnly ? "Indisponível em modo leitura" : ""}
-                className={cn((!categories || categories.length === 0) && "animate-shake")}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Adicionar Categoria
-              </Button>
-            </div>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px] px-4">
-                      <Checkbox
-                        checked={isAllCategoriesSelected}
-                        onCheckedChange={(checked) => handleToggleSelectAllCategories(!!checked)}
-                        aria-label="Selecionar todas as categorias"
-                      />
-                    </TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead><span className="sr-only">Ações</span></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {categoriesLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="h-24 text-center">
-                        <Skeleton className="h-6 w-1/2 mx-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ) : paginatedCategories.length > 0 ? paginatedCategories.map(category => (
-                    <TableRow key={category.id} data-state={selectedCategories.includes(category.id) && "selected"}>
-                      <TableCell className="px-4">
-                        <Checkbox
-                          checked={selectedCategories.includes(category.id)}
-                          onCheckedChange={(checked) => handleToggleSelectCategory(category.id, !!checked)}
-                          aria-label={`Selecionar ${category.name}`}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">{category.name}</TableCell>
-                      <TableCell className="text-right">
-                        <Button disabled={isReadOnly} title={isReadOnly ? "Indisponível em modo leitura" : ""} variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditingCategory(category)}>
-                          <Edit className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  )) : (
-                    <TableRow>
-                      <TableCell colSpan={3} className="p-4 text-center text-muted-foreground h-24">Nenhuma categoria encontrada.</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            <div className="flex items-center justify-between pt-4">
-              <div className="text-sm text-muted-foreground">
-                {selectedCategories.length} de{" "}
-                {filteredCategories.length} categoria(s) selecionadas.
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-muted-foreground">
-                  Página {currentCategoryPage} de {totalCategoryPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentCategoryPage(p => p - 1)}
-                  disabled={currentCategoryPage === 1}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentCategoryPage(p => p + 1)}
-                  disabled={currentCategoryPage >= totalCategoryPages}
-                >
-                  Próximo
-                </Button>
-              </div>
-            </div>
-          </div>
-        </TabsContent>
+            {/* categorias */}
+            <AlertDialog open={!!catDialog} onOpenChange={(o) => !o && setCatDialog(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{catDialog?.mode === "add" ? "Nova categoria" : "Renomear categoria"}</AlertDialogTitle>
+                        <AlertDialogDescription>{catDialog?.mode === "add" ? "Escreva o nome da categoria." : "Todos os produtos dela são atualizados."}</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="space-y-1.5"><Label htmlFor="cat-name">Nome da categoria</Label><Input id="cat-name" autoFocus value={catName} onChange={(e) => setCatName(e.target.value)} placeholder={categoryPlaceholder} onKeyDown={(e) => { if (e.key === "Enter") confirmCategoryDialog(); }} /></div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={(e) => { e.preventDefault(); confirmCategoryDialog(); }}>{catDialog?.mode === "add" ? "Adicionar" : "Guardar"}</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog open={!!delCat} onOpenChange={(o) => !o && setDelCat(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader><AlertDialogTitle>Apagar a categoria «{delCat?.name}»?</AlertDialogTitle><AlertDialogDescription>Está vazia, por isso não afeta nenhum produto.</AlertDialogDescription></AlertDialogHeader>
+                    <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteCategory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Apagar</AlertDialogAction></AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
-        <TabsContent value="import" className="mt-4">
-          <CatalogImporter
-            existing={(products || []).map((p) => ({ id: p.id, name: p.name, price: p.price }))}
-            categories={(categories || []).map((c) => c.name)}
-            onImport={handleBulkImport}
-          />
-        </TabsContent>
-
-      </Tabs>
-    </>
-  );
+            {/* sincronizar */}
+            <AlertDialog open={!!syncPlan} onOpenChange={(o) => !o && setSyncPlan(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Acrescentar {syncPlan?.products.length} produto{syncPlan?.products.length === 1 ? "" : "s"} ao catálogo?</AlertDialogTitle>
+                        <AlertDialogDescription>Estão no inventário mas ainda não no catálogo{syncPlan?.newCategories.length ? ` (e serão criadas ${syncPlan.newCategories.length} categoria${syncPlan.newCategories.length === 1 ? "" : "s"})` : ""}.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <ul className="max-h-40 space-y-0.5 overflow-y-auto rounded-lg bg-muted/40 p-3 text-sm">
+                        {syncPlan?.products.slice(0, 12).map((p) => <li key={p.name} className="truncate">{p.name} <span className="text-muted-foreground">· {p.category}</span></li>)}
+                        {syncPlan && syncPlan.products.length > 12 && <li className="text-muted-foreground">e mais {syncPlan.products.length - 12}…</li>}
+                    </ul>
+                    <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={runSync}>Acrescentar</AlertDialogAction></AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
+    );
 }

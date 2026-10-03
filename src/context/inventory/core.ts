@@ -491,7 +491,10 @@ export function useInventoryCore() {
 
   const { data: stockMovementsData, isLoading: stockMovementsLoading } = useCollection<StockMovement>(stockMovementsCollectionRef);
 
-  const { data: catalogProductsData, isLoading: catalogProductsLoading } = useCollection<CatalogProduct>(catalogProductsCollectionRef);
+  const { data: catalogProductsRaw, isLoading: catalogProductsLoading } = useCollection<CatalogProduct>(catalogProductsCollectionRef);
+  // Produtos do catálogo na lixeira (deletedAt) não aparecem em lado nenhum: filtra-se aqui, na origem,
+  // para todas as páginas (vendas, encomendas, Stock Rápido…) ficarem certas. A lixeira usa `catalogProductsRaw`.
+  const catalogProductsData = useMemo(() => (catalogProductsRaw ? catalogProductsRaw.filter((p) => !p.deletedAt) : catalogProductsRaw), [catalogProductsRaw]);
 
   const { data: catalogCategoriesData, isLoading: catalogCategoriesLoading } = useCollection<CatalogCategory>(catalogCategoriesCollectionRef);
 
@@ -673,7 +676,7 @@ export function useInventoryCore() {
       updateDocumentNonBlocking(companyDocRef, details);
     }
   }, [companyDocRef]);
-  return { user, setUser, firebaseUser, setFirebaseUser, companyId, setCompanyId, loading, setLoading, profilePicture, setProfilePicture, notifications, setNotifications, monthlySalesChartData, setMonthlySalesChartData, chatHistory, setChatHistory, router, toast, firestore, auth, wasSyncing, lastSaleTimestamp, setLastSaleTimestamp, companyData, setCompanyData, isReadOnly, isTrial, daysLeft, renewInDays, subscriptionReason, locations, isMultiLocation, postFeed, addNotification, markNotificationAsRead, markAllAsRead, clearNotifications, handleSetProfilePicture, sendPush, assertOnline, isManagerUser, notifyManagers, triggerEmailAlert, logout, canView, canEdit, productsCollectionRef, salesCollectionRef, productionsCollectionRef, ordersCollectionRef, stockMovementsCollectionRef, catalogProductsCollectionRef, catalogCategoriesCollectionRef, rawMaterialsCollectionRef, recipesCollectionRef, companyDocRef, productsData, productsLoading, salesData, salesLoading, productionsData, productionsLoading, ordersData, ordersLoading, stockMovementsData, stockMovementsLoading, catalogProductsData, catalogProductsLoading, catalogCategoriesData, catalogCategoriesLoading, rawMaterialsData, rawMaterialsLoading, recipesData, recipesLoading, products, businessStartDate, categorizeProductWithAI, dashboardStats, updateCompany };
+  return { user, setUser, firebaseUser, setFirebaseUser, companyId, setCompanyId, loading, setLoading, profilePicture, setProfilePicture, notifications, setNotifications, monthlySalesChartData, setMonthlySalesChartData, chatHistory, setChatHistory, router, toast, firestore, auth, wasSyncing, lastSaleTimestamp, setLastSaleTimestamp, companyData, setCompanyData, isReadOnly, isTrial, daysLeft, renewInDays, subscriptionReason, locations, isMultiLocation, postFeed, addNotification, markNotificationAsRead, markAllAsRead, clearNotifications, handleSetProfilePicture, sendPush, assertOnline, isManagerUser, notifyManagers, triggerEmailAlert, logout, canView, canEdit, productsCollectionRef, salesCollectionRef, productionsCollectionRef, ordersCollectionRef, stockMovementsCollectionRef, catalogProductsCollectionRef, catalogCategoriesCollectionRef, rawMaterialsCollectionRef, recipesCollectionRef, companyDocRef, productsData, productsLoading, salesData, salesLoading, productionsData, productionsLoading, ordersData, ordersLoading, stockMovementsData, stockMovementsLoading, catalogProductsData, catalogProductsRaw, catalogProductsLoading, catalogCategoriesData, catalogCategoriesLoading, rawMaterialsData, rawMaterialsLoading, recipesData, recipesLoading, products, businessStartDate, categorizeProductWithAI, dashboardStats, updateCompany };
 }
 
 export type InventoryCore = ReturnType<typeof useInventoryCore>;

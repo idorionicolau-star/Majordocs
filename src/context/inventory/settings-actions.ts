@@ -59,6 +59,73 @@ export function useSettingsActions(core: InventoryCore) {
   }, [catalogCategoriesCollectionRef, catalogCategoriesData]);
 
 
+  /** Aplica `build` a vários produtos do catálogo, em lotes de 400 (limite do Firestore: 500). */
+  const batchCatalog = useCallback(async (ops: { id: string; data: Record<string, unknown> }[]) => {
+    if (!firestore || !companyId) throw new Error('Sem ligação à empresa.');
+    for (let i = 0; i < ops.length; i += 400) {
+      const batch = writeBatch(firestore);
+      ops.slice(i, i + 400).forEach((o) => batch.update(doc(firestore, `companies/${companyId}/catalogProducts`, o.id), o.data));
+      // sem internet o commit só termina quando a ligação volta: a alteração já está guardada neste aparelho, não se espera
+      if (typeof navigator !== 'undefined' && !navigator.onLine) batch.commit().catch(() => { });
+      else await batch.commit();
+    }
+    return ops.length;
+  }, [firestore, companyId]);
+
+  const deleteCatalogProducts = useCallback(async (ids: string[]) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return 0;
+    }
+    if (!ids.length) return 0;
+    const at = new Date().toISOString();
+    try {
+      return await batchCatalog(ids.map((id) => ({ id, data: { deletedAt: at, deletedBy: user?.username || 'Sistema' } })));
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Não foi possível apagar', description: e?.message });
+      return 0;
+    }
+  }, [isReadOnly, toast, batchCatalog, user]);
+
+  const updateCatalogProducts = useCallback(async (updates: { id: string; data: Partial<CatalogProduct> }[]) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return 0;
+    }
+    if (!updates.length) return 0;
+    try {
+      return await batchCatalog(updates.map((u) => ({ id: u.id, data: u.data as Record<string, unknown> })));
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Não foi possível alterar', description: e?.message });
+      return 0;
+    }
+  }, [isReadOnly, toast, batchCatalog]);
+
+  const deleteCatalogCategory = useCallback(async (categoryId: string) => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return false;
+    }
+    if (!firestore || !companyId) return false;
+    const cat = catalogCategoriesData?.find((c) => c.id === categoryId);
+    if (!cat) return false;
+    // só se apaga uma categoria vazia: os produtos dela ficariam sem categoria
+    const inUse = (catalogProductsData || []).filter((p) => p.category === cat.name).length;
+    if (inUse > 0) {
+      toast({ variant: 'destructive', title: `A categoria "${cat.name}" tem ${inUse} produto(s)`, description: 'Mude esses produtos para outra categoria (seleccione-os e use "Mudar categoria") e depois apague a categoria.' });
+      return false;
+    }
+    try {
+      const ref = doc(firestore, `companies/${companyId}/catalogCategories`, categoryId);
+      if (typeof navigator !== 'undefined' && !navigator.onLine) deleteDoc(ref).catch(() => { });
+      else await deleteDoc(ref);
+      return true;
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Não foi possível apagar a categoria', description: e?.message });
+      return false;
+    }
+  }, [isReadOnly, toast, firestore, companyId, catalogCategoriesData, catalogProductsData]);
+
   const addRawMaterial = useCallback(async (material: Omit<RawMaterial, 'id'>) => {
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
@@ -482,7 +549,7 @@ export function useSettingsActions(core: InventoryCore) {
       toast({ variant: 'destructive', title: 'Erro ao Unificar', description: 'Ocorreu um erro ao tentar unificar os produtos.' });
     }
   }, [productsCollectionRef, firestore, companyId, productsData, toast]);
-  return { addCatalogProduct, addCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts };
+  return { addCatalogProduct, addCatalogCategory, deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts };
 }
 
 export type SettingsActions = ReturnType<typeof useSettingsActions>;

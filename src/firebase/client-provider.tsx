@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
 import { FirebaseProvider } from '@/firebase/provider';
 import { InventoryProvider } from '@/context/inventory-context';
@@ -19,7 +18,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
             <FinanceProvider>
               <FirebaseErrorListener />
               <ClientLayout>{children}</ClientLayout>
-              <Toaster />
             </FinanceProvider>
           </CRMProvider>
         </InventoryProvider>
