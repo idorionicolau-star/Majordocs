@@ -122,7 +122,7 @@ function fuzzyWord(tok: string, nameWords: string[]): boolean {
  * as palavras de ligação ("de", "para") não contam, e se nada bater, tolera uma ou duas letras trocadas
  * (o que o ditado costuma errar). Começos de nome primeiro.
  */
-export function searchProducts(products: Product[], term: string, limit = 8, fuzzy = true): Product[] {
+export function searchProducts<T extends { name: string }>(products: T[], term: string, limit = 8, fuzzy = true): T[] {
     const t = normalizeString(term.trim()).replace(/[()\[\]{}"'`´]/g, " ").replace(/\s+/g, " ").trim();
     if (!t) return [];
     const all = t.split(" ").filter(Boolean);
@@ -131,7 +131,7 @@ export function searchProducts(products: Product[], term: string, limit = 8, fuz
     const toks = tokens.length ? tokens : all;
 
     const run = (match: (name: string, words: string[], tok: string) => boolean) => {
-        const scored: { p: Product; score: number }[] = [];
+        const scored: { p: T; score: number }[] = [];
         for (const p of products) {
             const name = normalizeString(p.name);
             const words = name.split(/[^a-z0-9.,]+/).filter(Boolean);

@@ -53,15 +53,15 @@ export function wordSimilarity(a: string, b: string): number {
     return sim;
 }
 
-export type Scored = { product: Product; score: number };
+export type Scored<T = Product> = { product: T; score: number };
 
 /** Produtos mais parecidos com o que se disse, do mais ao menos parecido. */
-export function approxProducts(products: Product[], term: string, limit = 5): Scored[] {
+export function approxProducts<T extends { name: string }>(products: T[], term: string, limit = 5): Scored<T>[] {
     const all = normalizeString(term).replace(/[^a-z0-9.\s]/g, ' ').split(/\s+/).filter(Boolean);
     const qt = all.filter((w) => !STOP.has(w));
     const tokens = qt.length ? qt : all;
     if (!tokens.length) return [];
-    const out: Scored[] = [];
+    const out: Scored<T>[] = [];
     for (const product of products) {
         const words = normalizeString(product.name).replace(/[^a-z0-9.\s]/g, ' ').split(/\s+/).filter((w) => w && !STOP.has(w));
         if (!words.length) continue;
