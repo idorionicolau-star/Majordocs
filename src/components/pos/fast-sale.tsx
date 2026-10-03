@@ -143,6 +143,8 @@ export function FastSale() {
     // Enter escolhe o primeiro que se pode vender — não um esgotado que aparece no topo.
     useEffect(() => setHighlight(Math.max(0, results.findIndex((p) => avail(p) > 0))), [parsed.term]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // O disponível mostrado no carrinho acompanha o stock actual (outra venda pode ter mexido nele); a linha guarda o do momento em que entrou.
+    const liveAvail = (l: { key: string; available: number }) => { const p = scoped.find((x) => `${x.name}|${x.location || ""}` === l.key); return p ? avail(p) : l.available; };
     const inCart = (p: Product) => lines.find((l) => l.key === `${p.name}|${p.location || ""}`);
 
     const focusQty = (key: string) =>
@@ -261,7 +263,7 @@ export function FastSale() {
     const paid = paidText.trim() === "" ? total : Math.max(0, toNumber(paidText) || 0);
     const debt = Math.max(0, total - paid);
     const change = Math.max(0, paid - total);
-    const overStock = lines.filter((l) => l.qty > l.available);
+    const overStock = lines.filter((l) => l.qty > liveAvail(l));
     const zeroPrice = lines.filter((l) => !(l.price > 0));
     const isProforma = docType === "Factura Proforma";
     // Betão ainda a secar não se carrega hoje: só se vende como "levanta depois".
@@ -467,7 +469,7 @@ export function FastSale() {
                             {favourites.map((p) => (
                                 <button key={p.instanceId} type="button" onClick={() => add(p)} className="shrink-0 whitespace-nowrap rounded-full border bg-card px-3 py-2 text-left text-sm hover:border-primary">
                                     <span className="font-medium">{p.name}</span>
-                                    <span className="ml-1.5 text-xs text-muted-foreground">{formatCurrency(priceOf(p))}</span>
+                                    <span className="ml-1.5 text-xs text-muted-foreground">{formatCurrency(priceOf(p))} · {fmtQ(avail(p))} disp.</span>
                                 </button>
                             ))}
                         </div>
@@ -481,11 +483,17 @@ export function FastSale() {
                     <p className="mb-1.5 flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><ShoppingCart className="h-3.5 w-3.5" /> Carrinho ({lines.length})</p>
                     <div className="overflow-hidden rounded-2xl border bg-card">
                         {lines.map((l) => {
-                            const over = l.qty > l.available && !isProforma;
+                            const liveA = liveAvail(l);
+                            const over = l.qty > liveA && !isProforma;
                             return (
                                 <div key={l.key} className={cn("border-b px-3 py-3 last:border-0", over && "bg-red-500/10")}>
                                     <div className="flex items-start justify-between gap-2">
-                                        <p className="min-w-0 truncate text-sm font-semibold">{l.name}</p>
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-semibold">{l.name}</p>
+                                            <p className={cn("text-xs", over ? "font-semibold text-red-600" : liveA - l.qty === 0 ? "text-amber-600" : "text-muted-foreground")} data-testid="cart-available">
+                                                Disponível: {fmtQ(liveA)} {l.unit}{!isProforma && !over && <> · fica{liveA - l.qty === 0 ? " 0" : ` ${fmtQ(liveA - l.qty)}`}</>}
+                                            </p>
+                                        </div>
                                         <button type="button" aria-label="Remover" onClick={() => remove(l.key)} className="shrink-0 p-1 text-muted-foreground"><Trash2 className="h-4 w-4" /></button>
                                     </div>
                                     <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -515,7 +523,7 @@ export function FastSale() {
                                         />
                                         <span className="ml-auto text-sm font-bold tabular-nums">{formatCurrency(l.qty * l.price)}</span>
                                     </div>
-                                    {over && <p className="mt-1 text-xs font-semibold text-red-600">Só há {fmtQ(l.available)} {l.unit} disponíveis.</p>}
+                                    {over && <p className="mt-1 text-xs font-semibold text-red-600">Só há {fmtQ(liveA)} {l.unit} disponíveis.</p>}
                                     {!(l.price > 0) && <p className="mt-1 text-xs font-semibold text-red-600">Indique o preço.</p>}
                                     {!!l.ref && l.price > 0 && Math.abs(l.price - l.ref) >= 0.01 && user?.role !== "Admin" && user?.role !== "Dono" && (
                                         <p className="mt-1 text-xs font-semibold text-amber-600">Preço habitual {formatCurrency(l.ref)} — o gestor vai ser avisado para confirmar.</p>

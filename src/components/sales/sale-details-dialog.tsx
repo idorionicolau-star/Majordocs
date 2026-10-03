@@ -1,6 +1,7 @@
 
 "use client";
 
+import { formatSaleMoment } from "@/lib/sale-time";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import type { Sale } from "@/lib/types";
 import { Calendar, User, Box, Hash } from "lucide-react";
@@ -24,8 +25,6 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
 );
 
 export function SaleDetailsDialog({ sale, open, onOpenChange, trigger }: SaleDetailsDialogProps) {
-    const saleDate = new Date(sale.date);
-
     const formattedSubtotal = formatCurrency(sale.subtotal);
     const formattedDiscount = sale.discount ? formatCurrency(sale.discount) : 'N/A';
     const formattedVat = sale.vat ? formatCurrency(sale.vat) : 'N/A';
@@ -41,7 +40,7 @@ export function SaleDetailsDialog({ sale, open, onOpenChange, trigger }: SaleDet
         >
             <div className="grid gap-6 py-4">
                 <div className="grid grid-cols-2 gap-4">
-                    <DetailItem icon={Calendar} label="Data" value={saleDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })} />
+                    <DetailItem icon={Calendar} label="Data e hora" value={formatSaleMoment(sale)} />
                     <DetailItem icon={User} label="Cliente" value={sale.clientName || 'N/A'} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">

@@ -1,6 +1,7 @@
 
 "use client"
 
+import { saleMoment } from "@/lib/sale-time";
 import * as React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { Sale, Company } from "@/lib/types"
@@ -329,8 +330,13 @@ export const columns = (options: ColumnsOptions): ColumnDef<Sale>[] => {
             accessorKey: "date",
             header: "Data",
             cell: ({ row }) => {
-                const date = new Date(row.original.date);
-                return date.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+                const m = saleMoment(row.original);
+                return (
+                    <div className="leading-tight">
+                        <div>{m.day}</div>
+                        {m.time && <div className="text-xs text-muted-foreground tabular-nums">{m.time}</div>}
+                    </div>
+                );
             }
         },
         {
