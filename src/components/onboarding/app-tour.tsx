@@ -1,8 +1,9 @@
 "use client";
 
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Banknote, Boxes, ChevronLeft, ChevronRight, ClipboardList, PartyPopper, Smartphone, Users, Zap, type LucideIcon } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Banknote, Boxes, ChevronLeft, ChevronRight, ClipboardList, PartyPopper, PlayCircle, Smartphone, Users, X, Zap, type LucideIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
@@ -44,6 +45,13 @@ const SLIDES: Slide[] = [
 ];
 
 const seenKey = (companyId?: string | null) => `majorstockx-tour-seen-${companyId || "x"}`;
+const resumeKey = (companyId?: string | null) => `majorstockx-tour-resume-${companyId || "x"}`;
+const readResume = (companyId?: string | null): number | null => {
+    try { const v = localStorage.getItem(resumeKey(companyId)); return v === null ? null : Number(v); } catch { return null; }
+};
+const writeResume = (companyId: string | null | undefined, v: number | null) => {
+    try { if (v === null) localStorage.removeItem(resumeKey(companyId)); else localStorage.setItem(resumeKey(companyId), String(v)); } catch { /* ignore */ }
+};
 
 export function isTourSeen(companyId?: string | null): boolean {
     try { return localStorage.getItem(seenKey(companyId)) === "1"; } catch { return false; }
@@ -76,13 +84,31 @@ export function TourHost() {
     const [open, setOpen] = useState(false);
     const [celebrate, setCelebrate] = useState(false);
     const [i, setI] = useState(0);
+    /** o tour ficou a meio (a pessoa foi ver um ecrã): em que passo continuar; null = não há tour a meio */
+    const [resume, setResumeState] = useState<number | null>(null);
+    const pathname = usePathname();
+    const autoDone = useRef(false);
+
+    // grava só quando a pessoa age (um efeito a gravar sempre apagava o valor guardado antes de ele ser lido)
+    const setResume = (v: number | null) => { setResumeState(v); writeResume(companyId, v); };
+    useEffect(() => { if (companyId && !isTourSeen(companyId)) setResumeState(readResume(companyId)); }, [companyId]);
+
+    // Empresa nova (ainda sem vendas): o tour abre sozinho, uma vez, no primeiro dashboard — antes dos "primeiros passos".
+    useEffect(() => {
+        if (autoDone.current || !ctx || ctx.loading || !companyId || pathname !== "/dashboard") return;
+        autoDone.current = true;
+        const privileged = ctx.user?.role === "Admin" || ctx.user?.role === "Dono";
+        if (!privileged || isTourSeen(companyId) || readResume(companyId) !== null || (ctx.sales?.length || 0) > 0) return;
+        setCelebrate(false); setI(0); setOpen(true);
+    }, [ctx, companyId, pathname]);
 
     useEffect(() => {
         const on = (e: Event) => {
             // depois da 1.ª venda só aparece uma vez; pedido pelo utilizador aparece sempre
             const wantsCelebrate = !!(e as CustomEvent).detail?.celebrate;
             if (wantsCelebrate && isTourSeen(companyId)) return;
-            setCelebrate(wantsCelebrate); setI(0); setOpen(true);
+            const at = readResume(companyId);
+            setCelebrate(wantsCelebrate); setI(!wantsCelebrate && at !== null ? at : 0); setResume(null); setOpen(true);
         };
         window.addEventListener("msx:tour", on);
         if (new URLSearchParams(window.location.search).get("tour") === "1") {
@@ -95,9 +121,19 @@ export function TourHost() {
     const slides = SLIDES.filter((s) => !(reseller && s.manufacturingOnly));
     const slide = slides[Math.min(i, slides.length - 1)];
     const last = i >= slides.length - 1;
-    const close = () => { setOpen(false); markTourSeen(companyId); };
+    const close = () => { setOpen(false); setResume(null); markTourSeen(companyId); };
+    /** foi ver o ecrã: o tour não acaba, fica à espera num botão e retoma no passo seguinte */
+    const visit = () => { setOpen(false); setResume(Math.min(i + 1, slides.length - 1)); };
+    const goOn = () => { if (resume === null) return; setI(Math.min(resume, slides.length - 1)); setCelebrate(false); setResume(null); setOpen(true); };
 
     return (
+        <>
+        {!open && resume !== null && (
+            <div className="fixed bottom-20 right-3 z-40 flex items-center gap-1 rounded-full border bg-card py-1 pl-1 pr-1 shadow-lg md:bottom-6 md:right-6">
+                <Button size="sm" className="rounded-full" onClick={goOn}><PlayCircle className="mr-1.5 h-4 w-4" /> Continuar o tour ({resume + 1}/{slides.length})</Button>
+                <button type="button" onClick={close} aria-label="Terminar o tour" className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
+            </div>
+        )}
         <Dialog open={open} onOpenChange={(o) => { if (!o) close(); else setOpen(true); }}>
             <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-md">
                 {celebrate && i === 0 && (
@@ -117,8 +153,9 @@ export function TourHost() {
                     ))}
                 </ul>
                 {slide.href && (
-                    <Button asChild variant="outline" className="w-full" onClick={close}><Link href={slide.href}>{slide.open}</Link></Button>
+                    <Button asChild variant="outline" className="w-full"><Link href={slide.href} onClick={visit}>{slide.open}</Link></Button>
                 )}
+                {slide.href && <p className="-mt-2 text-center text-xs text-muted-foreground">Depois pode continuar o tour no botão que fica no canto.</p>}
                 <div className="flex items-center justify-between gap-2 pt-1">
                     <Button variant="ghost" size="sm" onClick={() => setI((n) => Math.max(0, n - 1))} disabled={i === 0} aria-label="Anterior"><ChevronLeft className="h-4 w-4" /></Button>
                     <div className="flex gap-1.5" aria-label={`Passo ${i + 1} de ${slides.length}`}>
@@ -131,5 +168,6 @@ export function TourHost() {
                 {!last && <button type="button" onClick={close} className="text-center text-xs text-muted-foreground underline-offset-4 hover:underline">Saltar</button>}
             </DialogContent>
         </Dialog>
+        </>
     );
 }

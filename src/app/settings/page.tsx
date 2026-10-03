@@ -333,13 +333,24 @@ export default function SettingsPage() {
     }
   }, [companyData]);
 
+  // /settings#company abre directamente o separador pedido (e, na Empresa, leva ao primeiro campo por preencher)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return;
+    const go = () => {
       const hash = window.location.hash.substring(1);
-      if (hash) {
-        setActiveTab(hash);
+      if (!hash) return;
+      setActiveTab(hash);
+      if (hash === 'company') {
+        window.setTimeout(() => {
+          const el = ['taxId', 'phone', 'address'].map((id) => document.getElementById(id) as HTMLInputElement | null).find((i) => i && !i.value) || document.getElementById('taxId');
+          el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          el?.focus({ preventScroll: true });
+        }, 500);
       }
-    }
+    };
+    go();
+    window.addEventListener('hashchange', go);
+    return () => window.removeEventListener('hashchange', go);
   }, []);
 
   useEffect(() => {

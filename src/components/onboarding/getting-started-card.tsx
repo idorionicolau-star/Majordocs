@@ -13,7 +13,7 @@ const dismissKey = (companyId?: string | null) => `majorstockx-started-hidden-${
 const COPY: Record<StepId, { icon: LucideIcon; title: string; hint: string; action: string; href?: string }> = {
     products: { icon: PackagePlus, title: "Adicionar produtos", hint: "Um a um no Stock Rápido, ou vários de uma vez no Catálogo.", action: "Adicionar", href: "/inventory/quick" },
     sale: { icon: ShoppingCart, title: "Fazer a primeira venda", hint: "Leva segundos na Venda Rápida.", action: "Vender", href: "/pos" },
-    company: { icon: Building2, title: "Completar os dados da empresa", hint: "NUIT, contactos e logótipo aparecem nos documentos.", action: "Preencher", href: "/settings" },
+    company: { icon: Building2, title: "Completar os dados da empresa", hint: "NUIT, contactos e logótipo aparecem nos documentos.", action: "Preencher", href: "/settings#company" },
     tour: { icon: PlayCircle, title: "Ver como a app funciona", hint: "Um minuto, seis ecrãs.", action: "Ver" },
 };
 
