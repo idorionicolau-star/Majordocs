@@ -144,7 +144,7 @@ export function VariantsEditor({ state, onChange, baseName, basePrice, existingN
                                             onChange={(e) => onQuantities({ ...quantities, [v.name]: e.target.value })}
                                             placeholder={unit || "Qtd"}
                                             aria-label={`Quantidade de ${v.name}`}
-                                            className="h-8 w-24 text-center font-semibold tabular-nums"
+                                            className="h-8 w-20 shrink-0 text-center sm:w-24 font-semibold tabular-nums"
                                         />
                                     )}
                                     <Input
@@ -153,7 +153,7 @@ export function VariantsEditor({ state, onChange, baseName, basePrice, existingN
                                         onChange={(e) => set({ prices: { ...state.prices, [v.name]: e.target.value } })}
                                         placeholder={basePrice ? formatCurrency(basePrice) : "Preço"}
                                         aria-label={`Preço de ${v.name}`}
-                                        className={cn("h-8 w-28 text-right tabular-nums")}
+                                        className={cn("h-8 w-24 shrink-0 text-right tabular-nums sm:w-28")}
                                     />
                                 </li>
                             ))}
