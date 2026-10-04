@@ -82,7 +82,10 @@ export async function applyPaidPayment(reference: string, info: { providerId?: s
             ...(info.providerId ? { providerId: info.providerId } : {}),
             ...(info.transactionId ? { transactionId: info.transactionId } : {}),
         });
+        // pagamento com código de convite: conta mais um mês com desconto (para o lembrete na app)
+        const coupon = p.coupon && c.coupon?.code === p.coupon ? { coupon: { ...c.coupon, monthsUsed: (Number(c.coupon.monthsUsed) || 0) + 1 } } : {};
         tx.set(companyRef, {
+            ...coupon,
             status: 'active',
             plan: p.planId,
             subscriptionEndsAt: end.toISOString(),

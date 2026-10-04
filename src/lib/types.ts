@@ -86,6 +86,8 @@ export type Company = {
   /** Quando o teste foi (re)iniciado: empresas novas ao registar; antigas no reinício único. Se existir, não há novo reinício. */
   trialRestartedAt?: string;
   subscriptionEndsAt?: string;
+  /** Código de convite/desconto (gravado só pelo servidor; serve para mostrar e lembrar). Ver lib/coupon-core.ts */
+  coupon?: import('@/lib/coupon-core').CompanyCoupon;
   /** Numeric copy (end + grace) used by Firestore rules */
   paidUntilMs?: number;
   plan?: string;

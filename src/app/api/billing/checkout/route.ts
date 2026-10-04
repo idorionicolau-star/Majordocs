@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 import { initializeAdmin, verifyIdToken } from '@/lib/firebase-admin';
 import { zumbopay } from '@/lib/billing-server';
 import { planById } from '@/lib/plans';
+import { findCoupon } from '@/lib/coupons-server';
+import { couponAmount } from '@/lib/coupon-core';
 
 /**
  * Cria um pagamento na ZumboPay (checkout alojado: M-Pesa, e-Mola e cartão) para a empresa de quem está
@@ -33,11 +35,23 @@ export async function POST(req: Request) {
     const company = await db.doc(`companies/${companyId}`).get();
     const now = new Date();
 
+    // Código de convite: preço especial nos primeiros meses do Mensal. O preço vem da lista do servidor e os meses
+    // usados contam-se nos pagamentos (que só o servidor escreve) — nada do que está na empresa é confiado.
+    const coupon = findCoupon(company.get('coupon.code') || '');
+    let amount = plan.amount;
+    if (coupon) {
+        const used = (await db.collection(`companies/${companyId}/payments`).where('coupon', '==', coupon.code).where('status', '==', 'paid').get()).size;
+        const c = couponAmount(coupon.def, used, plan.id);
+        if (c.amount != null) amount = c.amount;
+    }
+    const withCoupon = coupon && amount !== plan.amount ? coupon.code : null;
+
     // Índice referência → empresa, para o webhook encontrar o pagamento sem confiar no que vem no corpo.
     await db.doc(`billingRefs/${reference}`).set({ companyId, reference, createdAt: now.toISOString() });
     const paymentRef = db.doc(`companies/${companyId}/payments/${reference}`);
     await paymentRef.set({
-        reference, provider: 'zumbopay', planId: plan.id, months: plan.months, amount: plan.amount,
+        reference, provider: 'zumbopay', planId: plan.id, months: plan.months, amount,
+        ...(withCoupon ? { coupon: withCoupon, fullAmount: plan.amount } : {}),
         status: 'pending', createdAt: now.toISOString(), createdBy: emp.get('username') || decoded.uid,
     });
 
@@ -46,10 +60,10 @@ export async function POST(req: Request) {
             method: 'POST',
             headers: { 'Idempotency-Key': reference },
             body: JSON.stringify({
-                title: `MajorStockX — ${plan.label}`.slice(0, 80),
+                title: `MajorStockX — ${plan.label}${withCoupon ? ` (código ${withCoupon})` : ''}`.slice(0, 80),
                 // a nossa referência vai aqui: se o webhook devolver a descrição, é por ela que se encontra o pagamento
                 description: `${reference} · ${company.get('name') || companyId}`.slice(0, 200),
-                amount: plan.amount,
+                amount,
                 currency: 'MZN',
                 channels: ['mpesa', 'emola', 'card'],
                 wallet_id: walletId,
@@ -64,7 +78,7 @@ export async function POST(req: Request) {
         await Promise.all([d.reference, d.slug, d.id]
             .filter((k): k is string => !!k && !k.includes('/') && k !== reference)
             .map((k) => db.doc(`billingRefs/${k}`).set({ companyId, reference, createdAt: now.toISOString() })));
-        return NextResponse.json({ reference, checkoutUrl: d.checkout_url });
+        return NextResponse.json({ reference, checkoutUrl: d.checkout_url, amount });
     } catch (e: any) {
         await paymentRef.update({ status: 'error', error: String(e?.message || e).slice(0, 300) });
         return NextResponse.json({ error: 'Não foi possível iniciar o pagamento.', details: e?.message }, { status: 502 });

@@ -1,7 +1,8 @@
 
 'use client';
 
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
+import { savePendingCoupon, PENDING_COUPON_KEY } from '@/components/billing/pending-coupon';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -36,6 +37,15 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // Código de convite: vem no link (/register?codigo=MJTP86) ou escreve-se; aplica-se quando a empresa abrir.
+  const [inviteCode, setInviteCode] = useState('');
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const c = q.get('codigo') || q.get('convite') || q.get('cupao') || q.get('code');
+    if (c) setInviteCode(c.trim().toUpperCase());
+  }, []);
+  const keepInvite = () => savePendingCoupon(inviteCode);
+  const dropInvite = () => { try { localStorage.removeItem(PENDING_COUPON_KEY); } catch { /* ignore */ } };
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -61,6 +71,7 @@ export default function RegisterPage() {
       return;
     }
 
+    keepInvite();
     try {
       const success = await context.registerCompany(data.companyName, data.adminUsername?.trim() || deriveUsername(data.adminEmail), data.adminEmail, data.adminPassword, data.businessType);
       if (success) {
@@ -69,8 +80,9 @@ export default function RegisterPage() {
           description: `A fazer login com a conta "${data.adminEmail}"...`,
         });
         // The onAuthStateChanged listener in context will handle redirection to the dashboard
-      }
+      } else dropInvite();
     } catch (error: any) {
+      dropInvite();
       // The toast for the error is already handled inside the registerCompany function
     } finally {
       setIsLoading(false);
@@ -96,8 +108,10 @@ export default function RegisterPage() {
       return;
     }
 
+    keepInvite();
     try {
       const success = await context.registerCompanyWithGoogle(currentCompanyName, currentBusinessType);
+      if (!success) dropInvite();
       if (success) {
         toast({
           title: 'Empresa Registada com Sucesso!',
@@ -107,6 +121,7 @@ export default function RegisterPage() {
       }
     } catch (error: any) {
       // Error handled in context
+      dropInvite();
     } finally {
       setIsGoogleLoading(false);
     }
@@ -201,6 +216,11 @@ export default function RegisterPage() {
                   </FormItem>
                 )}
               />
+              <div className="space-y-1.5">
+                <Label htmlFor="inviteCode">Código de convite <span className="font-normal text-muted-foreground">(opcional)</span></Label>
+                <Input id="inviteCode" value={inviteCode} onChange={(e) => setInviteCode(e.target.value.toUpperCase())} placeholder="Ex.: MJTP86" autoComplete="off" autoCapitalize="characters" />
+                {inviteCode && <p className="text-[11px] text-muted-foreground">O desconto do convite aplica-se ao plano Mensal quando subscrever.</p>}
+              </div>
               <div className="flex items-center space-x-2">
                 <Checkbox id="show-password" checked={showPassword} onCheckedChange={(checked) => setShowPassword(!!checked)} />
                 <label
