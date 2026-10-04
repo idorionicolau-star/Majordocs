@@ -71,3 +71,11 @@ describe('mudar o nome de um produto', () => {
         expect(aliases.has('cimento')).toBe(false);
     });
 });
+
+describe('produto que passa a ter variações', () => {
+    it('o produto actual vira a primeira variação (nome, família e valores juntos)', () => {
+        const plan = planRename([{ from: 'Cimento', to: 'Cimento - Cinzento' }], { catalog, products, recipes: [], orders: [] }, undefined, { variantGroup: 'Cimento', variantValues: { Cor: 'Cinzento' } });
+        expect(plan.catalog[0].data).toEqual({ name: 'Cimento - Cinzento', formerNames: ['Cimento'], variantGroup: 'Cimento', variantValues: { Cor: 'Cinzento' } });
+        expect(plan.products.every((p) => p.data.variantGroup === 'Cimento')).toBe(true);
+    });
+});

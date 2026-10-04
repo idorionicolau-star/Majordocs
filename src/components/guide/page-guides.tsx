@@ -96,6 +96,7 @@ export const PAGE_GUIDES: Guide[] = [
             { target: "qs-modes", title: "O que vai fazer?", body: <><b>Entrada</b>: chegou mercadoria. <b>Saída</b>: consumo, quebra, oferta. <b>Contagem</b>: contar o que há e acertar o stock.</> },
             { target: "qs-location", title: "O local", body: <>Escolha o armazém ou loja onde está a mexer.</> },
             { target: "qs-search", title: "Produto e quantidade", body: <>Escreva <b>cimento 20</b> e carregue em Enter — já está no lote. Se o produto ainda não existir, pode criá-lo aqui mesmo (com variações, se precisar).</> },
+            { target: "qs-search", title: "Editar nome e variações", body: <>Toque num produto e, no painel que abre, em <b>✏️ Editar</b>: muda o nome em todo o programa, <b>cria variações</b> (cores, texturas…) num produto que ainda não as tem, muda ou acrescenta variações — sem ir ao Catálogo.</> },
             { target: "qs-scan-voice", title: "Câmara e voz", body: <>Leia o código de barras com a câmara, ou dite: <b>«vinte sacos de cimento»</b>. A app mostra o que ouviu para confirmar com Enter.</> },
             { target: "qs-lot|qs-help", title: "O lote", body: <>Os artigos vão-se juntando num lote. Pode corrigir as quantidades antes de confirmar. O lote fica guardado no telemóvel, mesmo sem internet ou se a página fechar.</> },
             { target: "qs-confirm", title: "Confirmar tudo de uma vez", body: <>Escreva uma nota (fornecedor, guia, motivo) e confirme. Cada artigo fica registado no histórico de movimentos.</> },

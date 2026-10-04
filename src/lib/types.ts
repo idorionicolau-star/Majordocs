@@ -462,7 +462,7 @@ export interface InventoryContextType {
 
   mergeProducts: (targetProductId: string, sourceProductIds: string[]) => Promise<void>;
   /** Muda o nome em todo o programa (catálogo, stock, receitas, encomendas em aberto). Ver lib/rename.ts */
-  renameProduct: (oldName: string, newName: string, opts?: { family?: boolean }) => Promise<boolean>;
+  renameProduct: (oldName: string, newName: string, opts?: { family?: boolean; set?: { variantGroup?: string; variantValues?: Record<string, string> } }) => Promise<boolean>;
   restoreItem: (collectionName: string, id: string) => Promise<void>;
   hardDelete: (collectionName: string, id: string) => Promise<void>;
   exportCompanyData: () => Promise<void>;

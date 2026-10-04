@@ -619,6 +619,9 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                     name={renaming}
                     open={!!renaming}
                     onClose={() => setRenaming(null)}
+                    location={location}
+                    withQty={mode === "in"}
+                    onEntries={(entries) => { for (const e of entries) addLine(newLine(e.product.name, e.qty, e.product.price, e.product)); }}
                     onDone={(pairs) => {
                         // o que já estava na lista por gravar segue com o nome novo
                         const to = new Map(pairs.map((x) => [nameKey(x.from), x.to]));
@@ -745,11 +748,11 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                                         type="button"
                                         data-tour="qs-rename"
                                         onClick={() => setRenaming(picked.product!.name)}
-                                        aria-label={`Mudar o nome de ${picked.product.name}`}
-                                        title="Mudar nome"
-                                        className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        aria-label={`Editar ${picked.product.name}: nome e variações`}
+                                        title="Editar nome e variações"
+                                        className="flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
                                     >
-                                        <Pencil className="h-4 w-4" />
+                                        <Pencil className="h-3.5 w-3.5" /> Editar
                                     </button>
                                 )}
                             </div>
