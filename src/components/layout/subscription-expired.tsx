@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Lock, CreditCard, Mail } from 'lucide-react';
+import { Lock, CreditCard, Mail, MessageCircle } from 'lucide-react';
+import { emailLink, SUPPORT, whatsappLink } from '@/lib/support';
 
 export function SubscriptionExpired() {
     return (
@@ -30,9 +31,17 @@ export function SubscriptionExpired() {
                         <CreditCard className="w-4 h-4 mr-2" />
                         Pagar subscrição (M-Pesa, e-Mola, cartão)
                     </Button>
-                    <Button variant="outline" className="w-full" onClick={() => window.location.href = 'mailto:suporte@majorstockx.com?subject=Renovação%20de%20Assinatura'}>
-                        <Mail className="w-4 h-4 mr-2" />
-                        Contactar Suporte / Vendas
+                    <Button asChild variant="outline" className="w-full">
+                        <a href={whatsappLink('Olá, preciso de ajuda para renovar a minha subscrição MajorStockX.')} target="_blank" rel="noopener noreferrer">
+                            <MessageCircle className="w-4 h-4 mr-2" />
+                            Suporte por WhatsApp ({SUPPORT.whatsappDisplay})
+                        </a>
+                    </Button>
+                    <Button asChild variant="outline" className="w-full">
+                        <a href={emailLink('Renovação de Assinatura')}>
+                            <Mail className="w-4 h-4 mr-2" />
+                            Suporte por email
+                        </a>
                     </Button>
                     <Button variant="ghost" className="w-full text-slate-500" onClick={() => window.location.href = '/login'}>
                         Voltar ao Login

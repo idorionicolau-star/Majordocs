@@ -22,6 +22,8 @@ import { TourHost } from '@/components/onboarding/app-tour';
 import { GuideHost } from '@/components/guide/guide-host';
 import { PageTutorialHint } from '@/components/guide/page-help';
 import { SeenSync } from '@/components/guide/seen-sync';
+import { SupportDialog } from '@/components/support/support-dialog';
+import { whatsappLink } from '@/lib/support';
 import { OnboardingWelcome } from '@/components/onboarding/welcome';
 
 import { LoadingBar } from './loading-bar';
@@ -154,7 +156,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
               💳 Pagar agora
             </a>
             <a 
-              href="https://wa.me/258843427497"
+              href={whatsappLink("Olá, a minha conta MajorStockX está em modo leitura. Preciso de ajuda para reactivar.")}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white text-rose-700 hover:bg-white/90 px-3 py-1 rounded-md text-xs font-bold transition-all shadow-sm flex items-center gap-1"
@@ -194,6 +196,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <OnboardingWelcome />
           <PageTutorialHint />
           <SeenSync />
+          <SupportDialog />
           <GuideHost />
           <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
         </div>
