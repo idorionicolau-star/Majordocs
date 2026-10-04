@@ -63,7 +63,7 @@ function ValuesInput({ values, suggestions, onChange }: { values: string[]; sugg
  * "Este produto tem variações?" — o utilizador escolhe os tipos (Cor, Textura…), os valores de cada um e vê já
  * as variações que vão ser criadas (cada uma com o seu stock), podendo pôr preços diferentes.
  */
-export function VariantsEditor({ state, onChange, baseName, basePrice, existingNames, quantities, onQuantities, unit, valueHints, hideSwitch }: {
+export function VariantsEditor({ state, onChange, baseName, basePrice, existingNames, quantities, onQuantities, unit, valueHints, hideSwitch, usedValues }: {
     state: VariantsState;
     onChange: (s: VariantsState) => void;
     baseName: string;
@@ -77,6 +77,8 @@ export function VariantsEditor({ state, onChange, baseName, basePrice, existingN
     valueHints?: Record<string, string[]>;
     /** Sem o interruptor: a pessoa já escolheu criar variações (ex.: "Nova variação de…"). */
     hideSwitch?: boolean;
+    /** Valores que a família já tem (por tipo): não aparecem nas sugestões — acrescentam-se variações novas. */
+    usedValues?: Record<string, string[]>;
 }) {
     const set = (patch: Partial<VariantsState>) => onChange({ ...state, ...patch });
     const setOption = (i: number, patch: Partial<VariantOption>) => set({ options: state.options.map((o, j) => (j === i ? { ...o, ...patch } : o)) });
@@ -114,7 +116,7 @@ export function VariantsEditor({ state, onChange, baseName, basePrice, existingN
                                     <Button type="button" variant="ghost" size="sm" className="ml-auto text-muted-foreground" onClick={() => set({ options: state.options.filter((_, j) => j !== i) })}>Tirar este tipo</Button>
                                 )}
                             </div>
-                            <ValuesInput values={o.values} suggestions={Array.from(new Set([...(valueHints?.[o.name.trim()] || []), ...(SUGGESTED_VALUES[o.name.trim()] || [])]))} onChange={(values) => setOption(i, { values })} />
+                            <ValuesInput values={o.values} suggestions={Array.from(new Set([...(valueHints?.[o.name.trim()] || []), ...(SUGGESTED_VALUES[o.name.trim()] || [])])).filter((v) => !(usedValues?.[o.name.trim()] || []).some((u) => u.toLowerCase() === v.toLowerCase()))} onChange={(values) => setOption(i, { values })} />
                         </div>
                     ))}
                     <datalist id="variant-option-names">{SUGGESTED_OPTIONS.map((n) => <option key={n} value={n} />)}</datalist>

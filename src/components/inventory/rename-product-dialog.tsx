@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, Layers, Loader2, Pencil, Plus, X } from "lucide-react";
+import { Check, Layers, Loader2, Pencil, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,8 @@ import { useInventory } from "@/context/inventory-context";
 import { useToast } from "@/hooks/use-toast";
 import { nameKey, pushPriceHistory } from "@/lib/catalog-view";
 import { renameClash, renamePairs, type RenamePair } from "@/lib/rename";
-import { optionsOfFamily, SUGGESTED_OPTIONS, SUGGESTED_VALUES, variantName, type VariantValues } from "@/lib/variants";
+import { cleanOptions, optionsOfFamily, planVariants, SUGGESTED_VALUES, variantName, type VariantValues } from "@/lib/variants";
+import { VariantsEditor, type VariantsState } from "@/components/catalog/variants-editor";
 import type { Product } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -20,7 +21,7 @@ export function useCanRename() {
 }
 
 /** Variação nova com a quantidade que entrou agora (só em Entrada) — vai para o lote do Stock Rápido. */
-export type NewVariantEntry = { product: Product; qty: number };
+export type NewVariantEntry = { product: Product; qty: number; /** o produto que já existia (agora 1.ª variação): entra no lote como produto existente */ existing?: boolean };
 
 const clean = (s: string) => s.trim().replace(/\s+/g, " ");
 const toQty = (s: string) => { const n = Number(String(s).replace(",", ".")); return Number.isFinite(n) && n > 0 ? n : 0; };
@@ -79,22 +80,26 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
     const [editing, setEditing] = useState<string | null>(null);
     const [editValues, setEditValues] = useState<VariantValues>({});
     const [editPrice, setEditPrice] = useState("");
-    const [adding, setAdding] = useState<VariantValues>({});
-    const [addQty, setAddQty] = useState("");
-    const [addPrice, setAddPrice] = useState("");
+    // variações novas: o mesmo editor do produto novo (tipos, valores com sugestões, quantidade e preço de cada uma)
+    const [vstate, setVstate] = useState<VariantsState>({ enabled: true, options: [{ name: "Cor", values: [] }], prices: {} });
+    const [vqty, setVqty] = useState<Record<string, string>>({});
+    /** num produto que passa a ter variações: em qual fica o stock que já existe */
+    const [stockTo, setStockTo] = useState("");
     // ---- criar variações num produto que não as tem
     const [converting, setConverting] = useState(false);
-    const [type, setType] = useState("Cor");
-    const [current, setCurrent] = useState("");
-    const [others, setOthers] = useState<{ value: string; qty: string; price: string }[]>([]);
-    const [otherText, setOtherText] = useState("");
 
     useEffect(() => {
         if (!open) return;
         setFamily(false); setValue(name); setSaving(false);
-        setEditing(null); setAdding({}); setAddQty(""); setAddPrice("");
-        setConverting(false); setType("Cor"); setCurrent(""); setOthers([]); setOtherText("");
-    }, [open, name]);
+        setEditing(null); setVqty({}); setStockTo(""); setConverting(false);
+        setVstate({ enabled: true, options: order.length ? order.map((n) => ({ name: n, values: [] })) : [{ name: "Cor", values: [] }], prices: {} });
+    }, [open, name, group]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const allNames = useMemo(() => all.map((p) => p.name), [all]);
+    const vOrder = cleanOptions(vstate.options).map((o) => o.name);
+    const vplan = planVariants(group || name, vstate.options, allNames);
+    const chosen = vplan.create.find((v) => v.name === stockTo) || vplan.create[0];
+    const familyHints = useMemo(() => Object.fromEntries(options.map((o) => [o.name, o.values])), [options]);
 
     const pairs = product ? renamePairs(product, value, all, family) : [];
     const clash = pairs.length ? renameClash(pairs, all) : null;
@@ -163,57 +168,47 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
         if (renamed) onDone?.([{ from: m.name, to }]);
     };
 
-    const addOne = async () => {
-        if (!group) return;
-        const values = Object.fromEntries(order.map((k) => [k, clean(adding[k] || "")]));
-        if (order.some((k) => !values[k])) return;
-        const n = variantName(group, values, order);
-        if (taken(n)) { toast({ variant: "destructive", title: "Essa variação já existe", description: n }); return; }
+    /** acrescenta à família as variações do editor (com quantidade e preço de cada uma) */
+    const addMany = async () => {
+        if (!group || !vplan.create.length || vplan.tooMany || saving) return;
         setSaving(true);
-        await createVariants(group, [{ values, qty: withQty ? toQty(addQty) : 0, price: toQty(addPrice) }], order);
+        await createVariants(group, vplan.create.map((v) => ({ values: v.values, qty: withQty ? toQty(vqty[v.name] || "") : 0, price: toQty(vstate.prices[v.name] || "") })), vOrder);
         setSaving(false);
-        setAdding({}); setAddQty(""); setAddPrice("");
-        toast({ title: "Variação criada", description: withQty && toQty(addQty) ? `«${n}» — ${toQty(addQty)} no lote, confirme para dar entrada.` : `«${n}» está no catálogo.` });
+        const inLot = withQty ? vplan.create.filter((v) => toQty(vqty[v.name] || "") > 0).length : 0;
+        toast({ title: `${vplan.create.length} variaç${vplan.create.length === 1 ? "ão criada" : "ões criadas"}`, description: inLot ? `${inLot} no lote — confirme para dar entrada.` : `Estão no catálogo de «${group}».` });
+        setVstate({ ...vstate, options: vstate.options.map((o) => ({ ...o, values: [] })), prices: {} });
+        setVqty({});
     };
-
-    const addOther = () => {
-        const v = clean(otherText);
-        if (!v) return;
-        if (nameKey(v) === nameKey(current) || others.some((o) => nameKey(o.value) === nameKey(v))) { setOtherText(""); return; }
-        setOthers([...others, { value: v, qty: "", price: "" }]);
-        setOtherText("");
-    };
-    const convertNames = () => {
-        const base = name;
-        const t = clean(type) || "Cor";
-        return { base, t, first: variantName(base, { [t]: clean(current) }, [t]), rest: others.map((o) => variantName(base, { [t]: o.value }, [t])) };
-    };
-    const convertClash = (() => {
-        if (!converting || !clean(current)) return null;
-        const c = convertNames();
-        return [c.first, ...c.rest].find((n) => nameKey(n) !== nameKey(name) && taken(n)) || null;
-    })();
 
     const convert = async () => {
-        if (!clean(current) || convertClash || saving) return;
-        const { base, t, first } = convertNames();
+        if (!chosen || vplan.tooMany || saving) return;
+        const base = name;
         setSaving(true);
-        const values = { [t]: clean(current) };
-        // o produto actual (com o seu stock e histórico) passa a ser a 1.ª variação
-        const ok = await renameProduct(name, first, { set: { variantGroup: base, variantValues: values } });
+        // preço próprio da variação onde fica o stock: grava-se antes de mudar o nome
+        const ownPrice = toQty(vstate.prices[chosen.name] || "");
+        if (ownPrice) await setPrice(name, ownPrice);
+        // o produto actual (com o seu stock e histórico) passa a ser a variação escolhida
+        const ok = await renameProduct(name, chosen.name, { set: { variantGroup: base, variantValues: chosen.values } });
         if (!ok) { setSaving(false); return; }
         // não estava no catálogo (só no stock): entra agora, para a família ficar completa
         if (!catalog.some((c) => nameKey(c.name) === nameKey(name))) {
-            await addCatalogProduct({ ...model(), name: first, variantGroup: base, variantValues: values } as Parameters<typeof addCatalogProduct>[0]);
+            await addCatalogProduct({ ...model(), ...(ownPrice ? { price: ownPrice } : {}), name: chosen.name, variantGroup: base, variantValues: chosen.values } as Parameters<typeof addCatalogProduct>[0]);
         }
-        await createVariants(base, others.map((o) => ({ values: { [t]: o.value }, qty: withQty ? toQty(o.qty) : 0, price: toQty(o.price) })), [t]);
+        const rest = vplan.create.filter((v) => v.name !== chosen.name);
+        await createVariants(base, rest.map((v) => ({ values: v.values, qty: withQty ? toQty(vqty[v.name] || "") : 0, price: toQty(vstate.prices[v.name] || "") })), vOrder);
+        // quantidade que entrou agora da variação onde fica o stock: soma ao produto que já existia
+        const q = withQty ? toQty(vqty[chosen.name] || "") : 0;
+        const stockHere = (products || []).find((p) => nameKey(p.name) === nameKey(name) && (!location || (p.location || "") === location));
+        if (q > 0) {
+            const renamed = { ...(stockHere || { ...model(), instanceId: `new-${chosen.name}`, stock: 0, reservedStock: 0, lastUpdated: "" }), name: chosen.name, variantGroup: base, variantValues: chosen.values } as Product;
+            onEntries?.([{ product: renamed, qty: q, existing: !!stockHere }]);
+        }
         setSaving(false);
-        toast({ title: `«${base}» tem agora ${others.length + 1} variações`, description: `O stock que já havia ficou em «${first}».` });
-        onDone?.([{ from: name, to: first }]);
+        toast({ title: `«${base}» tem agora ${vplan.create.length} variações`, description: `O stock que já havia ficou em «${chosen.name}».` });
+        onDone?.([{ from: name, to: chosen.name }]);
         onClose();
     };
 
-    const typeSuggestions = SUGGESTED_VALUES[clean(type)] || [];
 
     // Produto solto com o mesmo nome de uma família que já existe ("Pavê Borbulha" e "Pavê Borbulha - Preto", …):
     // o stock dele é de uma dessas variações (ou de uma nova) — junta-se à família.
@@ -224,6 +219,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
             .sort((a, b) => a.name.localeCompare(b.name, "pt", { numeric: true })) as unknown as Product[];
     }, [catalog, group, name]);
     const famOrder = useMemo(() => optionsOfFamily(sameFamily.map((m) => ({ variantValues: m.variantValues }))).map((o) => o.name), [sameFamily]);
+    const myStockAll = (products || []).filter((p) => nameKey(p.name) === nameKey(name)).reduce((t, p) => t + (p.stock || 0), 0);
     const myStock = (products || []).filter((p) => nameKey(p.name) === nameKey(name) && (!location || (p.location || "") === location)).reduce((t, p) => t + (p.stock || 0), 0);
     const hasStockHere = (n: string) => (products || []).some((p) => nameKey(p.name) === nameKey(n) && (!location || (p.location || "") === location) && (p.stock || 0) > 0);
     const [joinNew, setJoinNew] = useState("");
@@ -332,33 +328,23 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                                     </li>
                                 ))}
                             </ul>
-                            <div className="space-y-2 rounded-xl border border-dashed p-3" data-tour="qs-add-variant">
-                                <p className="text-sm font-medium">Nova variação</p>
-                                {order.map((k) => {
-                                    const used = options.find((o) => o.name === k)?.values || [];
-                                    return (
-                                        <div key={k} className="flex items-center gap-2">
-                                            <span className="w-20 shrink-0 text-xs text-muted-foreground">{k}</span>
-                                            <Input value={adding[k] || ""} list={`nv-${k}`} placeholder={`Ex.: ${(SUGGESTED_VALUES[k] || []).find((v) => !used.includes(v)) || ""}`}
-                                                onChange={(e) => setAdding({ ...adding, [k]: e.target.value })}
-                                                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addOne(); } }} className="h-10" autoComplete="off" />
-                                            <datalist id={`nv-${k}`}>{(SUGGESTED_VALUES[k] || []).filter((v) => !used.includes(v)).map((v) => <option key={v} value={v} />)}</datalist>
-                                        </div>
-                                    );
-                                })}
-                                <div className="flex items-center gap-2">
-                                    <span className="w-20 shrink-0 text-xs text-muted-foreground">Preço</span>
-                                    <Input inputMode="decimal" aria-label="Preço da variação nova" value={addPrice} onChange={(e) => setAddPrice(e.target.value)} placeholder={String(model().price || 0)} className="h-10 w-28" />
-                                    <span className="text-xs text-muted-foreground">vazio = o mesmo</span>
-                                </div>
-                                {withQty && (
-                                    <div className="flex items-center gap-2">
-                                        <span className="w-20 shrink-0 text-xs text-muted-foreground">Entrou agora</span>
-                                        <Input inputMode="decimal" aria-label="Quantidade que entrou" value={addQty} onChange={(e) => setAddQty(e.target.value)} placeholder="0" className="h-10 w-28" />
-                                    </div>
-                                )}
-                                <Button type="button" size="sm" variant="secondary" className="w-full" onClick={addOne} disabled={saving || order.some((k) => !clean(adding[k] || ""))}>
-                                    <Plus className="mr-1 h-4 w-4" /> Acrescentar variação
+                            <div className="space-y-2" data-tour="qs-add-variant">
+                                <p className="text-sm font-medium">Novas variações</p>
+                                <VariantsEditor
+                                    state={vstate}
+                                    onChange={setVstate}
+                                    baseName={group}
+                                    basePrice={model().price}
+                                    existingNames={allNames}
+                                    quantities={withQty ? vqty : undefined}
+                                    onQuantities={withQty ? setVqty : undefined}
+                                    unit={product?.unit || "un"}
+                                    usedValues={order.length === 1 ? familyHints : undefined}
+                                    hideSwitch
+                                />
+                                <Button type="button" className="w-full" onClick={addMany} disabled={saving || !vplan.create.length || vplan.tooMany}>
+                                    {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-1 h-4 w-4" />}
+                                    {vplan.create.length ? `Acrescentar ${vplan.create.length} variaç${vplan.create.length === 1 ? "ão" : "ões"}` : "Acrescentar variações"}
                                 </Button>
                             </div>
                         </>
@@ -395,45 +381,36 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                             </Button>
                         </div>
                     ) : (
-                        <div className="space-y-3 rounded-xl border p-3">
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium" htmlFor="var-type">Tipo de variação</label>
-                                <Input id="var-type" value={type} list="var-types" onChange={(e) => setType(e.target.value)} className="h-10" autoComplete="off" />
-                                <datalist id="var-types">{SUGGESTED_OPTIONS.map((o) => <option key={o} value={o} />)}</datalist>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {SUGGESTED_OPTIONS.map((o) => (
-                                        <button key={o} type="button" onClick={() => setType(o)} className={cn("rounded-full border px-2.5 py-0.5 text-xs", clean(type) === o ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground")}>{o}</button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium" htmlFor="var-current">O que já tem em stock é…</label>
-                                <Input id="var-current" value={current} list="var-vals" placeholder={`Ex.: ${typeSuggestions[0] || "Cinzento"}`} onChange={(e) => setCurrent(e.target.value)} className="h-10" autoComplete="off" />
-                                <p className="text-xs text-muted-foreground">O stock e o histórico de «{name}» ficam nesta variação{clean(current) ? <>: <b className="text-foreground">«{variantName(name, { [clean(type) || "Cor"]: clean(current) })}»</b></> : null}.</p>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium" htmlFor="var-other">Outras opções de {clean(type) || "Cor"}</label>
-                                <p className="text-xs text-muted-foreground">{withQty ? "Quanto entrou agora e o preço de cada uma" : "O preço de cada uma"} (preço vazio = {formatCurrency(model().price || 0)}).</p>
-                                {others.map((o, i) => (
-                                    <div key={o.value} className="flex items-center gap-2">
-                                        <span className="min-w-0 flex-1 truncate rounded-lg bg-muted px-3 py-2 text-sm">{o.value}</span>
-                                        {withQty && <Input inputMode="decimal" aria-label={`Quantidade de ${o.value}`} value={o.qty} placeholder="qtd" onChange={(e) => setOthers(others.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)))} className="h-9 w-16" />}
-                                        <Input inputMode="decimal" aria-label={`Preço de ${o.value}`} value={o.price} placeholder={String(model().price || "preço")} onChange={(e) => setOthers(others.map((x, j) => (j === i ? { ...x, price: e.target.value } : x)))} className="h-9 w-20" />
-                                        <button type="button" aria-label={`Tirar ${o.value}`} onClick={() => setOthers(others.filter((_, j) => j !== i))} className="rounded-full p-1 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
+                        <div className="space-y-3">
+                            <VariantsEditor
+                                state={vstate}
+                                onChange={setVstate}
+                                baseName={name}
+                                basePrice={model().price}
+                                existingNames={allNames}
+                                quantities={withQty ? vqty : undefined}
+                                onQuantities={withQty ? setVqty : undefined}
+                                unit={product?.unit || "un"}
+                                hideSwitch
+                            />
+                            {vplan.create.length > 0 && (
+                                <div className="space-y-1.5 rounded-xl border border-primary/40 bg-primary/5 p-3" data-tour="qs-stock-to">
+                                    <p className="text-sm">O stock que já existe de «{name}»{myStockAll ? <> (<b>{myStockAll} {product?.unit || "un"}</b>)</> : null} fica em:</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {vplan.create.map((v) => (
+                                            <button key={v.name} type="button" onClick={() => setStockTo(v.name)}
+                                                className={cn("rounded-full border px-3 py-1 text-sm", chosen?.name === v.name ? "border-primary bg-primary text-primary-foreground" : "bg-background")}>
+                                                {Object.values(v.values).join(" / ")}
+                                            </button>
+                                        ))}
                                     </div>
-                                ))}
-                                <div className="flex gap-2">
-                                    <Input id="var-other" value={otherText} list="var-vals" placeholder={`Ex.: ${typeSuggestions[1] || "Vermelho"}`} onChange={(e) => setOtherText(e.target.value)}
-                                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addOther(); } }} className="h-10" autoComplete="off" />
-                                    <Button type="button" variant="outline" className="h-10 shrink-0" onClick={addOther} disabled={!clean(otherText)}><Plus className="h-4 w-4" /></Button>
+                                    <p className="text-xs text-muted-foreground">O histórico (vendas, movimentos) também segue para essa variação.</p>
                                 </div>
-                                <datalist id="var-vals">{typeSuggestions.map((v) => <option key={v} value={v} />)}</datalist>
-                            </div>
-                            {convertClash && <p className="text-sm text-destructive">Já há um produto chamado «{convertClash}».</p>}
+                            )}
                             <div className="flex gap-2">
                                 <Button type="button" variant="ghost" onClick={() => setConverting(false)}>Cancelar</Button>
-                                <Button type="button" className="flex-1" onClick={convert} disabled={!clean(current) || !!convertClash || saving}>
-                                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Criar {others.length + 1} variaç{others.length ? "ões" : "ão"}
+                                <Button type="button" className="flex-1" onClick={convert} disabled={!chosen || vplan.tooMany || saving}>
+                                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} {vplan.create.length ? `Criar ${vplan.create.length} variaç${vplan.create.length === 1 ? "ão" : "ões"}` : "Criar variações"}
                                 </Button>
                             </div>
                         </div>

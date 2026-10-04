@@ -660,7 +660,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                     location={location}
                     withQty={mode === "in"}
                     pendingNew={Object.values(drafts).flatMap((d) => Object.values(d)).filter((l) => l.isNew).map((l) => l.name)}
-                    onEntries={(entries) => { for (const e of entries) addLine(newLine(e.product.name, e.qty, e.product.price, e.product)); }}
+                    onEntries={(entries) => { for (const e of entries) addLine(e.existing ? lineFromProduct(e.product, e.qty) : newLine(e.product.name, e.qty, e.product.price, e.product)); }}
                     onDone={(pairs) => {
                         // o que já estava na lista por gravar segue com o nome novo
                         const to = new Map(pairs.map((x) => [nameKey(x.from), x.to]));
@@ -853,7 +853,9 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                                 quantities={variantQtys}
                                 onQuantities={setVariantQtys}
                                 unit={newUnit}
-                                valueHints={familyHints || undefined}
+                                // família de um só tipo (ex.: Cor): as cores que já tem não aparecem nas sugestões
+                                valueHints={familyHints && Object.keys(familyHints).length > 1 ? familyHints : undefined}
+                                usedValues={familyHints && Object.keys(familyHints).length === 1 ? familyHints : undefined}
                                 hideSwitch={!!familyHints}
                             />
                         </div>
