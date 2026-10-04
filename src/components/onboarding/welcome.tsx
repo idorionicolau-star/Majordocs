@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
 import { startGuide, useGuideState } from "@/components/guide/guide-store";
 import { openTour } from "@/components/onboarding/app-tour";
+import { rememberSeen } from "@/lib/seen-store";
 
 const seenKey = (companyId?: string | null) => `majorstockx-welcome-seen-${companyId || "x"}`;
 
@@ -25,6 +26,7 @@ function markWelcomeSeen(companyId?: string | null) {
     } catch {
         /* ignore */
     }
+    rememberSeen(seenKey(companyId));
 }
 
 type Ctx = { companyId?: string | null; user?: { role?: string } | null; sales?: unknown[] } | null | undefined;

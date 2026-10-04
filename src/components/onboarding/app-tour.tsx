@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
 import { cn } from "@/lib/utils";
+import { rememberSeen } from "@/lib/seen-store";
 
 type Slide = { icon: LucideIcon; title: string; lead: string; points: string[]; href?: string; open?: string; manufacturingOnly?: boolean };
 
@@ -57,6 +58,7 @@ export function isTourSeen(companyId?: string | null): boolean {
 }
 function markTourSeen(companyId?: string | null) {
     try { localStorage.setItem(seenKey(companyId), "1"); } catch { /* sem armazenamento: volta a aparecer, sem mal */ }
+    rememberSeen(seenKey(companyId));
     window.dispatchEvent(new Event("msx:tour-seen"));
 }
 

@@ -21,6 +21,7 @@ import { InstallPrompt } from '@/components/install-prompt';
 import { TourHost } from '@/components/onboarding/app-tour';
 import { GuideHost } from '@/components/guide/guide-host';
 import { PageTutorialHint } from '@/components/guide/page-help';
+import { SeenSync } from '@/components/guide/seen-sync';
 import { OnboardingWelcome } from '@/components/onboarding/welcome';
 
 import { LoadingBar } from './loading-bar';
@@ -192,6 +193,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <TourHost />
           <OnboardingWelcome />
           <PageTutorialHint />
+          <SeenSync />
           <GuideHost />
           <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
         </div>

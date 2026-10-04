@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { gettingStarted, type StepId } from "@/lib/onboarding";
 import { isDemoSaleDone } from "@/lib/demo-data";
 import { startGuide } from "@/components/guide/guide-store";
+import { rememberSeen } from "@/lib/seen-store";
 
 const dismissKey = (companyId?: string | null) => `majorstockx-started-hidden-${companyId || "x"}`;
 
@@ -27,8 +28,10 @@ export function GettingStartedCard() {
     const [hidden, setHidden] = useState(true); // escondido até ler a escolha guardada (evita um piscar)
     const [demoDone, setDemoDone] = useState(false);
     useEffect(() => {
-        try { setHidden(localStorage.getItem(dismissKey(companyId)) === "1"); } catch { setHidden(false); }
-        const update = () => setDemoDone(isDemoSaleDone(companyId));
+        const update = () => {
+            try { setHidden(localStorage.getItem(dismissKey(companyId)) === "1"); } catch { setHidden(false); }
+            setDemoDone(isDemoSaleDone(companyId));
+        };
         update();
         window.addEventListener("msx:guide-done", update);
         return () => window.removeEventListener("msx:guide-done", update);
@@ -47,6 +50,7 @@ export function GettingStartedCard() {
 
     const hide = () => {
         try { localStorage.setItem(dismissKey(companyId), "1"); } catch { /* ignore */ }
+        rememberSeen(dismissKey(companyId));
         setHidden(true);
     };
 
