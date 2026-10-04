@@ -3,7 +3,9 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { collection, limit, onSnapshot, orderBy, query } from "firebase/firestore";
-import { CheckCircle2, CreditCard, Loader2, ShieldCheck, Smartphone, XCircle } from "lucide-react";
+import { CheckCircle2, CreditCard, Loader2, ShieldCheck, Smartphone, Ticket, XCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { couponAmount, couponMonthsLeft, couponReminder } from "@/lib/coupon-core";
 import { useInventory } from "@/context/inventory-context";
 import { useAuth, useFirestore } from "@/firebase/provider";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +30,38 @@ function BillingInner() {
     const [busy, setBusy] = useState(false);
     const [returned, setReturned] = useState<{ status: string; periodEnd?: string | null } | null>(null);
     const [history, setHistory] = useState<Payment[]>([]);
+    const [codeText, setCodeText] = useState("");
+    const [applying, setApplying] = useState(false);
+    const coupon = companyData?.coupon;
+    const couponLeft = couponMonthsLeft(coupon);
+    /** preço deste plano com o código (null = preço normal). O servidor volta a calcular ao pagar. */
+    const priceOf = (planId: PlanId) => {
+        const p = PLANS.find((x) => x.id === planId)!;
+        const c = coupon ? couponAmount({ price: coupon.price, months: coupon.months }, coupon.monthsUsed, planId) : { amount: null };
+        return { full: p.amount, amount: c.amount ?? p.amount, discounted: c.amount != null };
+    };
+
+    const applyCode = async () => {
+        if (!codeText.trim()) return;
+        setApplying(true);
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            const r = await fetch("/api/billing/coupon", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ code: codeText }),
+            });
+            const j = await r.json();
+            if (!r.ok) throw new Error(j.error || "Código inválido.");
+            setCodeText("");
+            setSelected("mensal");
+            toast({ title: "Código aplicado", description: couponReminder(j.coupon, formatCurrency) || undefined });
+        } catch (e) {
+            toast({ variant: "destructive", title: "Não foi possível usar o código", description: e instanceof Error ? e.message : "" });
+        } finally {
+            setApplying(false);
+        }
+    };
     const isAdmin = !!user && (user.role === "Admin" || user.role === "Dono");
 
     // History (admins can read companies/{id}/payments)
@@ -115,22 +149,43 @@ function BillingInner() {
                 <p className="rounded-2xl border p-4 text-sm text-muted-foreground">Só o administrador da empresa pode pagar a subscrição.</p>
             ) : (
                 <>
+                    {coupon && couponLeft > 0 && (
+                        <div data-tour="bill-coupon" className="flex items-start gap-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm">
+                            <Ticket className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+                            <p>
+                                <b>{couponReminder(coupon, formatCurrency)}.</b>{" "}
+                                O desconto vale no plano <b>Mensal</b>; depois passa ao preço normal ({formatCurrency(PLANS[0].amount)}/mês).
+                            </p>
+                        </div>
+                    )}
+
                     <div className="grid gap-3 sm:grid-cols-3" data-tour="bill-plans">
-                        {PLANS.map((p) => (
+                        {PLANS.map((p) => { const pr = priceOf(p.id); return (
                             <button key={p.id} type="button" onClick={() => setSelected(p.id)}
                                 className={cn("relative rounded-2xl border-2 p-4 text-left transition", selected === p.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
                                 {p.note && <span className="absolute right-3 top-3 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold text-emerald-600">{p.note}</span>}
                                 <p className="font-semibold">{p.label}</p>
-                                <p className="mt-2 text-2xl font-bold tabular-nums">{formatCurrency(p.amount)}</p>
-                                <p className="text-xs text-muted-foreground">{p.months === 1 ? "por mês" : `${p.months} meses · ${formatCurrency(Math.round(p.amount / p.months))}/mês`}</p>
+                                {pr.discounted && <p className="mt-2 text-sm text-muted-foreground line-through tabular-nums">{formatCurrency(pr.full)}</p>}
+                                <p className={cn("text-2xl font-bold tabular-nums", pr.discounted ? "text-emerald-600" : "mt-2")}>{formatCurrency(pr.amount)}</p>
+                                <p className="text-xs text-muted-foreground">{pr.discounted ? `com o código ${coupon?.code}` : p.months === 1 ? "por mês" : `${p.months} meses · ${formatCurrency(Math.round(p.amount / p.months))}/mês`}</p>
                             </button>
-                        ))}
+                        ); })}
                     </div>
 
                     <Button data-tour="bill-pay" onClick={pay} disabled={busy} className="h-12 rounded-xl text-base">
                         {busy ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CreditCard className="mr-2 h-5 w-5" />}
-                        Pagar {formatCurrency(PLANS.find((p) => p.id === selected)!.amount)}
+                        Pagar {formatCurrency(priceOf(selected).amount)}
                     </Button>
+
+                    {!(coupon && couponLeft > 0) && (
+                        <div className="flex gap-2" data-tour="bill-code">
+                            <Input value={codeText} onChange={(e) => setCodeText(e.target.value)} placeholder="Tem um código de convite?" aria-label="Código de convite"
+                                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyCode(); } }} className="h-11 min-w-0" autoComplete="off" autoCapitalize="characters" />
+                            <Button type="button" variant="outline" className="h-11 shrink-0" onClick={applyCode} disabled={applying || !codeText.trim()}>
+                                {applying ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
+                            </Button>
+                        </div>
+                    )}
 
                     <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
                         <p className="flex items-center gap-2"><Smartphone className="h-4 w-4 shrink-0" /> M-Pesa, e-Mola, mKesh ou cartão Visa/Mastercard</p>

@@ -23,6 +23,7 @@ import { GuideHost } from '@/components/guide/guide-host';
 import { PageTutorialHint } from '@/components/guide/page-help';
 import { SeenSync } from '@/components/guide/seen-sync';
 import { SupportDialog } from '@/components/support/support-dialog';
+import { PendingCoupon } from '@/components/billing/pending-coupon';
 import { whatsappLink } from '@/lib/support';
 import { OnboardingWelcome } from '@/components/onboarding/welcome';
 
@@ -166,9 +167,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        {isTrial && <TrialBanner companyId={authContext?.companyId} daysLeft={daysLeft} />}
+        {isTrial && <TrialBanner companyId={authContext?.companyId} daysLeft={daysLeft} coupon={authContext?.companyData?.coupon} />}
 
-        {!isReadOnly && !isTrial && typeof renewInDays === 'number' && <RenewBanner companyId={authContext?.companyId} renewInDays={renewInDays} />}
+        {!isReadOnly && !isTrial && typeof renewInDays === 'number' && <RenewBanner companyId={authContext?.companyId} renewInDays={renewInDays} coupon={authContext?.companyData?.coupon} />}
 
         <div className={`flex min-h-screen w-full bg-transparent ${isTrial ? 'pt-0' : ''}`}>
           <Sidebar />
@@ -197,6 +198,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <PageTutorialHint />
           <SeenSync />
           <SupportDialog />
+          <PendingCoupon />
           <GuideHost />
           <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
         </div>
