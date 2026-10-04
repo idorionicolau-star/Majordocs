@@ -252,7 +252,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
 
     return (
         <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-            <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-md">
+            <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
                 <DialogHeader className="text-left">
                     <DialogTitle>Editar «{name}»</DialogTitle>
                     <DialogDescription>O nome e as variações mudam em todo o programa: catálogo, stock de todas as localizações, receitas e encomendas em aberto.</DialogDescription>
@@ -273,7 +273,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                     )}
                     <div className="flex gap-2">
                         <Input id="rename-input" aria-label={family ? "Nome da família" : "Nome novo"} value={value} onChange={(e) => setValue(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveName(); } }} className="h-11 text-base" autoComplete="off" />
+                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveName(); } }} className="h-11 min-w-0 text-base" autoComplete="off" />
                         <Button type="button" className="h-11 shrink-0" onClick={saveName} disabled={!pairs.length || !!clash || saving}>
                             {saving && !editing && !converting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Mudar nome"}
                         </Button>
@@ -299,14 +299,14 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                                                         <span className="w-20 shrink-0 text-xs text-muted-foreground">{k}</span>
                                                         <Input value={editValues[k] ?? m.values[k] ?? ""} autoFocus={k === order[0]} list={`ev-${k}`}
                                                             onChange={(e) => setEditValues({ ...editValues, [k]: e.target.value })}
-                                                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveEdit(m); } }} className="h-9" />
+                                                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveEdit(m); } }} className="h-9 min-w-0" />
                                                         <datalist id={`ev-${k}`}>{(SUGGESTED_VALUES[k] || []).map((v) => <option key={v} value={v} />)}</datalist>
                                                     </div>
                                                 ))}
                                                 <div className="flex items-center gap-2">
                                                     <span className="w-20 shrink-0 text-xs text-muted-foreground">Preço</span>
                                                     <Input inputMode="decimal" aria-label={`Preço de ${m.name}`} value={editPrice} placeholder={m.price ? String(m.price) : "0"}
-                                                        onChange={(e) => setEditPrice(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveEdit(m); } }} className="h-9 w-32" />
+                                                        onChange={(e) => setEditPrice(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveEdit(m); } }} className="h-9 w-32 min-w-0" />
                                                 </div>
                                                 <div className="flex justify-end gap-2">
                                                     <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancelar</Button>

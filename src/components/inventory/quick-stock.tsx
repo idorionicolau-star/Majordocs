@@ -127,6 +127,8 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const [voiceAsks, setVoiceAsks] = useState<VoiceAsk[]>([]);
     const { link: linkBarcode, canLink } = useBarcodeLink();
     const canRename = useCanRename();
+    /** nomes que já existem (stock ou catálogo): só esses se podem editar — um produto novo do lote ainda não existe */
+    const knownNames = useMemo(() => new Set([...(catalogProducts || []).filter((c) => !c.deletedAt), ...products.filter((p) => !p.deletedAt)].map((p) => nameKey(p.name))), [catalogProducts, products]);
     const [renaming, setRenaming] = useState<string | null>(null);
     const [drafts, setDrafts] = useState<Record<QuickMode, Draft>>({ in: {}, out: {}, count: {} });
     const [draftsLoaded, setDraftsLoaded] = useState(false);
@@ -670,7 +672,11 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                             return [line.key, line];
                         }));
                         setDrafts((all) => ({ in: fix(all.in), out: fix(all.out), count: fix(all.count) }));
-                        setPicked((p) => (p?.product && to.has(nameKey(p.product.name)) ? { ...p, product: { ...p.product, name: to.get(nameKey(p.product.name))! } } : p));
+                        setPicked((p) => {
+                            if (p?.product && to.has(nameKey(p.product.name))) return { ...p, product: { ...p.product, name: to.get(nameKey(p.product.name))! } };
+                            if (p?.from && to.has(nameKey(p.from.name))) { const n = to.get(nameKey(p.from.name))!; return { ...p, newName: n, from: { ...p.from, name: n } }; }
+                            return p;
+                        });
                     }}
                 />
             )}
@@ -795,12 +801,13 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                         <div className="min-w-0">
                             <div className="flex min-w-0 items-center gap-1">
                                 <p className="truncate text-base font-semibold text-foreground">{picked.product?.name || picked.newName}</p>
-                                {picked.product && canRename && (
+                                {/* também nos que vêm do catálogo (ainda sem stock aqui) ou de outra localização */}
+                                {(picked.product || picked.from) && canRename && (
                                     <button
                                         type="button"
                                         data-tour="qs-rename"
-                                        onClick={() => setRenaming(picked.product!.name)}
-                                        aria-label={`Editar ${picked.product.name}: nome e variações`}
+                                        onClick={() => setRenaming((picked.product || picked.from)!.name)}
+                                        aria-label={`Editar ${(picked.product || picked.from)!.name}: nome e variações`}
                                         title="Editar nome e variações"
                                         className="flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
                                     >
@@ -1064,8 +1071,15 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                             return (
                                 <div key={l.key} className={cn("flex items-center gap-3 border-b px-4 py-2.5 last:border-0", after < 0 && "bg-red-500/10")}>
                                     <div className="min-w-0 flex-1">
-                                        <p className="truncate text-sm font-medium">
-                                            {l.name} {l.isNew && <span className="ml-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">NOVO</span>}
+                                        <p className="flex min-w-0 items-center gap-1 text-sm font-medium">
+                                            <span className="truncate">{l.name}</span>
+                                            {l.isNew && <span className="ml-1 shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">NOVO</span>}
+                                            {canRename && knownNames.has(nameKey(l.name)) && (
+                                                <button type="button" onClick={() => setRenaming(l.name)} aria-label={`Editar ${l.name}: nome e variações`} title="Editar nome e variações"
+                                                    className="shrink-0 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+                                                    <Pencil className="h-3.5 w-3.5" />
+                                                </button>
+                                            )}
                                         </p>
                                         <p className={cn("text-xs", after < 0 ? "font-semibold text-red-600" : "text-muted-foreground")}>
                                             {fmt(l.systemStock)} → {fmt(after)} {l.unit}{after < 0 && " · stock insuficiente"}
