@@ -556,7 +556,7 @@ export function useSettingsActions(core: InventoryCore) {
    * encomendas em aberto, de uma vez. O histórico fica como foi gravado e aparece com o nome novo (lib/rename.ts).
    * `family`: numa família de variações, muda o nome base de todas.
    */
-  const renameProduct = useCallback(async (oldName: string, newName: string, opts: { family?: boolean } = {}): Promise<boolean> => {
+  const renameProduct = useCallback(async (oldName: string, newName: string, opts: { family?: boolean; set?: { variantGroup?: string; variantValues?: Record<string, string> } } = {}): Promise<boolean> => {
     if (isReadOnly) {
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return false;
@@ -587,7 +587,7 @@ export function useSettingsActions(core: InventoryCore) {
       catalog, products: stock,
       recipes: canEdit('raw-materials') ? (recipesData || []) : [],
       orders: canEdit('orders') ? (ordersData || []) : [],
-    }, opts.family ? newName : undefined);
+    }, opts.family ? newName : undefined, opts.family ? undefined : opts.set);
     if (plan.catalog.length && !canEdit('settings')) {
       toast({ variant: 'destructive', title: 'Sem permissão', description: 'Este produto está no catálogo: só quem gere o catálogo pode mudar o nome.' });
       return false;

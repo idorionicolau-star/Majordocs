@@ -50,10 +50,12 @@ export function renameClash(pairs: RenamePair[], all: Named[]): string | null {
     return null;
 }
 
+type RenameData = { name: string; formerNames: string[]; variantGroup?: string; variantValues?: Record<string, string> };
+
 export type RenamePlan = {
     /** catálogo e stock: nome novo, nomes antigos e (numa família) a base nova */
-    catalog: { id: string; data: { name: string; formerNames: string[]; variantGroup?: string } }[];
-    products: { id: string; data: { name: string; formerNames: string[]; variantGroup?: string } }[];
+    catalog: { id: string; data: RenameData }[];
+    products: { id: string; data: RenameData }[];
     recipes: { id: string; productName: string }[];
     orders: { id: string; productName: string }[];
 };
@@ -63,6 +65,8 @@ export function planRename(
     pairs: RenamePair[],
     data: { catalog: Named[]; products: Named[]; recipes: HasProductName[]; orders: HasProductName[] },
     newGroup?: string,
+    /** campos a gravar junto (ex.: um produto que passa a ser variação: { variantGroup, variantValues }) */
+    extra?: { variantGroup?: string; variantValues?: Record<string, string> },
 ): RenamePlan {
     const to = new Map(pairs.map((p) => [nameKey(p.from), p]));
     const named = (rows: Named[]) =>
@@ -70,7 +74,7 @@ export function planRename(
             const p = to.get(nameKey(r.name));
             if (!r.id || !p) return [];
             const former = [...(r.formerNames || []), r.name].filter((n, i, a) => nameKey(n) !== nameKey(p.to) && a.findIndex((x) => nameKey(x) === nameKey(n)) === i);
-            return [{ id: r.id, data: { name: p.to, formerNames: former, ...(newGroup && r.variantGroup ? { variantGroup: clean(newGroup) } : {}) } }];
+            return [{ id: r.id, data: { name: p.to, formerNames: former, ...(newGroup && r.variantGroup ? { variantGroup: clean(newGroup) } : {}), ...(extra || {}) } }];
         });
     const linked = (rows: HasProductName[], open?: (r: HasProductName) => boolean) =>
         rows.flatMap((r) => {
