@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useInventory } from "@/context/inventory-context";
 import { useToast } from "@/hooks/use-toast";
-import { nameKey } from "@/lib/catalog-view";
+import { nameKey, pushPriceHistory } from "@/lib/catalog-view";
 import { renameClash, renamePairs, type RenamePair } from "@/lib/rename";
 import { optionsOfFamily, SUGGESTED_OPTIONS, SUGGESTED_VALUES, variantName, type VariantValues } from "@/lib/variants";
 import type { Product } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 
 /** Quem pode mudar nomes e variações: quem gere o inventário. */
 export function useCanRename() {
@@ -41,7 +41,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
     withQty?: boolean;
     onEntries?: (entries: NewVariantEntry[]) => void;
 }) {
-    const { catalogProducts, products, renameProduct, addCatalogProduct } = useInventory();
+    const { catalogProducts, products, renameProduct, addCatalogProduct, updateCatalogProducts, updateProduct, canEdit, user } = useInventory();
     const { toast } = useToast();
     const catalog = useMemo(() => (catalogProducts || []).filter((c) => !c.deletedAt), [catalogProducts]);
     const all = useMemo(() => [...catalog, ...(products || [])], [catalog, products]);
@@ -50,14 +50,18 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
 
     // a família: um por nome (catálogo + stock), com o stock desta localização
     const members = useMemo(() => {
-        if (!group) return [] as { name: string; values: VariantValues; stock: number; unit: string }[];
+        type Row = { name: string; values: VariantValues; stock: number; unit: string; price: number; fromCatalog: boolean };
+        if (!group) return [] as Row[];
         const k = nameKey(group);
-        const by = new Map<string, { name: string; values: VariantValues; stock: number; unit: string }>();
+        const by = new Map<string, Row>();
         for (const p of all) {
             if (!p.variantGroup || nameKey(p.variantGroup) !== k) continue;
             const key = nameKey(p.name);
-            const cur = by.get(key) || { name: p.name, values: p.variantValues || {}, stock: 0, unit: p.unit || "un" };
-            if ("stock" in p && (p as Product).instanceId && (!location || ((p as Product).location || "") === location)) cur.stock += (p as Product).stock || 0;
+            const isStock = "instanceId" in p && !!(p as Product).instanceId;
+            const cur = by.get(key) || { name: p.name, values: p.variantValues || {}, stock: 0, unit: p.unit || "un", price: 0, fromCatalog: false };
+            // o preço do catálogo manda; sem catálogo, o do stock
+            if (!isStock && p.price) { cur.price = p.price; cur.fromCatalog = true; } else if (!cur.fromCatalog && p.price) cur.price = p.price;
+            if (isStock && (!location || ((p as Product).location || "") === location)) cur.stock += (p as Product).stock || 0;
             by.set(key, cur);
         }
         return [...by.values()].sort((a, b) => a.name.localeCompare(b.name, "pt", { numeric: true }));
@@ -72,19 +76,21 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
     // ---- variações
     const [editing, setEditing] = useState<string | null>(null);
     const [editValues, setEditValues] = useState<VariantValues>({});
+    const [editPrice, setEditPrice] = useState("");
     const [adding, setAdding] = useState<VariantValues>({});
     const [addQty, setAddQty] = useState("");
+    const [addPrice, setAddPrice] = useState("");
     // ---- criar variações num produto que não as tem
     const [converting, setConverting] = useState(false);
     const [type, setType] = useState("Cor");
     const [current, setCurrent] = useState("");
-    const [others, setOthers] = useState<{ value: string; qty: string }[]>([]);
+    const [others, setOthers] = useState<{ value: string; qty: string; price: string }[]>([]);
     const [otherText, setOtherText] = useState("");
 
     useEffect(() => {
         if (!open) return;
         setFamily(false); setValue(name); setSaving(false);
-        setEditing(null); setAdding({}); setAddQty("");
+        setEditing(null); setAdding({}); setAddQty(""); setAddPrice("");
         setConverting(false); setType("Cor"); setCurrent(""); setOthers([]); setOtherText("");
     }, [open, name]);
 
@@ -103,13 +109,14 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
         };
     };
     /** cria as variações no catálogo e (em Entrada) junta ao lote as que trazem quantidade */
-    const createVariants = async (base: string, list: { values: VariantValues; qty: number }[], ord: string[]) => {
+    const createVariants = async (base: string, list: { values: VariantValues; qty: number; price?: number }[], ord: string[]) => {
         const m = model();
         const entries: NewVariantEntry[] = [];
         for (const v of list) {
             const n = variantName(base, v.values, ord);
-            await addCatalogProduct({ ...m, name: n, variantGroup: base, variantValues: v.values } as Parameters<typeof addCatalogProduct>[0]);
-            if (v.qty > 0) entries.push({ qty: v.qty, product: { ...m, name: n, variantGroup: base, variantValues: v.values, instanceId: `new-${n}`, stock: 0, reservedStock: 0, lastUpdated: "" } as Product });
+            const price = v.price && v.price > 0 ? v.price : m.price;
+            await addCatalogProduct({ ...m, price, name: n, variantGroup: base, variantValues: v.values } as Parameters<typeof addCatalogProduct>[0]);
+            if (v.qty > 0) entries.push({ qty: v.qty, product: { ...m, price, name: n, variantGroup: base, variantValues: v.values, instanceId: `new-${n}`, stock: 0, reservedStock: 0, lastUpdated: "" } as Product });
         }
         if (entries.length) onEntries?.(entries);
     };
@@ -125,19 +132,33 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
         onClose();
     };
 
-    const saveEdit = async (m: { name: string; values: VariantValues }) => {
+    /** preço de uma variação: no catálogo (com histórico de preços) e no stock de todas as localizações */
+    const setPrice = async (productName: string, price: number) => {
+        const k = nameKey(productName);
+        const cat = catalog.filter((c) => c.id && nameKey(c.name) === k);
+        if (cat.length && canEdit("settings")) {
+            const at = new Date().toISOString();
+            await updateCatalogProducts(cat.map((c) => ({ id: c.id!, data: { price, priceHistory: pushPriceHistory(c.priceHistory, { at, from: c.price || 0, to: price, by: user?.username }) } })));
+        }
+        for (const p of (products || []).filter((x) => nameKey(x.name) === k && x.instanceId)) await updateProduct(p.instanceId, { price });
+    };
+
+    const saveEdit = async (m: { name: string; values: VariantValues; price: number }) => {
         const values = Object.fromEntries(order.map((k) => [k, clean(editValues[k] ?? m.values[k] ?? "")]));
         if (order.some((k) => !values[k]) || !group) return;
         const to = variantName(group, values, order);
-        if (nameKey(to) === nameKey(m.name)) { setEditing(null); return; }
-        if (taken(to)) { toast({ variant: "destructive", title: "Essa variação já existe", description: to }); return; }
+        const renamed = nameKey(to) !== nameKey(m.name);
+        const newPrice = toQty(editPrice);
+        const repriced = editPrice.trim() !== "" && newPrice > 0 && newPrice !== m.price;
+        if (!renamed && !repriced) { setEditing(null); return; }
+        if (renamed && taken(to)) { toast({ variant: "destructive", title: "Essa variação já existe", description: to }); return; }
         setSaving(true);
-        const ok = await renameProduct(m.name, to, { set: { variantValues: values } });
+        if (renamed && !(await renameProduct(m.name, to, { set: { variantValues: values } }))) { setSaving(false); return; }
+        if (repriced) await setPrice(renamed ? to : m.name, newPrice);
         setSaving(false);
-        if (!ok) return;
         setEditing(null);
-        toast({ title: "Variação mudada", description: `«${m.name}» passa a «${to}».` });
-        onDone?.([{ from: m.name, to }]);
+        toast({ title: "Variação actualizada", description: [renamed ? `«${m.name}» passa a «${to}».` : "", repriced ? `Preço: ${formatCurrency(newPrice)}.` : ""].filter(Boolean).join(" ") });
+        if (renamed) onDone?.([{ from: m.name, to }]);
     };
 
     const addOne = async () => {
@@ -147,9 +168,9 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
         const n = variantName(group, values, order);
         if (taken(n)) { toast({ variant: "destructive", title: "Essa variação já existe", description: n }); return; }
         setSaving(true);
-        await createVariants(group, [{ values, qty: withQty ? toQty(addQty) : 0 }], order);
+        await createVariants(group, [{ values, qty: withQty ? toQty(addQty) : 0, price: toQty(addPrice) }], order);
         setSaving(false);
-        setAdding({}); setAddQty("");
+        setAdding({}); setAddQty(""); setAddPrice("");
         toast({ title: "Variação criada", description: withQty && toQty(addQty) ? `«${n}» — ${toQty(addQty)} no lote, confirme para dar entrada.` : `«${n}» está no catálogo.` });
     };
 
@@ -157,7 +178,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
         const v = clean(otherText);
         if (!v) return;
         if (nameKey(v) === nameKey(current) || others.some((o) => nameKey(o.value) === nameKey(v))) { setOtherText(""); return; }
-        setOthers([...others, { value: v, qty: "" }]);
+        setOthers([...others, { value: v, qty: "", price: "" }]);
         setOtherText("");
     };
     const convertNames = () => {
@@ -183,7 +204,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
         if (!catalog.some((c) => nameKey(c.name) === nameKey(name))) {
             await addCatalogProduct({ ...model(), name: first, variantGroup: base, variantValues: values } as Parameters<typeof addCatalogProduct>[0]);
         }
-        await createVariants(base, others.map((o) => ({ values: { [t]: o.value }, qty: withQty ? toQty(o.qty) : 0 })), [t]);
+        await createVariants(base, others.map((o) => ({ values: { [t]: o.value }, qty: withQty ? toQty(o.qty) : 0, price: toQty(o.price) })), [t]);
         setSaving(false);
         toast({ title: `«${base}» tem agora ${others.length + 1} variações`, description: `O stock que já havia ficou em «${first}».` });
         onDone?.([{ from: name, to: first }]);
@@ -245,6 +266,11 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                                                         <datalist id={`ev-${k}`}>{(SUGGESTED_VALUES[k] || []).map((v) => <option key={v} value={v} />)}</datalist>
                                                     </div>
                                                 ))}
+                                                <div className="flex items-center gap-2">
+                                                    <span className="w-20 shrink-0 text-xs text-muted-foreground">Preço</span>
+                                                    <Input inputMode="decimal" aria-label={`Preço de ${m.name}`} value={editPrice} placeholder={m.price ? String(m.price) : "0"}
+                                                        onChange={(e) => setEditPrice(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveEdit(m); } }} className="h-9 w-32" />
+                                                </div>
                                                 <div className="flex justify-end gap-2">
                                                     <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancelar</Button>
                                                     <Button type="button" size="sm" onClick={() => saveEdit(m)} disabled={saving}><Check className="mr-1 h-4 w-4" /> Guardar</Button>
@@ -254,9 +280,9 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                                             <div className="flex items-center justify-between gap-2">
                                                 <div className="min-w-0">
                                                     <p className={cn("truncate text-sm", nameKey(m.name) === nameKey(name) && "font-semibold")}>{order.map((k) => m.values[k]).filter(Boolean).join(" / ") || m.name}</p>
-                                                    <p className="text-xs text-muted-foreground">{m.stock} {m.unit}{location ? " aqui" : ""}</p>
+                                                    <p className="text-xs text-muted-foreground">{m.stock} {m.unit}{location ? " aqui" : ""}{m.price ? ` · ${formatCurrency(m.price)}` : ""}</p>
                                                 </div>
-                                                <button type="button" aria-label={`Mudar ${m.name}`} onClick={() => { setEditing(m.name); setEditValues({}); }}
+                                                <button type="button" aria-label={`Mudar ${m.name}`} onClick={() => { setEditing(m.name); setEditValues({}); setEditPrice(m.price ? String(m.price) : ""); }}
                                                     className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
                                                     <Pencil className="h-4 w-4" />
                                                 </button>
@@ -279,10 +305,15 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                                         </div>
                                     );
                                 })}
+                                <div className="flex items-center gap-2">
+                                    <span className="w-20 shrink-0 text-xs text-muted-foreground">Preço</span>
+                                    <Input inputMode="decimal" aria-label="Preço da variação nova" value={addPrice} onChange={(e) => setAddPrice(e.target.value)} placeholder={String(model().price || 0)} className="h-10 w-28" />
+                                    <span className="text-xs text-muted-foreground">vazio = o mesmo</span>
+                                </div>
                                 {withQty && (
                                     <div className="flex items-center gap-2">
                                         <span className="w-20 shrink-0 text-xs text-muted-foreground">Entrou agora</span>
-                                        <Input inputMode="decimal" value={addQty} onChange={(e) => setAddQty(e.target.value)} placeholder="0" className="h-10 w-28" />
+                                        <Input inputMode="decimal" aria-label="Quantidade que entrou" value={addQty} onChange={(e) => setAddQty(e.target.value)} placeholder="0" className="h-10 w-28" />
                                     </div>
                                 )}
                                 <Button type="button" size="sm" variant="secondary" className="w-full" onClick={addOne} disabled={saving || order.some((k) => !clean(adding[k] || ""))}>
@@ -315,11 +346,13 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                                 <p className="text-xs text-muted-foreground">O stock e o histórico de «{name}» ficam nesta variação{clean(current) ? <>: <b className="text-foreground">«{variantName(name, { [clean(type) || "Cor"]: clean(current) })}»</b></> : null}.</p>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-sm font-medium" htmlFor="var-other">Outras opções de {clean(type) || "Cor"}{withQty ? " (e quanto entrou agora)" : ""}</label>
+                                <label className="text-sm font-medium" htmlFor="var-other">Outras opções de {clean(type) || "Cor"}</label>
+                                <p className="text-xs text-muted-foreground">{withQty ? "Quanto entrou agora e o preço de cada uma" : "O preço de cada uma"} (preço vazio = {formatCurrency(model().price || 0)}).</p>
                                 {others.map((o, i) => (
                                     <div key={o.value} className="flex items-center gap-2">
                                         <span className="min-w-0 flex-1 truncate rounded-lg bg-muted px-3 py-2 text-sm">{o.value}</span>
-                                        {withQty && <Input inputMode="decimal" aria-label={`Quantidade de ${o.value}`} value={o.qty} placeholder="0" onChange={(e) => setOthers(others.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)))} className="h-9 w-20" />}
+                                        {withQty && <Input inputMode="decimal" aria-label={`Quantidade de ${o.value}`} value={o.qty} placeholder="qtd" onChange={(e) => setOthers(others.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)))} className="h-9 w-16" />}
+                                        <Input inputMode="decimal" aria-label={`Preço de ${o.value}`} value={o.price} placeholder={String(model().price || "preço")} onChange={(e) => setOthers(others.map((x, j) => (j === i ? { ...x, price: e.target.value } : x)))} className="h-9 w-20" />
                                         <button type="button" aria-label={`Tirar ${o.value}`} onClick={() => setOthers(others.filter((_, j) => j !== i))} className="rounded-full p-1 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
                                     </div>
                                 ))}

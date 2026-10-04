@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cleanOptions, combinations, countCombinations, optionsOfFamily, planVariants, siblingsOf, variantName, MAX_VARIANTS } from '@/lib/variants';
+import { cleanOptions, combinations, countCombinations, optionsOfFamily, planVariants, groupFamilies, isFamilyGroup, siblingsOf, variantChoice, variantLabel, variantName, MAX_VARIANTS } from '@/lib/variants';
 
 describe('variações', () => {
     const cor = { name: 'Cor', values: ['Vermelho', 'Cinzento'] };
@@ -40,5 +40,45 @@ describe('variações', () => {
         expect(siblingsOf(all[0], all).map((p) => p.name)).toEqual(['Pavê - Azul', 'Pavê - Vermelho']);
         expect(siblingsOf(all[2], all)).toEqual([]);
         expect(optionsOfFamily(all)).toEqual([{ name: 'Cor', values: ['Vermelho', 'Azul'] }]);
+    });
+});
+
+describe('qual variação? (venda e Stock Rápido)', () => {
+    const pool = [
+        { name: 'Pavê - Vermelho', variantGroup: 'Pavê', variantValues: { Cor: 'Vermelho' } },
+        { name: 'Pavê - Cinzento', variantGroup: 'Pavê', variantValues: { Cor: 'Cinzento' } },
+        { name: 'Cimento' },
+        { name: 'Bloco - Branco', variantGroup: 'Bloco', variantValues: { Cor: 'Branco' } },
+    ];
+    it('só o nome da família → pergunta, com todas as variações', () => {
+        expect(variantChoice('pave', pool[0], pool).map((p) => p.name)).toEqual(['Pavê - Cinzento', 'Pavê - Vermelho']);
+        expect(variantChoice('pa', pool[0], pool)).toHaveLength(2);
+    });
+    it('a pesquisa já diz qual → não pergunta', () => {
+        expect(variantChoice('pave verm', pool[0], pool)).toEqual([]);
+    });
+    it('sem família ou família de uma só → não pergunta', () => {
+        expect(variantChoice('cimento', pool[2], pool)).toEqual([]);
+        expect(variantChoice('bloco', pool[3], pool)).toEqual([]);
+    });
+    it('rótulo da variação', () => {
+        expect(variantLabel(pool[0])).toBe('Vermelho');
+        expect(variantLabel({ name: 'Pavê - Azul', variantGroup: 'Pavê' })).toBe('Azul');
+    });
+});
+
+describe('inventário: famílias juntas', () => {
+    it('junta as variações da mesma família e localização, no lugar da primeira', () => {
+        const list = [
+            { name: 'Cimento', location: 'A' },
+            { name: 'Pavê - Vermelho', variantGroup: 'Pavê', location: 'A' },
+            { name: 'Areia', location: 'A' },
+            { name: 'Pavê - Cinzento', variantGroup: 'Pavê', location: 'A' },
+            { name: 'Pavê - Azul', variantGroup: 'Pavê', location: 'B' }, // outra localização: sozinho
+        ];
+        const g = groupFamilies(list);
+        expect(g.map((x) => (isFamilyGroup(x) ? `[${x.group}: ${x.members.map((m) => m.name).join(', ')}]` : x.name))).toEqual([
+            'Cimento', '[Pavê: Pavê - Cinzento, Pavê - Vermelho]', 'Areia', 'Pavê - Azul',
+        ]);
     });
 });

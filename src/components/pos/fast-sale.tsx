@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn, formatCurrency, normalizeString, plural } from "@/lib/utils";
 import type { CartItem, Product, Sale } from "@/lib/types";
 import { parseQuickInput, searchProducts, toNumber } from "@/lib/quick-stock";
+import { variantChoice, variantLabel } from "@/lib/variants";
+import { VariantChooser, chooserKey } from "@/components/catalog/variant-chooser";
 import { Check, ChevronDown, GraduationCap, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, Truck, X } from "lucide-react";
 import { BarcodeScanner } from "@/components/scan/barcode-scanner";
 import { VoiceButton } from "@/components/scan/voice-button";
@@ -270,14 +272,34 @@ export function FastSale() {
         });
     };
 
+    // "pavê 20" + Enter numa família com várias variações: pergunta qual (em vez de juntar a primeira)
+    const [choice, setChoice] = useState<{ options: Product[]; qty: number | null } | null>(null);
+    useEffect(() => setChoice(null), [parsed.term]);
+    const choiceRows = (choice?.options || []).map((p) => {
+        const a = avail(p);
+        return { key: p.instanceId, label: variantLabel(p), sub: a <= 0 ? "Esgotado" : `${fmtQ(a)} ${p.unit || "un"}`, right: priceOf(p) ? formatCurrency(priceOf(p)) : undefined, disabled: a <= 0 };
+    });
+    const pickChoice = (key: string) => {
+        const p = choice?.options.find((o) => o.instanceId === key);
+        if (!p) return;
+        pickProduct(p, choice?.qty);
+        setChoice(null);
+    };
+    const enterPick = (p: Product) => {
+        const opts = variantChoice(parsed.term, p, scoped);
+        if (opts.length) { setChoice({ options: opts, qty: parsed.qty ?? null }); return; }
+        pickProduct(p, parsed.qty);
+    };
+
     const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (choice && chooserKey(e, choiceRows, pickChoice, () => setChoice(null))) return;
         if (e.key === "ArrowDown") { e.preventDefault(); setHighlight((h) => Math.min(h + 1, Math.max(results.length - 1, 0))); }
         else if (e.key === "ArrowUp") { e.preventDefault(); setHighlight((h) => Math.max(h - 1, 0)); }
         else if (e.key === "Enter") {
             e.preventDefault();
             // leitor USB/Bluetooth: escreve o código e carrega Enter
             if (looksLikeBarcode(text)) { handleCode(text); return; }
-            if (results[highlight]) pickProduct(results[highlight], parsed.qty);
+            if (results[highlight]) enterPick(results[highlight]);
         }
         else if (e.key === "Escape") setText("");
     };
@@ -506,13 +528,26 @@ export function FastSale() {
                         <button type="button" aria-label="Cancelar" onClick={() => setPendingCode(null)} className="shrink-0 text-muted-foreground"><X className="h-4 w-4" /></button>
                     </div>
                 )}
-                {parsed.qty != null && results[highlight] && (
+                {parsed.qty != null && results[highlight] && !choice && variantChoice(parsed.term, results[highlight], scoped).length > 0 ? (
+                    <p className="mt-1.5 px-1 text-xs text-muted-foreground">Enter pergunta qual variação de <b className="text-foreground">{results[highlight].variantGroup}</b> ({fmtQ(parsed.qty)})</p>
+                ) : parsed.qty != null && results[highlight] && !choice && (
                     <p className="mt-1.5 px-1 text-xs text-muted-foreground">Enter junta <b className="text-foreground">{fmtQ(parsed.qty)} × {results[highlight].name}</b> = {formatCurrency(parsed.qty * priceOf(results[highlight]))}</p>
                 )}
             </div>
 
+            {choice && (
+                <VariantChooser
+                    group={choice.options[0]?.variantGroup || ""}
+                    kind={(() => { const k = Object.keys(choice.options[0]?.variantValues || {}); return k.length === 1 ? k[0].toLowerCase() : undefined; })()}
+                    qty={choice.qty != null ? fmtQ(choice.qty) : undefined}
+                    options={choiceRows}
+                    onPick={pickChoice}
+                    onClose={() => { setChoice(null); focusSearch(); }}
+                />
+            )}
+
             {/* Results */}
-            {parsed.term ? (
+            {parsed.term && !choice ? (
                 <div className="mt-1 overflow-hidden rounded-2xl border bg-card">
                     {results.map((p, i) => {
                         const a = avail(p);

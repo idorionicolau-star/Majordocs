@@ -14,7 +14,8 @@ import type { Product } from "@/lib/types";
 import { NewProductFields } from "@/components/inventory/new-product-fields";
 import { PhotoCount } from "@/components/inventory/photo-count";
 import { VariantsEditor, EMPTY_VARIANTS, type VariantsState } from "@/components/catalog/variants-editor";
-import { optionsOfFamily, planVariants } from "@/lib/variants";
+import { optionsOfFamily, planVariants, variantChoice, variantLabel } from "@/lib/variants";
+import { VariantChooser, chooserKey } from "@/components/catalog/variant-chooser";
 import { cleanProductName, findNameMatches, guessUnit, planCatalogWrites, suggestCategory, type NameMatch } from "@/lib/new-product";
 import {
     commitQuickStock,
@@ -496,7 +497,23 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
         focusSearch();
     };
 
+    // "pavê 20" + Enter numa família com várias variações: pergunta qual (em vez de usar a primeira)
+    const [choice, setChoice] = useState<{ options: Product[]; qty: number | null } | null>(null);
+    useEffect(() => setChoice(null), [parsed.term, mode]);
+    const choiceRows = (choice?.options || []).map((p) => ({
+        key: p.instanceId, label: variantLabel(p),
+        sub: blind ? undefined : `${fmt(p.stock || 0)} ${p.unit || "un"}`,
+        disabled: mode === "out" && (p.stock || 0) <= 0,
+    }));
+    const pickChoice = (key: string) => {
+        const p = choice?.options.find((o) => o.instanceId === key);
+        if (!p) return;
+        pick(p, undefined, choice?.qty);
+        setChoice(null);
+    };
+
     const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (choice && chooserKey(e, choiceRows, pickChoice, () => setChoice(null))) return;
         const total = results.length + elsewhere.length + (canCreate ? 1 : 0);
         if (e.key === "ArrowDown") {
             e.preventDefault();
@@ -513,7 +530,11 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                 if (first) countInputs.current.get(lineKey(first.name, first.location || ""))?.focus();
                 return;
             }
-            if (highlight < results.length && results[highlight]) pick(results[highlight], undefined, parsed.qty);
+            if (highlight < results.length && results[highlight]) {
+                const opts = mode === "count" ? [] : variantChoice(parsed.term, results[highlight], scoped);
+                if (opts.length) setChoice({ options: opts, qty: parsed.qty ?? null });
+                else pick(results[highlight], undefined, parsed.qty);
+            }
             else if (highlight < results.length + elsewhere.length) pickElsewhere(elsewhere[highlight - results.length], parsed.qty);
             else if (canCreate) pick(undefined, parsed.term, parsed.qty);
             else if (elsewhere[0]) pickElsewhere(elsewhere[0], parsed.qty);
@@ -731,10 +752,23 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                 )}
                 {parsed.qty != null && parsed.term && (
                     <p className="mt-1.5 px-1 text-xs text-muted-foreground">
-                        Enter adiciona <b className="text-foreground">{fmt(parsed.qty)}</b> × {results[highlight]?.name || parsed.term}
+                        {mode !== "count" && results[highlight] && highlight < results.length && variantChoice(parsed.term, results[highlight], scoped).length > 0
+                            ? <>Enter pergunta qual variação de <b className="text-foreground">{results[highlight].variantGroup}</b> ({fmt(parsed.qty)})</>
+                            : <>Enter adiciona <b className="text-foreground">{fmt(parsed.qty)}</b> × {results[highlight]?.name || parsed.term}</>}
                     </p>
                 )}
             </div>
+
+            {choice && (
+                <VariantChooser
+                    group={choice.options[0]?.variantGroup || ""}
+                    kind={(() => { const k = Object.keys(choice.options[0]?.variantValues || {}); return k.length === 1 ? k[0].toLowerCase() : undefined; })()}
+                    qty={choice.qty != null ? fmt(choice.qty) : undefined}
+                    options={choiceRows}
+                    onPick={pickChoice}
+                    onClose={() => { setChoice(null); focusSearch(); }}
+                />
+            )}
 
             {/* Quantity panel for the picked product */}
             {picked && (
@@ -856,7 +890,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             )}
 
             {/* Search results (entry / exit) */}
-            {!picked && mode !== "count" && parsed.term && (
+            {!picked && !choice && mode !== "count" && parsed.term && (
                 <div data-tour="qs-results" className="mt-2 overflow-hidden rounded-2xl border bg-card">
                     {results.map((p, i) => {
                         const inLot = lines[lineKey(p.name, p.location || "")];
