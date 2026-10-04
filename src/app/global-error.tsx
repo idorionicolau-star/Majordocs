@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { reportError } from "@/lib/report-error";
+import { SUPPORT, supportMessage, whatsappLink } from "@/lib/support";
 
 export default function GlobalError({
     error,
@@ -40,6 +41,17 @@ export default function GlobalError({
                                 Ir para o início
                             </button>
                         </div>
+                        <p style={{ color: '#666', marginTop: '1.25rem', fontSize: '0.875rem' }}>
+                            Continua a acontecer?{' '}
+                            <a
+                                style={{ color: '#3b82f6', fontWeight: 600 }}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                href={whatsappLink(supportMessage({ page: typeof window !== 'undefined' ? window.location.pathname : null, detail: error.message }))}
+                            >
+                                Envie-nos uma captura de ecrã pelo WhatsApp ({SUPPORT.whatsappDisplay})
+                            </a>
+                        </p>
                     </div>
                 </div>
             </body>

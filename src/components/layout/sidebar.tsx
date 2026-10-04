@@ -7,9 +7,10 @@ import { useContext } from "react";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { useNavGroups } from "./use-nav-groups";
-import { HelpCircle, LogOut, Settings, User as UserIcon } from "lucide-react";
+import { HelpCircle, LifeBuoy, LogOut, Settings, User as UserIcon } from "lucide-react";
 import { openTour } from "@/components/onboarding/app-tour";
 import { MenuModeToggle } from "./menu-mode-toggle";
+import { openSupport, SupportNavButton } from "@/components/support/support-dialog";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -77,6 +78,7 @@ export function Sidebar() {
                     </div>
                 ))}
                 <MenuModeToggle simple={simple} hiddenCount={hiddenCount} onChange={setSimple} />
+                <SupportNavButton />
             </nav>
 
             {/* Bottom Actions / User */}
@@ -123,6 +125,10 @@ export function Sidebar() {
                         <DropdownMenuItem className="cursor-pointer" onClick={() => openTour()}>
                             <HelpCircle className="mr-2 h-4 w-4" />
                             <span>Como a app funciona</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer" onClick={() => { openSupport(); }}>
+                            <LifeBuoy className="mr-2 h-4 w-4" />
+                            <span>Ajuda e suporte</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-700 dark:text-red-400 dark:focus:text-red-300" onClick={() => logout()}>

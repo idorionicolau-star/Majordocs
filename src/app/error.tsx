@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { reportError } from "@/lib/report-error";
+import { SUPPORT, supportMessage, whatsappLink } from "@/lib/support";
 
 export default function Error({
     error,
@@ -51,6 +52,17 @@ export default function Error({
                         Ir para o início
                     </Button>
                 </div>
+                <p className="pt-2 text-sm text-muted-foreground">
+                    Continua a acontecer?{" "}
+                    <a
+                        className="font-semibold text-primary underline-offset-4 hover:underline"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        href={whatsappLink(supportMessage({ page: typeof window !== "undefined" ? window.location.pathname : null, detail: error.digest ? `${error.message} (${error.digest})` : error.message }))}
+                    >
+                        Envie-nos uma captura de ecrã pelo WhatsApp ({SUPPORT.whatsappDisplay})
+                    </a>
+                </p>
             </div>
         </div>
     );

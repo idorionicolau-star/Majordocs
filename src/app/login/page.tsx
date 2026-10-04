@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useContext } from 'react';
+import { emailLink, SUPPORT, whatsappLink } from "@/lib/support";
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -191,9 +192,17 @@ export default function LoginPage() {
             </Button>
           </div>
         </CardContent>
-        <CardFooter className="flex justify-center text-sm">
+        <CardFooter className="flex flex-col items-center gap-2 text-sm">
           <p className="text-muted-foreground">
             Não tem uma conta? <Link href="/register" className="text-primary hover:underline">Crie uma aqui.</Link>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Problemas a entrar?{" "}
+            <a href={whatsappLink("Olá, estou com problemas a entrar na MajorStockX.")} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline">
+              WhatsApp {SUPPORT.whatsappDisplay}
+            </a>
+            {" "}ou{" "}
+            <a href={emailLink("Problemas a entrar na MajorStockX")} className="font-medium text-primary hover:underline">email</a>
           </p>
         </CardFooter>
       </Card>
