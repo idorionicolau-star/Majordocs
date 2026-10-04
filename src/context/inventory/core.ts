@@ -20,6 +20,7 @@ import { isCountableSale } from '@/lib/sale-filters';
 import { canRestartTrial } from '@/lib/trial';
 import { TRIAL_DAYS } from '@/lib/plans';
 import { authedFetch } from '@/lib/api-client';
+import { aliasMap, applyAliases } from '@/lib/rename';
 
 type CatalogProduct = Omit<
   Product,
@@ -483,18 +484,26 @@ export function useInventoryCore() {
 
   const { data: productsData, isLoading: productsLoading } = useCollection<Product>(productsCollectionRef);
 
-  const { data: salesData, isLoading: salesLoading } = useCollection<Sale>(salesCollectionRef);
+  const { data: salesRaw, isLoading: salesLoading } = useCollection<Sale>(salesCollectionRef);
 
-  const { data: productionsData, isLoading: productionsLoading } = useCollection<Production>(productionsCollectionRef);
+  const { data: productionsRaw, isLoading: productionsLoading } = useCollection<Production>(productionsCollectionRef);
 
-  const { data: ordersData, isLoading: ordersLoading } = useCollection<Order>(ordersCollectionRef);
+  const { data: ordersRaw, isLoading: ordersLoading } = useCollection<Order>(ordersCollectionRef);
 
-  const { data: stockMovementsData, isLoading: stockMovementsLoading } = useCollection<StockMovement>(stockMovementsCollectionRef);
+  const { data: stockMovementsRaw, isLoading: stockMovementsLoading } = useCollection<StockMovement>(stockMovementsCollectionRef);
 
   const { data: catalogProductsRaw, isLoading: catalogProductsLoading } = useCollection<CatalogProduct>(catalogProductsCollectionRef);
   // Produtos do catálogo na lixeira (deletedAt) não aparecem em lado nenhum: filtra-se aqui, na origem,
   // para todas as páginas (vendas, encomendas, Stock Rápido…) ficarem certas. A lixeira usa `catalogProductsRaw`.
   const catalogProductsData = useMemo(() => (catalogProductsRaw ? catalogProductsRaw.filter((p) => !p.deletedAt) : catalogProductsRaw), [catalogProductsRaw]);
+
+  // Produtos que mudaram de nome: o histórico (gravado com o nome antigo, que não se reescreve) aparece
+  // com o nome actual em todas as páginas — relatórios, histórico do produto, reservas, encomendas.
+  const aliases = useMemo(() => aliasMap(catalogProductsData, productsData), [catalogProductsData, productsData]);
+  const salesData = useMemo(() => applyAliases(salesRaw, aliases), [salesRaw, aliases]);
+  const productionsData = useMemo(() => applyAliases(productionsRaw, aliases), [productionsRaw, aliases]);
+  const ordersData = useMemo(() => applyAliases(ordersRaw, aliases), [ordersRaw, aliases]);
+  const stockMovementsData = useMemo(() => applyAliases(stockMovementsRaw, aliases), [stockMovementsRaw, aliases]);
 
   const { data: catalogCategoriesData, isLoading: catalogCategoriesLoading } = useCollection<CatalogCategory>(catalogCategoriesCollectionRef);
 

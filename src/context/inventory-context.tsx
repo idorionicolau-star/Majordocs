@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
-import type { InventoryContextType } from '@/lib/types';
+import type { InventoryContextType, Product } from '@/lib/types';
 import { PasswordConfirmationDialog } from '@/components/auth/password-confirmation-dialog';
 import { useAuthActions } from './inventory/auth-actions';
 import { useProductActions } from './inventory/product-actions';
@@ -31,8 +31,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const orderActions = useOrderActions(core);
   const { deleteOrder, finalizeOrder } = orderActions;
   const settingsActions = useSettingsActions(core);
-  const { addCatalogProduct, addCatalogCategory, deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem: restoreItemBase, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts } = settingsActions;
+  const { addCatalogProduct, addCatalogCategory, deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem: restoreItemBase, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts, renameProduct } = settingsActions;
   // Restaurar uma produção refaz o stock e a matéria-prima; o resto da lixeira usa a regra geral
+  // Editar um produto e mudar-lhe o nome: muda em todo o programa (senão o stock das outras localizações,
+  // o catálogo e as encomendas ficavam com o nome antigo e deixavam de bater certo).
+  const updateProductEverywhere = useCallback(async (instanceId: string, data: Partial<Product>) => {
+    const current = products.find((p) => p.instanceId === instanceId);
+    if (current && typeof data.name === 'string' && data.name.trim() && data.name.trim() !== current.name) {
+      if (!(await renameProduct(current.name, data.name))) throw new Error('O nome não foi mudado.');
+    }
+    return updateProduct(instanceId, data);
+  }, [products, renameProduct, updateProduct]);
   const restoreItem = useCallback((collectionName: string, id: string) => (collectionName === 'productions' ? restoreProduction(id) : restoreItemBase(collectionName, id)), [restoreProduction, restoreItemBase]);
 
 
@@ -167,11 +176,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
     businessStartDate,
     chatHistory, setChatHistory,
-    addProduct, updateProduct, deleteProduct,
+    addProduct, updateProduct: updateProductEverywhere, deleteProduct,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, addBulkSale, confirmSalePickup, addProductionLog,
     addProduction, updateProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
     clearProductsCollection,
-    mergeProducts,
+    mergeProducts, renameProduct,
     restoreItem,
     hardDelete,
     deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory,
@@ -205,7 +214,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
     businessStartDate,
     chatHistory, setChatHistory,
-    addProduct, updateProduct, deleteProduct,
+    addProduct, updateProductEverywhere, deleteProduct,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, addBulkSale, confirmSalePickup, addProductionLog,
     addProduction, updateProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
     clearProductsCollection,
@@ -216,7 +225,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     updateRawMaterial,
     addRecipe,
     updateRecipe,
-    mergeProducts,
+    mergeProducts, renameProduct,
     restoreItem, deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory,
     exportCompanyData,
     availableUnits, addUnit,

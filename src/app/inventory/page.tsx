@@ -148,7 +148,11 @@ export default function InventoryPage() {
 
   const handleUpdateProduct = async (updatedProduct: Product) => {
     if (updatedProduct.instanceId) {
-      await updateProduct(updatedProduct.instanceId, updatedProduct);
+      try {
+        await updateProduct(updatedProduct.instanceId, updatedProduct);
+      } catch {
+        return; // o motivo já foi mostrado (ex.: nome repetido)
+      }
       toast({
         title: "Produto Atualizado",
         description: `O produto "${updatedProduct.name}" foi atualizado com sucesso.`,

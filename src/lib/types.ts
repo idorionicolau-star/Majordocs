@@ -126,6 +126,8 @@ export type Product = {
   /** Variações: o nome base da família ("Pavê Borbulha") e o valor de cada tipo ({ Cor: "Vermelho" }). Ver lib/variants.ts */
   variantGroup?: string;
   variantValues?: Record<string, string>;
+  /** Nomes que o produto já teve (ver lib/rename.ts): o histórico com esses nomes aparece com o nome actual. */
+  formerNames?: string[];
 };
 
 
@@ -459,6 +461,8 @@ export interface InventoryContextType {
   categorizeProductWithAI: (productName: string) => Promise<string | null>;
 
   mergeProducts: (targetProductId: string, sourceProductIds: string[]) => Promise<void>;
+  /** Muda o nome em todo o programa (catálogo, stock, receitas, encomendas em aberto). Ver lib/rename.ts */
+  renameProduct: (oldName: string, newName: string, opts?: { family?: boolean }) => Promise<boolean>;
   restoreItem: (collectionName: string, id: string) => Promise<void>;
   hardDelete: (collectionName: string, id: string) => Promise<void>;
   exportCompanyData: () => Promise<void>;
