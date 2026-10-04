@@ -7,6 +7,8 @@ import { resolveInventoryProductRef } from '@/lib/product-ref';
 import { reservedToRelease } from '@/lib/order-stock';
 import { updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { InventoryCore } from './core';
+import { planRename, renameClash, renamePairs } from '@/lib/rename';
+import { nameKey } from '@/lib/catalog-view';
 
 type CatalogProduct = Omit<
   Product,
@@ -15,7 +17,7 @@ type CatalogProduct = Omit<
 type CatalogCategory = { id: string; name: string };
 
 export function useSettingsActions(core: InventoryCore) {
-  const { isReadOnly, user, isMultiLocation, locations, toast, catalogProductsCollectionRef, catalogCategoriesCollectionRef, catalogCategoriesData, rawMaterialsCollectionRef, recipesCollectionRef, firestore, companyId, productsData, salesData, companyData, products, rawMaterialsData, catalogProductsData, productsCollectionRef } = core;
+  const { isReadOnly, user, isMultiLocation, locations, toast, catalogProductsCollectionRef, catalogCategoriesCollectionRef, catalogCategoriesData, rawMaterialsCollectionRef, recipesCollectionRef, firestore, companyId, productsData, salesData, companyData, products, rawMaterialsData, catalogProductsData, productsCollectionRef, ordersData, recipesData, canEdit } = core;
 
 
 
@@ -549,7 +551,70 @@ export function useSettingsActions(core: InventoryCore) {
       toast({ variant: 'destructive', title: 'Erro ao Unificar', description: 'Ocorreu um erro ao tentar unificar os produtos.' });
     }
   }, [productsCollectionRef, firestore, companyId, productsData, toast]);
-  return { addCatalogProduct, addCatalogCategory, deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts };
+  /**
+   * Muda o nome de um produto em todo o programa: catálogo, stock em todas as localizações, receitas e
+   * encomendas em aberto, de uma vez. O histórico fica como foi gravado e aparece com o nome novo (lib/rename.ts).
+   * `family`: numa família de variações, muda o nome base de todas.
+   */
+  const renameProduct = useCallback(async (oldName: string, newName: string, opts: { family?: boolean } = {}): Promise<boolean> => {
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return false;
+    }
+    if (!firestore || !companyId) return false;
+    if (!canEdit('inventory')) {
+      toast({ variant: 'destructive', title: 'Sem permissão', description: 'Só quem gere o inventário pode mudar o nome de um produto.' });
+      return false;
+    }
+    const catalog = catalogProductsData || [];
+    const stock = productsData || [];
+    const all = [...catalog, ...stock];
+    const key = nameKey(oldName);
+    // o do catálogo primeiro (tem a família de variações); senão o do stock
+    const product = all.find((p) => nameKey(p.name) === key);
+    if (!product) {
+      toast({ variant: 'destructive', title: 'Produto não encontrado', description: oldName });
+      return false;
+    }
+    const pairs = renamePairs(product, newName, all, opts.family);
+    if (!pairs.length) return true;
+    const clash = renameClash(pairs, all);
+    if (clash) {
+      toast({ variant: 'destructive', title: 'Esse nome já existe', description: `Já há um produto chamado «${clash}». Escolha outro nome.` });
+      return false;
+    }
+    const plan = planRename(pairs, {
+      catalog, products: stock,
+      recipes: canEdit('raw-materials') ? (recipesData || []) : [],
+      orders: canEdit('orders') ? (ordersData || []) : [],
+    }, opts.family ? newName : undefined);
+    if (plan.catalog.length && !canEdit('settings')) {
+      toast({ variant: 'destructive', title: 'Sem permissão', description: 'Este produto está no catálogo: só quem gere o catálogo pode mudar o nome.' });
+      return false;
+    }
+    const at = new Date().toISOString();
+    const writes: [string, string, Record<string, unknown>][] = [
+      ...plan.catalog.map((u) => ['catalogProducts', u.id, u.data] as [string, string, Record<string, unknown>]),
+      ...plan.products.map((u) => ['products', u.id, { ...u.data, lastUpdated: at }] as [string, string, Record<string, unknown>]),
+      ...plan.recipes.map((u) => ['recipes', u.id, { productName: u.productName }] as [string, string, Record<string, unknown>]),
+      ...plan.orders.map((u) => ['orders', u.id, { productName: u.productName }] as [string, string, Record<string, unknown>]),
+    ];
+    try {
+      // tudo de uma vez quando cabe num lote (até 450 escritas): ou muda tudo, ou nada
+      for (let i = 0; i < writes.length; i += 450) {
+        const batch = writeBatch(firestore);
+        for (const [col, id, data] of writes.slice(i, i + 450)) batch.update(doc(firestore, `companies/${companyId}/${col}`, id), data);
+        if (typeof navigator !== 'undefined' && !navigator.onLine) batch.commit().catch(() => { });
+        else await batch.commit();
+      }
+      return true;
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Não foi possível mudar o nome', description: e?.message });
+      return false;
+    }
+  }, [isReadOnly, toast, firestore, companyId, canEdit, catalogProductsData, productsData, recipesData, ordersData]);
+
+  return { addCatalogProduct, addCatalogCategory, deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts, renameProduct };
 }
 
 export type SettingsActions = ReturnType<typeof useSettingsActions>;

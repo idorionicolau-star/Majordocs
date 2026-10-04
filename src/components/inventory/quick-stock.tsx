@@ -37,6 +37,8 @@ import { parseVoice } from "@/lib/voice-parse";
 import { resolveVoice } from "@/lib/voice-approx";
 import { VoiceConfirm, type VoiceAsk } from "@/components/scan/voice-confirm";
 import { useBarcodeLink } from "@/hooks/use-barcode-link";
+import { RenameProductDialog, useCanRename } from "@/components/inventory/rename-product-dialog";
+import type { RenamePair } from "@/lib/rename";
 import {
     ArrowDownToLine,
     ScanBarcode,
@@ -46,6 +48,7 @@ import {
     Loader2,
     MapPin,
     Minus,
+    Pencil,
     Plus,
     Search,
     Sheet,
@@ -117,6 +120,8 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const [listening, setListening] = useState("");
     const [voiceAsks, setVoiceAsks] = useState<VoiceAsk[]>([]);
     const { link: linkBarcode, canLink } = useBarcodeLink();
+    const canRename = useCanRename();
+    const [renaming, setRenaming] = useState<string | null>(null);
     const [drafts, setDrafts] = useState<Record<QuickMode, Draft>>({ in: {}, out: {}, count: {} });
     const [draftsLoaded, setDraftsLoaded] = useState(false);
     const lines = drafts[mode];
@@ -609,6 +614,24 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     // ---------- Render ----------
     return (
         <div className="mx-auto w-full max-w-3xl pb-40">
+            {renaming && (
+                <RenameProductDialog
+                    name={renaming}
+                    open={!!renaming}
+                    onClose={() => setRenaming(null)}
+                    onDone={(pairs) => {
+                        // o que já estava na lista por gravar segue com o nome novo
+                        const to = new Map(pairs.map((x) => [nameKey(x.from), x.to]));
+                        const fix = (d: Draft): Draft => Object.fromEntries(Object.values(d).map((l) => {
+                            const n = to.get(nameKey(l.name));
+                            const line = n ? { ...l, name: n, key: lineKey(n, l.location) } : l;
+                            return [line.key, line];
+                        }));
+                        setDrafts((all) => ({ in: fix(all.in), out: fix(all.out), count: fix(all.count) }));
+                        setPicked((p) => (p?.product && to.has(nameKey(p.product.name)) ? { ...p, product: { ...p.product, name: to.get(nameKey(p.product.name))! } } : p));
+                    }}
+                />
+            )}
             <BarcodeScanner open={scanOpen} onClose={() => { setScanOpen(false); focusSearch(); }} onScan={(c) => handleCode(c, true)} />
             {/* Mode switch */}
             <div data-tour="qs-modes" className="grid grid-cols-3 gap-2 rounded-2xl bg-muted p-1.5">
@@ -715,7 +738,21 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                 <div data-tour="qs-panel" className={cn("mt-2 rounded-2xl border-2 bg-card p-4 shadow-sm", current.tone)}>
                     <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                            <p className="truncate text-base font-semibold text-foreground">{picked.product?.name || picked.newName}</p>
+                            <div className="flex min-w-0 items-center gap-1">
+                                <p className="truncate text-base font-semibold text-foreground">{picked.product?.name || picked.newName}</p>
+                                {picked.product && canRename && (
+                                    <button
+                                        type="button"
+                                        data-tour="qs-rename"
+                                        onClick={() => setRenaming(picked.product!.name)}
+                                        aria-label={`Mudar o nome de ${picked.product.name}`}
+                                        title="Mudar nome"
+                                        className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    >
+                                        <Pencil className="h-4 w-4" />
+                                    </button>
+                                )}
+                            </div>
                             <p className="text-xs text-muted-foreground">
                                 {picked.product
                                     ? (blind ? `Conte e escreva a quantidade que está lá (${picked.product.unit || "un"})` : `Stock actual: ${fmt(picked.product.stock || 0)} ${picked.product.unit || "un"}`)

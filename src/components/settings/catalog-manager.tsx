@@ -139,10 +139,15 @@ export function CatalogManager() {
         }
         const before = byId.get(id);
         const patch: Partial<CatalogProduct> = { ...data };
+        // nome novo: muda também no stock (todas as localizações), receitas e encomendas em aberto
+        if (before && data.name && data.name.trim() !== before.name) {
+            if (!(await ctx.renameProduct(before.name, data.name))) return;
+            delete patch.name;
+        }
         if (before && typeof data.price === "number" && data.price !== (before.price || 0)) {
             patch.priceHistory = pushPriceHistory(before.priceHistory, { at: new Date().toISOString(), from: before.price || 0, to: data.price, by: username });
         }
-        const n = await ctx.updateCatalogProducts([{ id, data: patch }]);
+        const n = Object.keys(patch).length ? await ctx.updateCatalogProducts([{ id, data: patch }]) : 1;
         if (n) toast({ title: "Produto atualizado" });
     };
     const askBulk = (kind: "category" | "price" | "delete", ids: string[]) => {
