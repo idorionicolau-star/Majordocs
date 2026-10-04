@@ -119,3 +119,31 @@ export function applyAliases<T extends { productName?: string }>(rows: T[] | nul
     });
     return changed ? out : rows;
 }
+
+/**
+ * Um produto solto, com stock ("Pavê Borbulha"), passa a ser uma variação que já existe no catálogo
+ * ("Pavê Borbulha - Preto", ainda sem stock): o stock, as receitas e as encomendas em aberto passam para a
+ * variação; a entrada solta do catálogo vai para a lixeira; o nome antigo fica guardado na variação
+ * (o histórico aparece com o nome novo).
+ */
+export function planMergeIntoVariant(
+    fromName: string,
+    target: Named & { id?: string; variantValues?: Record<string, string> },
+    data: { catalog: Named[]; products: (Named & { location?: string })[]; recipes: HasProductName[]; orders: HasProductName[] },
+): { plan: RenamePlan; trash: string[]; clash: string | null } {
+    const from = nameKey(fromName);
+    const to = nameKey(target.name);
+    // a variação já tem stock numa localização onde o produto solto também tem: juntar seria somar às cegas
+    const here = new Set(data.products.filter((p) => !p.deletedAt && nameKey(p.name) === to).map((p) => p.location || ''));
+    const clash = data.products.some((p) => !p.deletedAt && nameKey(p.name) === from && here.has(p.location || '')) ? target.name : null;
+    const plan = planRename([{ from: fromName, to: target.name }], { catalog: [], products: data.products, recipes: data.recipes, orders: data.orders }, undefined, {
+        variantGroup: target.variantGroup,
+        variantValues: target.variantValues || {},
+    });
+    if (target.id) {
+        const former = [...(target.formerNames || []), fromName].filter((n, i, a) => nameKey(n) !== to && a.findIndex((x) => nameKey(x) === nameKey(n)) === i);
+        plan.catalog = [{ id: target.id, data: { name: target.name, formerNames: former } }];
+    }
+    const trash = data.catalog.filter((c) => c.id && !c.deletedAt && nameKey(c.name) === from).map((c) => c.id!);
+    return { plan, trash, clash };
+}

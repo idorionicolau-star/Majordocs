@@ -173,6 +173,8 @@ export function FastSale() {
             }
         });
     const focusSearch = () => requestAnimationFrame(() => searchRef.current?.focus());
+    /** o nome continua escrito mas seleccionado: tocar noutra variação, ou escrever por cima outro produto */
+    const selectSearch = () => requestAnimationFrame(() => { searchRef.current?.focus(); searchRef.current?.select(); });
 
     const add = (p: Product, qty?: number | null, quiet = false) => {
         const a = avail(p);
@@ -191,9 +193,11 @@ export function FastSale() {
                 { key, productId: p.sourceIds?.[0] || p.id || "", name: p.name, unit: p.unit || "un", qty: q, price: priceOf(p), cost: p.cost || 0, available: a, ready: curingInfo.enabled ? Math.max(0, a - curingInfo.curing(p.name, p.location)) : undefined, readyAt: curingInfo.enabled ? curingInfo.nextReady(p.name, p.location)?.toISOString() : undefined, location: p.location || "", ref: p.price || 0 },
             ];
         });
-        setText("");
+        // variações da mesma família na lista ("pavê borbulha"): o nome fica escrito para juntar a próxima
+        const keep = !!p.variantGroup && !!parsed.term && results.some((x) => x !== p && x.variantGroup === p.variantGroup);
+        setText(keep ? parsed.term : "");
         if (quiet) return;
-        if (qty != null && qty > 0) focusSearch();
+        if (qty != null && qty > 0) { if (keep) selectSearch(); else focusSearch(); }
         else focusQty(key); // added 1 — cursor goes to the quantity so the number can be typed straight away
     };
 

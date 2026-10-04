@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { aliasMap, applyAliases, planRename, renameClash, renamePairs } from '@/lib/rename';
+import { aliasMap, applyAliases, planMergeIntoVariant, planRename, renameClash, renamePairs } from '@/lib/rename';
 
 const catalog = [
     { id: 'c1', name: 'Cimento' },
@@ -77,5 +77,32 @@ describe('produto que passa a ter variações', () => {
         const plan = planRename([{ from: 'Cimento', to: 'Cimento - Cinzento' }], { catalog, products, recipes: [], orders: [] }, undefined, { variantGroup: 'Cimento', variantValues: { Cor: 'Cinzento' } });
         expect(plan.catalog[0].data).toEqual({ name: 'Cimento - Cinzento', formerNames: ['Cimento'], variantGroup: 'Cimento', variantValues: { Cor: 'Cinzento' } });
         expect(plan.products.every((p) => p.data.variantGroup === 'Cimento')).toBe(true);
+    });
+});
+
+describe('juntar um produto solto a uma variação que já existe', () => {
+    const cat = [
+        { id: 'k0', name: 'Pavê Borbulha' },
+        { id: 'k1', name: 'Pavê Borbulha - Preto', variantGroup: 'Pavê Borbulha', variantValues: { Cor: 'Preto' } },
+    ];
+    it('o stock passa para a variação; a entrada solta vai para a lixeira', () => {
+        const r = planMergeIntoVariant('Pavê Borbulha', cat[1], {
+            catalog: cat,
+            products: [{ id: 's1', name: 'Pavê Borbulha', location: 'A' }],
+            recipes: [], orders: [{ id: 'o1', productName: 'Pavê Borbulha', status: 'Pendente' }],
+        });
+        expect(r.clash).toBeNull();
+        expect(r.plan.products[0]).toEqual({ id: 's1', data: { name: 'Pavê Borbulha - Preto', formerNames: ['Pavê Borbulha'], variantGroup: 'Pavê Borbulha', variantValues: { Cor: 'Preto' } } });
+        expect(r.plan.catalog).toEqual([{ id: 'k1', data: { name: 'Pavê Borbulha - Preto', formerNames: ['Pavê Borbulha'] } }]);
+        expect(r.plan.orders).toEqual([{ id: 'o1', productName: 'Pavê Borbulha - Preto' }]);
+        expect(r.trash).toEqual(['k0']);
+    });
+    it('não junta se a variação já tem stock na mesma localização', () => {
+        const r = planMergeIntoVariant('Pavê Borbulha', cat[1], {
+            catalog: cat,
+            products: [{ id: 's1', name: 'Pavê Borbulha', location: 'A' }, { id: 's2', name: 'Pavê Borbulha - Preto', location: 'A' }],
+            recipes: [], orders: [],
+        });
+        expect(r.clash).toBe('Pavê Borbulha - Preto');
     });
 });

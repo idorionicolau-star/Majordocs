@@ -29,7 +29,7 @@ const toQty = (s: string) => { const n = Number(String(s).replace(",", ".")); re
  * Editar um produto no Stock Rápido: mudar o nome (em todo o programa) e as variações —
  * criar variações num produto que ainda não as tem, mudar o valor de uma, acrescentar novas.
  */
-export function RenameProductDialog({ name, open, onClose, onDone, location, withQty, onEntries }: {
+export function RenameProductDialog({ name, open, onClose, onDone, location, withQty, onEntries, pendingNew = [] }: {
     name: string;
     open: boolean;
     onClose: () => void;
@@ -40,8 +40,10 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
     /** Entrada: pede a quantidade que entrou de cada variação nova */
     withQty?: boolean;
     onEntries?: (entries: NewVariantEntry[]) => void;
+    /** variações novas que estão no lote por registar (não se pode juntar stock a elas antes de registar) */
+    pendingNew?: string[];
 }) {
-    const { catalogProducts, products, renameProduct, addCatalogProduct, updateCatalogProducts, updateProduct, canEdit, user } = useInventory();
+    const { catalogProducts, products, renameProduct, addCatalogProduct, updateCatalogProducts, updateProduct, canEdit, user, mergeIntoVariant } = useInventory();
     const { toast } = useToast();
     const catalog = useMemo(() => (catalogProducts || []).filter((c) => !c.deletedAt), [catalogProducts]);
     const all = useMemo(() => [...catalog, ...(products || [])], [catalog, products]);
@@ -213,6 +215,45 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
 
     const typeSuggestions = SUGGESTED_VALUES[clean(type)] || [];
 
+    // Produto solto com o mesmo nome de uma família que já existe ("Pavê Borbulha" e "Pavê Borbulha - Preto", …):
+    // o stock dele é de uma dessas variações (ou de uma nova) — junta-se à família.
+    const sameFamily = useMemo(() => {
+        if (group) return [] as Product[];
+        const k = nameKey(name);
+        return catalog.filter((c) => c.variantGroup && nameKey(c.variantGroup) === k && nameKey(c.name) !== k)
+            .sort((a, b) => a.name.localeCompare(b.name, "pt", { numeric: true })) as unknown as Product[];
+    }, [catalog, group, name]);
+    const famOrder = useMemo(() => optionsOfFamily(sameFamily.map((m) => ({ variantValues: m.variantValues }))).map((o) => o.name), [sameFamily]);
+    const myStock = (products || []).filter((p) => nameKey(p.name) === nameKey(name) && (!location || (p.location || "") === location)).reduce((t, p) => t + (p.stock || 0), 0);
+    const hasStockHere = (n: string) => (products || []).some((p) => nameKey(p.name) === nameKey(n) && (!location || (p.location || "") === location) && (p.stock || 0) > 0);
+    const [joinNew, setJoinNew] = useState("");
+
+    const join = async (targetName: string) => {
+        setSaving(true);
+        const ok = await mergeIntoVariant(name, targetName);
+        setSaving(false);
+        if (!ok) return;
+        toast({ title: `Juntou-se à família «${sameFamily[0]?.variantGroup}»`, description: `O stock de «${name}» passou para «${targetName}».` });
+        onDone?.([{ from: name, to: targetName }]);
+        onClose();
+    };
+    const joinAsNew = async () => {
+        const v = clean(joinNew);
+        const base = sameFamily[0]?.variantGroup;
+        if (!v || !base || famOrder.length !== 1) return;
+        const values = { [famOrder[0]]: v };
+        const to = variantName(base, values, famOrder);
+        if (taken(to)) { await join(to); return; }
+        setSaving(true);
+        const ok = await renameProduct(name, to, { set: { variantGroup: base, variantValues: values } });
+        if (ok && !catalog.some((c) => nameKey(c.name) === nameKey(name))) await addCatalogProduct({ ...model(), name: to, variantGroup: base, variantValues: values } as Parameters<typeof addCatalogProduct>[0]);
+        setSaving(false);
+        if (!ok) return;
+        toast({ title: `Juntou-se à família «${base}»`, description: `«${name}» passa a «${to}».` });
+        onDone?.([{ from: name, to }]);
+        onClose();
+    };
+
     return (
         <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
             <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-md">
@@ -321,6 +362,31 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                                 </Button>
                             </div>
                         </>
+                    ) : sameFamily.length > 0 ? (
+                        <div className="space-y-2 rounded-xl border border-primary/40 bg-primary/5 p-3 text-sm" data-tour="qs-join-family">
+                            <p>Já existe a família <b>«{sameFamily[0].variantGroup}»</b> com {sameFamily.length} variações. <b>{myStock} {product?.unit || "un"}</b> deste produto são de qual?</p>
+                            <div className="grid grid-cols-2 gap-2">
+                                {sameFamily.map((m) => {
+                                    const pending = pendingNew.some((n) => nameKey(n) === nameKey(m.name));
+                                    const busy = hasStockHere(m.name) || pending;
+                                    return (
+                                        <button key={m.name} type="button" disabled={saving || busy} onClick={() => join(m.name)}
+                                            className="flex min-h-12 flex-col items-start justify-center rounded-xl border bg-background px-3 py-2 text-left hover:border-primary disabled:opacity-40">
+                                            <span className="font-semibold">{Object.values(m.variantValues || {}).join(" / ") || m.name}</span>
+                                            {busy && <span className="text-xs text-muted-foreground">{pending ? "no lote — registe primeiro" : "já tem stock aqui"}</span>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {famOrder.length === 1 && (
+                                <div className="flex gap-2">
+                                    <Input value={joinNew} onChange={(e) => setJoinNew(e.target.value)} placeholder={`Outra ${famOrder[0].toLowerCase()}…`} aria-label={`Outra ${famOrder[0]}`}
+                                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); joinAsNew(); } }} className="h-10" autoComplete="off" />
+                                    <Button type="button" variant="outline" className="h-10 shrink-0" disabled={!clean(joinNew) || saving} onClick={joinAsNew}>Juntar</Button>
+                                </div>
+                            )}
+                            <p className="text-xs text-muted-foreground">O stock, as encomendas em aberto e o histórico seguem para a variação escolhida.</p>
+                        </div>
                     ) : !converting ? (
                         <div className="rounded-xl border border-dashed p-3 text-sm">
                             <p className="text-muted-foreground">Este produto ainda não tem variações. Tem cores, texturas ou tamanhos diferentes?</p>
