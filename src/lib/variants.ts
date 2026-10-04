@@ -111,3 +111,56 @@ export function optionsOfFamily(members: { variantValues?: VariantValues }[]): V
   }
   return [...map].map(([name, values]) => ({ name, values }));
 }
+
+/**
+ * Enter numa pesquisa que só diz a família ("pavê 20") quando há várias variações: quais oferecer
+ * ("Qual cor?"). Devolve [] quando não é preciso perguntar: o produto não tem família, só há uma
+ * variação, ou a pesquisa já diz qual é ("pavê verm 20").
+ */
+export function variantChoice<T extends Grouped & { variantValues?: VariantValues }>(term: string, picked: T, pool: T[]): T[] {
+  if (!picked.variantGroup) return [];
+  const family = siblingsOf(picked, pool);
+  if (family.length < 2) return [];
+  const groupWords = nameKey(picked.variantGroup).split(/[^a-z0-9.,]+/).filter(Boolean);
+  const words = nameKey(term).split(/[^a-z0-9.,]+/).filter(Boolean);
+  // alguma palavra que não é do nome da família (ex.: "verm") = já escolheu a variação
+  const extra = words.filter((w) => !groupWords.some((g) => g.startsWith(w) || w.startsWith(g)));
+  return extra.length ? [] : family;
+}
+
+/** "Vermelho / Lisa" — o que distingue a variação dentro da família. */
+export function variantLabel(p: { name: string; variantGroup?: string; variantValues?: VariantValues }): string {
+  const v = Object.values(p.variantValues || {}).filter(Boolean).join(' / ');
+  if (v) return v;
+  const g = p.variantGroup ? clean(p.variantGroup) : '';
+  return g && p.name.startsWith(`${g} - `) ? p.name.slice(g.length + 3) : p.name;
+}
+
+export type FamilyGroup<T> = { kind: 'family'; key: string; group: string; members: T[] };
+
+/**
+ * Inventário: junta as variações da mesma família (e da mesma localização) numa só entrada, no lugar
+ * onde aparece a primeira. Uma família com uma só variação na lista fica como produto normal.
+ */
+export function groupFamilies<T extends Grouped & { location?: string }>(list: T[]): (T | FamilyGroup<T>)[] {
+  const keyOf = (p: T) => (p.variantGroup ? `${nameKey(p.variantGroup)}|${p.location || ''}` : '');
+  const count = new Map<string, T[]>();
+  for (const p of list) {
+    const k = keyOf(p);
+    if (k) count.set(k, [...(count.get(k) || []), p]);
+  }
+  const out: (T | FamilyGroup<T>)[] = [];
+  const placed = new Set<string>();
+  for (const p of list) {
+    const k = keyOf(p);
+    const fam = k ? count.get(k)! : [];
+    if (fam.length < 2) { out.push(p); continue; }
+    if (placed.has(k)) continue;
+    placed.add(k);
+    const members = [...fam].sort((a, b) => a.name.localeCompare(b.name, 'pt', { numeric: true, sensitivity: 'base' }));
+    out.push({ kind: 'family', key: k, group: p.variantGroup!, members });
+  }
+  return out;
+}
+
+export const isFamilyGroup = <T,>(x: T | FamilyGroup<T>): x is FamilyGroup<T> => !!x && typeof x === 'object' && (x as FamilyGroup<T>).kind === 'family';

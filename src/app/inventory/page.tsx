@@ -34,7 +34,9 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ProductCard } from "@/components/inventory/product-card";
-import { ProductRow } from "@/components/inventory/product-row";
+import { FamilyRow, ProductRow } from "@/components/inventory/product-row";
+import { FamilyCard } from "@/components/inventory/family-card";
+import { groupFamilies, isFamilyGroup, variantLabel, type FamilyGroup } from "@/lib/variants";
 import { ReservedDriftBanner } from "@/components/inventory/reserved-drift-banner";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
@@ -444,6 +446,17 @@ export default function InventoryPage() {
     return result;
   }, [searchedProducts, sortBy]);
 
+  // Variações da mesma família juntas numa só entrada (lista do telemóvel e cartões); a tabela mostra todas.
+  const grouped = useMemo(() => groupFamilies(filteredProducts), [filteredProducts]);
+  const [openFamilies, setOpenFamilies] = useState<Set<string>>(new Set());
+  const familyOpen = (key: string) => !!nameFilter.trim() || openFamilies.has(key);
+  const toggleFamily = (key: string) => setOpenFamilies((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+  type ListItem = { t: 'p'; p: Product; member?: boolean } | { t: 'f'; f: FamilyGroup<Product> };
+  const listItems = useMemo<ListItem[]>(() => grouped.flatMap((x): ListItem[] => {
+    if (!isFamilyGroup(x)) return [{ t: 'p', p: x }];
+    return [{ t: 'f', f: x }, ...(familyOpen(x.key) ? x.members.map((m): ListItem => ({ t: 'p', p: m, member: true })) : [])];
+  }), [grouped, openFamilies, nameFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Cartões: mostra 48 e vai juntando mais quando se chega perto do fim.
   const GRID_PAGE = 48;
   const [gridLimit, setGridLimit] = useState(GRID_PAGE);
@@ -822,15 +835,26 @@ export default function InventoryPage() {
                 useWindowScroll
                 increaseViewportBy={500}
                 // Desenha logo as primeiras linhas, sem esperar pela medição do ecrã.
-                initialItemCount={Math.min(20, filteredProducts.length)}
-                data={filteredProducts}
-                itemContent={(index, product) => (
-                  <ProductRow
-                    key={product.instanceId}
-                    product={product}
-                    canEdit={canEditInventory}
-                    locationName={isMultiLocation ? locations.find(l => l.id === product.location)?.name : undefined}
+                initialItemCount={Math.min(20, listItems.length)}
+                data={listItems}
+                computeItemKey={(_, it) => (it.t === 'f' ? `f-${it.f.key}` : `${it.member ? 'm' : 'p'}-${it.p.instanceId}`)}
+                itemContent={(index, it) => it.t === 'f' ? (
+                  <FamilyRow
+                    group={it.f.group}
+                    members={it.f.members}
+                    expanded={familyOpen(it.f.key)}
+                    onToggle={() => toggleFamily(it.f.key)}
+                    label={variantLabel}
+                    locationName={isMultiLocation ? locations.find(l => l.id === it.f.members[0]?.location)?.name : undefined}
                   />
+                ) : (
+                  <div className={cn(it.member && "border-l-4 border-primary/30 bg-muted/20")}>
+                    <ProductRow
+                      product={it.p}
+                      canEdit={canEditInventory}
+                      locationName={isMultiLocation ? locations.find(l => l.id === it.p.location)?.name : undefined}
+                    />
+                  </div>
                 )}
               />
             </div>
@@ -865,7 +889,16 @@ export default function InventoryPage() {
                 gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
                 gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
               )}>
-                {filteredProducts.slice(0, gridLimit).map(product => (
+                {grouped.slice(0, gridLimit).map(item => isFamilyGroup(item) ? (
+                  <FamilyCard
+                    key={`f-${item.key}`}
+                    group={item.group}
+                    members={item.members}
+                    canEdit={canEditInventory}
+                    label={variantLabel}
+                    locationName={isMultiLocation ? locations.find(l => l.id === item.members[0]?.location)?.name : undefined}
+                  />
+                ) : ((product: Product) => (
                   <ProductCard
                     key={product.instanceId}
                     product={product}
@@ -877,9 +910,9 @@ export default function InventoryPage() {
                     isMultiLocation={isMultiLocation}
                     locationName={locations.find(l => l.id === product.location)?.name}
                   />
-                ))}
+                ))(item))}
               </div>
-              {gridLimit < filteredProducts.length && <div ref={gridSentinel} className="h-24" aria-hidden />}
+              {gridLimit < grouped.length && <div ref={gridSentinel} className="h-24" aria-hidden />}
               <div className="pb-20" />
             </>
           ) : (

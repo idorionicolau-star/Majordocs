@@ -7,7 +7,7 @@ import { resolveInventoryProductRef } from '@/lib/product-ref';
 import { reservedToRelease } from '@/lib/order-stock';
 import { updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { InventoryCore } from './core';
-import { planRename, renameClash, renamePairs } from '@/lib/rename';
+import { planMergeIntoVariant, planRename, renameClash, renamePairs } from '@/lib/rename';
 import { nameKey } from '@/lib/catalog-view';
 
 type CatalogProduct = Omit<
@@ -614,7 +614,50 @@ export function useSettingsActions(core: InventoryCore) {
     }
   }, [isReadOnly, toast, firestore, companyId, canEdit, catalogProductsData, productsData, recipesData, ordersData]);
 
-  return { addCatalogProduct, addCatalogCategory, deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts, renameProduct };
+  /**
+   * Um produto solto com stock ("Pavê Borbulha") passa a ser uma variação que já existe no catálogo
+   * ("Pavê Borbulha - Preto"): stock, receitas e encomendas em aberto passam para ela; a entrada solta do
+   * catálogo vai para a lixeira. Ver planMergeIntoVariant em lib/rename.ts.
+   */
+  const mergeIntoVariant = useCallback(async (fromName: string, targetName: string): Promise<boolean> => {
+    if (isReadOnly || !firestore || !companyId) return false;
+    if (!canEdit('inventory') || !canEdit('settings')) {
+      toast({ variant: 'destructive', title: 'Sem permissão', description: 'Só quem gere o catálogo e o inventário pode juntar produtos a uma família.' });
+      return false;
+    }
+    const catalog = catalogProductsData || [];
+    const target = catalog.find((c) => nameKey(c.name) === nameKey(targetName));
+    if (!target?.variantGroup) return false;
+    const { plan, trash, clash } = planMergeIntoVariant(fromName, target, {
+      catalog, products: productsData || [],
+      recipes: canEdit('raw-materials') ? (recipesData || []) : [],
+      orders: canEdit('orders') ? (ordersData || []) : [],
+    });
+    if (clash) {
+      toast({ variant: 'destructive', title: `«${clash}» já tem stock aqui`, description: 'Para não somar às cegas, faça primeiro uma contagem ou escolha outra variação.' });
+      return false;
+    }
+    const at = new Date().toISOString();
+    const writes: [string, string, Record<string, unknown>][] = [
+      ...plan.catalog.map((u) => ['catalogProducts', u.id, u.data] as [string, string, Record<string, unknown>]),
+      ...trash.map((id) => ['catalogProducts', id, { deletedAt: at, deletedBy: user?.username || 'Sistema' }] as [string, string, Record<string, unknown>]),
+      ...plan.products.map((u) => ['products', u.id, { ...u.data, lastUpdated: at }] as [string, string, Record<string, unknown>]),
+      ...plan.recipes.map((u) => ['recipes', u.id, { productName: u.productName }] as [string, string, Record<string, unknown>]),
+      ...plan.orders.map((u) => ['orders', u.id, { productName: u.productName }] as [string, string, Record<string, unknown>]),
+    ];
+    try {
+      const batch = writeBatch(firestore);
+      for (const [col, id, data] of writes) batch.update(doc(firestore, `companies/${companyId}/${col}`, id), data);
+      if (typeof navigator !== 'undefined' && !navigator.onLine) batch.commit().catch(() => { });
+      else await batch.commit();
+      return true;
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Não foi possível juntar à família', description: e?.message });
+      return false;
+    }
+  }, [isReadOnly, toast, firestore, companyId, canEdit, catalogProductsData, productsData, recipesData, ordersData, user]);
+
+  return { addCatalogProduct, addCatalogCategory, deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts, renameProduct, mergeIntoVariant };
 }
 
 export type SettingsActions = ReturnType<typeof useSettingsActions>;

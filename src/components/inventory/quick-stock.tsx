@@ -14,7 +14,8 @@ import type { Product } from "@/lib/types";
 import { NewProductFields } from "@/components/inventory/new-product-fields";
 import { PhotoCount } from "@/components/inventory/photo-count";
 import { VariantsEditor, EMPTY_VARIANTS, type VariantsState } from "@/components/catalog/variants-editor";
-import { optionsOfFamily, planVariants } from "@/lib/variants";
+import { optionsOfFamily, planVariants, variantChoice, variantLabel } from "@/lib/variants";
+import { VariantChooser, chooserKey } from "@/components/catalog/variant-chooser";
 import { cleanProductName, findNameMatches, guessUnit, planCatalogWrites, suggestCategory, type NameMatch } from "@/lib/new-product";
 import {
     commitQuickStock,
@@ -85,6 +86,11 @@ function saveDraft(key: string, draft: Draft) {
     } catch {
         /* storage unavailable — draft just isn't kept */
     }
+}
+
+/** "No lote: 10" nos resultados da pesquisa — o que já foi juntado e ainda não foi registado. */
+function InLotBadge({ qty }: { qty: string }) {
+    return <span className="mt-0.5 inline-block shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground tabular-nums">no lote: {qty}</span>;
 }
 
 export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) {
@@ -272,6 +278,21 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const problems = lineList.filter((l) => mode === "out" && resultingStock(mode, l) < 0);
 
     const focusSearch = () => requestAnimationFrame(() => searchRef.current?.focus());
+    /**
+     * Depois de juntar um artigo: a pesquisa limpa-se — excepto quando a lista tem variações da mesma família
+     * ("pavê borbulha"): aí o nome fica escrito (seleccionado) para tocar na próxima variação sem o escrever de novo.
+     */
+    const nextSearch = (added?: Product) => {
+        const group = added?.variantGroup ? nameKey(added.variantGroup) : "";
+        const keep = !!group && !!parsed.term && [...results, ...elsewhere].some((x) => x.name !== added!.name && x.variantGroup && nameKey(x.variantGroup) === group);
+        if (keep) {
+            setText(parsed.term);
+            requestAnimationFrame(() => { searchRef.current?.focus(); searchRef.current?.select(); });
+        } else {
+            setText("");
+            focusSearch();
+        }
+    };
 
     const addLine = useCallback(
         (line: QuickLine, replace = false) => {
@@ -302,9 +323,8 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                     const sug = suggestCategory(clean, categoryNames, liveProducts);
                     addLine(newLine(clean, presetQty, undefined, undefined, { category: sug.category, unit: guessUnit(clean, unitNames) }));
                 }
-                setText("");
                 setPicked(null);
-                focusSearch();
+                nextSearch(product);
                 return;
             }
             setQtyText(fmt(presetQty));
@@ -362,9 +382,8 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const pickElsewhere = (p: Product, presetQty?: number | null) => {
         if (presetQty != null && presetQty >= 0) {
             addLine(newLine(p.name, presetQty, undefined, p));
-            setText("");
             setPicked(null);
-            focusSearch();
+            nextSearch(p);
             return;
         }
         setPicked({ newName: p.name, from: p });
@@ -492,11 +511,26 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             }
         }
         setPicked(null);
-        setText("");
-        focusSearch();
+        nextSearch(picked.product || picked.from);
+    };
+
+    // "pavê 20" + Enter numa família com várias variações: pergunta qual (em vez de usar a primeira)
+    const [choice, setChoice] = useState<{ options: Product[]; qty: number | null } | null>(null);
+    useEffect(() => setChoice(null), [parsed.term, mode]);
+    const choiceRows = (choice?.options || []).map((p) => ({
+        key: p.instanceId, label: variantLabel(p),
+        sub: [blind ? "" : `${fmt(p.stock || 0)} ${p.unit || "un"}`, lines[lineKey(p.name, p.location || "")] ? `no lote: ${fmt(lines[lineKey(p.name, p.location || "")].qty)}` : ""].filter(Boolean).join(" · ") || undefined,
+        disabled: mode === "out" && (p.stock || 0) <= 0,
+    }));
+    const pickChoice = (key: string) => {
+        const p = choice?.options.find((o) => o.instanceId === key);
+        if (!p) return;
+        pick(p, undefined, choice?.qty);
+        setChoice(null);
     };
 
     const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (choice && chooserKey(e, choiceRows, pickChoice, () => setChoice(null))) return;
         const total = results.length + elsewhere.length + (canCreate ? 1 : 0);
         if (e.key === "ArrowDown") {
             e.preventDefault();
@@ -513,7 +547,11 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                 if (first) countInputs.current.get(lineKey(first.name, first.location || ""))?.focus();
                 return;
             }
-            if (highlight < results.length && results[highlight]) pick(results[highlight], undefined, parsed.qty);
+            if (highlight < results.length && results[highlight]) {
+                const opts = mode === "count" ? [] : variantChoice(parsed.term, results[highlight], scoped);
+                if (opts.length) setChoice({ options: opts, qty: parsed.qty ?? null });
+                else pick(results[highlight], undefined, parsed.qty);
+            }
             else if (highlight < results.length + elsewhere.length) pickElsewhere(elsewhere[highlight - results.length], parsed.qty);
             else if (canCreate) pick(undefined, parsed.term, parsed.qty);
             else if (elsewhere[0]) pickElsewhere(elsewhere[0], parsed.qty);
@@ -621,6 +659,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                     onClose={() => setRenaming(null)}
                     location={location}
                     withQty={mode === "in"}
+                    pendingNew={Object.values(drafts).flatMap((d) => Object.values(d)).filter((l) => l.isNew).map((l) => l.name)}
                     onEntries={(entries) => { for (const e of entries) addLine(newLine(e.product.name, e.qty, e.product.price, e.product)); }}
                     onDone={(pairs) => {
                         // o que já estava na lista por gravar segue com o nome novo
@@ -731,10 +770,23 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                 )}
                 {parsed.qty != null && parsed.term && (
                     <p className="mt-1.5 px-1 text-xs text-muted-foreground">
-                        Enter adiciona <b className="text-foreground">{fmt(parsed.qty)}</b> × {results[highlight]?.name || parsed.term}
+                        {mode !== "count" && results[highlight] && highlight < results.length && variantChoice(parsed.term, results[highlight], scoped).length > 0
+                            ? <>Enter pergunta qual variação de <b className="text-foreground">{results[highlight].variantGroup}</b> ({fmt(parsed.qty)})</>
+                            : <>Enter adiciona <b className="text-foreground">{fmt(parsed.qty)}</b> × {results[highlight]?.name || parsed.term}</>}
                     </p>
                 )}
             </div>
+
+            {choice && (
+                <VariantChooser
+                    group={choice.options[0]?.variantGroup || ""}
+                    kind={(() => { const k = Object.keys(choice.options[0]?.variantValues || {}); return k.length === 1 ? k[0].toLowerCase() : undefined; })()}
+                    qty={choice.qty != null ? fmt(choice.qty) : undefined}
+                    options={choiceRows}
+                    onPick={pickChoice}
+                    onClose={() => { setChoice(null); focusSearch(); }}
+                />
+            )}
 
             {/* Quantity panel for the picked product */}
             {picked && (
@@ -856,14 +908,14 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             )}
 
             {/* Search results (entry / exit) */}
-            {!picked && mode !== "count" && parsed.term && (
+            {!picked && !choice && mode !== "count" && parsed.term && (
                 <div data-tour="qs-results" className="mt-2 overflow-hidden rounded-2xl border bg-card">
                     {results.map((p, i) => {
                         const inLot = lines[lineKey(p.name, p.location || "")];
                         return (
                             <button key={p.instanceId} type="button" onClick={() => pick(p, undefined, parsed.qty)}
                                 onMouseEnter={() => setHighlight(i)}
-                                className={cn("flex w-full items-center justify-between gap-3 border-b px-4 py-3 text-left last:border-0", i === highlight && "bg-muted")}>
+                                className={cn("flex w-full items-center justify-between gap-3 border-b px-4 py-3 text-left last:border-0", inLot && "border-l-4 border-l-primary bg-primary/5", i === highlight && "bg-muted")}>
                                 <div className="min-w-0">
                                     <p className="truncate font-medium">{p.name}</p>
                                     <p className="text-xs text-muted-foreground">
@@ -872,24 +924,30 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                                 </div>
                                 <div className="shrink-0 text-right">
                                     <p className="font-semibold tabular-nums">{fmt(p.stock || 0)} <span className="text-xs font-normal text-muted-foreground">{p.unit || "un"}</span></p>
-                                    {inLot && <p className="text-xs text-primary">no lote: {fmt(inLot.qty)}</p>}
+                                    {inLot && <InLotBadge qty={fmt(inLot.qty)} />}
                                 </div>
                             </button>
                         );
                     })}
-                    {elsewhere.map((p, i) => (
+                    {elsewhere.map((p, i) => {
+                        // já está no lote desta localização (ex.: variação nova que ainda não foi registada)
+                        const inLot = lines[lineKey(p.name, location)];
+                        return (
                         <button key={`else-${p.instanceId}`} type="button" onClick={() => pickElsewhere(p, parsed.qty)}
                             onMouseEnter={() => setHighlight(results.length + i)}
-                            className={cn("flex w-full items-center justify-between gap-3 border-b px-4 py-3 text-left", highlight === results.length + i && "bg-muted")}>
+                            className={cn("flex w-full items-center justify-between gap-3 border-b px-4 py-3 text-left", inLot && "border-l-4 border-l-primary bg-primary/5", highlight === results.length + i && "bg-muted")}>
                             <div className="min-w-0">
                                 <p className="truncate font-medium">{p.name}</p>
                                 {p.instanceId.startsWith("catalog-")
-                                    ? <p className="text-xs text-muted-foreground">Do catálogo · ainda sem stock{p.category ? ` · ${p.category}` : ""}</p>
+                                    ? <p className="text-xs text-muted-foreground">Do catálogo · {inLot ? "entra com este lote" : "ainda sem stock"}{p.category ? ` · ${p.category}` : ""}</p>
                                     : <p className="text-xs text-amber-600">Ainda não existe nesta localização · existe em {locName(p.location || "")}</p>}
                             </div>
-                            <span className="shrink-0 text-xs font-semibold text-primary">{p.instanceId.startsWith("catalog-") ? "Usar" : "Trazer para aqui"}</span>
+                            {inLot
+                                ? <InLotBadge qty={fmt(inLot.qty)} />
+                                : <span className="shrink-0 text-xs font-semibold text-primary">{p.instanceId.startsWith("catalog-") ? "Usar" : "Trazer para aqui"}</span>}
                         </button>
-                    ))}
+                        );
+                    })}
                     {canCreate && (
                         <button type="button" onClick={() => pick(undefined, parsed.term, parsed.qty)}
                             onMouseEnter={() => setHighlight(results.length + elsewhere.length)}
