@@ -1,5 +1,6 @@
 // Produtos fictícios da venda de demonstração. Só existem no ecrã: nunca são gravados.
 import type { Product } from "@/lib/types";
+import { rememberSeen } from "@/lib/seen-store";
 
 const base = { reservedStock: 0, lowStockThreshold: 10, criticalStockThreshold: 5, lastUpdated: "", location: "" };
 
@@ -30,5 +31,6 @@ export function markDemoSaleDone(companyId?: string | null) {
     } catch {
         /* ignore */
     }
+    rememberSeen(demoKey(companyId));
     if (typeof window !== "undefined") window.dispatchEvent(new Event("msx:guide-done"));
 }

@@ -3,6 +3,7 @@
 // Estado global do guia activo (qual e em que passo). Não precisa de contexto React: qualquer botão pode
 // começar um guia com `startGuide("catalogo")`. Fica no sessionStorage para sobreviver a um recarregar.
 import { useSyncExternalStore } from "react";
+import { rememberSeen } from "@/lib/seen-store";
 
 export type GuideState = { id: string; index: number } | null;
 
@@ -85,5 +86,6 @@ export function markGuideDone(id: string) {
     } catch {
         /* ignore */
     }
+    rememberSeen(doneKey(id));
     if (typeof window !== "undefined") window.dispatchEvent(new Event("msx:guide-done"));
 }

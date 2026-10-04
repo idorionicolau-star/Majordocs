@@ -11,6 +11,20 @@ import { GUIDES } from "./guides";
 import { guideStore, markGuideDone, useGuideState } from "./guide-store";
 import { findTarget } from "./types";
 
+/** O que se vê do elemento: cortado pelas caixas que deslizam (overflow) onde está metido. */
+function clippedRect(el: HTMLElement, r: DOMRect) {
+    let top = r.top, left = r.left, right = r.right, bottom = r.bottom;
+    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+        const cs = getComputedStyle(p);
+        const cx = cs.overflowX !== "visible", cy = cs.overflowY !== "visible";
+        if (!cx && !cy) continue;
+        const pr = p.getBoundingClientRect();
+        if (cx) { left = Math.max(left, pr.left); right = Math.min(right, pr.right); }
+        if (cy) { top = Math.max(top, pr.top); bottom = Math.min(bottom, pr.bottom); }
+    }
+    return { top, left, width: Math.max(0, right - left), height: Math.max(0, bottom - top), bottom, right };
+}
+
 const sameBox = (a: Box | null, b: Box) => !!a && Math.abs(a.top - b.top) < 0.5 && Math.abs(a.left - b.left) < 0.5 && Math.abs(a.width - b.width) < 0.5 && Math.abs(a.height - b.height) < 0.5;
 
 /**
@@ -135,12 +149,16 @@ export function GuideHost() {
                     const a = document.activeElement as HTMLElement | null;
                     if (a && a !== document.body && !el.contains(a) && !rootRef.current?.contains(a) && a.matches("input, textarea, select, [contenteditable='true']")) a.blur();
                 }
-                const r = el.getBoundingClientRect();
+                const full = el.getBoundingClientRect();
+                const r = clippedRect(el, full);
                 const vTop = vis.top;
                 const vBottom = vis.top + vis.height;
                 if (!scrolled) {
                     scrolled = true;
-                    if (r.top < vTop + 72 || r.bottom > vBottom - 96) el.scrollIntoView({ block: r.height > vis.height * 0.6 ? "start" : "center", behavior: "smooth" });
+                    const offV = full.top < vTop + 72 || full.bottom > vBottom - 96;
+                    // escondido para o lado (ex.: no fim de uma faixa de filtros que desliza na horizontal)
+                    const offH = r.width < Math.min(full.width, vw) - 2 || full.left < 0 || full.right > vw;
+                    if (offV || offH) el.scrollIntoView({ block: offV ? (full.height > vis.height * 0.6 ? "start" : "center") : "nearest", inline: offH ? "center" : "nearest", behavior: "smooth" });
                 }
                 // o teclado abriu ou fechou e o elemento ficou fora do que se vê → volta a mostrá-lo
                 if (kb !== lastKb) {
