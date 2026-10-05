@@ -305,5 +305,14 @@ service cloud.firestore {
         && request.resource.data.data is string;
       allow delete: if isSignedIn() && request.auth.uid == uid;
     }
+    // Plano do ReplayX (plan, subscriptionEndsAt, paidUntilMs) e pagamentos: o utilizador só lê; só o servidor escreve.
+    match /replayx_users/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+    match /replayx_users/{uid}/payments/{paymentId} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
   }
 }
