@@ -294,25 +294,5 @@ service cloud.firestore {
         allow create, update, delete: if can('reports', 'write');
       }
     }
-
-    // ReplayX (plataforma de trading): cada utilizador lê e grava só os seus próprios dados
-    // (layout, desenhos, sessões de replay, estratégias, alertas), guardados como JSON.
-    match /replayx_users/{uid}/state/{key} {
-      allow read: if isSignedIn() && request.auth.uid == uid;
-      allow create, update: if isSignedIn() && request.auth.uid == uid
-        && key in ['settings', 'workspace', 'drawings', 'trading', 'strategies', 'alerts']
-        && request.resource.data.keys().hasOnly(['data', 'updatedAt', 'savedAt'])
-        && request.resource.data.data is string;
-      allow delete: if isSignedIn() && request.auth.uid == uid;
-    }
-    // Plano do ReplayX (plan, subscriptionEndsAt, paidUntilMs) e pagamentos: o utilizador só lê; só o servidor escreve.
-    match /replayx_users/{uid} {
-      allow read: if isSignedIn() && request.auth.uid == uid;
-      allow write: if false;
-    }
-    match /replayx_users/{uid}/payments/{paymentId} {
-      allow read: if isSignedIn() && request.auth.uid == uid;
-      allow write: if false;
-    }
   }
 }
