@@ -38,6 +38,7 @@ import { parseVoice } from "@/lib/voice-parse";
 import { resolveVoice } from "@/lib/voice-approx";
 import { VoiceConfirm, type VoiceAsk } from "@/components/scan/voice-confirm";
 import { useBarcodeLink } from "@/hooks/use-barcode-link";
+import { evalQty, isExpression, prettyExpression } from "@/lib/calc";
 import { RenameProductDialog, useCanRename } from "@/components/inventory/rename-product-dialog";
 import type { RenamePair } from "@/lib/rename";
 import {
@@ -86,6 +87,17 @@ function saveDraft(key: string, draft: Draft) {
     } catch {
         /* storage unavailable — draft just isn't kept */
     }
+}
+
+/** "120 + 35 + 48 = 203" enquanto se escreve uma conta num campo das listas. */
+function CalcPreview({ text, fmt }: { text: string; fmt: (n: number) => string }) {
+    if (!isExpression(text)) return null;
+    const v = evalQty(text);
+    return (
+        <p className="truncate text-xs font-semibold text-primary" aria-live="polite">
+            {prettyExpression(text)} = {Number.isFinite(v) ? fmt(v) : "…"}
+        </p>
+    );
 }
 
 /** "No lote: 10" nos resultados da pesquisa — o que já foi juntado e ainda não foi registado. */
@@ -146,6 +158,9 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const searchRef = useRef<HTMLInputElement>(null);
     const qtyRef = useRef<HTMLInputElement>(null);
     const countInputs = useRef<Map<string, HTMLInputElement>>(new Map());
+    const lotInputs = useRef<Map<string, HTMLInputElement>>(new Map());
+    /** Linha (contagem ou lote) com o campo aberto e o que lá está escrito — para os botões ＋/× e o total da conta. */
+    const [calc, setCalc] = useState<{ key: string; text: string } | null>(null);
 
     const current = MODES.find((m) => m.id === mode)!;
     // Contagem cega: quem conta (funcionário) não vê o stock do sistema — conta o que está lá de verdade.
@@ -467,6 +482,15 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
 
     // Buttons next to the quantity field must not steal focus (keeps Enter working and the phone keyboard open).
     const keepFocus = (e: React.MouseEvent) => e.preventDefault();
+    /** "120" + "+" → "120+" (troca o sinal se o último já for um): o teclado numérico do telemóvel não tem + nem ×. */
+    const withOp = (v: string, op: string) => (v.trim() ? v.replace(/\s*[-+*/x×]\s*$/i, "") + op : v);
+    /** Botões ＋/× num campo das listas (contagem, lote): escreve no próprio campo, sem lhe tirar o foco. */
+    const typeOp = (el: HTMLInputElement | undefined, key: string, op: string) => {
+        if (!el) return;
+        el.value = withOp(el.value, op);
+        el.setSelectionRange(el.value.length, el.value.length);
+        setCalc({ key, text: el.value });
+    };
 
     /** Produto novo com variações: cada variação com quantidade vira uma linha do lote (e entra no catálogo). */
     const confirmVariants = () => {
@@ -893,6 +917,22 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                         )}
                     </div>}
 
+                    {!(creating && mode === "in" && variants.enabled) && (
+                        <div className="mt-2 flex items-center gap-2" data-tour="qs-calc">
+                            <button type="button" onMouseDown={keepFocus} onClick={() => setQtyText((v) => withOp(v, "+"))} aria-label="Somar"
+                                className="flex h-10 items-center justify-center gap-1 rounded-lg border-2 border-primary/40 bg-primary/5 px-3 text-sm font-bold text-primary"><span className="text-lg">＋</span> somar</button>
+                            <button type="button" onMouseDown={keepFocus} onClick={() => setQtyText((v) => withOp(v, "×"))} aria-label="Multiplicar"
+                                className="flex h-10 items-center justify-center gap-1 rounded-lg border-2 border-primary/40 bg-primary/5 px-3 text-sm font-bold text-primary"><span className="text-lg">×</span> vezes</button>
+                            <p className="min-w-0 flex-1 truncate text-right text-sm" aria-live="polite" data-tour="qs-calc-result">
+                                {isExpression(qtyText)
+                                    ? Number.isFinite(evalQty(qtyText))
+                                        ? <><span className="text-muted-foreground">{prettyExpression(qtyText)} =</span> <b className="text-base tabular-nums">{fmt(evalQty(qtyText))}</b></>
+                                        : <span className="text-muted-foreground">{prettyExpression(qtyText)} …</span>
+                                    : <span className="text-xs text-muted-foreground">Some por partes: 120 ＋ 35 ＋ 48</span>}
+                            </p>
+                        </div>
+                    )}
+
                     {mode !== "count" && !(creating && mode === "in" && variants.enabled) && (
                         <div className="mt-2 flex flex-wrap gap-2">
                             {STEPS.map((s) => (
@@ -1019,21 +1059,31 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                                             )}
                                             {!blind && line && diff === 0 && <span className="ml-2 font-semibold text-emerald-600">✓ certo</span>}
                                         </p>
+                                        {calc?.key === key && <CalcPreview text={calc.text} fmt={fmt} />}
                                     </div>
-                                    {!blind && (
+                                    {!blind && calc?.key !== key && (
                                     <button type="button" title="Igual ao sistema" onClick={() => { addLine(lineFromProduct(p, p.stock || 0), true); focusNextCount(key); }}
                                         className="h-10 shrink-0 rounded-lg border px-2 text-xs text-muted-foreground">
                                         = {fmt(p.stock || 0)}
                                     </button>
                                     )}
+                                    {calc?.key === key && (
+                                        <span className="flex shrink-0 gap-1">
+                                            <button type="button" aria-label="Somar" onMouseDown={keepFocus} onClick={() => typeOp(countInputs.current.get(key), key, "+")} className="h-10 w-9 rounded-lg border-2 border-primary/40 bg-primary/5 text-lg font-bold text-primary">＋</button>
+                                            <button type="button" aria-label="Multiplicar" onMouseDown={keepFocus} onClick={() => typeOp(countInputs.current.get(key), key, "×")} className="h-10 w-9 rounded-lg border-2 border-primary/40 bg-primary/5 text-lg font-bold text-primary">×</button>
+                                        </span>
+                                    )}
                                     <input
                                         ref={(el) => { if (el) countInputs.current.set(key, el); else countInputs.current.delete(key); }}
+                                        onFocus={(e) => setCalc({ key, text: e.target.value })}
+                                        onInput={(e) => setCalc({ key, text: (e.target as HTMLInputElement).value })}
                                         inputMode="decimal"
                                         enterKeyHint="next"
                                         placeholder="—"
                                         defaultValue={line ? fmt(line.qty) : ""}
                                         key={line ? `${key}-${line.qty}` : key}
                                         onBlur={(e) => {
+                                            setCalc((c) => (c?.key === key ? null : c));
                                             const raw = e.target.value.trim();
                                             if (raw === "") { if (line) removeLine(key); return; }
                                             const q = toNumber(raw);
@@ -1085,12 +1135,23 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                                             {fmt(l.systemStock)} → {fmt(after)} {l.unit}{after < 0 && " · stock insuficiente"}
                                             {after >= 0 && l.reservedStock > 0 && after < l.reservedStock && <span className="font-semibold text-amber-600"> · abaixo do reservado ({fmt(l.reservedStock)})</span>}
                                         </p>
+                                        {calc?.key === l.key && <CalcPreview text={calc.text} fmt={fmt} />}
                                     </div>
+                                    {calc?.key === l.key && (
+                                        <span className="flex shrink-0 gap-1">
+                                            <button type="button" aria-label="Somar" onMouseDown={keepFocus} onClick={() => typeOp(lotInputs.current.get(l.key), l.key, "+")} className="h-10 w-9 rounded-lg border-2 border-primary/40 bg-primary/5 text-lg font-bold text-primary">＋</button>
+                                            <button type="button" aria-label="Multiplicar" onMouseDown={keepFocus} onClick={() => typeOp(lotInputs.current.get(l.key), l.key, "×")} className="h-10 w-9 rounded-lg border-2 border-primary/40 bg-primary/5 text-lg font-bold text-primary">×</button>
+                                        </span>
+                                    )}
                                     <input
+                                        ref={(el) => { if (el) lotInputs.current.set(l.key, el); else lotInputs.current.delete(l.key); }}
+                                        onFocus={(e) => setCalc({ key: l.key, text: e.target.value })}
+                                        onInput={(e) => setCalc({ key: l.key, text: (e.target as HTMLInputElement).value })}
                                         inputMode="decimal"
                                         defaultValue={fmt(l.qty)}
                                         key={`${l.key}-${l.qty}`}
                                         onBlur={(e) => {
+                                            setCalc((c) => (c?.key === l.key ? null : c));
                                             const q = toNumber(e.target.value);
                                             if (q > 0) setLineQty(l.key, q); else removeLine(l.key);
                                         }}

@@ -1,3 +1,4 @@
+import { evalQty } from "@/lib/calc";
 import {
     collection,
     doc,
@@ -43,6 +44,9 @@ export const lineKey = (name: string, location: string) =>
     `${normalizeString(name.trim())}|${location || ""}`;
 
 export const toNumber = (raw: string): number => {
+    // também aceita contas: "120+35+48" → 203, "12x8" → 96 (ver lib/calc.ts)
+    const v = evalQty(raw);
+    if (Number.isFinite(v)) return v;
     const n = parseFloat(String(raw).replace(/\s/g, "").replace(",", "."));
     return Number.isFinite(n) ? n : NaN;
 };
