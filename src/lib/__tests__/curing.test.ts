@@ -63,3 +63,15 @@ describe('curing', () => {
     expect(r.get('s4')).toEqual({ state: 'short' });
   });
 });
+
+describe('local "Principal" = sem local', () => {
+  it('a venda sem local encontra o stock em "Principal" (e o que seca lá)', () => {
+    const now = new Date(2026, 0, 10);
+    const batches = curingBatches([{ productName: 'Grelha', quantity: 5, date: '2026-01-09', location: 'Principal' }], now, 3);
+    const stock = (_n: string, l?: string) => (!l || l === 'Principal' ? 314 : 0);
+    const out = allocatePickups([{ id: 's1', productName: 'Grelha', quantity: 6, date: '2026-01-10', location: '' }], stock, batches);
+    expect(out.get('s1')).toEqual({ state: 'ready' });
+    expect(curingQty(batches, 'grelha', '')).toBe(5);
+    expect(curingQty(batches, 'grelha', 'Principal')).toBe(5);
+  });
+});

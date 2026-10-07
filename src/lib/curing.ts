@@ -8,6 +8,9 @@ export type ProductionLite = { productName: string; quantity: number; date: stri
 export type PendingSale = { id: string; productName: string; quantity: number; date: string; location?: string };
 export type CuringBatch = { name: string; location: string; qty: number; readyAt: Date };
 
+/** Num só local, "Principal" e "" são o mesmo sítio (ver sameLocation em lib/product-ref). */
+const loc = (l?: string | null) => (!l || l === 'Principal' ? '' : l);
+
 const key = (s: string) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
 
 /** Início do dia (hora local) em que o lote fica pronto: dia da produção + dias de secagem. */
@@ -23,7 +26,7 @@ export function curingBatches(productions: ProductionLite[], now: Date, curingDa
   if (!(curingDays > 0)) return [];
   return productions
     .filter((p) => !p.deletedAt && p.quantity > 0 && p.date)
-    .map((p) => ({ name: p.productName, location: p.location || '', qty: p.quantity, readyAt: readyDate(p.date, curingDays) }))
+    .map((p) => ({ name: p.productName, location: loc(p.location), qty: p.quantity, readyAt: readyDate(p.date, curingDays) }))
     .filter((b) => !isNaN(b.readyAt.getTime()) && b.readyAt.getTime() > now.getTime())
     .sort((a, b) => a.readyAt.getTime() - b.readyAt.getTime());
 }
@@ -31,13 +34,13 @@ export function curingBatches(productions: ProductionLite[], now: Date, curingDa
 /** Quantidade deste produto (neste local) ainda a secar. */
 export function curingQty(batches: CuringBatch[], name: string, location?: string): number {
   const k = key(name);
-  return batches.filter((b) => key(b.name) === k && b.location === (location || '')).reduce((t, b) => t + b.qty, 0);
+  return batches.filter((b) => key(b.name) === k && b.location === loc(location)).reduce((t, b) => t + b.qty, 0);
 }
 
 /** Quando fica pronto o próximo lote deste produto (ou null). */
 export function nextReady(batches: CuringBatch[], name: string, location?: string): Date | null {
   const k = key(name);
-  return batches.find((b) => key(b.name) === k && b.location === (location || ''))?.readyAt ?? null;
+  return batches.find((b) => key(b.name) === k && b.location === loc(location))?.readyAt ?? null;
 }
 
 /** Pronto a carregar = o que há em stock menos o que ainda seca (nunca negativo). */
@@ -63,14 +66,14 @@ export function allocatePickups(
   const out = new Map<string, PickupStatus>();
   const groups = new Map<string, PendingSale[]>();
   for (const s of pending) {
-    const g = `${key(s.productName)}|${s.location || ''}`;
+    const g = `${key(s.productName)}|${loc(s.location)}`;
     groups.set(g, [...(groups.get(g) || []), s]);
   }
   for (const list of groups.values()) {
     const { productName, location } = list[0];
     const stock = stockOf(productName, location);
     const pool = readyQty(stock, batches, productName, location);
-    const mine = batches.filter((b) => key(b.name) === key(productName) && b.location === (location || ''));
+    const mine = batches.filter((b) => key(b.name) === key(productName) && b.location === loc(location));
     let demand = 0;
     for (const s of [...list].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())) {
       demand += s.quantity;
