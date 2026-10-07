@@ -96,12 +96,31 @@ export function useSettingsActions(core: InventoryCore) {
     }
     if (!updates.length) return 0;
     try {
-      return await batchCatalog(updates.map((u) => ({ id: u.id, data: u.data as Record<string, unknown> })));
+      const n = await batchCatalog(updates.map((u) => ({ id: u.id, data: u.data as Record<string, unknown> })));
+      // Preço mudado no catálogo: o stock (todas as localizações) passa a ter o mesmo preço — é o que a venda usa.
+      const priced = updates.filter((u) => typeof u.data.price === 'number');
+      if (priced.length && firestore && companyId && canEdit('inventory')) {
+        const nameOf = new Map((catalogProductsData || []).map((c) => [c.id, c.name]));
+        const writes: { id: string; price: number }[] = [];
+        for (const u of priced) {
+          const name = nameOf.get(u.id);
+          if (!name) continue;
+          for (const p of productsData || []) if (p.id && !p.deletedAt && nameKey(p.name) === nameKey(name) && p.price !== u.data.price) writes.push({ id: p.id, price: u.data.price as number });
+        }
+        const at = new Date().toISOString();
+        for (let i = 0; i < writes.length; i += 400) {
+          const batch = writeBatch(firestore);
+          writes.slice(i, i + 400).forEach((w) => batch.update(doc(firestore, `companies/${companyId}/products`, w.id), { price: w.price, lastUpdated: at }));
+          if (typeof navigator !== 'undefined' && !navigator.onLine) batch.commit().catch(() => { });
+          else await batch.commit();
+        }
+      }
+      return n;
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Não foi possível alterar', description: e?.message });
       return 0;
     }
-  }, [isReadOnly, toast, batchCatalog]);
+  }, [isReadOnly, toast, batchCatalog, firestore, companyId, canEdit, catalogProductsData, productsData]);
 
   const deleteCatalogCategory = useCallback(async (categoryId: string) => {
     if (isReadOnly) {

@@ -20,7 +20,7 @@ const fmtQty = (n: number) => new Intl.NumberFormat("pt-PT", { maximumFractionDi
  * Ficha do produto do catálogo: foto, preço, custo e margem, código de barras, quanto há em cada local,
  * últimas vendas e histórico de preços. Abre ao tocar num produto; daqui edita-se, duplica-se ou apaga-se.
  */
-export function CatalogProductDetail({ product, inventory, sales, locations, readOnly, family, onClose, onEdit, onDuplicate, onDelete, onOpenSibling, onAddVariant, onCreateVariants, onRenameFamily }: {
+export function CatalogProductDetail({ product, inventory, sales, locations, readOnly, family, onClose, onEdit, onDuplicate, onDelete, onOpenSibling, onAddVariant, onCreateVariants, onRenameFamily, onFamilyPrice }: {
     product: Item | null;
     inventory: Product[];
     sales: Sale[];
@@ -30,6 +30,8 @@ export function CatalogProductDetail({ product, inventory, sales, locations, rea
     family: Item[];
     /** mudar o nome da família (o nome base de todas as variações) */
     onRenameFamily?: (p: Item) => void;
+    /** o mesmo preço para todas as variações da família */
+    onFamilyPrice?: (p: Item) => void;
     onClose: () => void;
     onEdit: (p: Item) => void;
     onDuplicate: (p: Item) => void;
@@ -103,10 +105,19 @@ export function CatalogProductDetail({ product, inventory, sales, locations, rea
                             <section aria-label="Variações">
                                 <div className="mb-2 flex items-center justify-between gap-2">
                                     <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-semibold"><Layers className="h-4 w-4 shrink-0" /> <span className="truncate">Variações de {product.variantGroup}</span> <span className="font-normal text-muted-foreground">({siblings.length})</span></h3>
-                                    {onRenameFamily && !readOnly && (
-                                        <Button type="button" variant="outline" size="sm" className="h-8 shrink-0" data-tour="catalog-rename-family" onClick={() => onRenameFamily(product)}>
-                                            <Edit className="mr-1 h-3.5 w-3.5" /> Nome da família
-                                        </Button>
+                                    {!readOnly && (onRenameFamily || onFamilyPrice) && (
+                                        <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                                            {onRenameFamily && (
+                                                <Button type="button" variant="outline" size="sm" className="h-8" data-tour="catalog-rename-family" onClick={() => onRenameFamily(product)}>
+                                                    <Edit className="mr-1 h-3.5 w-3.5" /> Nome
+                                                </Button>
+                                            )}
+                                            {onFamilyPrice && (
+                                                <Button type="button" variant="outline" size="sm" className="h-8" data-tour="catalog-family-price" onClick={() => onFamilyPrice(product)}>
+                                                    Preço da família
+                                                </Button>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                                 <ul className="divide-y rounded-xl border text-sm">
