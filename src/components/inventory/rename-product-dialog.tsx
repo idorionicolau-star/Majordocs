@@ -56,7 +56,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
 
     // a família: um por nome (catálogo + stock), com o stock desta localização
     const members = useMemo(() => {
-        type Row = { name: string; values: VariantValues; stock: number; unit: string; price: number; fromCatalog: boolean };
+        type Row = { name: string; values: VariantValues; stock: number; unit: string; price: number; cost: number; ownCost: boolean; fromCatalog: boolean };
         if (!group) return [] as Row[];
         const k = nameKey(group);
         const by = new Map<string, Row>();
@@ -64,9 +64,11 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
             if (!p.variantGroup || nameKey(p.variantGroup) !== k) continue;
             const key = nameKey(p.name);
             const isStock = "instanceId" in p && !!(p as Product).instanceId;
-            const cur = by.get(key) || { name: p.name, values: p.variantValues || {}, stock: 0, unit: p.unit || "un", price: 0, fromCatalog: false };
+            const cur = by.get(key) || { name: p.name, values: p.variantValues || {}, stock: 0, unit: p.unit || "un", price: 0, cost: 0, ownCost: false, fromCatalog: false };
             // o preço do catálogo manda; sem catálogo, o do stock
             if (!isStock && p.price) { cur.price = p.price; cur.fromCatalog = true; } else if (!cur.fromCatalog && p.price) cur.price = p.price;
+            // o custo também: o do catálogo manda; "custo próprio" (mudado à mão) está no catálogo
+            if (!isStock) { if (p.cost) cur.cost = p.cost; if (p.ownCost) cur.ownCost = true; } else if (!cur.cost && p.cost) cur.cost = p.cost;
             if (isStock && (!location || ((p as Product).location || "") === location)) cur.stock += (p as Product).stock || 0;
             by.set(key, cur);
         }
@@ -83,6 +85,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
     const [editing, setEditing] = useState<string | null>(null);
     const [editValues, setEditValues] = useState<VariantValues>({});
     const [editPrice, setEditPrice] = useState("");
+    const [editCost, setEditCost] = useState("");
     // variações novas: o mesmo editor do produto novo (tipos, valores com sugestões, quantidade e preço de cada uma)
     const [vstate, setVstate] = useState<VariantsState>({ enabled: true, options: [{ name: "Cor", values: [] }], prices: {} });
     const [vqty, setVqty] = useState<Record<string, string>>({});
@@ -96,11 +99,20 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
     const famPriceN = famPrice.trim() ? evalQty(famPrice) : 0;
     const famPriceOk = Number.isFinite(famPriceN) && famPriceN > 0;
     const blanks = members.filter((m) => !m.price);
+    // custo da família: um custo único para todas, menos as que tiveram o custo mudado à mão
+    const [famCost, setFamCost] = useState("");
+    const famCostN = famCost.trim() ? evalQty(famCost) : 0;
+    const famCostOk = Number.isFinite(famCostN) && famCostN > 0;
+    const unified = members.filter((m) => !m.ownCost);
+    const costFill = famCostOk ? unified.filter((m) => m.cost !== famCostN) : [];
 
     useEffect(() => {
         if (!open) return;
         setFamily(!!(startFamily && group)); setValue(startFamily && group ? group : name); setSaving(false);
         setEditing(null); setVqty({}); setStockTo(""); setConverting(false); setFamPrice("");
+        // o custo único que a família já tem (se as variações sem custo próprio têm todas o mesmo)
+        const costs = [...new Set(members.filter((m) => !m.ownCost).map((m) => m.cost))];
+        setFamCost(costs.length === 1 && costs[0] > 0 ? String(costs[0]) : "");
         setVstate({ enabled: true, options: order.length ? order.map((n) => ({ name: n, values: [] })) : [{ name: "Cor", values: [] }], prices: {} });
     }, [open, name, group]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -120,7 +132,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
         const p = (src || {}) as Partial<Product>;
         return {
             // na família, as variações novas sem preço próprio levam o preço da família
-            category: p.category || "Geral", price: familyMode && famPriceOk ? famPriceN : p.price || 0, cost: p.cost || 0, unit: p.unit || "un",
+            category: p.category || "Geral", price: familyMode && famPriceOk ? famPriceN : p.price || 0, cost: familyMode && famCostOk ? famCostN : p.cost || 0, unit: p.unit || "un",
             lowStockThreshold: p.lowStockThreshold ?? 10, criticalStockThreshold: p.criticalStockThreshold ?? 5,
             ...(p.imageUrl ? { imageUrl: p.imageUrl } : {}),
         };
@@ -149,12 +161,16 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
         onClose();
     };
 
-    /** "Editar família": o preço vai só para as variações sem preço (as outras guardam o seu); depois o nome */
+    /**
+     * "Editar família": o preço vai só para as variações sem preço (as outras guardam o seu);
+     * o custo vai para todas as que não têm custo próprio; depois o nome.
+     */
     const saveFamily = async () => {
         const fill = famPriceOk ? blanks : [];
-        if ((!pairs.length && !fill.length) || clash || saving) return;
+        if ((!pairs.length && !fill.length && !costFill.length) || clash || saving) return;
         setSaving(true);
         for (const m of fill) await setPrice(m.name, famPriceN);
+        for (const m of costFill) await setCost(m.name, famCostN, false);
         const ok = pairs.length ? await renameProduct(name, value, { family: true }) : true;
         setSaving(false);
         if (!ok) return;
@@ -163,6 +179,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
             description: [
                 pairs.length ? `Nome: «${clean(value)}».` : "",
                 fill.length ? `${formatCurrency(famPriceN)} em ${fill.length} variaç${fill.length === 1 ? "ão" : "ões"} sem preço.` : "",
+                costFill.length ? `Custo ${formatCurrency(famCostN)} em ${costFill.length} variaç${costFill.length === 1 ? "ão" : "ões"}.` : "",
             ].filter(Boolean).join(" "),
         });
         if (pairs.length) onDone?.(pairs);
@@ -180,21 +197,33 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
         for (const p of (products || []).filter((x) => nameKey(x.name) === k && x.instanceId)) await updateProduct(p.instanceId, { price });
     };
 
-    const saveEdit = async (m: { name: string; values: VariantValues; price: number }) => {
+    /** custo de uma variação: no catálogo (chega ao stock) e no stock sem catálogo; `own` = mudado à mão */
+    const setCost = async (productName: string, cost: number, own: boolean) => {
+        const k = nameKey(productName);
+        const cat = catalog.filter((c) => c.id && nameKey(c.name) === k);
+        if (cat.length && canEdit("settings")) await updateCatalogProducts(cat.map((c) => ({ id: c.id!, data: { cost, ownCost: own } })));
+        for (const p of (products || []).filter((x) => nameKey(x.name) === k && x.instanceId && (x.cost || 0) !== cost)) await updateProduct(p.instanceId, { cost });
+    };
+
+    const saveEdit = async (m: { name: string; values: VariantValues; price: number; cost: number }) => {
         const values = Object.fromEntries(order.map((k) => [k, clean(editValues[k] ?? m.values[k] ?? "")]));
         if (order.some((k) => !values[k]) || !group) return;
         const to = variantName(group, values, order);
         const renamed = nameKey(to) !== nameKey(m.name);
         const newPrice = toQty(editPrice);
         const repriced = editPrice.trim() !== "" && newPrice > 0 && newPrice !== m.price;
-        if (!renamed && !repriced) { setEditing(null); return; }
+        const newCost = toQty(editCost);
+        const recosted = editCost.trim() !== "" && newCost > 0 && newCost !== m.cost;
+        if (!renamed && !repriced && !recosted) { setEditing(null); return; }
         if (renamed && taken(to)) { toast({ variant: "destructive", title: "Essa variação já existe", description: to }); return; }
         setSaving(true);
         if (renamed && !(await renameProduct(m.name, to, { set: { variantValues: values } }))) { setSaving(false); return; }
         if (repriced) await setPrice(renamed ? to : m.name, newPrice);
+        // custo mudado só nesta variação: passa a ser próprio (o custo da família não o substitui)
+        if (recosted) await setCost(renamed ? to : m.name, newCost, true);
         setSaving(false);
         setEditing(null);
-        toast({ title: "Variação actualizada", description: [renamed ? `«${m.name}» passa a «${to}».` : "", repriced ? `Preço: ${formatCurrency(newPrice)}.` : ""].filter(Boolean).join(" ") });
+        toast({ title: "Variação actualizada", description: [renamed ? `«${m.name}» passa a «${to}».` : "", repriced ? `Preço: ${formatCurrency(newPrice)}.` : "", recosted ? `Custo: ${formatCurrency(newCost)}.` : ""].filter(Boolean).join(" ") });
         if (renamed) onDone?.([{ from: m.name, to }]);
     };
 
@@ -308,7 +337,17 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                             {" "}As que já têm preço próprio não mudam (mude-as no lápis, abaixo).
                         </p>
                     </div>
-                    <Button type="button" className="h-11 w-full" onClick={saveFamily} disabled={(!pairs.length && !(famPriceOk && blanks.length)) || !!clash || saving}>
+                    <div className="space-y-1.5">
+                        <label htmlFor="family-cost" className="text-sm font-semibold">Custo da família</label>
+                        <Input id="family-cost" inputMode="decimal" value={famCost} onChange={(e) => setFamCost(e.target.value)} placeholder="Ex.: 400"
+                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveFamily(); } }} className="h-11 text-base" autoComplete="off" />
+                        <p className="text-xs text-muted-foreground">
+                            Um custo único para {unified.length === members.length ? <b className="text-foreground">todas as variações</b> : <b className="text-foreground">{unified.length} variaç{unified.length === 1 ? "ão" : "ões"}</b>} e para as novas.
+                            {unified.length < members.length && <> {members.length - unified.length === 1 ? "A que tem" : `As ${members.length - unified.length} que têm`} custo próprio ({members.filter((m) => m.ownCost).map((m) => order.map((k) => m.values[k]).filter(Boolean).join(" / ") || m.name).join(", ")}) {members.length - unified.length === 1 ? "fica" : "ficam"} com o seu.</>}
+                            {" "}Mudar o custo de uma variação no lápis torna-o próprio.
+                        </p>
+                    </div>
+                    <Button type="button" className="h-11 w-full" onClick={saveFamily} disabled={(!pairs.length && !(famPriceOk && blanks.length) && !costFill.length) || !!clash || saving}>
                         {saving && !editing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />} Guardar
                     </Button>
                 </section>
@@ -363,6 +402,11 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                                                     <Input inputMode="decimal" aria-label={`Preço de ${m.name}`} value={editPrice} placeholder={m.price ? String(m.price) : "0"}
                                                         onChange={(e) => setEditPrice(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveEdit(m); } }} className="h-9 w-32 min-w-0" />
                                                 </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="w-20 shrink-0 text-xs text-muted-foreground">Custo</span>
+                                                    <Input inputMode="decimal" aria-label={`Custo de ${m.name}`} value={editCost} placeholder={m.cost ? String(m.cost) : "0"}
+                                                        onChange={(e) => setEditCost(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveEdit(m); } }} className="h-9 w-32 min-w-0" />
+                                                </div>
                                                 <div className="flex justify-end gap-2">
                                                     <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancelar</Button>
                                                     <Button type="button" size="sm" onClick={() => saveEdit(m)} disabled={saving}><Check className="mr-1 h-4 w-4" /> Guardar</Button>
@@ -372,9 +416,9 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                                             <div className="flex items-center justify-between gap-2">
                                                 <div className="min-w-0">
                                                     <p className={cn("truncate text-sm", nameKey(m.name) === nameKey(name) && "font-semibold")}>{order.map((k) => m.values[k]).filter(Boolean).join(" / ") || m.name}</p>
-                                                    <p className="text-xs text-muted-foreground">{m.stock} {m.unit}{location ? " aqui" : ""}{m.price ? ` · ${formatCurrency(m.price)}` : familyMode ? " · sem preço" : ""}</p>
+                                                    <p className="text-xs text-muted-foreground">{m.stock} {m.unit}{location ? " aqui" : ""}{m.price ? ` · ${formatCurrency(m.price)}` : familyMode ? " · sem preço" : ""}{familyMode && m.cost ? ` · custo ${formatCurrency(m.cost)}${m.ownCost ? " (próprio)" : ""}` : ""}</p>
                                                 </div>
-                                                <button type="button" aria-label={`Mudar ${m.name}`} onClick={() => { setEditing(m.name); setEditValues({}); setEditPrice(m.price ? String(m.price) : ""); }}
+                                                <button type="button" aria-label={`Mudar ${m.name}`} onClick={() => { setEditing(m.name); setEditValues({}); setEditPrice(m.price ? String(m.price) : ""); setEditCost(m.cost ? String(m.cost) : ""); }}
                                                     className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
                                                     <Pencil className="h-4 w-4" />
                                                 </button>

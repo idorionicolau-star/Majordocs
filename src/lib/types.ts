@@ -128,6 +128,8 @@ export type Product = {
   /** Variações: o nome base da família ("Pavê Borbulha") e o valor de cada tipo ({ Cor: "Vermelho" }). Ver lib/variants.ts */
   variantGroup?: string;
   variantValues?: Record<string, string>;
+  /** Variação com custo mudado à mão: o custo da família ("Editar família") já não o substitui. */
+  ownCost?: boolean;
   /** Nomes que o produto já teve (ver lib/rename.ts): o histórico com esses nomes aparece com o nome actual. */
   formerNames?: string[];
 };
