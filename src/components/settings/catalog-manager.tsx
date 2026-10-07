@@ -28,6 +28,7 @@ import { AddVariantDialog } from "@/components/catalog/add-variant-dialog";
 import { siblingsOf } from "@/lib/variants";
 import { formatCurrency } from "@/lib/utils";
 import type { Product } from "@/lib/types";
+import { RenameProductDialog } from "@/components/inventory/rename-product-dialog";
 
 type CatalogProduct = Omit<Product, "stock" | "instanceId" | "reservedStock" | "location" | "lastUpdated"> & { id: string };
 const offline = () => typeof navigator !== "undefined" && !navigator.onLine;
@@ -60,6 +61,8 @@ export function CatalogManager() {
     const [dupSource, setDupSource] = useState<CatalogProduct | null>(null);
     const [variantSource, setVariantSource] = useState<CatalogProduct | null>(null);
     const [newVariantOf, setNewVariantOf] = useState<string | null>(null);
+    /** variação cuja família vai mudar de nome (abre a janela "Editar" já em "A família") */
+    const [familyRename, setFamilyRename] = useState<string | null>(null);
     const [dup, setDup] = useState<{ data: Omit<CatalogProduct, "id">; existing: CatalogProduct } | null>(null);
     const [bulk, setBulk] = useState<{ kind: "category" | "price" | "delete"; ids: string[] } | null>(null);
     const [bulkCat, setBulkCat] = useState("");
@@ -384,6 +387,10 @@ export function CatalogManager() {
                 />
             )}
 
+            {familyRename && (
+                <RenameProductDialog name={familyRename} open={!!familyRename} onClose={() => setFamilyRename(null)} startFamily />
+            )}
+
             <CatalogProductDetail
                 product={detail}
                 inventory={inventory || []}
@@ -393,6 +400,7 @@ export function CatalogManager() {
                 family={catalog}
                 onClose={() => setDetailId(null)}
                 onOpenSibling={(p) => setDetailId(p.id || null)}
+                onRenameFamily={(p) => { setDetailId(null); setFamilyRename(p.name); }}
                 onAddVariant={(p) => { setDetailId(null); setNewVariantOf(p.variantGroup || null); }}
                 onCreateVariants={(p) => { setDetailId(null); setAddPrefill(""); setVariantSource(p as CatalogProduct); setAddOpen(true); }}
                 onEdit={(p) => { setDetailId(null); setEditId(p.id || null); }}
