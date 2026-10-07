@@ -36,8 +36,9 @@ export type Step = { id: StepId; done: boolean };
  */
 export function gettingStarted(s: { demoDone: boolean; catalog: number; stock: number; sales: number; companyDone: boolean }): { steps: Step[]; done: number; total: number; finished: boolean; next?: StepId } {
   const steps: Step[] = [
-    { id: 'demo', done: s.demoDone || s.sales > 0 },
+    // primeiro os produtos, depois ver como se vende, depois o stock e a primeira venda a sério
     { id: 'catalog', done: s.catalog > 0 || s.stock > 0 },
+    { id: 'demo', done: s.demoDone || s.sales > 0 },
     { id: 'stock', done: s.stock > 0 },
     { id: 'sale', done: s.sales > 0 },
     { id: 'company', done: s.companyDone },

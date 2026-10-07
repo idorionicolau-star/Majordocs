@@ -67,17 +67,17 @@ export function OnboardingWelcome() {
                 </DialogHeader>
                 <ol className="space-y-3">
                     <li className="flex gap-3 rounded-xl border p-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-600"><ShoppingCart className="h-5 w-5" /></span>
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><BookOpen className="h-5 w-5" /></span>
                         <span className="min-w-0 text-sm">
-                            <b className="block text-base">1. Uma venda de demonstração</b>
-                            Com produtos de exemplo, do princípio ao fim. <b>Nada é gravado.</b>
+                            <b className="block text-base">1. O seu catálogo</b>
+                            Pôr os <b>seus</b> produtos (nome, preço, foto) e editá-los — este já é a sério.
                         </span>
                     </li>
                     <li className="flex gap-3 rounded-xl border p-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><BookOpen className="h-5 w-5" /></span>
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-600"><ShoppingCart className="h-5 w-5" /></span>
                         <span className="min-w-0 text-sm">
-                            <b className="block text-base">2. O seu catálogo</b>
-                            Adicionar e editar os <b>seus</b> produtos — este já é a sério.
+                            <b className="block text-base">2. Como se vende</b>
+                            Uma venda de demonstração, do princípio ao fim. <b>Nada é gravado.</b>
                         </span>
                     </li>
                     <li className="flex gap-3 rounded-xl border border-dashed p-3 text-sm text-muted-foreground">
@@ -86,7 +86,7 @@ export function OnboardingWelcome() {
                     </li>
                 </ol>
                 <div className="flex flex-col gap-2 pt-1">
-                    <Button size="lg" className="h-12 text-base" onClick={() => { close(); startGuide("venda-demo"); }}>
+                    <Button size="lg" className="h-12 text-base" onClick={() => { close(); startGuide("catalogo"); }}>
                         <GraduationCap className="mr-2 h-5 w-5" /> Começar
                     </Button>
                     <div className="grid grid-cols-2 gap-2">

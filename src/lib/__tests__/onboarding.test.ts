@@ -15,7 +15,7 @@ describe('onboarding', () => {
     });
     it('lista de primeiros passos', () => {
         const a = gettingStarted({ demoDone: false, catalog: 0, stock: 0, sales: 0, companyDone: false });
-        expect(a.done).toBe(0); expect(a.next).toBe('demo'); expect(a.finished).toBe(false); expect(a.total).toBe(5);
+        expect(a.done).toBe(0); expect(a.next).toBe('catalog'); expect(a.steps.map((x) => x.id)).toEqual(['catalog', 'demo', 'stock', 'sale', 'company']); expect(a.finished).toBe(false); expect(a.total).toBe(5);
         const b = gettingStarted({ demoDone: true, catalog: 3, stock: 0, sales: 0, companyDone: true });
         expect(b.next).toBe('stock');
         // quem já vende não precisa da demonstração, e ter stock conta como ter produtos
