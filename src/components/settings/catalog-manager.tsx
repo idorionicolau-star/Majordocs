@@ -151,6 +151,8 @@ export function CatalogManager() {
         if (before && typeof data.price === "number" && data.price !== (before.price || 0)) {
             patch.priceHistory = pushPriceHistory(before.priceHistory, { at: new Date().toISOString(), from: before.price || 0, to: data.price, by: username });
         }
+        // variação com custo mudado à mão: o custo da família deixa de a substituir
+        if (before?.variantGroup && typeof data.cost === "number" && data.cost !== (before.cost || 0)) patch.ownCost = true;
         const n = Object.keys(patch).length ? await ctx.updateCatalogProducts([{ id, data: patch }]) : 1;
         if (n) toast({ title: "Produto atualizado" });
     };
