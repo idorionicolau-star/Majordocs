@@ -99,6 +99,10 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
     const famPriceN = famPrice.trim() ? evalQty(famPrice) : 0;
     const famPriceOk = Number.isFinite(famPriceN) && famPriceN > 0;
     const blanks = members.filter((m) => !m.price);
+    /** "aplicar também às que já têm preço" (por omissão, o preço da família só preenche as sem preço) */
+    const [priceAll, setPriceAll] = useState(false);
+    const priced = famPriceOk ? members.filter((m) => m.price && m.price !== famPriceN) : [];
+    const priceFill = famPriceOk ? [...blanks, ...(priceAll ? priced : [])] : [];
     // custo da família: um custo único para todas, menos as que tiveram o custo mudado à mão
     const [famCost, setFamCost] = useState("");
     const famCostN = famCost.trim() ? evalQty(famCost) : 0;
@@ -109,7 +113,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
     useEffect(() => {
         if (!open) return;
         setFamily(!!(startFamily && group)); setValue(startFamily && group ? group : name); setSaving(false);
-        setEditing(null); setVqty({}); setStockTo(""); setConverting(false); setFamPrice("");
+        setEditing(null); setVqty({}); setStockTo(""); setConverting(false); setFamPrice(""); setPriceAll(false);
         // o custo único que a família já tem (se as variações sem custo próprio têm todas o mesmo)
         const costs = [...new Set(members.filter((m) => !m.ownCost).map((m) => m.cost))];
         setFamCost(costs.length === 1 && costs[0] > 0 ? String(costs[0]) : "");
@@ -166,8 +170,17 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
      * o custo vai para todas as que não têm custo próprio; depois o nome.
      */
     const saveFamily = async () => {
-        const fill = famPriceOk ? blanks : [];
-        if ((!pairs.length && !fill.length && !costFill.length) || clash || saving) return;
+        const fill = priceFill;
+        if (clash || saving) return;
+        if (!pairs.length && !fill.length && !costFill.length) {
+            toast({
+                title: "Nada a mudar",
+                description: famPriceOk && priced.length
+                    ? "Todas as variações já têm preço próprio. Marque «Aplicar também às que já têm preço» para o mudar em todas."
+                    : "O nome, o preço e o custo já estão assim.",
+            });
+            return;
+        }
         setSaving(true);
         for (const m of fill) await setPrice(m.name, famPriceN);
         for (const m of costFill) await setCost(m.name, famCostN, false);
@@ -178,7 +191,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
             title: "Família actualizada",
             description: [
                 pairs.length ? `Nome: «${clean(value)}».` : "",
-                fill.length ? `${formatCurrency(famPriceN)} em ${fill.length} variaç${fill.length === 1 ? "ão" : "ões"} sem preço.` : "",
+                fill.length ? `${formatCurrency(famPriceN)} em ${fill.length} variaç${fill.length === 1 ? "ão" : "ões"}${priceAll && priced.length ? "" : " sem preço"}.` : "",
                 costFill.length ? `Custo ${formatCurrency(famCostN)} em ${costFill.length} variaç${costFill.length === 1 ? "ão" : "ões"}.` : "",
             ].filter(Boolean).join(" "),
         });
@@ -336,6 +349,12 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                                 : <>Todas as variações já têm preço — esse fica. Este preço vai para as variações novas.</>}
                             {" "}As que já têm preço próprio não mudam (mude-as no lápis, abaixo).
                         </p>
+                        {priced.length > 0 && (
+                            <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+                                <input type="checkbox" className="h-4 w-4 accent-primary" checked={priceAll} onChange={(e) => setPriceAll(e.target.checked)} data-tour="family-price-all" />
+                                Aplicar também às {priced.length} que já têm preço
+                            </label>
+                        )}
                     </div>
                     <div className="space-y-1.5">
                         <label htmlFor="family-cost" className="text-sm font-semibold">Custo da família</label>
@@ -347,7 +366,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                             {" "}Mudar o custo de uma variação no lápis torna-o próprio.
                         </p>
                     </div>
-                    <Button type="button" className="h-11 w-full" onClick={saveFamily} disabled={(!pairs.length && !(famPriceOk && blanks.length) && !costFill.length) || !!clash || saving}>
+                    <Button type="button" className="h-11 w-full" onClick={saveFamily} disabled={(!pairs.length && !priceFill.length && !costFill.length && !famPriceOk) || !!clash || saving}>
                         {saving && !editing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />} Guardar
                     </Button>
                 </section>
