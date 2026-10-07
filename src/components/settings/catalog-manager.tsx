@@ -63,6 +63,7 @@ export function CatalogManager() {
     const [newVariantOf, setNewVariantOf] = useState<string | null>(null);
     /** variação cuja família vai mudar de nome (abre a janela "Editar" já em "A família") */
     const [familyRename, setFamilyRename] = useState<string | null>(null);
+    /** família cujo preço se vai mudar de uma vez */
     const [dup, setDup] = useState<{ data: Omit<CatalogProduct, "id">; existing: CatalogProduct } | null>(null);
     const [bulk, setBulk] = useState<{ kind: "category" | "price" | "delete"; ids: string[] } | null>(null);
     const [bulkCat, setBulkCat] = useState("");
@@ -400,7 +401,7 @@ export function CatalogManager() {
                 family={catalog}
                 onClose={() => setDetailId(null)}
                 onOpenSibling={(p) => setDetailId(p.id || null)}
-                onRenameFamily={(p) => { setDetailId(null); setFamilyRename(p.name); }}
+                onEditFamily={(p) => { setDetailId(null); setFamilyRename(p.name); }}
                 onAddVariant={(p) => { setDetailId(null); setNewVariantOf(p.variantGroup || null); }}
                 onCreateVariants={(p) => { setDetailId(null); setAddPrefill(""); setVariantSource(p as CatalogProduct); setAddOpen(true); }}
                 onEdit={(p) => { setDetailId(null); setEditId(p.id || null); }}
