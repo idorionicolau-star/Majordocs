@@ -26,7 +26,6 @@ import { adjustPrice, buildSyncPlan, categoryCounts, copyName, findBarcodeClash,
 import { CatalogProductDetail } from "@/components/catalog/catalog-product-detail";
 import { AddVariantDialog } from "@/components/catalog/add-variant-dialog";
 import { siblingsOf } from "@/lib/variants";
-import { evalQty } from "@/lib/calc";
 import { formatCurrency } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 import { RenameProductDialog } from "@/components/inventory/rename-product-dialog";
@@ -65,8 +64,6 @@ export function CatalogManager() {
     /** variação cuja família vai mudar de nome (abre a janela "Editar" já em "A família") */
     const [familyRename, setFamilyRename] = useState<string | null>(null);
     /** família cujo preço se vai mudar de uma vez */
-    const [familyPrice, setFamilyPrice] = useState<{ group: string; ids: string[] } | null>(null);
-    const [familyPriceText, setFamilyPriceText] = useState("");
     const [dup, setDup] = useState<{ data: Omit<CatalogProduct, "id">; existing: CatalogProduct } | null>(null);
     const [bulk, setBulk] = useState<{ kind: "category" | "price" | "delete"; ids: string[] } | null>(null);
     const [bulkCat, setBulkCat] = useState("");
@@ -391,46 +388,6 @@ export function CatalogManager() {
                 />
             )}
 
-            {familyPrice && (() => {
-                const members = familyPrice.ids.map((id) => byId.get(id)).filter((m): m is CatalogProduct => !!m);
-                const price = evalQty(familyPriceText);
-                const valid = Number.isFinite(price) && price >= 0;
-                const apply = async () => {
-                    if (!valid || readOnly) return;
-                    const at = new Date().toISOString();
-                    const updates = members.filter((m) => (m.price || 0) !== price).map((m) => ({ id: m.id!, data: { price, priceHistory: pushPriceHistory(m.priceHistory, { at, from: m.price || 0, to: price, by: username }) } as Partial<CatalogProduct> }));
-                    const n = updates.length ? await ctx.updateCatalogProducts(updates) : 0;
-                    setFamilyPrice(null);
-                    toast({ title: n ? `Preço de ${n} variaç${n === 1 ? "ão" : "ões"} mudado` : "Nada a mudar", description: n ? `«${familyPrice.group}»: ${formatCurrency(price)} em todas — também no stock e nas vendas.` : "Todas já tinham este preço." });
-                };
-                return (
-                    <AlertDialog open onOpenChange={(o) => !o && setFamilyPrice(null)}>
-                        <AlertDialogContent data-tour="family-price-dialog">
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Preço da família «{familyPrice.group}»</AlertDialogTitle>
-                                <AlertDialogDescription>O mesmo preço de venda para as {members.length} variações. Cada mudança fica no histórico de preços.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <Input inputMode="decimal" aria-label="Preço da família" value={familyPriceText} onChange={(e) => setFamilyPriceText(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); apply(); } }} className="h-12 text-lg font-bold" autoFocus />
-                            <ul className="max-h-48 divide-y overflow-y-auto rounded-lg border text-sm">
-                                {members.map((m) => (
-                                    <li key={m.id} className="flex items-center justify-between gap-2 px-3 py-1.5">
-                                        <span className="min-w-0 truncate">{Object.values(m.variantValues || {}).join(" / ") || m.name}</span>
-                                        <span className="shrink-0 tabular-nums text-muted-foreground">
-                                            {formatCurrency(m.price || 0)}{valid && (m.price || 0) !== price && <> → <b className="text-foreground">{formatCurrency(price)}</b></>}
-                                        </span>
-                                    </li>
-                                ))}
-                            </ul>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction disabled={!valid} onClick={(e) => { e.preventDefault(); apply(); }}>Aplicar a todas</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                );
-            })()}
-
             {familyRename && (
                 <RenameProductDialog name={familyRename} open={!!familyRename} onClose={() => setFamilyRename(null)} startFamily />
             )}
@@ -444,13 +401,7 @@ export function CatalogManager() {
                 family={catalog}
                 onClose={() => setDetailId(null)}
                 onOpenSibling={(p) => setDetailId(p.id || null)}
-                onRenameFamily={(p) => { setDetailId(null); setFamilyRename(p.name); }}
-                onFamilyPrice={(p) => {
-                    const members = siblingsOf(p, catalog).filter((m) => m.id);
-                    setDetailId(null);
-                    setFamilyPriceText(String(p.price || ""));
-                    setFamilyPrice({ group: p.variantGroup || p.name, ids: members.map((m) => m.id!) });
-                }}
+                onEditFamily={(p) => { setDetailId(null); setFamilyRename(p.name); }}
                 onAddVariant={(p) => { setDetailId(null); setNewVariantOf(p.variantGroup || null); }}
                 onCreateVariants={(p) => { setDetailId(null); setAddPrefill(""); setVariantSource(p as CatalogProduct); setAddOpen(true); }}
                 onEdit={(p) => { setDetailId(null); setEditId(p.id || null); }}

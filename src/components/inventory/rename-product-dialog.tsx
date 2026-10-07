@@ -13,6 +13,7 @@ import { cleanOptions, optionsOfFamily, planVariants, SUGGESTED_VALUES, variantN
 import { VariantsEditor, type VariantsState } from "@/components/catalog/variants-editor";
 import type { Product } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
+import { evalQty } from "@/lib/calc";
 
 /** Quem pode mudar nomes e variações: quem gere o inventário. */
 export function useCanRename() {
@@ -43,7 +44,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
     onEntries?: (entries: NewVariantEntry[]) => void;
     /** variações novas que estão no lote por registar (não se pode juntar stock a elas antes de registar) */
     pendingNew?: string[];
-    /** abrir já em "A família" (mudar o nome base de todas as variações) — usado no Catálogo */
+    /** "Editar família" (Catálogo): nome base, preço para as variações sem preço e variações, numa janela só */
     startFamily?: boolean;
 }) {
     const { catalogProducts, products, renameProduct, addCatalogProduct, updateCatalogProducts, updateProduct, canEdit, user, mergeIntoVariant } = useInventory();
@@ -89,11 +90,17 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
     const [stockTo, setStockTo] = useState("");
     // ---- criar variações num produto que não as tem
     const [converting, setConverting] = useState(false);
+    // ---- editar a família (Catálogo): o preço da família só preenche as variações sem preço
+    const familyMode = startFamily && !!group;
+    const [famPrice, setFamPrice] = useState("");
+    const famPriceN = famPrice.trim() ? evalQty(famPrice) : 0;
+    const famPriceOk = Number.isFinite(famPriceN) && famPriceN > 0;
+    const blanks = members.filter((m) => !m.price);
 
     useEffect(() => {
         if (!open) return;
         setFamily(!!(startFamily && group)); setValue(startFamily && group ? group : name); setSaving(false);
-        setEditing(null); setVqty({}); setStockTo(""); setConverting(false);
+        setEditing(null); setVqty({}); setStockTo(""); setConverting(false); setFamPrice("");
         setVstate({ enabled: true, options: order.length ? order.map((n) => ({ name: n, values: [] })) : [{ name: "Cor", values: [] }], prices: {} });
     }, [open, name, group]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -112,7 +119,8 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
         const src = catalog.find((c) => nameKey(c.name) === nameKey(name)) || product;
         const p = (src || {}) as Partial<Product>;
         return {
-            category: p.category || "Geral", price: p.price || 0, cost: p.cost || 0, unit: p.unit || "un",
+            // na família, as variações novas sem preço próprio levam o preço da família
+            category: p.category || "Geral", price: familyMode && famPriceOk ? famPriceN : p.price || 0, cost: p.cost || 0, unit: p.unit || "un",
             lowStockThreshold: p.lowStockThreshold ?? 10, criticalStockThreshold: p.criticalStockThreshold ?? 5,
             ...(p.imageUrl ? { imageUrl: p.imageUrl } : {}),
         };
@@ -138,6 +146,26 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
         if (!ok) return;
         toast({ title: "Nome mudado", description: pairs.length > 1 ? `${pairs.length} variações passam a «${clean(value)} - …».` : `«${pairs[0].from}» passa a «${pairs[0].to}» em todo o programa.` });
         onDone?.(pairs);
+        onClose();
+    };
+
+    /** "Editar família": o preço vai só para as variações sem preço (as outras guardam o seu); depois o nome */
+    const saveFamily = async () => {
+        const fill = famPriceOk ? blanks : [];
+        if ((!pairs.length && !fill.length) || clash || saving) return;
+        setSaving(true);
+        for (const m of fill) await setPrice(m.name, famPriceN);
+        const ok = pairs.length ? await renameProduct(name, value, { family: true }) : true;
+        setSaving(false);
+        if (!ok) return;
+        toast({
+            title: "Família actualizada",
+            description: [
+                pairs.length ? `Nome: «${clean(value)}».` : "",
+                fill.length ? `${formatCurrency(famPriceN)} em ${fill.length} variaç${fill.length === 1 ? "ão" : "ões"} sem preço.` : "",
+            ].filter(Boolean).join(" "),
+        });
+        if (pairs.length) onDone?.(pairs);
         onClose();
     };
 
@@ -256,11 +284,35 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
         <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
             <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
                 <DialogHeader className="text-left">
-                    <DialogTitle>Editar «{name}»</DialogTitle>
+                    <DialogTitle>{familyMode ? <>Editar família «{group}»</> : <>Editar «{name}»</>}</DialogTitle>
                     <DialogDescription>O nome e as variações mudam em todo o programa: catálogo, stock de todas as localizações, receitas e encomendas em aberto.</DialogDescription>
                 </DialogHeader>
 
-                {/* ---------- Nome ---------- */}
+                {familyMode ? (
+                <section className="space-y-3" data-tour="family-edit">
+                    <div className="space-y-1.5">
+                        <label htmlFor="rename-input" className="text-sm font-semibold">Nome da família</label>
+                        <Input id="rename-input" value={value} onChange={(e) => setValue(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveFamily(); } }} className="h-11 text-base" autoComplete="off" />
+                        {clash ? <p className="text-sm text-destructive">Já há um produto chamado «{clash}».</p>
+                            : pairs.length > 0 ? <p className="text-xs text-muted-foreground">Ex.: «{pairs[0].from}» → <b className="text-foreground">«{pairs[0].to}»</b></p> : null}
+                    </div>
+                    <div className="space-y-1.5">
+                        <label htmlFor="family-price" className="text-sm font-semibold">Preço da família</label>
+                        <Input id="family-price" inputMode="decimal" value={famPrice} onChange={(e) => setFamPrice(e.target.value)} placeholder="Ex.: 550"
+                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveFamily(); } }} className="h-11 text-base" autoComplete="off" />
+                        <p className="text-xs text-muted-foreground">
+                            {blanks.length
+                                ? <>Vai para as <b className="text-foreground">{blanks.length} variaç{blanks.length === 1 ? "ão" : "ões"} sem preço</b> ({blanks.map((m) => order.map((k) => m.values[k]).filter(Boolean).join(" / ") || m.name).join(", ")}) e para as variações novas.</>
+                                : <>Todas as variações já têm preço — esse fica. Este preço vai para as variações novas.</>}
+                            {" "}As que já têm preço próprio não mudam (mude-as no lápis, abaixo).
+                        </p>
+                    </div>
+                    <Button type="button" className="h-11 w-full" onClick={saveFamily} disabled={(!pairs.length && !(famPriceOk && blanks.length)) || !!clash || saving}>
+                        {saving && !editing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />} Guardar
+                    </Button>
+                </section>
+                ) : (
                 <section className="space-y-2">
                     <h3 className="text-sm font-semibold">Nome</h3>
                     {group && members.length > 1 && (
@@ -284,6 +336,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                         : family && pairs.length > 0 ? <p className="text-xs text-muted-foreground">Ex.: «{pairs[0].from}» → <b className="text-foreground">«{pairs[0].to}»</b></p> : null}
                     <p className="text-xs text-muted-foreground">As vendas antigas passam a aparecer com o nome novo; as facturas já emitidas ficam como estão.</p>
                 </section>
+                )}
 
                 {/* ---------- Variações ---------- */}
                 <section className="space-y-2 border-t pt-4" data-tour="qs-edit-variants">
@@ -319,7 +372,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
                                             <div className="flex items-center justify-between gap-2">
                                                 <div className="min-w-0">
                                                     <p className={cn("truncate text-sm", nameKey(m.name) === nameKey(name) && "font-semibold")}>{order.map((k) => m.values[k]).filter(Boolean).join(" / ") || m.name}</p>
-                                                    <p className="text-xs text-muted-foreground">{m.stock} {m.unit}{location ? " aqui" : ""}{m.price ? ` · ${formatCurrency(m.price)}` : ""}</p>
+                                                    <p className="text-xs text-muted-foreground">{m.stock} {m.unit}{location ? " aqui" : ""}{m.price ? ` · ${formatCurrency(m.price)}` : familyMode ? " · sem preço" : ""}</p>
                                                 </div>
                                                 <button type="button" aria-label={`Mudar ${m.name}`} onClick={() => { setEditing(m.name); setEditValues({}); setEditPrice(m.price ? String(m.price) : ""); }}
                                                     className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
