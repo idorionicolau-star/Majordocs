@@ -48,7 +48,8 @@ export function EmptyStateWelcome() {
         });
     }, [companyData]);
 
-    const profileDone = !!(companyData?.taxId && (companyData?.phone || companyData?.address));
+    // o NUIT é opcional: basta um contacto
+    const profileDone = !!(companyData?.phone || companyData?.address);
     const productsDone = (products?.length || 0) > 0 || (catalogProducts?.length || 0) > 0;
 
     const set = (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement>) => setDetails((d) => ({ ...d, [k]: e.target.value }));
@@ -122,7 +123,7 @@ export function EmptyStateWelcome() {
                             <input id="onb-logo" type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogo(f); e.target.value = ""; }} />
                         </div>
                         <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="space-y-1.5"><Label htmlFor="onb-nuit">NUIT</Label><Input id="onb-nuit" inputMode="numeric" value={details.taxId} onChange={set("taxId")} placeholder="Ex.: 400123456" /></div>
+                            <div className="space-y-1.5"><Label htmlFor="onb-nuit">NUIT <span className="font-normal text-muted-foreground">(opcional)</span></Label><Input id="onb-nuit" inputMode="numeric" value={details.taxId} onChange={set("taxId")} placeholder="Ex.: 400123456" /></div>
                             <div className="space-y-1.5"><Label htmlFor="onb-phone">Telefone</Label><Input id="onb-phone" inputMode="tel" value={details.phone} onChange={set("phone")} placeholder="Ex.: 84 123 4567" /></div>
                             <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="onb-address">Endereço</Label><Input id="onb-address" value={details.address} onChange={set("address")} placeholder="Rua, bairro, cidade" /></div>
                         </div>
@@ -136,7 +137,7 @@ export function EmptyStateWelcome() {
                     </div>
                 )}
                 {!editing && profileDone && (
-                    <p className="mt-3 border-t pt-3 text-sm text-muted-foreground">NUIT {companyData?.taxId}{companyData?.phone ? ` · ${companyData.phone}` : ""}</p>
+                    <p className="mt-3 border-t pt-3 text-sm text-muted-foreground">{[companyData?.taxId ? `NUIT ${companyData.taxId}` : "", companyData?.phone, companyData?.address].filter(Boolean).join(" · ")}</p>
                 )}
             </section>
 

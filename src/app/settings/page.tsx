@@ -342,7 +342,7 @@ export default function SettingsPage() {
       setActiveTab(hash);
       if (hash === 'company') {
         window.setTimeout(() => {
-          const el = ['taxId', 'phone', 'address'].map((id) => document.getElementById(id) as HTMLInputElement | null).find((i) => i && !i.value) || document.getElementById('taxId');
+          const el = ['phone', 'address'].map((id) => document.getElementById(id) as HTMLInputElement | null).find((i) => i && !i.value) || document.getElementById('phone');
           el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
           el?.focus({ preventScroll: true });
         }, 500);
@@ -713,7 +713,7 @@ export default function SettingsPage() {
                           <Input id="phone" value={companyDetails.phone} onChange={handleDetailChange} />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="taxId">NUIT</Label>
+                          <Label htmlFor="taxId">NUIT <span className="font-normal text-muted-foreground">(opcional)</span></Label>
                           <Input id="taxId" value={companyDetails.taxId} onChange={handleDetailChange} />
                         </div>
                         <div className="space-y-2 md:col-span-2">
