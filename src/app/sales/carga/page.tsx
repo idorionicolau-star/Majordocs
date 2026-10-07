@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { allocatePickups, type PickupStatus } from "@/lib/curing";
 import { cn, formatCurrency, normalizeString } from "@/lib/utils";
+import { sameLocation } from "@/lib/product-ref";
 import { links } from "@/lib/deep-links";
 import type { Sale } from "@/lib/types";
 
@@ -33,12 +34,14 @@ export default function LoadingListPage() {
     );
 
     const status = useMemo(() => {
+        // "Principal" e "" são o mesmo local; uma venda sem local, numa empresa com vários, é do primeiro (como ao levantar)
+        const saleLoc = (l?: string) => l || (isMultiLocation ? locations[0]?.id || "" : "");
         const stockOf = (name: string, location?: string) =>
             products
-                .filter((p) => !p.deletedAt && normalizeString(p.name) === normalizeString(name) && (p.location || "") === (location || ""))
+                .filter((p) => !p.deletedAt && normalizeString(p.name) === normalizeString(name) && sameLocation(p.location, location))
                 .reduce((t, p) => t + (p.stock || 0), 0);
-        return allocatePickups(pending.map((s) => ({ id: s.id, productName: s.productName, quantity: s.quantity, date: s.date, location: s.location })), stockOf, curing.batches);
-    }, [pending, products, curing.batches]);
+        return allocatePickups(pending.map((s) => ({ id: s.id, productName: s.productName, quantity: s.quantity, date: s.date, location: saleLoc(s.location) })), stockOf, curing.batches);
+    }, [pending, products, curing.batches, isMultiLocation, locations]);
 
     const locName = (id?: string) => locations.find((l) => l.id === id)?.name || "";
     const canConfirm = canEdit("sales");

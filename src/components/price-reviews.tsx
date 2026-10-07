@@ -9,6 +9,7 @@ import { useInventory } from "@/context/inventory-context";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { cn, formatCurrency, normalizeString } from "@/lib/utils";
+import { sameLocation } from "@/lib/product-ref";
 
 export type PriceReview = {
     id: string;
@@ -100,7 +101,7 @@ export function PriceReviewsPanel() {
                 .forEach((p) => batch.update(doc(firestore, `companies/${companyId}/priceReviews/${p.id}`), { status: accept ? "accepted" : "rejected", ...stamp }));
 
             if (accept) {
-                const same = products.filter((p) => normalizeString(p.name) === normalizeString(r.productName) && (allLocations || (p.location || "") === r.location));
+                const same = products.filter((p) => normalizeString(p.name) === normalizeString(r.productName) && (allLocations || sameLocation(p.location, r.location)));
                 const ids = new Set<string>(r.productIds || []);
                 same.forEach((p) => (p.sourceIds?.length ? p.sourceIds : p.id ? [p.id] : []).forEach((id) => ids.add(id)));
                 ids.forEach((id) => batch.update(doc(firestore, `companies/${companyId}/products/${id}`), { price: r.soldPrice, lastUpdated: now }));
