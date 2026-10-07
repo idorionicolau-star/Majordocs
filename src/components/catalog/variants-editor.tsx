@@ -136,7 +136,8 @@ export function VariantsEditor({ state, onChange, baseName, basePrice, existingN
                         <ul className="max-h-56 divide-y overflow-y-auto rounded-lg border text-sm" aria-label="Variações a criar">
                             {plan.create.map((v) => (
                                 <li key={v.name} className="flex items-center gap-2 px-3 py-1.5">
-                                    <span className="min-w-0 flex-1 truncate">{v.name}</span>
+                                    {/* o que distingue a variação ("Branco"), por inteiro — o nome todo cortado ("Tinta - …") não dizia qual era */}
+                                    <span className="min-w-0 flex-1 break-words font-medium leading-tight" title={v.name}>{Object.values(v.values).join(" / ") || v.name}</span>
                                     {quantities && onQuantities && (
                                         <Input
                                             type="number" step="any" min="0" inputMode="decimal"
@@ -144,7 +145,7 @@ export function VariantsEditor({ state, onChange, baseName, basePrice, existingN
                                             onChange={(e) => onQuantities({ ...quantities, [v.name]: e.target.value })}
                                             placeholder={unit || "Qtd"}
                                             aria-label={`Quantidade de ${v.name}`}
-                                            className="h-8 w-20 shrink-0 text-center sm:w-24 font-semibold tabular-nums"
+                                            className="h-8 w-16 shrink-0 text-center sm:w-24 font-semibold tabular-nums"
                                         />
                                     )}
                                     <Input
