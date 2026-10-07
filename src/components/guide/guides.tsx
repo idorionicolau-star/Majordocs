@@ -91,12 +91,12 @@ const demoSteps = (closing: GuideStep): GuideStep[] => [
 const vendaDemo: Guide = {
     id: "venda-demo",
     title: "Venda de demonstração",
-    next: "catalogo",
     steps: demoSteps({
         route: DEMO,
         target: "pos-demo-done",
         title: "Venda feita! 🎉",
-        body: <>É sempre assim. Numa venda a sério o stock desce sozinho e o documento fica pronto a imprimir ou enviar. <br />A seguir: o <b>catálogo</b>, onde põe os <b>seus</b> produtos.</>,
+        body: <>É sempre assim. Numa venda a sério o stock desce sozinho e o documento fica pronto a imprimir ou enviar. <br />Próximo passo: dar entrada do <b>stock</b> dos seus produtos no <b>Stock Rápido</b> — depois já pode vender a sério.</>,
+        cta: { label: "Ver o Stock Rápido", guide: "pagina-stock-rapido" },
     }),
 };
 
@@ -106,6 +106,8 @@ const vendaDemo: Guide = {
 const catalogo: Guide = {
     id: "catalogo",
     title: "O seu catálogo",
+    // primeiro os produtos; depois mostra-se como se vende (demonstração, nada é gravado)
+    next: "venda-demo",
     steps: [
         {
             route: "/catalog",
@@ -160,10 +162,9 @@ const catalogo: Guide = {
             body: (
                 <>
                     <p>No catálogo também pode <b>importar</b> uma lista do Excel, organizar as <b>categorias</b> e selecionar vários produtos para mudar o preço de uma vez.</p>
-                    <p>Próximo passo: dar entrada do stock no <b>Stock Rápido</b>, para poder vender os seus produtos.</p>
+                    <p>A seguir mostramos <b>como se vende</b>: uma venda de demonstração, com produtos de exemplo — <b>nada é gravado</b>.</p>
                 </>
             ),
-            cta: { label: "Ver o Stock Rápido", guide: "pagina-stock-rapido" },
         },
     ],
 };
