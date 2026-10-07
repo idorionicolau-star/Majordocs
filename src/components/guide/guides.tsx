@@ -96,7 +96,7 @@ const vendaDemo: Guide = {
         target: "pos-demo-done",
         title: "Venda feita! 🎉",
         body: <>É sempre assim. Numa venda a sério o stock desce sozinho e o documento fica pronto a imprimir ou enviar. <br />Próximo passo: dar entrada do <b>stock</b> dos seus produtos no <b>Stock Rápido</b> — depois já pode vender a sério.</>,
-        cta: { label: "Ver o Stock Rápido", guide: "pagina-stock-rapido" },
+        cta: { label: "Abrir o Stock Rápido", href: "/inventory/quick?modo=entrada" },
     }),
 };
 
