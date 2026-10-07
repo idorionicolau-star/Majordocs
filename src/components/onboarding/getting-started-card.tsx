@@ -18,7 +18,7 @@ const COPY: Record<StepId, { icon: LucideIcon; title: string; hint: string; acti
     catalog: { icon: PackagePlus, title: "Pôr os seus produtos no catálogo", hint: "Nome, preço, custo e foto — mostramos onde tocar.", action: "Adicionar", guide: "catalogo" },
     stock: { icon: Boxes, title: "Dar entrada do stock", hint: "Quanto tem de cada produto, no Stock Rápido.", action: "Abrir", href: "/inventory/quick?modo=entrada" },
     sale: { icon: ShoppingCart, title: "Fazer a primeira venda a sério", hint: "Na Venda Rápida, com os seus produtos.", action: "Vender", href: "/pos" },
-    company: { icon: Building2, title: "Completar os dados da empresa", hint: "NUIT, contactos e logótipo aparecem nos documentos.", action: "Preencher", href: "/settings#company" },
+    company: { icon: Building2, title: "Completar os dados da empresa", hint: "Contactos e logótipo aparecem nos documentos. O NUIT é opcional.", action: "Preencher", href: "/settings#company" },
 };
 
 /** "Primeiros passos": fica no início até a empresa fazer o essencial (ou até a pessoa o esconder). */
@@ -44,7 +44,8 @@ export function GettingStartedCard() {
         catalog: (ctx.catalogProducts || []).length,
         stock: ctx.products.length,
         sales: ctx.sales.length,
-        companyDone: !!(c?.taxId && (c?.phone || c?.address)),
+        // o NUIT é opcional: basta um contacto (telefone ou endereço)
+        companyDone: !!(c?.phone || c?.address),
     });
     if (g.finished) return null;
 

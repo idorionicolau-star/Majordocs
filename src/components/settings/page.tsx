@@ -248,7 +248,7 @@ export default function SettingsPage() {
                                 <Input id="phone" value={companyDetails.phone} onChange={handleDetailChange} />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="taxId">NUIT</Label>
+                                <Label htmlFor="taxId">NUIT <span className="font-normal text-muted-foreground">(opcional)</span></Label>
                                 <Input id="taxId" value={companyDetails.taxId} onChange={handleDetailChange} />
                             </div>
                             <div className="space-y-2 md:col-span-2">
