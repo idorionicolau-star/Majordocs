@@ -30,7 +30,7 @@ const toQty = (s: string) => { const n = Number(String(s).replace(",", ".")); re
  * Editar um produto no Stock Rápido: mudar o nome (em todo o programa) e as variações —
  * criar variações num produto que ainda não as tem, mudar o valor de uma, acrescentar novas.
  */
-export function RenameProductDialog({ name, open, onClose, onDone, location, withQty, onEntries, pendingNew = [] }: {
+export function RenameProductDialog({ name, open, onClose, onDone, location, withQty, onEntries, pendingNew = [], startFamily = false }: {
     name: string;
     open: boolean;
     onClose: () => void;
@@ -43,6 +43,8 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
     onEntries?: (entries: NewVariantEntry[]) => void;
     /** variações novas que estão no lote por registar (não se pode juntar stock a elas antes de registar) */
     pendingNew?: string[];
+    /** abrir já em "A família" (mudar o nome base de todas as variações) — usado no Catálogo */
+    startFamily?: boolean;
 }) {
     const { catalogProducts, products, renameProduct, addCatalogProduct, updateCatalogProducts, updateProduct, canEdit, user, mergeIntoVariant } = useInventory();
     const { toast } = useToast();
@@ -90,7 +92,7 @@ export function RenameProductDialog({ name, open, onClose, onDone, location, wit
 
     useEffect(() => {
         if (!open) return;
-        setFamily(false); setValue(name); setSaving(false);
+        setFamily(!!(startFamily && group)); setValue(startFamily && group ? group : name); setSaving(false);
         setEditing(null); setVqty({}); setStockTo(""); setConverting(false);
         setVstate({ enabled: true, options: order.length ? order.map((n) => ({ name: n, values: [] })) : [{ name: "Cor", values: [] }], prices: {} });
     }, [open, name, group]); // eslint-disable-line react-hooks/exhaustive-deps
