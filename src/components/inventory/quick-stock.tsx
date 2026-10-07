@@ -139,6 +139,19 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const [voiceAsks, setVoiceAsks] = useState<VoiceAsk[]>([]);
     const { link: linkBarcode, canLink } = useBarcodeLink();
     const canRename = useCanRename();
+    /** Produto novo que já está no lote (ainda não gravado): volta ao painel para mudar nome, categoria, unidade ou dar variações. */
+    const reopenNewLine = (l: QuickLine) => {
+        removeLine(l.key);
+        openNewProduct(l.name);
+        if (l.category) { setNewCategory(l.category); setCategoryTouched(true); }
+        if (l.unit) { setNewUnit(l.unit); setUnitTouched(true); }
+        setAckDuplicate(true);
+        setNewPrice(l.price ? String(l.price) : "");
+        setQtyText(fmt(l.qty));
+        setPicked({ newName: l.name });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        requestAnimationFrame(() => qtyRef.current?.focus());
+    };
     /** nomes que já existem (stock ou catálogo): só esses se podem editar — um produto novo do lote ainda não existe */
     const knownNames = useMemo(() => new Set([...(catalogProducts || []).filter((c) => !c.deletedAt), ...products.filter((p) => !p.deletedAt)].map((p) => nameKey(p.name))), [catalogProducts, products]);
     const [renaming, setRenaming] = useState<string | null>(null);
@@ -332,14 +345,10 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
         if (presetQty != null && presetQty >= 0) {
             // Everything typed in one go ("bloco x 200") — add straight away,
             // excepto produto novo parecido com outro: aí mostra primeiro o aviso.
-            const similar = wantedName ? findNameMatches(cleanProductName(wantedName), { inventory: liveProducts, catalog: catalogProducts || [] }) : [];
-            if (!(wantedName && similar.length)) {
-                if (product) addLine(lineFromProduct(product, presetQty));
-                else if (wantedName) {
-                    const clean = cleanProductName(wantedName);
-                    const sug = suggestCategory(clean, categoryNames, liveProducts);
-                    addLine(newLine(clean, presetQty, undefined, undefined, { category: sug.category, unit: guessUnit(clean, unitNames) }));
-                }
+            // Produto que já existe: entra logo no lote. Produto NOVO ("10 spray"): abre sempre o painel com a
+            // quantidade já posta, para ver/corrigir o nome, a categoria, a unidade e dar variações antes de juntar.
+            if (product) {
+                addLine(lineFromProduct(product, presetQty));
                 setPicked(null);
                 nextSearch(product);
                 return;
@@ -1124,6 +1133,13 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                                         <p className="flex min-w-0 items-center gap-1 text-sm font-medium">
                                             <span className="truncate">{l.name}</span>
                                             {l.isNew && <span className="ml-1 shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">NOVO</span>}
+                                            {l.isNew && !l.variantGroup && !knownNames.has(nameKey(l.name)) && (
+                                                <button type="button" onClick={() => reopenNewLine(l)} aria-label={`Editar ${l.name}: nome, categoria, unidade e variações`} title="Editar antes de registar"
+                                                    data-tour="qs-edit-new"
+                                                    className="shrink-0 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+                                                    <Pencil className="h-3.5 w-3.5" />
+                                                </button>
+                                            )}
                                             {canRename && knownNames.has(nameKey(l.name)) && (
                                                 <button type="button" onClick={() => setRenaming(l.name)} aria-label={`Editar ${l.name}: nome e variações`} title="Editar nome e variações"
                                                     className="shrink-0 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
