@@ -12,18 +12,12 @@ const DEMO = "/pos?demo=1";
 const demoSteps = (closing: GuideStep): GuideStep[] => [
     {
         route: DEMO,
-        target: "pos-demo-banner",
-        title: "Uma venda a fingir, para aprender",
-        body: <>Vamos fazer uma venda completa, passo a passo. Os produtos são <b>de exemplo</b> e <b>nada é gravado</b> — nem venda, nem stock. Pode errar à vontade.</>,
-    },
-    {
-        route: DEMO,
         target: "pos-search",
         advance: "auto",
         done: () => appears("pos-result")() || appears("pos-cart-line")(),
         hint: "Escreva aqui",
         title: "1. Procure o produto",
-        body: <>Escreva o nome do que o cliente leva. Experimente escrever <b>cimento</b>.</>,
+        body: <>Uma venda a fingir, para aprender: os produtos são <b>de exemplo</b> e <b>nada é gravado</b>. Escreva o que o cliente leva — experimente <b>cimento</b>.</>,
     },
     {
         route: DEMO,
@@ -37,44 +31,14 @@ const demoSteps = (closing: GuideStep): GuideStep[] => [
     {
         route: DEMO,
         target: "pos-qty",
-        title: "3. A quantidade",
-        body: <>Use <b>−</b> e <b>+</b>, ou toque no número e escreva. Por cima vê quanto há disponível e quanto fica depois da venda.</>,
+        title: "3. Quantidade e preço",
+        body: <>Use <b>−</b> e <b>+</b>, ou toque no número e escreva. O <b>preço</b> vem do catálogo e pode mudá-lo numa venda especial (o gestor é avisado).</>,
     },
     {
         route: DEMO,
-        target: "pos-price",
-        title: "4. O preço",
-        body: <>Vem do catálogo. Se fizer um preço especial, mude-o aqui. Quando um funcionário muda o preço, o gestor é avisado para confirmar.</>,
-    },
-    {
-        route: DEMO,
-        target: "pos-client",
-        title: "5. O cliente (opcional)",
-        body: <>Escreva o nome se quiser o cliente no documento. Só é obrigatório quando ele fica a dever.</>,
-    },
-    {
-        route: DEMO,
-        target: "pos-pickup",
-        title: "6. Levou agora ou levanta depois?",
-        body: <><b>Levou agora</b> tira do stock já. <b>Levanta depois</b> deixa a mercadoria reservada até o cliente a vir buscar.</>,
-    },
-    {
-        route: DEMO,
-        target: "pos-payment",
-        title: "7. O pagamento",
-        body: <>Escolha como pagou (numerário, M-Pesa, e-Mola…) e quanto recebeu. Se pagar menos, a app regista a dívida; se pagar a mais, mostra o troco.</>,
-    },
-    {
-        route: DEMO,
-        target: "pos-date",
-        title: "8. A data",
-        body: <>Por defeito é hoje. Esqueceu-se de registar as vendas de ontem? Mude a data e registe-as agora.</>,
-    },
-    {
-        route: DEMO,
-        target: "pos-more",
-        title: "9. Mais opções",
-        body: <>Aqui escolhe o <b>documento</b> (venda a dinheiro, factura, recibo, guia de remessa ou proforma), um <b>desconto</b> e uma <b>nota</b>.</>,
+        target: "pos-payment|pos-pickup",
+        title: "4. Cliente e pagamento",
+        body: <>O <b>cliente</b> é opcional (só é obrigatório quando fica a dever). <b>Levou agora</b> tira do stock já; <b>levanta depois</b> deixa reservado. Escolha como pagou e quanto recebeu: a app regista a dívida ou mostra o troco.</>,
     },
     {
         route: DEMO,
@@ -82,8 +46,8 @@ const demoSteps = (closing: GuideStep): GuideStep[] => [
         advance: "auto",
         done: appears("pos-demo-done"),
         hint: "Toque em Confirmar",
-        title: "10. Confirme a venda",
-        body: <>Confira o total em baixo e toque em <b>Confirmar</b>.</>,
+        title: "5. Confirme a venda",
+        body: <>Confira o total e toque em <b>Confirmar</b>. Em <b>Mais opções</b> escolhe o documento (factura, recibo, guia, proforma), um desconto, uma nota e a data.</>,
     },
     closing,
 ];
@@ -111,32 +75,23 @@ const catalogo: Guide = {
     steps: [
         {
             route: "/catalog",
-            title: "O seu catálogo",
-            body: <>Aqui fica tudo o que vende: nome, preço, custo, foto e código de barras. Vamos adicionar <b>um produto seu, a sério</b> — este fica gravado.</>,
-        },
-        {
-            route: "/catalog",
             target: "catalog-new",
             advance: "auto",
             done: appears("catalog-form"),
             hint: "Toque em Novo produto",
             title: "Novo produto",
-            body: <>Toque aqui para adicionar um produto.</>,
+            body: <>Aqui fica tudo o que vende. Vamos adicionar <b>um produto seu, a sério</b> — este fica gravado. Toque em <b>Novo produto</b>.</>,
         },
-        { target: "catalog-f-category", title: "Categoria", body: <>O tipo de produto (Cimentos, Blocos, Tintas…). Ajuda a encontrar e a ver os relatórios por categoria.</> },
-        { target: "catalog-f-name", title: "Nome", body: <>Escreva o nome como o diz ao cliente, por exemplo <b>Cimento 32,5N</b>. A app avisa se já existir um parecido.</> },
-        { target: "catalog-f-photo", title: "Foto (opcional)", body: <>Uma foto ajuda quem vende a não se enganar no produto. Pode tirar com a câmara.</> },
-        { target: "catalog-f-price", title: "Preço e unidade", body: <>O <b>preço de venda</b> e a <b>unidade</b> (saco, m³, metro, lata…).</> },
-        { target: "catalog-f-cost", title: "Custo e código de barras", body: <>Com o <b>custo</b>, a app calcula a margem e o lucro. O <b>código de barras</b> pode ser lido com a câmara do telemóvel ou com um leitor.</> },
-        { target: "catalog-f-alerts", title: "Alertas de stock", body: <>Quando o stock descer abaixo destes números, a app avisa: primeiro <b>baixo</b>, depois <b>crítico</b>.</> },
-        { target: "catalog-f-variants", title: "Variações", body: <>O produto tem cores, texturas ou tamanhos? Ligue aqui e crie todas as variações de uma vez, cada uma com o seu stock e preço.</> },
+        { target: "catalog-f-name", title: "Nome e categoria", body: <>Escreva o nome como o diz ao cliente, por exemplo <b>Cimento 32,5N</b>, e escolha a <b>categoria</b> (Cimentos, Blocos, Tintas…).</> },
+        { target: "catalog-f-price", title: "Preço, unidade e custo", body: <>O <b>preço de venda</b> e a <b>unidade</b> (saco, m³, lata…). Com o <b>custo</b>, a app calcula a margem e o lucro.</> },
+        { target: "catalog-f-variants", title: "O resto é opcional", body: <><b>Foto</b>, <b>código de barras</b>, <b>alertas</b> de stock baixo e <b>variações</b> (cores, texturas, tamanhos), cada uma com o seu stock e preço.</> },
         {
             target: "catalog-f-submit",
             advance: "auto",
             done: disappears("catalog-form"),
             hint: "Toque em Adicionar",
             title: "Guarde",
-            body: <>Preencha pelo menos o nome e o preço e toque em <b>Adicionar ao Catálogo</b>. O produto passa a aparecer nas vendas, encomendas e no stock.</>,
+            body: <>Com pelo menos o nome e o preço, toque em <b>Adicionar ao Catálogo</b>. O produto passa a aparecer nas vendas e no stock.</>,
         },
         {
             route: "/catalog",
@@ -144,25 +99,16 @@ const catalogo: Guide = {
             advance: "auto",
             done: appears("catalog-detail"),
             hint: "Toque num produto",
-            title: "Editar um produto",
-            body: <>Para ver ou mudar um produto, toque nele para abrir a <b>ficha</b>.</>,
+            title: "Ver e editar",
+            body: <>Toque num produto para abrir a <b>ficha</b>.</>,
         },
-        { target: "catalog-detail", title: "A ficha do produto", body: <>Preço, custo e margem, quanto há em cada local, as últimas vendas e o histórico de preços — tudo num sítio.</> },
         {
-            target: "catalog-detail-edit",
-            advance: "auto",
-            done: appears("catalog-edit-form"),
-            hint: "Toque em Editar",
-            title: "Editar",
-            body: <>Toque em <b>Editar</b> para mudar o nome, preço, foto ou código. Ao lado pode criar variações, duplicar ou apagar.</>,
-        },
-        { target: "catalog-edit-form", title: "Mude e guarde", body: <>Altere o que precisar e toque em <b>Salvar Alterações</b>. Cada mudança de preço fica guardada no histórico.</> },
-        {
-            title: "Já sabe usar o catálogo ✅",
+            target: "catalog-detail-edit|catalog-detail",
+            title: "A ficha ✅",
             body: (
                 <>
-                    <p>No catálogo também pode <b>importar</b> uma lista do Excel, organizar as <b>categorias</b> e selecionar vários produtos para mudar o preço de uma vez.</p>
-                    <p>A seguir mostramos <b>como se vende</b>: uma venda de demonstração, com produtos de exemplo — <b>nada é gravado</b>.</p>
+                    <p>Preço, custo e margem, o stock em cada local e as últimas vendas. Toque em <b>Editar</b> para mudar o que precisar — cada mudança de preço fica no histórico.</p>
+                    <p>A seguir mostramos <b>como se vende</b>, com produtos de exemplo — <b>nada é gravado</b>.</p>
                 </>
             ),
         },
