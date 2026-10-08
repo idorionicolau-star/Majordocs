@@ -77,7 +77,7 @@ export function EscalepayPanel({ ownEmail }: { ownEmail?: string }) {
             <CardHeader>
                 <CardTitle>Vendas da EscalePay</CardTitle>
                 <CardDescription>
-                    Quem compra regista-se pelo link abaixo com o <b>mesmo email da compra</b> e usa o teste gratuito até a compra ser confirmada.
+                    Quem compra regista-se pelo link abaixo com o <b>mesmo email da compra</b> e pode usar logo a app (sem aviso de teste) até a compra ser confirmada.
                     Cole aqui a lista de compradores (ou o texto dos emails de venda): cada email activa a empresa — já, se tiver conta; senão, quando se registar.
                 </CardDescription>
             </CardHeader>

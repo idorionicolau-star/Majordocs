@@ -148,7 +148,7 @@ export default function RegisterPage() {
               {fromEscalepay && (
                 <div data-tour="escalepay-note" className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
                   <p className="font-semibold text-emerald-700 dark:text-emerald-400">Comprou na EscalePay? 🎉</p>
-                  <p className="mt-1 text-muted-foreground">Registe-se com o <b className="text-foreground">mesmo email da compra</b>. A conta fica activa sozinha assim que a compra for confirmada — até lá, já pode usar tudo no teste gratuito.</p>
+                  <p className="mt-1 text-muted-foreground">Registe-se com o <b className="text-foreground">mesmo email da compra</b>. A conta fica activa sozinha assim que a compra for confirmada — pode começar a usar já.</p>
                 </div>
               )}
               <FormField

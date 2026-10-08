@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { openSupport } from "@/components/support/support-dialog";
 import { isSnoozed, trialMessage, trialSnoozeMs, trialTone } from "@/lib/trial";
 import { couponReminder, type CompanyCoupon } from "@/lib/coupon-core";
 import { formatCurrency } from "@/lib/utils";
@@ -50,6 +51,20 @@ export function TrialBanner({ companyId, daysLeft, coupon }: { companyId?: strin
             <span className="rounded bg-white/20 px-2 py-0.5 text-xs font-bold">{daysLeft <= 0 ? "Último dia" : daysLeft === 1 ? "Resta 1 dia" : `Restam ${daysLeft} dias`}</span>
             <a href="/billing" className={`rounded bg-white px-2 py-0.5 text-xs font-bold hover:bg-white/90 ${btn}`}>Subscrever</a>
             <CloseBtn onClick={() => snooze(trialSnoozeMs(daysLeft))} />
+        </div>
+    );
+}
+
+/**
+ * Quem veio da EscalePay já pagou lá: não vê a contagem do teste. Só se a compra ainda não estiver confirmada
+ * nos últimos 3 dias é que aparece um aviso, para não ficar em modo leitura sem saber porquê.
+ */
+export function EscalepayPendingBanner({ daysLeft }: { daysLeft: number }) {
+    if (daysLeft > 3) return null;
+    return (
+        <div role="status" data-tour="escalepay-pending" className="sticky top-0 z-[60] flex flex-wrap items-center justify-center gap-2 bg-amber-500 py-2 px-4 text-center text-sm font-medium text-white shadow-md">
+            <span>Ainda não recebemos a confirmação da sua compra na EscalePay. Use o mesmo email da compra, ou fale connosco.</span>
+            <button type="button" onClick={openSupport} className="rounded bg-white px-2 py-0.5 text-xs font-bold text-amber-700 hover:bg-white/90">Falar com o suporte</button>
         </div>
     );
 }
