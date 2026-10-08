@@ -3,6 +3,8 @@
 
 import { useState, useContext, useEffect } from 'react';
 import { savePendingCoupon, PENDING_COUPON_KEY } from '@/components/billing/pending-coupon';
+import { saveOrigin } from '@/components/billing/escalepay-claim';
+import { ESCALEPAY_SOURCE } from '@/lib/escalepay-core';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -39,10 +41,13 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   // Código de convite: vem no link (/register?codigo=MJTP86) ou escreve-se; aplica-se quando a empresa abrir.
   const [inviteCode, setInviteCode] = useState('');
+  const [fromEscalepay, setFromEscalepay] = useState(false);
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     const c = q.get('codigo') || q.get('convite') || q.get('cupao') || q.get('code');
     if (c) setInviteCode(c.trim().toUpperCase());
+    // comprou na EscalePay (link dos afiliados): a compra activa a conta quando for confirmada
+    if ((q.get('origem') || '').toLowerCase() === ESCALEPAY_SOURCE) { setFromEscalepay(true); saveOrigin(ESCALEPAY_SOURCE); }
   }, []);
   const keepInvite = () => savePendingCoupon(inviteCode);
   const dropInvite = () => { try { localStorage.removeItem(PENDING_COUPON_KEY); } catch { /* ignore */ } };
@@ -140,6 +145,12 @@ export default function RegisterPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={handleSubmit(handleRegister)} className="space-y-4">
+              {fromEscalepay && (
+                <div data-tour="escalepay-note" className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
+                  <p className="font-semibold text-emerald-700 dark:text-emerald-400">Comprou na EscalePay? 🎉</p>
+                  <p className="mt-1 text-muted-foreground">Registe-se com o <b className="text-foreground">mesmo email da compra</b>. A conta fica activa sozinha assim que a compra for confirmada — até lá, já pode usar tudo no teste gratuito.</p>
+                </div>
+              )}
               <FormField
                 control={form.control}
                 name="companyName"
