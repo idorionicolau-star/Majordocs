@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useEffect, useRef } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { InventoryContext } from "@/context/inventory-context";
 import { useAuth } from "@/firebase/provider";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +11,14 @@ export const ORIGIN_KEY = "majorstockx-origem";
 
 export function saveOrigin(origin: string) {
     try { if (origin) localStorage.setItem(ORIGIN_KEY, origin); } catch { /* ignore */ }
+}
+
+/** A empresa veio da EscalePay (marcada no servidor, ou acabou de se registar pelo link neste aparelho)? */
+export function useFromEscalepay(): boolean {
+    const ctx = useContext(InventoryContext);
+    const [flag, setFlag] = useState(false);
+    useEffect(() => { try { setFlag(localStorage.getItem(ORIGIN_KEY) === ESCALEPAY_SOURCE); } catch { /* ignore */ } }, []);
+    return ctx?.companyData?.source === ESCALEPAY_SOURCE || flag;
 }
 
 /**

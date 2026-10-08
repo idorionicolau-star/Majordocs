@@ -91,6 +91,8 @@ export type Company = {
   /** Numeric copy (end + grace) used by Firestore rules */
   paidUntilMs?: number;
   plan?: string;
+  /** De onde veio a empresa: "escalepay" = registou-se pelo link dos afiliados (ver lib/escalepay-core.ts). */
+  source?: string;
   /** Arranque oficial: quando se apagaram os registos anteriores (só uma vez). */
   dataResetAt?: string;
 };

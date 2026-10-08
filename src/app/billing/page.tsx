@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { PLANS, type PlanId } from "@/lib/plans";
 import { cn, formatCurrency } from "@/lib/utils";
+import { useFromEscalepay } from "@/components/billing/escalepay-claim";
 
 type Payment = { reference: string; planId: PlanId; amount: number; status: string; createdAt: string; paidAt?: string; periodEnd?: string };
 
@@ -19,6 +20,7 @@ const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString
 
 function BillingInner() {
     const { companyData, companyId, user, isTrial, daysLeft, isReadOnly, subscriptionReason } = useInventory();
+    const fromEscalepay = useFromEscalepay();
     const auth = useAuth();
     const firestore = useFirestore();
     const { toast } = useToast();
@@ -122,6 +124,7 @@ function BillingInner() {
     const ends = companyData?.subscriptionEndsAt;
     const statusLine = isReadOnly
         ? subscriptionReason === "trial_expired" ? "O período de teste terminou." : "A subscrição não está activa."
+        : isTrial && fromEscalepay ? "Compra na EscalePay a confirmar — a conta fica activa sozinha (use o mesmo email da compra)."
         : isTrial ? `Período de teste — faltam ${daysLeft} dia(s).`
         : ends ? `Activa até ${fmtDate(ends)}.` : "Activa.";
 
