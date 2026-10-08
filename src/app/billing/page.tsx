@@ -202,7 +202,7 @@ function BillingInner() {
                         {history.map((h) => (
                             <div key={h.reference} className="flex items-center justify-between gap-3 border-b px-4 py-2.5 text-sm last:border-0">
                                 <div className="min-w-0">
-                                    <p className="font-medium">{PLANS.find((p) => p.id === h.planId)?.label || h.planId} · {formatCurrency(h.amount)}</p>
+                                    <p className="font-medium">{PLANS.find((p) => p.id === h.planId)?.label || h.planId}{h.amount ? ` · ${formatCurrency(h.amount)}` : ""}</p>
                                     <p className="text-xs text-muted-foreground">{new Date(h.createdAt).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "short" })} · ref. {h.reference}{h.periodEnd ? ` · até ${fmtDate(h.periodEnd)}` : ""}</p>
                                 </div>
                                 <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",

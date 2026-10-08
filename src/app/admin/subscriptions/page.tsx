@@ -27,6 +27,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Lock, ShieldAlert, CheckCircle, Clock, AlertOctagon } from 'lucide-react';
 import { Company } from '@/lib/types';
 import { ZumboPayCheck } from '@/components/admin/zumbopay-check';
+import { EscalepayPanel } from '@/components/admin/escalepay-panel';
 
 const ALLOWED_EMAILS = ['digitalwarriorguru@gmail.com', 'idorionicolau@gmail.com'];
 
@@ -155,6 +156,8 @@ export default function SubscriptionsAdminPage() {
           Ative, suspenda ou configure os períodos de teste (Trial) de todas as empresas no sistema.
         </p>
       </div>
+
+      <EscalepayPanel ownEmail={userEmail} />
 
       <ZumboPayCheck />
 

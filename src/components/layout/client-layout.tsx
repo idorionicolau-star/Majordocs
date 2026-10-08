@@ -24,6 +24,7 @@ import { PageTutorialHint } from '@/components/guide/page-help';
 import { SeenSync } from '@/components/guide/seen-sync';
 import { SupportDialog } from '@/components/support/support-dialog';
 import { PendingCoupon } from '@/components/billing/pending-coupon';
+import { EscalepayClaim } from '@/components/billing/escalepay-claim';
 import { whatsappLink } from '@/lib/support';
 import { OnboardingWelcome } from '@/components/onboarding/welcome';
 
@@ -199,6 +200,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <SeenSync />
           <SupportDialog />
           <PendingCoupon />
+          <EscalepayClaim />
           <GuideHost />
           <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
         </div>
