@@ -7,9 +7,10 @@ import { useContext } from "react";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { useNavGroups } from "./use-nav-groups";
-import { HelpCircle, LifeBuoy, LogOut, Settings, User as UserIcon } from "lucide-react";
+import { HelpCircle, LifeBuoy, LogOut, Settings, User as UserIcon, ShieldCheck } from "lucide-react";
 import { openTour } from "@/components/onboarding/app-tour";
 import { MenuModeToggle } from "./menu-mode-toggle";
+import { isSuperAdminEmail } from "@/lib/super-admin";
 import { openSupport, SupportNavButton } from "@/components/support/support-dialog";
 import {
     DropdownMenu,
@@ -126,6 +127,14 @@ export function Sidebar() {
                             <HelpCircle className="mr-2 h-4 w-4" />
                             <span>Como a app funciona</span>
                         </DropdownMenuItem>
+                        {isSuperAdminEmail(user?.email) && (
+                            <Link href="/admin/subscriptions">
+                                <DropdownMenuItem className="cursor-pointer" data-tour="nav-admin">
+                                    <ShieldCheck className="mr-2 h-4 w-4" />
+                                    <span>Administração</span>
+                                </DropdownMenuItem>
+                            </Link>
+                        )}
                         <DropdownMenuItem className="cursor-pointer" onClick={() => { openSupport(); }}>
                             <LifeBuoy className="mr-2 h-4 w-4" />
                             <span>Ajuda e suporte</span>

@@ -28,8 +28,9 @@ import { Lock, ShieldAlert, CheckCircle, Clock, AlertOctagon } from 'lucide-reac
 import { Company } from '@/lib/types';
 import { ZumboPayCheck } from '@/components/admin/zumbopay-check';
 import { EscalepayPanel } from '@/components/admin/escalepay-panel';
+import { isSuperAdminEmail } from '@/lib/super-admin';
 
-const ALLOWED_EMAILS = ['digitalwarriorguru@gmail.com', 'idorionicolau@gmail.com'];
+
 
 export default function SubscriptionsAdminPage() {
   const inventoryContext = useContext(InventoryContext);
@@ -46,7 +47,7 @@ export default function SubscriptionsAdminPage() {
 
   // Checks access based on currently logged in user email
   const userEmail = firebaseUser?.email || user?.email || "";
-  const isAuthorized = ALLOWED_EMAILS.includes(userEmail.toLowerCase().trim());
+  const isAuthorized = isSuperAdminEmail(userEmail);
 
   useEffect(() => {
     if (!isAuthorized || !firestore) return;
