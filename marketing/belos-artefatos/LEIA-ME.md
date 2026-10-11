@@ -1,4 +1,8 @@
-# Belos Artefatos: anúncio "Pavê" (Remotion)
+# Belos Artefatos: anúncios em vídeo (Remotion)
+
+Dois vídeos verticais no mesmo projecto: **Pavê** (`BelosPave`, 27 s) e **Cobogós** (`BelosCobogos`, 22 s). Ficheiros prontos: `belos-artefatos-pave.mp4` e `belos-artefatos-cobogos.mp4`.
+
+## Pavê
 
 Vídeo vertical (1080×1920, 27 s, 30 fps) para Reels, Stories e WhatsApp Status.
 Estilo premium com cortes em faixa diagonal e um antes/depois animado: o pavê monta-se peça a peça sobre a terra.
@@ -28,3 +32,19 @@ npx remotion render BelosPave out/belos-artefatos-pave.mp4
 ```
 
 Esta pasta fica fora da compilação da app (tsconfig e eslint ignoram `marketing/`).
+
+## Cobogós (`BelosCobogos`, 22,4 s)
+
+| Cena | Ficheiro | Duração |
+| --- | --- | --- |
+| Abertura: luz a atravessar um muro de cobogós | `src/CoboHook.tsx` | 3 s |
+| 9 desenhos de 30×30 cm a 120 MT (um por batida) + grelha final | `src/CoboMontage.tsx` | 5 s |
+| Painéis grandes: 80×80, 60×60 e 100×60 | `src/CoboXl.tsx` | 5,4 s |
+| Escolha o tamanho (20 a 80 cm, desenhado à escala) | `src/CoboLadder.tsx` | 4 s |
+| Contactos | `src/Cta.tsx` | 5 s |
+
+Fotos recortadas em `public/cobogos/`; música em `public/musica-cobogos.mp3`. Preços e tamanhos estão nos próprios ficheiros das cenas.
+
+```bash
+npx remotion render BelosCobogos out/belos-artefatos-cobogos.mp4
+```

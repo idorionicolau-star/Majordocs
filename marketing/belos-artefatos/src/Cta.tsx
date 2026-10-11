@@ -42,7 +42,9 @@ const Bubble: React.FC = () => (
   </svg>
 );
 
-export const Cta: React.FC = () => {
+export const Cta: React.FC<{ footer?: string }> = ({
+  footer = "PAVÊS · COBOGÓS · LANCIS · MOBILIÁRIO DE JARDIM",
+}) => {
   const frame = useCurrentFrame();
   const logoIn = interpolate(frame, [0, 22], [0, 1], {
     ...clamp,
@@ -284,7 +286,7 @@ export const Cta: React.FC = () => {
           color: "#a9c4ff",
         }}
       >
-        PAVÊS · COBOGÓS · LANCIS · MOBILIÁRIO DE JARDIM
+        {footer}
       </div>
       <Vignette strength={0.4} />
     </AbsoluteFill>
