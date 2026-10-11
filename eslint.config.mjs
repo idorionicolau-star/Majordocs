@@ -7,7 +7,7 @@ const eslintConfig = [
   ...nextVitals,
   ...nextTs,
   {
-    ignores: ['.next/**', 'node_modules/**', 'public/**', 'next-env.d.ts', 'seed-bakery.mjs'],
+    ignores: ['.next/**', 'node_modules/**', 'marketing/**', 'public/**', 'next-env.d.ts', 'seed-bakery.mjs'],
   },
   {
     rules: {
