@@ -3,6 +3,7 @@
 "use client";
 
 import { useState, useMemo, useContext, useEffect } from "react";
+import { useInventoryBackHref } from "@/hooks/use-inventory-back";
 import { useSearchParams } from "next/navigation";
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,6 +32,7 @@ import { MovementCard } from "@/components/inventory/history/movement-card";
 import Link from "next/link";
 
 export default function InventoryHistoryPage() {
+  const backHref = useInventoryBackHref();
   const searchParams = useSearchParams();
   const productNameFromQuery = searchParams.get('productName');
 
@@ -244,7 +246,7 @@ export default function InventoryHistoryPage() {
       <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <Button asChild variant="outline" className="h-12">
-            <Link href="/inventory">
+            <Link href={backHref}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Voltar ao Inventário
             </Link>

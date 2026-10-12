@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { links, parseInventoryFocus, applyInventoryFocus, hasInventoryFocus, inventoryFocusTitle } from '../deep-links';
+import { links, parseInventoryFocus, applyInventoryFocus, hasInventoryFocus, inventoryFocusTitle, safeReturn } from '../deep-links';
+import { suggestedQuantity } from '../business-analysis';
 import type { Product } from '../types';
 
 const p = (o: Partial<Product>): Product => ({ id: o.name || 'x', name: 'X', stock: 10, reservedStock: 0, price: 100, cost: 50, category: 'Geral', unit: 'un', location: 'l1', ...o } as Product);
@@ -57,4 +58,29 @@ describe('deep-links', () => {
     expect(links.employee('u1')).toBe('/users?funcionario=u1');
     expect(links.order('o1')).toBe('/orders?encomenda=o1');
   });
+});
+
+describe('regressar sem perder o filtro', () => {
+    it('só aceita endereços da app e da secção certa', () => {
+        expect(safeReturn('/inventory?problema=sem-preco', '/inventory', '/inventory')).toBe('/inventory?problema=sem-preco');
+        expect(safeReturn('/production?planear=1', '/production', '/production')).toBe('/production?planear=1');
+        expect(safeReturn('https://mal.com', '/inventory', '/inventory')).toBe('/inventory');
+        expect(safeReturn('//mal.com/inventory', '/inventory', '/inventory')).toBe('/inventory');
+        expect(safeReturn('/sales', '/inventory', '/inventory')).toBe('/inventory');
+        expect(safeReturn('/inventoryx', '/inventory', '/inventory')).toBe('/inventory');
+        expect(safeReturn(null, '/production', '/production')).toBe('/production');
+    });
+    it('registar produção já preenchida', () => {
+        expect(links.newProduction('Pavê 6cm', 120, 'loc1', links.productionPlan()))
+            .toBe('/production/new?produto=Pav%C3%AA+6cm&quantidade=120&local=loc1&voltar=%2Fproduction%3Fplanear%3D1');
+        expect(links.newProduction('Bloco')).toBe('/production/new?produto=Bloco');
+    });
+});
+
+describe('quanto produzir', () => {
+    it('cobre 30 dias de vendas, descontando o que há', () => {
+        expect(suggestedQuantity({ available: 20, soldPerDay: 5 })).toBe(130);
+        expect(suggestedQuantity({ available: -10, soldPerDay: 1.1 })).toBe(33);
+        expect(suggestedQuantity({ available: 500, soldPerDay: 5 })).toBe(0);
+    });
 });

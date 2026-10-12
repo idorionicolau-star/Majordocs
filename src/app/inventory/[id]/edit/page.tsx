@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useInventoryBackHref } from "@/hooks/use-inventory-back";
 import { useParams, useRouter } from 'next/navigation';
 import {
     Form,
@@ -77,6 +78,7 @@ const formSchema = z.object({
 type EditProductFormValues = z.infer<typeof formSchema>;
 
 export default function EditInventoryProductPage() {
+    const backHref = useInventoryBackHref();
     const { id } = useParams() as { id: string };
     const router = useRouter();
     const { products, availableUnits, locations, isMultiLocation, updateProduct, catalogCategories, addCatalogCategory, categorizeProductWithAI, companyId: companyIdForUpload } = useInventory();
@@ -172,7 +174,7 @@ export default function EditInventoryProductPage() {
                 title: "Produto Atualizado",
                 description: "As alterações foram salvas com sucesso.",
             });
-            router.push('/inventory');
+            router.push(backHref);
         } catch (error) {
             console.error("Error updating product:", error);
             toast({
@@ -226,7 +228,7 @@ export default function EditInventoryProductPage() {
         <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full pb-20 animate-in fade-in duration-500">
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" asChild className="rounded-full">
-                    <Link href="/inventory">
+                    <Link href={backHref}>
                         <ArrowLeft className="h-5 w-5" />
                         <span className="sr-only">Voltar ao Inventário</span>
                     </Link>
@@ -611,7 +613,7 @@ export default function EditInventoryProductPage() {
                         </div>
 
                         <div className="flex flex-col sm:flex-row items-center gap-3 pt-6 border-t border-border mt-8">
-                            <Button type="button" variant="outline" className="w-full sm:w-auto h-12" onClick={() => router.push('/inventory')}>
+                            <Button type="button" variant="outline" className="w-full sm:w-auto h-12" onClick={() => router.push(backHref)}>
                                 Cancelar
                             </Button>
                             <Button type="submit" className="w-full sm:w-auto h-12 px-8" disabled={isSubmitting}>
