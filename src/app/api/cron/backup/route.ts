@@ -9,8 +9,9 @@ import { backupPath, BACKUP_PREFIX, dayOf, expiredBackups } from '@/lib/backup-c
 
 /**
  * Cópia de segurança diária (Vercel Cron): os dados de cada empresa num JSON privado no Vercel Blob,
- * guardados 14 dias. Precisa de um Blob store PRIVADO e do seu token em BACKUP_BLOB_READ_WRITE_TOKEN
- * (as fotos usam outro store, público). Sem o token não faz nada.
+ * guardados 14 dias. Precisa de um Blob store PRIVADO ligado ao projecto com o prefixo BACKUP_BLOB
+ * (a Vercel cria BACKUP_BLOB_STORE_ID e autentica por OIDC) — ou do seu token em BACKUP_BLOB_READ_WRITE_TOKEN.
+ * As fotos usam outro store, público. Sem nenhum dos dois não faz nada.
  */
 async function dumpDoc(ref: DocumentReference, depth = 0): Promise<Record<string, unknown>> {
     const snap = await ref.get();
@@ -34,13 +35,20 @@ export async function GET(req: Request) {
     if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const storeId = process.env.BACKUP_BLOB_STORE_ID;
     const token = process.env.BACKUP_BLOB_READ_WRITE_TOKEN;
-    if (!token) return NextResponse.json({ skipped: 'BACKUP_BLOB_READ_WRITE_TOKEN não configurado' });
+    // OIDC explícito + storeId: a SDK usa ESTE store e nunca cai no BLOB_READ_WRITE_TOKEN das fotos (público)
+    const oidcToken = req.headers.get('x-vercel-oidc-token') || process.env.VERCEL_OIDC_TOKEN;
+    const auth = token ? { token } : storeId && oidcToken ? { storeId, oidcToken } : null;
+    if (!auth) {
+        const why = storeId ? 'sem token OIDC da Vercel' : 'BACKUP_BLOB_STORE_ID / BACKUP_BLOB_READ_WRITE_TOKEN não configurado';
+        return NextResponse.json({ skipped: why }, { status: storeId ? 500 : 200 });
+    }
 
     const db = initializeAdmin().firestore();
     const now = new Date();
     const day = dayOf(now);
-    const opts = { access: 'private' as const, token, addRandomSuffix: false, allowOverwrite: true, contentType: 'application/json' };
+    const opts = { access: 'private' as const, ...auth, addRandomSuffix: false, allowOverwrite: true, contentType: 'application/json' };
     const saved: string[] = [];
     const failed: string[] = [];
 
@@ -68,10 +76,10 @@ export async function GET(req: Request) {
     try {
         let cursor: string | undefined;
         do {
-            const page = await list({ prefix: BACKUP_PREFIX, cursor, token });
+            const page = await list({ prefix: BACKUP_PREFIX, cursor, ...auth });
             const old = expiredBackups(page.blobs.map((b) => b.pathname), now);
             if (old.length) {
-                await del(page.blobs.filter((b) => old.includes(b.pathname)).map((b) => b.url), { token });
+                await del(page.blobs.filter((b) => old.includes(b.pathname)).map((b) => b.url), auth);
                 removed += old.length;
             }
             cursor = page.hasMore ? page.cursor : undefined;
