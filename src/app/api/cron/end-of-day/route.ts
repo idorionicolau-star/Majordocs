@@ -4,6 +4,10 @@ import { Resend } from 'resend';
 import { formatCurrency } from '@/lib/utils';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { isCountableSale } from '@/lib/sale-filters';
+import { criticalProducts, escapeHtml, topProducts } from '@/lib/daily-report';
+
+const APP_URL = 'https://stock.majorgroup.app';
+const CRITICAL_SHOWN = 10;
 
 export async function GET(req: Request) {
     const authHeader = req.headers.get('authorization');
@@ -52,31 +56,48 @@ export async function GET(req: Request) {
 
                     let totalSalesCount = 0;
                     let totalSalesValue = 0;
+                    const countable: any[] = [];
 
                     salesSnapshot.forEach(saleDoc => {
                         const sale = saleDoc.data();
                         if (isCountableSale(sale as any)) {
                             totalSalesCount++;
                             totalSalesValue += (sale.amountPaid ?? (sale.totalValue || 0));
+                            countable.push(sale);
                         }
                     });
+                    const top = topProducts(countable, 3);
 
-                    // 2. Fetch Critical Stock
+                    // 2. Stock crítico (o mesmo produto no mesmo local conta uma vez)
                     const productsSnapshot = await db.collection(`companies/${companyId}/products`).get();
-                    let criticalItemsCount = 0;
-
-                    productsSnapshot.forEach(prodDoc => {
-                        const prod = prodDoc.data();
-                        if (prod.deletedAt) return;
-                        const availableStock = (prod.stock || 0) - (prod.reservedStock || 0);
-                        if (availableStock <= (prod.criticalStockThreshold || 0)) {
-                            criticalItemsCount++;
-                        }
-                    });
+                    const critical = criticalProducts(productsSnapshot.docs.map((d) => d.data() as any), companyData.locations || []);
+                    const criticalItemsCount = critical.length;
 
                     // 3. Prepare HTML
-                    const displayName = companyData.name || 'MajorStockX';
-                    const logoUrl = companyData.logoUrl;
+                    const displayName = escapeHtml(companyData.name || 'MajorStockX');
+                    const logoUrl = companyData.logoUrl ? escapeHtml(companyData.logoUrl) : '';
+                    const qty = (n: number, unit?: string) => `${n.toLocaleString('pt-PT')}${unit ? ` ${escapeHtml(unit)}` : ''}`;
+                    const cell = 'padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 14px;';
+                    const topHtml = top.length ? `
+               <h3 style="font-size: 16px; margin: 24px 0 8px;">🏆 Mais vendidos</h3>
+               <table style="width: 100%; border-collapse: collapse;">
+                 ${top.map((t, i) => `<tr>
+                   <td style="${cell}">${i + 1}. ${escapeHtml(t.name)}</td>
+                   <td style="${cell} text-align: right; white-space: nowrap;">${qty(t.quantity, t.unit)}</td>
+                   <td style="${cell} text-align: right; white-space: nowrap; color: #15803d;">${formatCurrency(t.value)}</td>
+                 </tr>`).join('')}
+               </table>` : '';
+                    const criticalHtml = critical.length ? `
+               <h3 style="font-size: 16px; margin: 24px 0 8px;">⚠️ Stock crítico</h3>
+               <table style="width: 100%; border-collapse: collapse;">
+                 <tr><th style="${cell} text-align: left; color: #64748b; font-weight: normal;">Produto</th><th style="${cell} text-align: right; color: #64748b; font-weight: normal;">Disponível</th><th style="${cell} text-align: right; color: #64748b; font-weight: normal;">Limite</th></tr>
+                 ${critical.slice(0, CRITICAL_SHOWN).map((c) => `<tr>
+                   <td style="${cell}">${escapeHtml(c.name)}${c.location ? ` <span style="color: #94a3b8;">· ${escapeHtml(c.location)}</span>` : ''}</td>
+                   <td style="${cell} text-align: right; white-space: nowrap; font-weight: bold; color: #b91c1c;">${qty(c.available, c.unit)}</td>
+                   <td style="${cell} text-align: right; white-space: nowrap; color: #64748b;">${qty(c.threshold, c.unit)}</td>
+                 </tr>`).join('')}
+               </table>
+               ${critical.length > CRITICAL_SHOWN ? `<p style="font-size: 13px; color: #64748b; margin: 6px 0 0;">e mais ${critical.length - CRITICAL_SHOWN} produto${critical.length - CRITICAL_SHOWN === 1 ? '' : 's'} no painel.</p>` : ''}` : '';
                     const logoHtml = logoUrl
                         ? `<img src="${logoUrl}" alt="${displayName}" style="max-height: 48px; max-width: 180px; object-fit: contain; margin-bottom: 8px;" /><br/>`
                         : '';
@@ -111,7 +132,12 @@ export async function GET(req: Request) {
                  <p style="margin: 4px 0; font-size: 16px;"><strong>Produtos em Stock Crítico:</strong> <span style="font-weight: bold; color: #b91c1c;">${criticalItemsCount}</span></p>
                </div>
  
-               <p style="font-size: 14px; color: #64748b;">Aceda ao seu painel para ver mais detalhes.</p>
+               ${topHtml}
+               ${criticalHtml}
+
+               <div style="text-align: center; margin: 28px 0 8px;">
+                 <a href="${APP_URL}/dashboard" style="display: inline-block; background-color: #0f172a; color: #ffffff; text-decoration: none; font-weight: bold; padding: 12px 24px; border-radius: 8px;">Abrir MajorStockX</a>
+               </div>
              </div>
              ${footerHtml}
          `;
