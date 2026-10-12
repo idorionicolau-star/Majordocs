@@ -9,8 +9,6 @@ const COUPONS: Record<string, CouponDef> = {
     MAJOR76: { price: 550, months: 3 },
     GD66: { price: 500, months: 3 },
     MJTP86: { price: 450, months: 3 },
-    // para testar os pagamentos: só um mês, a 25 MT
-    CHRISKILLYAN2224: { price: 25, months: 1, test: true },
 };
 
 export function findCoupon(raw: string): { code: string; def: CouponDef } | null {
