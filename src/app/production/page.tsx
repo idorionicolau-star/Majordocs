@@ -37,6 +37,7 @@ import { isSameDay, format } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
 import { forwardRef } from 'react';
+import { ProductionPlan } from "@/components/production/production-plan";
 
 export default function ProductionPage() {
   const inventoryContext = useContext(InventoryContext);
@@ -281,6 +282,10 @@ export default function ProductionPage() {
             </Button>
           </div>
         </div>
+
+        {searchParams.get('planear') === '1' && (
+          <ProductionPlan canRegister={canEditProduction && !isReadOnly} onClose={() => router.replace('/production')} />
+        )}
 
         <Card className="glass-panel p-4 mb-6 border-none" data-tour="prod-filters">
           <div className="space-y-4">

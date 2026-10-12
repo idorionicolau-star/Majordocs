@@ -53,7 +53,7 @@ import { Virtuoso } from 'react-virtuoso';
 
 import { useFuse } from "@/hooks/use-fuse";
 import { DeepLinkBanner } from "@/components/deep-link-banner";
-import { parseInventoryFocus, applyInventoryFocus, hasInventoryFocus, inventoryFocusTitle } from "@/lib/deep-links";
+import { parseInventoryFocus, applyInventoryFocus, hasInventoryFocus, inventoryFocusTitle, rememberInventoryUrl } from "@/lib/deep-links";
 
 type SortKey = 'stock_desc' | 'stock_asc' | 'name_asc' | 'date_desc';
 
@@ -88,6 +88,11 @@ export default function InventoryPage() {
   const router = useRouter();
   // Chegou por um aviso (notificação, diagnóstico)? Mostra só o caso pedido.
   const focus = useMemo(() => parseInventoryFocus(searchParams), [searchParams]);
+  // Editar um produto e voltar regressa aqui com o mesmo filtro (ver useInventoryBackHref).
+  useEffect(() => {
+    const q = searchParams.toString();
+    rememberInventoryUrl(q ? `/inventory?${q}` : '/inventory');
+  }, [searchParams]);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [nameFilter, setNameFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);

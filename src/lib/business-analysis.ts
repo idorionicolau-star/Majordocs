@@ -31,6 +31,15 @@ export type DataTask = {
 
 export type ProductRisk = { name: string; location?: string; unit: string; available: number; daysLeft: number; soldPerDay: number };
 
+/** Dias de vendas que uma produção (ou reposição) sugerida deve cobrir. */
+export const PLAN_COVER_DAYS = 30;
+
+/** Quanto produzir para cobrir PLAN_COVER_DAYS de vendas ao ritmo do último mês, descontando o que ainda há. */
+export function suggestedQuantity(r: Pick<ProductRisk, "available" | "soldPerDay">, coverDays = PLAN_COVER_DAYS): number {
+    const need = r.soldPerDay * coverDays - Math.max(0, r.available);
+    return need > 0 ? Math.ceil(need) : 0;
+}
+
 export type Analysis = {
     now: Date;
     sales: {
@@ -313,7 +322,7 @@ export function analyzeBusiness(input: {
     }
     if (negative.length) alerts.push({ id: "negative", severity: "critical", title: `${plural(negative.length, "produto", "produtos")} com stock negativo`, detail: reseller ? "Saiu mais do que entrou — falta registar a entrada (compra) desse produto." : "Saiu mais do que entrou — falta registar entradas ou produção.", items: negative.slice(0, 5).map((p) => `${p.name}: ${fmtQty(p.stock)} ${p.unit || "un"}`), itemLinks: negative.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Ver produtos com stock negativo", href: links.inventoryProblem("negativo") } });
     if (overdue.length) alerts.push({ id: "overdue", severity: "critical", title: `${plural(overdue.length, "encomenda atrasada", "encomendas atrasadas")}`, detail: "Passou a data de entrega combinada com o cliente.", items: overdue.slice(0, 5).map((o) => `${o.productName} — ${o.clientName || "cliente"}`), itemLinks: overdue.slice(0, 5).map((o) => links.order(o.id)), action: { label: "Ver encomendas atrasadas", href: overdue.length === 1 ? links.order(overdue[0].id) : "/orders" } });
-    if (runout.length) alerts.push({ id: "runout", severity: "warning", title: `${plural(runout.length, "produto vai", "produtos vão")} esgotar em ≤ 14 dias`, detail: "Ao ritmo de venda do último mês.", items: runout.slice(0, 5).map((r) => `${r.name}: ~${r.daysLeft} dias (${fmtQty(r.available)} ${r.unit})`), itemLinks: runout.slice(0, 5).map((r) => links.product(r.name, r.location)), action: reseller ? { label: "Repor stock", href: "/inventory/quick?modo=entrada" } : { label: "Planear produção", href: "/production" } });
+    if (runout.length) alerts.push({ id: "runout", severity: "warning", title: `${plural(runout.length, "produto vai", "produtos vão")} esgotar em ≤ 14 dias`, detail: "Ao ritmo de venda do último mês.", items: runout.slice(0, 5).map((r) => `${r.name}: ~${r.daysLeft} dias (${fmtQty(r.available)} ${r.unit})`), itemLinks: runout.slice(0, 5).map((r) => links.product(r.name, r.location)), action: reseller ? { label: "Repor stock", href: "/inventory/quick?modo=entrada" } : { label: "Planear produção", href: links.productionPlan() } });
     if (outOfStock.length) alerts.push({ id: "out", severity: "warning", title: `${plural(outOfStock.length, "produto esgotado", "produtos esgotados")}`, detail: reseller ? "Não podem ser vendidos até haver nova entrada de stock." : "Não podem ser vendidos até haver entrada ou produção.", items: outOfStock.slice(0, 5).map((p) => p.name), itemLinks: outOfStock.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Ver produtos esgotados", href: links.inventoryProblem("esgotado") } });
     if (pendingPickups.some((p) => p.days > 7)) {
         const stale = pendingPickups.filter((p) => p.days > 7);

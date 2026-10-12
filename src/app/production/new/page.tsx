@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useContext } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { safeReturn } from '@/lib/deep-links';
 import { useFirestore } from '@/firebase/provider';
 import {
     Form,
@@ -48,6 +49,12 @@ type AddProductionFormValues = z.infer<typeof formSchema>;
 
 export default function NewProductionPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    // Vindo do "O que produzir": produto, quantidade e local já escolhidos; no fim volta ao plano.
+    const preProduct = searchParams.get('produto') || '';
+    const preQuantity = Number(searchParams.get('quantidade')) || undefined;
+    const preLocation = searchParams.get('local') || '';
+    const backHref = safeReturn(searchParams.get('voltar'), '/production', '/production');
     const firestore = useFirestore();
     const inventoryContext = useContext(InventoryContext);
     const { toast } = useToast();
@@ -81,16 +88,26 @@ export default function NewProductionPage() {
 
     useEffect(() => {
         const savedLocation = localStorage.getItem('majorstockx-last-product-location');
-        const finalLocation = savedLocation && locations.some(l => l.id === savedLocation)
-            ? savedLocation
-            : (locations.length > 0 ? locations[0].id : "");
+        const finalLocation = preLocation && locations.some(l => l.id === preLocation)
+            ? preLocation
+            : savedLocation && locations.some(l => l.id === savedLocation)
+                ? savedLocation
+                : (locations.length > 0 ? locations[0].id : "");
 
         form.reset({
-            productName: "",
+            productName: preProduct,
+            ...(preQuantity ? { quantity: preQuantity } : {}),
             location: finalLocation,
             unit: 'un',
         });
-    }, [form, locations]);
+        if (preProduct) form.trigger(); // já preenchido: o botão Guardar fica logo activo
+    }, [form, locations, preProduct, preQuantity, preLocation]);
+
+    // a unidade do produto pré-escolhido (o catálogo pode chegar depois)
+    useEffect(() => {
+        const unit = preProduct ? catalogProducts.find((p: CatalogProduct) => p.name === preProduct)?.unit : undefined;
+        if (unit) form.setValue('unit', unit);
+    }, [form, catalogProducts, locations, preProduct]);
 
     async function onSubmit(values: AddProductionFormValues) {
         if (!firestore || !companyId || !user) {
@@ -123,7 +140,7 @@ export default function NewProductionPage() {
                 description: `${newProduction.quantity} ${newProduction.unit} de ${newProduction.productName} registadas e adicionadas ao stock.`,
                 action: <CheckCircle2 className="text-emerald-500" />
             });
-            router.push('/production');
+            router.push(backHref);
         } catch {
             // o erro (ex.: falta de matéria-prima) já foi mostrado por addProduction; a página fica aberta
         }
@@ -139,7 +156,7 @@ export default function NewProductionPage() {
         <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full pb-20 animate-in fade-in duration-500">
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" asChild className="rounded-full">
-                    <Link href="/production">
+                    <Link href={backHref}>
                         <ArrowLeft className="h-5 w-5" />
                         <span className="sr-only">Voltar à Produção</span>
                     </Link>
@@ -246,7 +263,7 @@ export default function NewProductionPage() {
                         </div>
 
                         <div className="flex flex-col sm:flex-row items-center gap-3 pt-6 border-t border-border">
-                            <Button type="button" variant="outline" className="w-full sm:w-auto h-12" onClick={() => router.push('/production')}>
+                            <Button type="button" variant="outline" className="w-full sm:w-auto h-12" onClick={() => router.push(backHref)}>
                                 Cancelar
                             </Button>
                             <Button type="submit" className="w-full sm:w-auto h-12 px-8 bg-emerald-600 hover:bg-emerald-700 text-white" disabled={isSubmitDisabled}>

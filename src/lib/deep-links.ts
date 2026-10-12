@@ -49,7 +49,31 @@ export const links = {
   customer: (name: string) => `/customers${qs({ cliente: name })}`,
   priceReviews: () => '/sales/precos',
   losses: (name?: string) => `/inventory/perdas${qs({ produto: name })}`,
+  /** Produção: o que vai esgotar e quanto produzir. */
+  productionPlan: () => '/production?planear=1',
+  /** Registar uma produção já com o produto (e quantidade/local) escolhidos; `voltar` = para onde ir depois. */
+  newProduction: (name: string, quantity?: number, location?: string, back?: string) =>
+    `/production/new${qs({ produto: name, quantidade: quantity ? String(quantity) : undefined, local: location, voltar: back })}`,
 };
+
+/** Endereço de regresso seguro (só dentro da app e da secção esperada) — ou o de recurso. */
+export function safeReturn(target: string | null | undefined, prefix: string, fallback: string): string {
+  if (!target || !target.startsWith('/') || target.startsWith('//')) return fallback;
+  return target === prefix || target.startsWith(prefix + '?') || target.startsWith(prefix + '/') ? target : fallback;
+}
+
+// O inventário lembra-se de onde estava (com o filtro do aviso): editar um produto e voltar não perde o filtro.
+const INVENTORY_URL_KEY = 'majorstockx-inventory-url';
+
+export function rememberInventoryUrl(url: string) {
+  try { sessionStorage.setItem(INVENTORY_URL_KEY, url); } catch { /* sem storage: volta ao inventário completo */ }
+}
+
+export function inventoryReturnUrl(): string {
+  let saved: string | null = null;
+  try { saved = sessionStorage.getItem(INVENTORY_URL_KEY); } catch { /* ignore */ }
+  return safeReturn(saved, '/inventory', '/inventory');
+}
 
 /** Lê os parâmetros do inventário e devolve o filtro pedido pelo link (ou null = lista normal). */
 export function parseInventoryFocus(params: { get(name: string): string | null }) {

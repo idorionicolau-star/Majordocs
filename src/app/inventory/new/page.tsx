@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useContext } from 'react';
+import { useInventoryBackHref } from "@/hooks/use-inventory-back";
 import { useRouter } from 'next/navigation';
 import {
     Form,
@@ -68,6 +69,7 @@ const formSchema = z.object({
 type AddProductFormValues = z.infer<typeof formSchema>;
 
 export default function NewInventoryProductPage() {
+    const backHref = useInventoryBackHref();
     const router = useRouter();
     const inventoryContext = useContext(InventoryContext);
     const { products, catalogCategories, catalogProducts, locations, isMultiLocation, addCatalogProduct, addCatalogCategory, availableUnits, addProduct } = inventoryContext || { products: [], catalogCategories: [], catalogProducts: [], locations: [], isMultiLocation: false, addCatalogProduct: async () => { }, addCatalogCategory: async () => { }, availableUnits: [], addProduct: async () => { } };
@@ -220,7 +222,7 @@ export default function NewInventoryProductPage() {
                 title: "Produto Adicionado",
                 description: `${values.name} foi adicionado ao inventário com sucesso.`,
             });
-            router.push('/inventory');
+            router.push(backHref);
         } catch (error: any) {
             console.error("Error adding product:", error);
         }
@@ -230,7 +232,7 @@ export default function NewInventoryProductPage() {
         <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full pb-20 animate-in fade-in duration-500">
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" asChild className="rounded-full">
-                    <Link href="/inventory">
+                    <Link href={backHref}>
                         <ArrowLeft className="h-5 w-5" />
                         <span className="sr-only">Voltar ao Inventário</span>
                     </Link>
@@ -555,7 +557,7 @@ export default function NewInventoryProductPage() {
                         </div>
 
                         <div className="flex flex-col sm:flex-row items-center gap-3 pt-6 border-t border-border mt-8">
-                            <Button type="button" variant="outline" className="w-full sm:w-auto h-12" onClick={() => router.push('/inventory')}>
+                            <Button type="button" variant="outline" className="w-full sm:w-auto h-12" onClick={() => router.push(backHref)}>
                                 Cancelar
                             </Button>
                             <Button type="submit" className="w-full sm:w-auto h-12 px-8" disabled={form.formState.isSubmitting}>
