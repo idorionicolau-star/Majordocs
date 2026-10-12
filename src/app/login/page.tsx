@@ -204,6 +204,9 @@ export default function LoginPage() {
             {" "}ou{" "}
             <a href={emailLink("Problemas a entrar na MajorStockX")} className="font-medium text-primary hover:underline">email</a>
           </p>
+          <p className="text-[11px] text-muted-foreground">
+            <Link href="/termos" className="hover:underline">Termos de Uso</Link> · <Link href="/privacidade" className="hover:underline">Privacidade</Link>
+          </p>
         </CardFooter>
       </Card>
     </div>

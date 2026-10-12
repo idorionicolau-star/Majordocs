@@ -244,6 +244,9 @@ export default function RegisterPage() {
               <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
                 {isLoading ? 'A registar...' : 'Registar Manualmente'}
               </Button>
+              <p className="text-center text-xs text-muted-foreground">
+                Ao registar-se, aceita os <a href="/termos" target="_blank" className="underline">Termos de Uso</a> e a <a href="/privacidade" target="_blank" className="underline">Política de Privacidade</a>.
+              </p>
 
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">

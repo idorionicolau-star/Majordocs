@@ -52,6 +52,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const authContext = React.useContext(InventoryContext);
   const isAuthPage = pathname === '/login' || pathname === '/register';
+  // páginas que qualquer pessoa pode ler, com ou sem conta (termos, privacidade)
+  const isPublicPage = pathname === '/termos' || pathname === '/privacidade';
 
   const [openCommandMenu, setOpenCommandMenu] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -97,7 +99,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       router.replace('/dashboard');
     }
 
-    if (!isAuthenticated && !isAuthPage) {
+    if (!isAuthenticated && !isAuthPage && !isPublicPage) {
       router.replace('/login');
     }
 
@@ -117,8 +119,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       }
     }
 
-  }, [authContext?.loading, authContext?.firebaseUser, pathname, router, isAuthPage]);
+  }, [authContext?.loading, authContext?.firebaseUser, pathname, router, isAuthPage, isPublicPage]);
 
+
+  if (isPublicPage) return <div>{children}</div>;
 
   if (authContext?.loading || (!authContext?.firebaseUser && !isAuthPage)) {
     return (
