@@ -411,7 +411,7 @@ export interface InventoryContextType {
     locationId?: string
   ) => Promise<void>;
   auditStock: (product: Product, newQuantity: number, reason: string) => Promise<void>;
-  transferStock: (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => Promise<void>;
+  transferStock: (productName: string, fromLocationId: string, toLocationId: string, quantity: number, opts?: { silent?: boolean }) => Promise<{ ok: boolean; error?: string }>;
   updateCompany: (details: Partial<Company>) => Promise<void>;
   addSale: (newSaleData: Omit<Sale, 'id' | 'guideNumber'>, reserveStock?: boolean) => void;
   addBulkSale: (

@@ -530,23 +530,22 @@ export function useProductActions(core: InventoryCore) {
   }, [firestore, companyId, user, toast, checkStockAndNotify, notifyManagers]);
 
 
-  const transferStock = useCallback(async (productName: string, fromLocationId: string, toLocationId: string, quantity: number) => {
+  /**
+   * Transfere `quantity` (do disponível) de uma localização para outra, numa transacção. Devolve se correu bem.
+   * `silent`: sem avisos (a página de transferência faz vários de seguida e mostra um resumo; o erro vem em `error`).
+   */
+  const transferStock = useCallback(async (productName: string, fromLocationId: string, toLocationId: string, quantity: number, opts: { silent?: boolean } = {}): Promise<{ ok: boolean; error?: string }> => {
+    const fail = (title: string, description: string) => {
+      if (!opts.silent) toast({ variant: 'destructive', title, description });
+      return { ok: false, error: description };
+    };
     assertOnline('transferir stock');
-    if (isReadOnly) {
-      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
-      return;
-    }
-    if (!firestore || !companyId || !user) return;
+    if (isReadOnly) return fail("Conta em modo leitura", "Modo leitura activo — contacte o suporte para reactivar o acesso completo.");
+    if (!firestore || !companyId || !user) return { ok: false, error: 'Sessão não carregada.' };
 
     const fromProduct = products.find(p => p.name === productName && sameLocation(p.location, fromLocationId));
-    if (!fromProduct || !fromProduct.id) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Produto de origem não encontrado.' });
-      return;
-    }
-    if (fromProduct.stock - fromProduct.reservedStock < quantity) {
-      toast({ variant: 'destructive', title: 'Stock Insuficiente', description: `Disponível: ${fromProduct.stock - fromProduct.reservedStock}` });
-      return;
-    }
+    if (!fromProduct || !fromProduct.id) return fail('Erro', 'Produto de origem não encontrado.');
+    if (fromProduct.stock - fromProduct.reservedStock < quantity) return fail('Stock Insuficiente', `Disponível: ${fromProduct.stock - fromProduct.reservedStock}`);
 
     const toProduct = products.find(p => p.name === productName && sameLocation(p.location, toLocationId));
 
@@ -613,10 +612,11 @@ export function useProductActions(core: InventoryCore) {
       });
 
 
-      toast({ title: 'Transferência Concluída' });
+      if (!opts.silent) toast({ title: 'Transferência Concluída' });
+      return { ok: true };
     } catch (error) {
       console.error('Error transferring stock:', error);
-      toast({ variant: 'destructive', title: 'Erro na Transferência', description: (error as Error).message });
+      return fail('Erro na Transferência', (error as Error).message);
     }
   }, [firestore, companyId, user, products, toast, checkStockAndNotify]);
 
