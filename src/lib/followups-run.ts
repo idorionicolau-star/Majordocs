@@ -22,7 +22,7 @@ export async function runFollowups({ dry = false }: { dry?: boolean } = {}) {
     const db = initializeAdmin().firestore();
     const now = new Date();
     const companies = await db.collection('companies').get();
-    const planned: { companyId: string; type: string; to: string[] }[] = [];
+    const planned: { companyId: string; companyName: string; type: string; to: string[] }[] = [];
     const failed: string[] = [];
     let sentCount = 0;
 
@@ -34,7 +34,7 @@ export async function runFollowups({ dry = false }: { dry?: boolean } = {}) {
             if (!next) continue;
             const { emails, name } = await companyRecipients(db, c);
             if (!emails.length) continue;
-            planned.push({ companyId: c.id, type: next.type, to: emails });
+            planned.push({ companyId: c.id, companyName: c.get('name') || c.id, type: next.type, to: emails });
             if (dry) continue;
 
             const unsubscribeUrl = `${APP_URL}/api/email/unsubscribe?c=${encodeURIComponent(c.id)}&t=${unsubscribeToken(c.id)}`;
@@ -44,11 +44,13 @@ export async function runFollowups({ dry = false }: { dry?: boolean } = {}) {
                 unsubscribeUrl,
                 trialEndsAt: facts.trialEndsAt, subscriptionEndsAt: facts.subscriptionEndsAt, countEveryDays: facts.countEveryDays,
             });
-            await resend!.emails.send({
+            const res: any = await resend!.emails.send({
                 from: 'MajorStockX <assistant@majorgroup.app>', to: emails, subject: mail.subject, html: mail.html,
                 // dicas: o Gmail e outros mostram "Cancelar subscrição" ao lado do remetente
                 ...(next.kind === 'tips' ? { headers: { 'List-Unsubscribe': `<${unsubscribeUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } } : {}),
             });
+            // o Resend não lança erro: devolve-o — sem isto um email recusado ficava registado como enviado
+            if (res?.error) throw new Error(res.error.message || String(res.error));
             await c.ref.collection('followups').doc(next.key).set({ type: next.type, kind: next.kind, sentAt: now.toISOString(), to: emails });
             sentCount++;
         } catch (e) {

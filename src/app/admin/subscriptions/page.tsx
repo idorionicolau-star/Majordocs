@@ -29,6 +29,7 @@ import { Company } from '@/lib/types';
 import { ZumboPayCheck } from '@/components/admin/zumbopay-check';
 import { EscalepayPanel } from '@/components/admin/escalepay-panel';
 import { ManualPaymentsPanel } from '@/components/admin/manual-payments-panel';
+import { TestEmailsPanel } from '@/components/admin/test-emails-panel';
 import { getAuth } from 'firebase/auth';
 import { isSuperAdminEmail } from '@/lib/super-admin';
 import { companyStanding, standingOrder, toDateInput, type CompanyStanding } from '@/lib/admin-subscription';
@@ -188,6 +189,8 @@ export default function SubscriptionsAdminPage() {
       </div>
 
       <ManualPaymentsPanel />
+
+      <TestEmailsPanel ownEmail={userEmail} />
 
       <EscalepayPanel ownEmail={userEmail} />
 

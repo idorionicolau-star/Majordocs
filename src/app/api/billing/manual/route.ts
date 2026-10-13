@@ -57,7 +57,8 @@ export async function POST(req: Request) {
                 company: companyName || companyId, email: decoded.email || null, createdBy: payer.username,
                 plan: plan.label, amount: formatCurrency(amount), method, reference, adminUrl: `${APP_URL}/admin/subscriptions`,
             });
-            await new Resend(apiKey).emails.send({ from: 'Major Assistant <assistant@majorgroup.app>', to: [SUPPORT.email], subject: mail.subject, html: mail.html });
+            const res: any = await new Resend(apiKey).emails.send({ from: 'Major Assistant <assistant@majorgroup.app>', to: [SUPPORT.email], subject: mail.subject, html: mail.html });
+            if (res?.error) console.error('manual payment email', res.error);
         } catch (e) {
             console.error('manual payment email', e);
         }
