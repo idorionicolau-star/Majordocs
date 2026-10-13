@@ -108,7 +108,7 @@ export function MobileNav({ onLinkClick }: MobileNavProps) {
                                     {user?.username || 'Utilizador'}
                                 </span>
                                 <span className="text-xs text-slate-400 truncate">
-                                    {user?.email || 'email@exemplo.com'}
+                                    {firebaseUser?.email || user?.email || ''}
                                 </span>
                             </div>
                         </div>
