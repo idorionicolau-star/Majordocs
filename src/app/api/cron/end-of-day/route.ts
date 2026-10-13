@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
 import { NextResponse } from 'next/server';
 import { initializeAdmin } from '@/lib/firebase-admin';
 import { Resend } from 'resend';
@@ -5,6 +8,7 @@ import { formatCurrency } from '@/lib/utils';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { isCountableSale } from '@/lib/sale-filters';
 import { criticalProducts, escapeHtml, topProducts } from '@/lib/daily-report';
+import { runFollowups } from '@/lib/followups-run';
 
 const APP_URL = 'https://stock.majorgroup.app';
 const CRITICAL_SHOWN = 10;
@@ -164,7 +168,11 @@ export async function GET(req: Request) {
 
         await Promise.allSettled(emailsPromises);
 
-        return NextResponse.json({ success: true, message: "End of day reports generated and dispatched" });
+        // a seguir, os emails de acompanhamento (um cron só: o plano Hobby da Vercel limita os crons)
+        let followups: unknown = null;
+        try { followups = await runFollowups(); } catch (e) { console.error('followups', e); }
+
+        return NextResponse.json({ success: true, message: "End of day reports generated and dispatched", followups });
     } catch (error: any) {
         console.error('Error executing End-of-Day cron:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });

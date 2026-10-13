@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Termos de Uso — MajorStockX" };
 
 export default function TermosPage() {
     return (
-        <LegalPage title="Termos de Uso" updated="12 de Outubro de 2026">
+        <LegalPage title="Termos de Uso" updated="13 de Outubro de 2026">
             <p>Estes termos explicam as regras de uso da MajorStockX, uma aplicação para registar vendas, stock e documentos da sua empresa. Ao criar uma conta ou usar a aplicação, aceita estes termos.</p>
 
             <h2>1. A sua conta</h2>
@@ -28,6 +28,7 @@ export default function TermosPage() {
             <ul>
                 <li>Os dados que regista são seus. Pode exportá-los em Ajustes → Segurança &amp; Dados.</li>
                 <li>Tratamos os dados conforme a nossa <a className="text-primary underline" href="/privacidade">Política de Privacidade</a>.</li>
+                <li>Ao criar a conta, aceita receber emails sobre ela (fim do teste ou da subscrição, pagamentos) e dicas e lembretes de uso. As dicas podem ser desligadas a qualquer momento, no link de cada email ou em Ajustes → Empresa.</li>
             </ul>
 
             <h2>4. Documentos e obrigações fiscais</h2>

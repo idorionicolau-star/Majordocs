@@ -84,8 +84,9 @@ const BusinessSummaryInner = ({ context }: { context: NonNullable<React.ContextT
             products, sales, customers: customers || [],
             orders: inv.orders || [], productions: inv.productions || [],
             stockMovements: inv.stockMovements || [], businessType: companyData?.businessType, multiLocation: inv.isMultiLocation,
+            countEveryDays: companyData?.countEveryDays,
         });
-    }, [loading, sales, products, customers, inv.orders, inv.productions, inv.stockMovements, companyData?.businessType]);
+    }, [loading, sales, products, customers, inv.orders, inv.productions, inv.stockMovements, companyData?.businessType, companyData?.countEveryDays]);
 
 
     const fetchInsights = useCallback(async (forceRefresh = false) => {

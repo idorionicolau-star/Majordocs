@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Política de Privacidade — MajorSt
 
 export default function PrivacidadePage() {
     return (
-        <LegalPage title="Política de Privacidade" updated="12 de Outubro de 2026">
+        <LegalPage title="Política de Privacidade" updated="13 de Outubro de 2026">
             <p>Esta política explica que dados a MajorStockX guarda, para quê, e quem os pode ver. Em resumo: os dados são da sua empresa, servem só para a aplicação funcionar, e não os vendemos.</p>
 
             <h2>1. Que dados guardamos</h2>
@@ -20,6 +20,7 @@ export default function PrivacidadePage() {
             <ul>
                 <li>Para a aplicação funcionar: mostrar o seu stock, registar vendas, emitir documentos, enviar avisos e relatórios que activar.</li>
                 <li>Para dar suporte quando nos pede ajuda.</li>
+                <li>Para lhe enviar <b>emails sobre a conta</b> (fim do teste ou da subscrição, pagamentos) e <b>dicas e lembretes de uso</b> (primeiros passos, contagem do stock em atraso, ajuda quando não usa a app há uns dias). Para isso registamos quando a app foi usada pela última vez. As dicas podem ser desligadas a qualquer momento (link no fim de cada email, ou Ajustes → Empresa); os avisos sobre a conta continuam a chegar enquanto ela existir.</li>
                 <li>Para cobrar a subscrição e prevenir abusos.</li>
             </ul>
             <p>Não vendemos nem alugamos os seus dados, e não os usamos para publicidade de terceiros.</p>

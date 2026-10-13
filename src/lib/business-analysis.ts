@@ -104,6 +104,8 @@ export function analyzeBusiness(input: {
     businessType?: 'manufacturer' | 'reseller';
     /** vários locais de stock: as reservas contam por local */
     multiLocation?: boolean;
+    /** prazo da contagem (Ajustes → Empresa; por defeito 30 dias) */
+    countEveryDays?: number;
     now?: Date;
 }): Analysis {
     const reseller = input.businessType === 'reseller';
@@ -341,6 +343,14 @@ export function analyzeBusiness(input: {
     if (duplicates.length) alerts.push({ id: "dups", severity: "info", title: `${plural(duplicates.length, "produto parece duplicado", "produtos parecem duplicados")}`, detail: "O mesmo artigo registado duas vezes divide o stock e confunde as vendas.", items: duplicates.slice(0, 5), itemLinks: duplicates.slice(0, 5).map((n) => links.product(n)), action: { label: "Rever duplicados", href: links.products([...duplicateNames], "Possíveis duplicados") } });
     if (fractionalUnits.length) alerts.push({ id: "units", severity: "info", title: `${plural(fractionalUnits.length, "produto em 'un'", "produtos em 'un'")} com quantidades decimais`, detail: "Ex.: 23.8 un. Provavelmente a unidade certa é m² ou m — confirme a unidade.", items: fractionalUnits.slice(0, 5).map((p) => `${p.name}: ${fmtQty(p.stock)} un`), itemLinks: fractionalUnits.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Rever unidades", href: links.inventoryProblem("unidades") } });
     const manualThresholds = products.filter((p) => p.thresholdMode === "manual");
+    // contagem em atraso (o mesmo lembrete que o email de acompanhamento). Sem nenhuma contagem, só avisa quem já usa
+    // a app há mais tempo do que o prazo — uma empresa nova não tem nada para contar ainda.
+    const countEvery = input.countEveryDays && input.countEveryDays >= 7 ? input.countEveryDays : 30;
+    const firstMove = movements.map((m) => safeDate(m.timestamp)).filter((d): d is Date => !!d).reduce<Date | null>((a, d) => (!a || d < a ? d : a), null);
+    const usedLongEnough = !!firstMove && days(now, firstMove) >= countEvery;
+    if (products.length && (daysSinceCount !== null ? daysSinceCount > countEvery : usedLongEnough)) {
+        alerts.push({ id: "count", severity: "warning", title: daysSinceCount === null ? "Ainda não fez nenhuma contagem do stock" : `Última contagem do stock há ${daysSinceCount} dias`, detail: "Perdas, enganos e vendas por registar fazem o stock da app afastar-se do que está na prateleira. Uma contagem acerta tudo.", action: { label: "Fazer contagem", href: "/inventory/quick?modo=contagem" } });
+    }
     if (manualThresholds.length) alerts.push({ id: "manual-thresholds", severity: "info", title: `${plural(manualThresholds.length, "produto tem", "produtos têm")} limites de stock fixos`, detail: "O alerta baixo e crítico destes não acompanha as vendas: um produto que passa a vender mais pode esgotar sem aviso. Ponha-os em automático.", items: manualThresholds.slice(0, 5).map((p) => p.name), itemLinks: manualThresholds.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Pôr em automático", href: links.inventoryProblem("limites-manuais") } });
     if (!alerts.length) alerts.push({ id: "ok", severity: "good", title: "Tudo em ordem", detail: "Sem alertas importantes. Continue a registar vendas" + (reseller ? "" : ", produção") + " e contagens." });
 
