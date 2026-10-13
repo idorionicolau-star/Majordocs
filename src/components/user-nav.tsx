@@ -1,7 +1,8 @@
 "use client"
 
 import { useContext } from "react"
-import { LogOut, User as UserIcon, Settings, HelpCircle } from "lucide-react"
+import { LogOut, User as UserIcon, Settings, HelpCircle, ShieldCheck } from "lucide-react"
+import { isSuperAdminEmail } from "@/lib/super-admin"
 import { openTour } from "@/components/onboarding/app-tour"
 import Link from "next/link";
 
@@ -20,7 +21,7 @@ import { InventoryContext } from "@/context/inventory-context"
 import { Skeleton } from "./ui/skeleton";
 
 export function UserNav() {
-  const { user, logout, loading, profilePicture } = useContext(InventoryContext) || { user: null, logout: () => {}, loading: true, profilePicture: null };
+  const { user, logout, loading, profilePicture, firebaseUser } = useContext(InventoryContext) || { user: null, logout: () => {}, loading: true, profilePicture: null, firebaseUser: null };
 
   if (loading) {
     return <Skeleton className="h-10 w-10 rounded-full" />;
@@ -58,6 +59,7 @@ export function UserNav() {
             <p className="text-xs leading-none text-muted-foreground">
               {user.role}
             </p>
+            <p className="truncate text-xs leading-none text-muted-foreground">{firebaseUser?.email || user.email}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -65,6 +67,14 @@ export function UserNav() {
           <HelpCircle className="mr-2 h-4 w-4" />
           <span>Como a app funciona</span>
         </DropdownMenuItem>
+        {isSuperAdminEmail(firebaseUser?.email || user.email) && (
+          <DropdownMenuItem asChild data-tour="nav-admin-top">
+            <Link href="/admin/subscriptions">
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              <span>Administração</span>
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={logout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Sair</span>

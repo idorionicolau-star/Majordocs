@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function Sidebar() {
-    const { user, logout } = useContext(InventoryContext) || { user: null, logout: async () => { } };
+    const { user, logout, firebaseUser } = useContext(InventoryContext) || { user: null, logout: async () => { }, firebaseUser: null };
 
     const { groups, isActive, simple, hiddenCount, setSimple } = useNavGroups();
 
@@ -127,7 +127,7 @@ export function Sidebar() {
                             <HelpCircle className="mr-2 h-4 w-4" />
                             <span>Como a app funciona</span>
                         </DropdownMenuItem>
-                        {isSuperAdminEmail(user?.email) && (
+                        {isSuperAdminEmail(firebaseUser?.email || user?.email) && (
                             <Link href="/admin/subscriptions">
                                 <DropdownMenuItem className="cursor-pointer" data-tour="nav-admin">
                                     <ShieldCheck className="mr-2 h-4 w-4" />
