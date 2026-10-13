@@ -46,6 +46,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
+import { countEvery, DEFAULT_COUNT_EVERY_DAYS } from "@/lib/followups-core";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PushSettingsCard } from "@/components/push-notifications";
 import {
@@ -254,6 +255,8 @@ export default function SettingsPage() {
     paymentInfo: '',
     businessType: 'manufacturer' as 'manufacturer' | 'reseller',
     curingDays: 0,
+    countEveryDays: DEFAULT_COUNT_EVERY_DAYS,
+    emailTips: true,
     notificationSettings: {
       emails: [] as {
         email: string;
@@ -316,6 +319,8 @@ export default function SettingsPage() {
         paymentInfo: companyData.paymentInfo || '',
         businessType: companyData.businessType || 'manufacturer',
         curingDays: companyData.curingDays ?? 0,
+        countEveryDays: countEvery(companyData.countEveryDays),
+        emailTips: companyData.emailTips !== false,
         notificationSettings: {
           emails: companyData.notificationSettings?.emails || (
             companyData.notificationSettings?.email ? [{
@@ -384,6 +389,7 @@ export default function SettingsPage() {
     toast({ title: 'A atualizar...', description: 'A guardar os dados da empresa.' });
     const dataToSave = {
       ...companyDetails,
+      countEveryDays: countEvery(companyDetails.countEveryDays),
       documentNumbering: Object.fromEntries(
         Object.entries(docNumberingMap).filter(([_, v]) => v.prefix)
       ),
@@ -704,6 +710,27 @@ export default function SettingsPage() {
                             <p className="text-xs text-muted-foreground">Só para quem tem um tempo de espera depois de produzir (betão a secar, cura, acabamento). Durante esses dias o produto já conta no stock, mas só se vende como “levanta depois”. Deixe em 0 se o produto fica pronto na hora — nada muda.</p>
                           </div>
                         )}
+                        <div className="space-y-2" data-tour="set-count-every">
+                          <Label htmlFor="countEveryDays">Lembrete de contagem do stock (dias)</Label>
+                          <Input
+                            id="countEveryDays"
+                            type="number"
+                            min={7}
+                            max={180}
+                            inputMode="numeric"
+                            value={companyDetails.countEveryDays}
+                            onChange={(e) => setCompanyDetails(prev => ({ ...prev, countEveryDays: Number(e.target.value) || 0 }))}
+                            onBlur={() => setCompanyDetails(prev => ({ ...prev, countEveryDays: countEvery(prev.countEveryDays) }))}
+                          />
+                          <p className="text-xs text-muted-foreground">Se passar este tempo sem uma contagem, a app avisa no painel e por email — o stock da app pode já não bater certo com a prateleira. Entre 7 e 180 dias (por defeito {DEFAULT_COUNT_EVERY_DAYS}).</p>
+                        </div>
+                        <div className="flex items-start justify-between gap-3 rounded-md border p-3" data-tour="set-email-tips">
+                          <div>
+                            <Label htmlFor="emailTips" className="cursor-pointer">Dicas e lembretes por email</Label>
+                            <p className="text-xs text-muted-foreground">Primeiros passos, contagem em atraso e "precisa de ajuda?" quando a app não é usada há uns dias. Os avisos de fim do teste ou da subscrição chegam sempre.</p>
+                          </div>
+                          <Switch id="emailTips" checked={companyDetails.emailTips} onCheckedChange={(checked) => setCompanyDetails(prev => ({ ...prev, emailTips: checked }))} />
+                        </div>
                         <div className="space-y-2">
                           <Label htmlFor="email">Email de Contacto</Label>
                           <Input id="email" type="email" value={companyDetails.email} onChange={handleDetailChange} />

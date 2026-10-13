@@ -60,6 +60,12 @@ export type Company = {
   businessType: 'manufacturer' | 'reseller';
   /** Dias que o produto fica a secar antes de se poder carregar (betão: 3). 0 = não se usa. */
   curingDays?: number;
+  /** Lembrete de contagem do stock: a cada N dias (por defeito 30). Ver lib/followups-core.ts */
+  countEveryDays?: number;
+  /** false = não quer emails de dicas (primeiros passos, falta de uso, contagem). Os avisos de prazos vão sempre. */
+  emailTips?: boolean;
+  /** Última vez que alguém da empresa abriu a app (gravado pelo servidor, /api/activity). */
+  lastActiveAt?: string;
   notificationSettings?: NotificationSettings;
   isMultiLocation?: boolean;
   locations?: Location[];

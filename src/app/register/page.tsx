@@ -245,7 +245,7 @@ export default function RegisterPage() {
                 {isLoading ? 'A registar...' : 'Registar Manualmente'}
               </Button>
               <p className="text-center text-xs text-muted-foreground">
-                Ao registar-se, aceita os <a href="/termos" target="_blank" className="underline">Termos de Uso</a> e a <a href="/privacidade" target="_blank" className="underline">Política de Privacidade</a>.
+                Ao registar-se, aceita os <a href="/termos" target="_blank" className="underline">Termos de Uso</a> e a <a href="/privacidade" target="_blank" className="underline">Política de Privacidade</a>, e a receber emails sobre a conta e dicas de uso (pode desligar as dicas quando quiser).
               </p>
 
               <div className="relative my-4">
