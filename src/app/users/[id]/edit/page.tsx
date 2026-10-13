@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
     Form,
@@ -34,7 +34,7 @@ import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
 import type { Employee, ModulePermission, PermissionLevel } from '@/lib/types';
 import { allPermissions } from '@/lib/data';
 import { InventoryContext } from "@/context/inventory-context";
-import { useFirestore } from '@/firebase/provider';
+import { useFirestore, useMemoFirebase } from '@/firebase/provider';
 import { authedFetch } from "@/lib/api-client";
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection } from 'firebase/firestore';
@@ -57,8 +57,12 @@ export default function EditUserPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const employeeNamePlaceholder = useDynamicPlaceholder('person');
 
-    // Fetch employees to find the one we are editing
-    const employeesColRef = firestore && companyId ? collection(firestore, `companies/${companyId}/employees`) : null;
+    // A referência TEM de ser memorizada: criada de novo a cada desenho, o useCollection voltava a subscrever,
+    // mostrava "a carregar", recebia os dados, redesenhava… para sempre (a página de edição nunca abria).
+    const employeesColRef = useMemoFirebase(
+        () => (firestore && companyId ? collection(firestore, `companies/${companyId}/employees`) : null),
+        [firestore, companyId]
+    );
     const { data: employees, isLoading } = useCollection<Employee>(employeesColRef);
 
     const employeeToEdit = employees?.find(e => e.id === userId);
@@ -72,17 +76,19 @@ export default function EditUserPage() {
         },
     });
 
+    // preenche o formulário uma vez por funcionário (uma actualização da lista não apaga o que está a ser escrito)
+    const filledFor = useRef<string | null>(null);
     useEffect(() => {
-        if (employeeToEdit) {
+        if (employeeToEdit && filledFor.current !== employeeToEdit.id) {
+            filledFor.current = employeeToEdit.id;
             form.reset({
                 username: employeeToEdit.username,
                 role: employeeToEdit.role,
                 permissions: employeeToEdit.permissions || {},
             });
-        } else if (!isLoading && employees && employees.length > 0) {
-            // Employee not found, maybe redirect or show error (handled below)
         }
-    }, [employeeToEdit, isLoading, employees, form]);
+    }, [employeeToEdit, form]);
+    const notFound = !isLoading && !!employees && !employeeToEdit;
 
     const role = form.watch('role');
 
@@ -153,6 +159,14 @@ export default function EditUserPage() {
         return <div className="p-8 text-center text-red-500">Acesso negado. Apenas administradores podem gerir utilizadores.</div>;
     }
 
+    if (notFound) {
+        return (
+            <div className="p-8 text-center">
+                <p className="text-muted-foreground">Este funcionário já não existe.</p>
+                <Button asChild variant="outline" className="mt-4"><Link href="/users">Voltar aos funcionários</Link></Button>
+            </div>
+        );
+    }
     if (isLoading || !employeeToEdit) {
         return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
     }
@@ -310,7 +324,7 @@ export default function EditUserPage() {
                                 </Button>
                                 <Button type="submit" className="w-full sm:w-auto h-12 px-8 bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
                                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Guardar Alterações
+                                    {isSubmitting ? 'A guardar…' : 'Guardar Alterações'}
                                 </Button>
                             </div>
                         </div>

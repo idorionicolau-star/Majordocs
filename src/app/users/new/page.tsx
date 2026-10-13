@@ -317,7 +317,7 @@ export default function NewUserPage() {
                             </Button>
                             <Button type="submit" className="w-full sm:w-auto h-12 px-8 bg-primary text-primary-foreground" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Concluir Registo
+                                {isSubmitting ? 'A criar a conta…' : 'Concluir Registo'}
                             </Button>
                         </div>
                     </form>
