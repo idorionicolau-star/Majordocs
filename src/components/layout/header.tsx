@@ -108,6 +108,10 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
             <Button variant="ghost" size="icon" disabled />
           )}
         </div>
+        {/* Pesquisa Rápida no telemóvel: produtos e perguntas ao assistente */}
+        <Button variant="ghost" size="icon" onClick={onSearchClick} className="h-10 w-10 md:hidden" aria-label="Pesquisa rápida">
+          <Search className="h-5 w-5" />
+        </Button>
         <PageHelpButton />
         <NotificationsDropdown />
         <UserNav />

@@ -17,7 +17,7 @@ export const PAGE_GUIDES: Guide[] = [
             { target: "dash-attention", title: "Atenção", body: <>Problemas a resolver, cada um com ligação directa: stock a acabar, reservas presas, dias sem vendas registadas. O <b>Diagnóstico</b> mostra tudo em detalhe.</> },
             { target: "dash-insights", title: "Sugestões do dia", body: <>Ideias calculadas a partir das suas vendas e do seu stock — o que encomendar, o que está parado, o que vende mais.</> },
             { target: "dash-kpis", title: "Números e gráficos", body: <>Só para o dono e administradores: lucro, crescimento, ticket médio, gráfico das vendas e o que mais vende.</> },
-            { target: "dash-assistant", title: "Assistente", body: <>Pergunte em português, por exemplo: <b>«quanto vendi esta semana?»</b> ou <b>«o que está a acabar?»</b>.</> },
+            { title: "Perguntas rápidas", body: <>Na <b>lupa</b> 🔍 lá em cima procura produtos e também pode perguntar em português, por exemplo: <b>«quanto vendi esta semana?»</b> ou <b>«stock de pavê»</b>.</> },
             { title: "Para chegar a tudo", body: MENU_TIP },
         ],
     },
