@@ -7,7 +7,7 @@ import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, History, Plus, ChevronsUpDown, Printer, Download, ScanBarcode, ClipboardList, WandSparkles, MoreHorizontal, TrendingDown } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, History, Plus, ChevronsUpDown, Printer, Download, ScanBarcode, ClipboardList, WandSparkles, MoreHorizontal, TrendingDown, Truck } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,7 +39,6 @@ import { FamilyCard } from "@/components/inventory/family-card";
 import { groupFamilies, isFamilyGroup, variantLabel, type FamilyGroup } from "@/lib/variants";
 import { ReservedDriftBanner } from "@/components/inventory/reserved-drift-banner";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
 import { useInventory } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
@@ -72,7 +71,6 @@ export default function InventoryPage() {
     addProduct,
     updateProduct,
     deleteProduct,
-    transferStock,
     clearProductsCollection,
     loading: inventoryLoading,
     canEdit,
@@ -167,18 +165,6 @@ export default function InventoryPage() {
     }
   };
 
-  const handleTransferStock = async (
-    productName: string,
-    fromLocationId: string,
-    toLocationId: string,
-    quantity: number
-  ) => {
-    try {
-      await transferStock(productName, fromLocationId, toLocationId, quantity);
-    } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Não foi possível transferir', description: e?.message || 'Tente de novo.' });
-    }
-  };
 
 
   const handleConfirmDeleteProduct = (product: Product) => {
@@ -644,7 +630,12 @@ export default function InventoryPage() {
             </Button>
           )}
           {isMultiLocation && canEditInventory && (
-            <TransferStockDialog onTransfer={handleTransferStock} />
+            <Button data-tour="inv-transfer" variant="outline" className="h-12 flex-1 sm:flex-none" asChild>
+              <Link href="/inventory/transfer">
+                <Truck className="mr-2 h-4 w-4" />
+                <span>Transferir</span>
+              </Link>
+            </Button>
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
