@@ -4,7 +4,12 @@ import { NextResponse } from 'next/server';
 import { initializeAdmin, verifyIdToken } from '@/lib/firebase-admin';
 import { companyPayer, planAmountFor } from '@/lib/billing-server';
 import { planById } from '@/lib/plans';
-import { isManualMethod, paymentReference } from '@/lib/manual-pay-core';
+import { Resend } from 'resend';
+import { isManualMethod, manualPaymentEmail, paymentReference } from '@/lib/manual-pay-core';
+import { SUPPORT } from '@/lib/support';
+import { formatCurrency } from '@/lib/utils';
+
+const APP_URL = 'https://stock.majorgroup.app';
 
 /**
  * Pagamento directo por M-Pesa / e-Mola (ver lib/manual-pay-core.ts): regista o pedido como pendente, com o valor
@@ -43,5 +48,19 @@ export async function POST(req: Request) {
         email: decoded.email || null, createdBy: payer.username, createdAt: now.toISOString(), status: 'pending',
     });
     await batch.commit();
+
+    // aviso por email ao super-administrador (se falhar, o pedido fica na mesma no painel)
+    const apiKey = process.env.RESEND_API_KEY;
+    if (apiKey) {
+        try {
+            const mail = manualPaymentEmail({
+                company: companyName || companyId, email: decoded.email || null, createdBy: payer.username,
+                plan: plan.label, amount: formatCurrency(amount), method, reference, adminUrl: `${APP_URL}/admin/subscriptions`,
+            });
+            await new Resend(apiKey).emails.send({ from: 'Major Assistant <assistant@majorgroup.app>', to: [SUPPORT.email], subject: mail.subject, html: mail.html });
+        } catch (e) {
+            console.error('manual payment email', e);
+        }
+    }
     return NextResponse.json({ reference, amount });
 }
