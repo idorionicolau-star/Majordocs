@@ -61,3 +61,7 @@ export function manualPaymentEmail(p: {
 </div>`;
     return { subject: `💰 Pagamento ${m.label} a confirmar — ${p.company} · ${p.amount} · ${p.reference}`, html };
 }
+
+/** Prazo prometido ao cliente para a confirmação manual (um só sítio: instruções, aviso e guia). */
+export const MANUAL_CONFIRM_HOURS = 'segunda a sábado, das 8h às 18h';
+export const MANUAL_CONFIRM_PROMISE = `em até 20 minutos em horário de funcionamento (${MANUAL_CONFIRM_HOURS}); fora desse horário, no início do dia seguinte`;
