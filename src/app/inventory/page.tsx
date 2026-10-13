@@ -842,8 +842,10 @@ export default function InventoryPage() {
                 // Desenha logo as primeiras linhas, sem esperar pela medição do ecrã.
                 initialItemCount={Math.min(20, listItems.length)}
                 data={listItems}
-                computeItemKey={(_, it) => (it.t === 'f' ? `f-${it.f.key}` : `${it.member ? 'm' : 'p'}-${it.p.instanceId}`)}
-                itemContent={(index, it) => it.t === 'f' ? (
+                // A lista pode encolher depois do 1.º desenho (ex.: ?filter= vindo da Pesquisa Rápida): a Virtuoso ainda
+                // pede por instantes linhas que já não existem — sem estas guardas a página rebentava ("reading 't'").
+                computeItemKey={(index, it) => (!it ? `x-${index}` : it.t === 'f' ? `f-${it.f.key}` : `${it.member ? 'm' : 'p'}-${it.p.instanceId}`)}
+                itemContent={(index, it) => !it ? null : it.t === 'f' ? (
                   <FamilyRow
                     group={it.f.group}
                     members={it.f.members}
