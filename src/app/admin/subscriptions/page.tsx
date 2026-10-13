@@ -29,6 +29,7 @@ import { Company } from '@/lib/types';
 import { ZumboPayCheck } from '@/components/admin/zumbopay-check';
 import { EscalepayPanel } from '@/components/admin/escalepay-panel';
 import { ManualPaymentsPanel } from '@/components/admin/manual-payments-panel';
+import { getAuth } from 'firebase/auth';
 import { isSuperAdminEmail } from '@/lib/super-admin';
 
 
@@ -56,6 +57,10 @@ export default function SubscriptionsAdminPage() {
     async function fetchCompanies() {
       try {
         setLoadingCompanies(true);
+        // Uma chamada ao servidor primeiro: na 1.ª visita ele põe a marca superAdmin no Firestore (ver verifyIdToken),
+        // que as regras exigem para ler a lista de todas as empresas.
+        const token = await getAuth().currentUser?.getIdToken().catch(() => null);
+        if (token) await fetch('/api/admin/manual-payments', { headers: { Authorization: `Bearer ${token}` } }).catch(() => null);
         const companiesRef = collection(firestore!, 'companies');
         const querySnapshot = await getDocs(companiesRef);
         const list: Company[] = [];

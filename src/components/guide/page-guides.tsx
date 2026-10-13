@@ -216,7 +216,7 @@ export const PAGE_GUIDES: Guide[] = [
         steps: [
             { title: "O seu plano", body: <>Quanto tempo falta e o histórico de pagamentos.</> },
             { target: "bill-plans", title: "Escolha o plano", body: <>Mensal, trimestral ou anual — os mais longos ficam mais baratos por mês.</> },
-            { target: "bill-method", title: "Como pagar", body: <><b>M-Pesa</b> ou <b>e-Mola</b>: envia para o nosso número e manda o comprovativo por WhatsApp; a conta fica activa quando confirmarmos. <b>Cartão</b>: activa na hora.</> },
+            { target: "bill-method", title: "Como pagar", body: <><b>M-Pesa</b> ou <b>e-Mola</b>: envia para o nosso número e manda o comprovativo por WhatsApp; a conta fica activa em até 20 minutos. <b>Cartão</b>: activa na hora.</> },
             { target: "bill-pay", title: "Pagar", body: <>Mostra o número, o valor e a referência a usar. Pagar antes do fim não perde dias.</> },
         ],
     },
