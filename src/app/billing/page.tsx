@@ -216,6 +216,15 @@ function BillingInner() {
                         ); })}
                     </div>
 
+                    <div data-tour="bill-notice" className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
+                        <p className="font-semibold">Aviso temporário: M-Pesa e e-Mola</p>
+                        <p className="mt-1 text-muted-foreground">
+                            Por causa de uma actualização dos sistemas de pagamento, o pagamento automático por M-Pesa e e-Mola está temporariamente indisponível.
+                            Enquanto isso, pode pagar <b>enviando directamente</b> para o nosso número e mandar o comprovativo por WhatsApp — a conta fica activa <b>em até 20 minutos</b>.
+                            O cartão continua a funcionar normalmente. Obrigado pela compreensão.
+                        </p>
+                    </div>
+
                     <div data-tour="bill-method" className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Forma de pagamento">
                         {([...Object.entries(MANUAL_METHODS).map(([id, m]) => [id, m.label]), ["card", "Cartão"]] as [PayMethod, string][]).map(([id, label]) => (
                             <button key={id} type="button" role="radio" aria-checked={method === id} onClick={() => setMethod(id)}
@@ -248,7 +257,7 @@ function BillingInner() {
                     )}
 
                     <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-                        <p className="flex items-center gap-2"><Smartphone className="h-4 w-4 shrink-0" /> M-Pesa e e-Mola: envio directo · conta activada quando confirmarmos o comprovativo</p>
+                        <p className="flex items-center gap-2"><Smartphone className="h-4 w-4 shrink-0" /> M-Pesa e e-Mola: envio directo · conta activada em até 20 minutos após o comprovativo</p>
                         <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 shrink-0" /> Cartão Visa/Mastercard: pagamento seguro via ZumboPay · conta activada na hora</p>
                     </div>
                     {ends && !isReadOnly && <p className="text-xs text-muted-foreground">Pagar antes do fim não perde dias: o novo período começa a {fmtDate(ends)}.</p>}

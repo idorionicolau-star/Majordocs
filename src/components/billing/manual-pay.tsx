@@ -47,7 +47,7 @@ export function ManualPayInstructions({ method, amount, reference, planLabel, co
                 <a href={proof} target="_blank" rel="noopener noreferrer"><MessageCircle className="mr-2 h-5 w-5" /> Enviar comprovativo por WhatsApp</a>
             </Button>
             <p className="text-xs text-muted-foreground">
-                A conta fica activa assim que confirmarmos o pagamento (normalmente em poucas horas). WhatsApp {SUPPORT.whatsappDisplay}, só mensagens.
+                A conta fica activa assim que confirmarmos o pagamento — em até 20 minutos. WhatsApp {SUPPORT.whatsappDisplay}, só mensagens.
             </p>
         </div>
     );
