@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check, Copy, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MANUAL_METHODS, manualProofMessage, type ManualMethod } from "@/lib/manual-pay-core";
+import { MANUAL_CONFIRM_PROMISE, MANUAL_METHODS, manualProofMessage, type ManualMethod } from "@/lib/manual-pay-core";
 import { whatsappLink, SUPPORT } from "@/lib/support";
 import { formatCurrency } from "@/lib/utils";
 
@@ -47,7 +47,7 @@ export function ManualPayInstructions({ method, amount, reference, planLabel, co
                 <a href={proof} target="_blank" rel="noopener noreferrer"><MessageCircle className="mr-2 h-5 w-5" /> Enviar comprovativo por WhatsApp</a>
             </Button>
             <p className="text-xs text-muted-foreground">
-                A conta fica activa assim que confirmarmos o pagamento — em até 20 minutos. WhatsApp {SUPPORT.whatsappDisplay}, só mensagens.
+                A conta fica activa assim que confirmarmos o pagamento — {MANUAL_CONFIRM_PROMISE}. WhatsApp {SUPPORT.whatsappDisplay}, só mensagens.
             </p>
         </div>
     );

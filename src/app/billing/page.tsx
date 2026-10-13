@@ -14,7 +14,7 @@ import { PLANS, type PlanId } from "@/lib/plans";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useFromEscalepay } from "@/components/billing/escalepay-claim";
 import { ManualPayInstructions } from "@/components/billing/manual-pay";
-import { MANUAL_METHODS, type ManualMethod } from "@/lib/manual-pay-core";
+import { MANUAL_CONFIRM_HOURS, MANUAL_CONFIRM_PROMISE, MANUAL_METHODS, type ManualMethod } from "@/lib/manual-pay-core";
 
 type Payment = { reference: string; planId: PlanId; amount: number; status: string; createdAt: string; paidAt?: string; periodEnd?: string; provider?: string; method?: ManualMethod };
 
@@ -220,7 +220,7 @@ function BillingInner() {
                         <p className="font-semibold">Aviso temporário: M-Pesa e e-Mola</p>
                         <p className="mt-1 text-muted-foreground">
                             Por causa de uma actualização dos sistemas de pagamento, o pagamento automático por M-Pesa e e-Mola está temporariamente indisponível.
-                            Enquanto isso, pode pagar <b>enviando directamente</b> para o nosso número e mandar o comprovativo por WhatsApp — a conta fica activa <b>em até 20 minutos</b>.
+                            Enquanto isso, pode pagar <b>enviando directamente</b> para o nosso número e mandar o comprovativo por WhatsApp — a conta fica activa <b>{MANUAL_CONFIRM_PROMISE}</b>.
                             O cartão continua a funcionar normalmente. Obrigado pela compreensão.
                         </p>
                     </div>
@@ -257,7 +257,7 @@ function BillingInner() {
                     )}
 
                     <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-                        <p className="flex items-center gap-2"><Smartphone className="h-4 w-4 shrink-0" /> M-Pesa e e-Mola: envio directo · conta activada em até 20 minutos após o comprovativo</p>
+                        <p className="flex items-center gap-2"><Smartphone className="h-4 w-4 shrink-0" /> M-Pesa e e-Mola: envio directo · conta activada em até 20 minutos após o comprovativo ({MANUAL_CONFIRM_HOURS})</p>
                         <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 shrink-0" /> Cartão Visa/Mastercard: pagamento seguro via ZumboPay · conta activada na hora</p>
                     </div>
                     {ends && !isReadOnly && <p className="text-xs text-muted-foreground">Pagar antes do fim não perde dias: o novo período começa a {fmtDate(ends)}.</p>}
