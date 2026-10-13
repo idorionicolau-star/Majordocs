@@ -26,7 +26,7 @@ interface MobileNavProps {
 }
 
 export function MobileNav({ onLinkClick }: MobileNavProps) {
-    const { user, logout } = useContext(InventoryContext) || { user: null, logout: async () => { } };
+    const { user, logout, firebaseUser } = useContext(InventoryContext) || { user: null, logout: async () => { }, firebaseUser: null };
 
     const handleLinkClick = () => {
         // Dispatch custom event for loading bar
@@ -132,7 +132,7 @@ export function MobileNav({ onLinkClick }: MobileNavProps) {
                             <HelpCircle className="mr-2 h-4 w-4" />
                             <span>Como a app funciona</span>
                         </DropdownMenuItem>
-                        {isSuperAdminEmail(user?.email) && (
+                        {isSuperAdminEmail(firebaseUser?.email || user?.email) && (
                             <Link href="/admin/subscriptions" onClick={onLinkClick}>
                                 <DropdownMenuItem className="cursor-pointer" data-tour="nav-admin">
                                     <ShieldCheck className="mr-2 h-4 w-4" />
