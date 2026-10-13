@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import { InventoryContext } from '@/context/inventory-context';
 import { useFirestore } from '@/firebase/provider';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,8 @@ import { EscalepayPanel } from '@/components/admin/escalepay-panel';
 import { ManualPaymentsPanel } from '@/components/admin/manual-payments-panel';
 import { getAuth } from 'firebase/auth';
 import { isSuperAdminEmail } from '@/lib/super-admin';
+import { companyStanding, standingOrder, toDateInput, type CompanyStanding } from '@/lib/admin-subscription';
+import { cn } from '@/lib/utils';
 
 
 
@@ -84,27 +86,27 @@ export default function SubscriptionsAdminPage() {
   }, [firestore, isAuthorized, toast]);
 
   const handleUpdateCompany = async (
-    companyId: string, 
-    status: Company['status'], 
-    trialEndsAt: string, 
+    companyId: string,
+    status: Company['status'],
+    trialEndsAt: string,
     subscriptionEndsAt: string
   ) => {
-    if (!firestore) return;
     try {
       setUpdatingId(companyId);
-      const companyDocRef = doc(firestore, 'companies', companyId);
-      
-      const updateData: Partial<Company> = {
-        status,
-        trialEndsAt: trialEndsAt || "",
-        subscriptionEndsAt: subscriptionEndsAt || ""
-      };
+      // pelo servidor: grava as datas no formato que as regras lêem e actualiza paidUntilMs (ver /api/admin/companies)
+      const token = await getAuth().currentUser?.getIdToken();
+      const r = await fetch('/api/admin/companies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ companyId, status, trialEndsAt, subscriptionEndsAt }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || 'Não foi possível atualizar a subscrição.');
 
-      await updateDoc(companyDocRef, updateData);
-      
-      // Update local state
-      setCompanies(prev => prev.map(c => c.id === companyId ? { ...c, ...updateData } : c));
-      
+      setCompanies(prev => prev.map(c => c.id === companyId ? {
+        ...c, status: j.status, trialEndsAt: j.trialEndsAt || undefined, subscriptionEndsAt: j.subscriptionEndsAt || undefined,
+      } : c));
+
       toast({
         title: "Alterações salvas",
         description: "Os dados da subscrição foram atualizados com sucesso.",
@@ -120,6 +122,27 @@ export default function SubscriptionsAdminPage() {
       setUpdatingId(null);
     }
   };
+
+  // Tempo restante de cada empresa (teste ou subscrição), o que pede atenção primeiro
+  const rows = useMemo(() => {
+    const now = new Date();
+    return companies
+      .map((c) => ({ company: c, standing: companyStanding(c, now) }))
+      .sort((a, b) => standingOrder(a.standing) - standingOrder(b.standing) || (a.company.name || '').localeCompare(b.company.name || ''));
+  }, [companies]);
+
+  const summary = useMemo(() => {
+    const count = (f: (s: CompanyStanding) => boolean) => rows.filter((r) => f(r.standing)).length;
+    return [
+      { label: 'Em teste', n: count((s) => s.kind === 'trial'), cls: 'text-sky-600' },
+      { label: 'Activas (pagas)', n: count((s) => s.kind === 'active' || s.kind === 'active_open'), cls: 'text-emerald-600' },
+      { label: 'Acabam em ≤ 7 dias', n: count((s) => (s.kind === 'trial' || s.kind === 'active') && s.daysLeft != null && s.daysLeft <= 7), cls: 'text-amber-600' },
+      { label: 'Em tolerância', n: count((s) => s.kind === 'grace'), cls: 'text-orange-600' },
+      { label: 'Teste acabado', n: count((s) => s.kind === 'trial_expired'), cls: 'text-red-600' },
+      { label: 'Subscrição acabada', n: count((s) => s.kind === 'expired'), cls: 'text-red-600' },
+      { label: 'Suspensas', n: count((s) => s.kind === 'suspended'), cls: 'text-muted-foreground' },
+    ];
+  }, [rows]);
 
   // 1. Loading state
   if (loadingContext) {
@@ -177,7 +200,7 @@ export default function SubscriptionsAdminPage() {
             Empresas Registadas
           </CardTitle>
           <CardDescription>
-            Defina o status e as datas de término para cada empresa.
+            Quanto falta a cada empresa (teste gratuito ou subscrição) — as que pedem atenção primeiro. Pode mudar o estado e as datas e guardar.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -192,11 +215,21 @@ export default function SubscriptionsAdminPage() {
               Nenhuma empresa encontrada ou erro de permissão no Firestore.
             </div>
           ) : (
+            <>
+            <div data-tour="admin-summary" className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+              {summary.map((x) => (
+                <div key={x.label} className="rounded-lg border px-3 py-2">
+                  <p className={cn("text-xl font-bold tabular-nums", x.n ? x.cls : "text-muted-foreground")}>{x.n}</p>
+                  <p className="text-[11px] leading-tight text-muted-foreground">{x.label}</p>
+                </div>
+              ))}
+            </div>
             <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Empresa</TableHead>
+                    <TableHead>Tempo restante</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Término do Trial (AAAA-MM-DD)</TableHead>
                     <TableHead>Término da Subscrição (AAAA-MM-DD)</TableHead>
@@ -204,10 +237,11 @@ export default function SubscriptionsAdminPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {companies.map((company) => (
-                    <CompanyRow 
-                      key={company.id} 
-                      company={company} 
+                  {rows.map(({ company, standing }) => (
+                    <CompanyRow
+                      key={company.id}
+                      company={company}
+                      standing={standing}
                       isUpdating={updatingId === company.id}
                       onSave={(status, trial, sub) => handleUpdateCompany(company.id, status, trial, sub)}
                     />
@@ -215,6 +249,7 @@ export default function SubscriptionsAdminPage() {
                 </TableBody>
               </Table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -223,23 +258,40 @@ export default function SubscriptionsAdminPage() {
 }
 
 // Inner component to manage row-level editing states easily
-function CompanyRow({ 
-  company, 
+const STANDING_STYLE: Record<CompanyStanding['kind'], string> = {
+  trial: 'bg-sky-500/15 text-sky-700 dark:text-sky-400',
+  active: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
+  active_open: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  grace: 'bg-orange-500/15 text-orange-700 dark:text-orange-400',
+  trial_expired: 'bg-red-500/15 text-red-700 dark:text-red-400',
+  expired: 'bg-red-500/15 text-red-700 dark:text-red-400',
+  suspended: 'bg-muted text-muted-foreground',
+};
+
+function CompanyRow({
+  company,
+  standing,
   isUpdating,
-  onSave 
-}: { 
-  company: Company; 
+  onSave
+}: {
+  company: Company;
+  standing: CompanyStanding;
   isUpdating: boolean;
   onSave: (status: Company['status'], trial: string, sub: string) => void;
 }) {
   const [status, setStatus] = useState<Company['status']>(company.status || 'trial');
-  const [trialEndsAt, setTrialEndsAt] = useState(company.trialEndsAt || '');
-  const [subscriptionEndsAt, setSubscriptionEndsAt] = useState(company.subscriptionEndsAt || '');
+  // as datas vêm em ISO completo; a caixa de data só aceita AAAA-MM-DD (antes ficava vazia)
+  const savedTrial = toDateInput(company.trialEndsAt);
+  const savedSub = toDateInput(company.subscriptionEndsAt);
+  const [trialEndsAt, setTrialEndsAt] = useState(savedTrial);
+  const [subscriptionEndsAt, setSubscriptionEndsAt] = useState(savedSub);
+  useEffect(() => { setTrialEndsAt(savedTrial); setSubscriptionEndsAt(savedSub); setStatus(company.status || 'trial'); }, [savedTrial, savedSub, company.status]);
+  const urgent = (standing.kind === 'trial' || standing.kind === 'active') && standing.daysLeft != null && standing.daysLeft <= 7;
 
-  const hasChanges = 
-    status !== company.status || 
-    trialEndsAt !== (company.trialEndsAt || '') || 
-    subscriptionEndsAt !== (company.subscriptionEndsAt || '');
+  const hasChanges =
+    status !== (company.status || 'trial') ||
+    trialEndsAt !== savedTrial ||
+    subscriptionEndsAt !== savedSub;
 
   return (
     <TableRow>
@@ -248,6 +300,16 @@ function CompanyRow({
           <span>{company.name}</span>
           <span className="text-[10px] text-muted-foreground font-mono">{company.id}</span>
         </div>
+      </TableCell>
+      <TableCell>
+        <span className={cn("inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold", STANDING_STYLE[standing.kind], urgent && "ring-1 ring-amber-500")}>
+          {standing.label}
+        </span>
+        {standing.endsAt && (
+          <span className="mt-1 block text-[11px] text-muted-foreground">
+            {standing.kind.startsWith('trial') ? 'fim do teste' : 'fim'}: {new Date(standing.endsAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}
+          </span>
+        )}
       </TableCell>
       <TableCell>
         <Select 
