@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import type { DocumentSnapshot, Firestore } from 'firebase-admin/firestore';
 import { initializeAdmin } from '@/lib/firebase-admin';
 import { TRIAL_DAYS } from '@/lib/plans';
-import { countEvery, type CompanyFacts } from '@/lib/followups-core';
+import { countEvery, latestActivity, type CompanyFacts } from '@/lib/followups-core';
 
 // Emails de acompanhamento — a parte que fala com o Firestore (ver lib/followups-core.ts).
 
@@ -35,7 +35,8 @@ export async function companyFacts(db: Firestore, c: DocumentSnapshot, now = new
 
     const [products, sales, moves, log] = await Promise.all([
         ref.collection('products').limit(5).get(),
-        ref.collection('sales').limit(1).get(),
+        // a venda mais recente: diz se já vendeu e quando trabalhou pela última vez (vendas feitas offline incluídas)
+        ref.collection('sales').orderBy('date', 'desc').limit(1).get(),
         // só um campo ordenado (sem índice composto): as movimentações do período, procura-se uma contagem
         ref.collection('stockMovements').where('timestamp', '>=', since).orderBy('timestamp', 'desc').limit(2000).get(),
         ref.collection('followups').get(),
@@ -54,7 +55,7 @@ export async function companyFacts(db: Firestore, c: DocumentSnapshot, now = new
         trialEndsAt: d.trialEndsAt || null,
         subscriptionEndsAt: d.subscriptionEndsAt || null,
         startedAt,
-        lastActiveAt: d.lastActiveAt || null,
+        lastActiveAt: latestActivity(d.lastActiveAt, [iso(sales.docs[0]?.get('date')), iso(moves.docs[0]?.get('timestamp'))], now),
         hasProducts: products.docs.some((p) => !p.get('deletedAt')),
         hasSale: !sales.empty,
         // muitas movimentações e nenhuma contagem entre elas: não se sabe — não lembra

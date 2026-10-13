@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { countEvery, followupEmail, nextFollowup, type CompanyFacts } from '@/lib/followups-core';
+import { countEvery, followupEmail, latestActivity, nextFollowup, type CompanyFacts } from '@/lib/followups-core';
 
 const now = new Date('2026-10-13T08:00:00Z'); // 10:00 em Maputo
 const ago = (d: number) => new Date(now.getTime() - d * 86_400_000).toISOString();
@@ -94,5 +94,18 @@ describe('Follow-ups: email', () => {
         const acc = followupEmail({ type: 'trial-3d', kind: 'account', key: 'k' }, { ...ctx, trialEndsAt: '2026-10-16T10:00:00Z' });
         expect(acc.html).not.toContain('Não quero receber');
         expect(acc.html).toContain('16 de outubro');
+    });
+});
+
+describe('Follow-ups: último uso conta também o trabalho feito offline', () => {
+    it('vendas e movimentos mais recentes que o "abri a app" contam como uso', () => {
+        expect(latestActivity(ago(8), [ago(1), null], now)).toBe(ago(1));
+        expect(latestActivity(ago(1), [ago(8)], now)).toBe(ago(1));
+        // o caso do problema: abriu a app há 8 dias sem internet, vendeu offline ontem → não é "falta de uso"
+        expect(nextFollowup(base({ lastActiveAt: latestActivity(ago(8), [ago(1)], now) }), now)).toBeNull();
+    });
+    it('datas no futuro não contam; contas sem registo continuam sem data', () => {
+        expect(latestActivity(ago(8), [ahead(3)], now)).toBe(ago(8));
+        expect(latestActivity(null, [ago(1)], now)).toBeNull();
     });
 });

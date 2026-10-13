@@ -58,6 +58,24 @@ export const countEvery = (n?: number | null) => {
     return Number.isFinite(v) && v >= 7 && v <= 180 ? v : DEFAULT_COUNT_EVERY_DAYS;
 };
 
+/**
+ * Último uso real: o mais recente entre o "abri a app" (/api/activity) e o trabalho registado (vendas, movimentos de
+ * stock). Quem trabalha sem internet só avisa o servidor quando a ligação volta, mas as vendas feitas offline trazem a
+ * data em que foram feitas — assim não recebe "está tudo bem?" por engano. Sem nenhum "abri a app" registado (contas
+ * antigas) continua sem data: a falta de uso só conta a partir do primeiro registo.
+ */
+export function latestActivity(lastActiveAt: string | null | undefined, work: (string | null | undefined)[], now = new Date()): string | null {
+    const base = valid(lastActiveAt);
+    if (!base) return null;
+    let best = base;
+    for (const w of work) {
+        const d = valid(w);
+        // datas no futuro (relógio do telemóvel adiantado) não contam
+        if (d && d > best && d.getTime() <= now.getTime() + 3600_000) best = d;
+    }
+    return best.toISOString();
+}
+
 /** Enviados nos últimos 7 dias / nas últimas 20 h (limites de frequência). */
 function recentCount(sent: Record<string, string>, now: Date, ms: number) {
     return Object.values(sent).filter((iso) => { const d = valid(iso); return !!d && now.getTime() - d.getTime() < ms; }).length;
