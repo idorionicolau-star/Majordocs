@@ -26,6 +26,20 @@ export type FollowupType =
     | 'inactive-5' | 'inactive-14'
     | 'count';
 
+/** Lista dos emails (para a Administração: testar e mostrar o que cada um é). */
+export const FOLLOWUP_CATALOG: { type: FollowupType; kind: FollowupKind; label: string; when: string }[] = [
+    { type: 'trial-3d', kind: 'account', label: 'Teste a acabar', when: 'faltam 1–3 dias para o fim do teste' },
+    { type: 'trial-last', kind: 'account', label: 'Último dia do teste', when: 'no dia em que o teste acaba' },
+    { type: 'trial-ended', kind: 'account', label: 'Teste terminou', when: 'até 7 dias depois do fim do teste' },
+    { type: 'sub-3d', kind: 'account', label: 'Subscrição a acabar', when: 'faltam 0–3 dias para o fim da subscrição' },
+    { type: 'sub-ended', kind: 'account', label: 'Subscrição terminou', when: 'logo depois do fim (tolerância)' },
+    { type: 'start-products', kind: 'tips', label: 'Adicionar produtos', when: '2 dias depois do registo, sem produtos' },
+    { type: 'start-sale', kind: 'tips', label: 'Primeira venda', when: '3 dias depois do registo, com produtos e sem vendas' },
+    { type: 'inactive-5', kind: 'tips', label: 'Está tudo bem?', when: '5 dias sem usar a app' },
+    { type: 'inactive-14', kind: 'tips', label: 'Sentimos a sua falta', when: '14 dias sem usar a app' },
+    { type: 'count', kind: 'tips', label: 'Contagem do stock', when: 'passou o prazo (30 dias) sem contagem' },
+];
+
 export type CompanyFacts = {
     status?: string;
     trialEndsAt?: string | null;
