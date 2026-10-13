@@ -15,7 +15,6 @@ import { FinancialHealthChart } from "@/components/dashboard/financial-health-ch
 import { TopSales } from "@/components/dashboard/top-sales";
 import { StockAlerts } from "@/components/dashboard/stock-alerts";
 import { EmptyStateWelcome } from "@/components/dashboard/empty-state";
-import { MajorAssistant } from "@/components/assistant/major-assistant";
 import { GettingStartedCard } from "@/components/onboarding/getting-started-card";
 
 // Removed dynamic imports to prevent circular dependency issues in production build
@@ -77,11 +76,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Row 3 - Assistant + Stock Alerts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:h-[450px]">
-            <div data-tour="dash-assistant" className="md:order-2"><MajorAssistant variant="card" className="h-[400px] md:h-full" /></div>
-            <StockAlerts className="md:h-full md:order-1" />
-          </div>
+          {/* Row 3 - Stock Alerts (as perguntas ao assistente estão na Pesquisa Rápida) */}
+          <StockAlerts className="md:max-h-[450px]" />
         </>
       ) : (
         <Card className="glass-panel h-[400px] flex flex-col justify-center items-center">
