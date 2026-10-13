@@ -13,8 +13,13 @@ import { Button } from "@/components/ui/button";
 import { PLANS, type PlanId } from "@/lib/plans";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useFromEscalepay } from "@/components/billing/escalepay-claim";
+import { ManualPayInstructions } from "@/components/billing/manual-pay";
+import { MANUAL_METHODS, type ManualMethod } from "@/lib/manual-pay-core";
 
-type Payment = { reference: string; planId: PlanId; amount: number; status: string; createdAt: string; paidAt?: string; periodEnd?: string };
+type Payment = { reference: string; planId: PlanId; amount: number; status: string; createdAt: string; paidAt?: string; periodEnd?: string; provider?: string; method?: ManualMethod };
+
+/** M-Pesa / e-Mola: pagamento directo (confirmado à mão); cartão: ZumboPay. */
+type PayMethod = ManualMethod | "card";
 
 const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric" }) : "—");
 
@@ -29,6 +34,7 @@ function BillingInner() {
     const returnedRef = params.get("ref");
 
     const [selected, setSelected] = useState<PlanId>("mensal");
+    const [method, setMethod] = useState<PayMethod>("mpesa");
     const [busy, setBusy] = useState(false);
     const [returned, setReturned] = useState<{ status: string; periodEnd?: string | null } | null>(null);
     const [history, setHistory] = useState<Payment[]>([]);
@@ -77,7 +83,7 @@ function BillingInner() {
     // vê-o acompanhado aqui. Sem isto ficava a olhar para o histórico à espera de uma actualização.
     const watchRef = useMemo(() => {
         if (returnedRef) return returnedRef;
-        const recent = history.find((h) => h.status === "pending" && Date.now() - new Date(h.createdAt).getTime() < 30 * 60_000);
+        const recent = history.find((h) => h.status === "pending" && h.provider !== "manual" && Date.now() - new Date(h.createdAt).getTime() < 30 * 60_000);
         return recent?.reference || null;
     }, [returnedRef, history]);
 
@@ -103,7 +109,42 @@ function BillingInner() {
         return () => { stop = true; };
     }, [watchRef, auth]);
 
+    // pagamento directo por confirmar (o mais recente, dos últimos 7 dias): as instruções continuam à vista
+    const pendingManual = useMemo(() => history.find((h) => h.provider === "manual" && h.status === "pending" && h.method
+        && Date.now() - new Date(h.createdAt).getTime() < 7 * 86_400_000) || null, [history]);
+
+    const [showRef, setShowRef] = useState<string | null>(null);
+    // depois de pedir, leva às instruções (no telemóvel ficam abaixo do botão)
+    useEffect(() => {
+        if (showRef && pendingManual?.reference === showRef) {
+            document.querySelector('[data-tour="bill-manual"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
+            setShowRef(null);
+        }
+    }, [showRef, pendingManual]);
+
+    const payManual = async (m: ManualMethod) => {
+        // o mesmo pedido ainda por confirmar: não cria outro, mostra as instruções
+        if (pendingManual && pendingManual.planId === selected && pendingManual.method === m) { setShowRef(pendingManual.reference); return; }
+        setBusy(true);
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            const r = await fetch("/api/billing/manual", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ planId: selected, method: m }),
+            });
+            const j = await r.json();
+            if (!r.ok) throw new Error(j.error || "Erro ao registar o pagamento");
+            setShowRef(j.reference); // o histórico (onSnapshot) traz o pedido e as instruções aparecem
+        } catch (e) {
+            toast({ variant: "destructive", title: "Não foi possível registar o pagamento", description: e instanceof Error ? e.message : "" });
+        } finally {
+            setBusy(false);
+        }
+    };
+
     const pay = async () => {
+        if (method !== "card") return payManual(method);
         setBusy(true);
         try {
             const token = await auth.currentUser?.getIdToken();
@@ -114,7 +155,7 @@ function BillingInner() {
             });
             const j = await r.json();
             if (!r.ok || !j.checkoutUrl) throw new Error([j.error || "Erro ao iniciar o pagamento", j.details].filter(Boolean).join(" — "));
-            window.location.href = j.checkoutUrl; // checkout ZumboPay: M-Pesa, e-Mola, cartão…
+            window.location.href = j.checkoutUrl; // checkout ZumboPay (cartão)
         } catch (e) {
             toast({ variant: "destructive", title: "Não foi possível iniciar o pagamento", description: e instanceof Error ? e.message : "" });
             setBusy(false);
@@ -175,10 +216,26 @@ function BillingInner() {
                         ); })}
                     </div>
 
+                    <div data-tour="bill-method" className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Forma de pagamento">
+                        {([...Object.entries(MANUAL_METHODS).map(([id, m]) => [id, m.label]), ["card", "Cartão"]] as [PayMethod, string][]).map(([id, label]) => (
+                            <button key={id} type="button" role="radio" aria-checked={method === id} onClick={() => setMethod(id)}
+                                className={cn("flex h-12 items-center justify-center gap-1.5 rounded-xl border-2 text-sm font-semibold transition",
+                                    method === id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
+                                {id === "card" ? <CreditCard className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />} {label}
+                            </button>
+                        ))}
+                    </div>
+
                     <Button data-tour="bill-pay" onClick={pay} disabled={busy} className="h-12 rounded-xl text-base">
-                        {busy ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CreditCard className="mr-2 h-5 w-5" />}
-                        Pagar {formatCurrency(priceOf(selected).amount)}
+                        {busy ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : method === "card" ? <CreditCard className="mr-2 h-5 w-5" /> : <Smartphone className="mr-2 h-5 w-5" />}
+                        Pagar {formatCurrency(priceOf(selected).amount)}{method === "card" ? " com cartão" : ` por ${MANUAL_METHODS[method].label}`}
                     </Button>
+
+                    {pendingManual && (
+                        <ManualPayInstructions method={pendingManual.method!} amount={pendingManual.amount} reference={pendingManual.reference}
+                            planLabel={PLANS.find((p) => p.id === pendingManual.planId)?.label || pendingManual.planId}
+                            company={companyData?.name} email={auth.currentUser?.email} />
+                    )}
 
                     {!(coupon && couponLeft > 0) && (
                         <div className="flex gap-2" data-tour="bill-code">
@@ -191,8 +248,8 @@ function BillingInner() {
                     )}
 
                     <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-                        <p className="flex items-center gap-2"><Smartphone className="h-4 w-4 shrink-0" /> M-Pesa, e-Mola, mKesh ou cartão Visa/Mastercard</p>
-                        <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 shrink-0" /> Pagamento seguro via ZumboPay (M-Pesa, e-Mola ou cartão) · conta activada na hora</p>
+                        <p className="flex items-center gap-2"><Smartphone className="h-4 w-4 shrink-0" /> M-Pesa e e-Mola: envio directo · conta activada quando confirmarmos o comprovativo</p>
+                        <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 shrink-0" /> Cartão Visa/Mastercard: pagamento seguro via ZumboPay · conta activada na hora</p>
                     </div>
                     {ends && !isReadOnly && <p className="text-xs text-muted-foreground">Pagar antes do fim não perde dias: o novo período começa a {fmtDate(ends)}.</p>}
                 </>
@@ -210,7 +267,7 @@ function BillingInner() {
                                 </div>
                                 <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",
                                     h.status === "paid" ? "bg-emerald-500/15 text-emerald-600" : h.status === "pending" ? "bg-sky-500/15 text-sky-600" : "bg-red-500/15 text-red-600")}>
-                                    {h.status === "paid" ? "pago" : h.status === "pending" ? "pendente" : "falhou"}
+                                    {h.status === "paid" ? "pago" : h.status === "pending" ? (h.provider === "manual" ? "a confirmar" : "pendente") : h.provider === "manual" ? "recusado" : "falhou"}
                                 </span>
                             </div>
                         ))}

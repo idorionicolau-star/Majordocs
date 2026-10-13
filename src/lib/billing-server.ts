@@ -1,6 +1,8 @@
 import 'server-only';
 import { initializeAdmin } from '@/lib/firebase-admin';
-import { GRACE_DAYS, planById } from '@/lib/plans';
+import { GRACE_DAYS, planById, type Plan } from '@/lib/plans';
+import { findCoupon } from '@/lib/coupons-server';
+import { couponAmount } from '@/lib/coupon-core';
 import { amountLooksRight, parseZumboError } from '@/lib/zumbopay-core';
 
 const DEFAULT_BASE = 'https://zumbopay.com/api/public/v1';
@@ -94,4 +96,30 @@ export async function applyPaidPayment(reference: string, info: { providerId?: s
         }, { merge: true });
         return { ok: true, end: end.toISOString() };
     });
+}
+
+/**
+ * Quem pode pagar a subscrição da empresa (Admin/Dono, ou o super-administrador). Devolve o funcionário ou null.
+ */
+export async function companyPayer(companyId: string, decoded: { uid: string; superAdmin?: boolean }) {
+    const emp = await initializeAdmin().firestore().doc(`companies/${companyId}/employees/${decoded.uid}`).get();
+    if (!['Admin', 'Dono'].includes(emp.get('role')) && !decoded.superAdmin) return null;
+    return { username: (emp.get('username') as string) || decoded.uid };
+}
+
+/**
+ * O preço a cobrar por um plano a esta empresa. Código de convite: preço especial nos primeiros meses do Mensal.
+ * O preço vem da lista do servidor e os meses usados contam-se nos pagamentos (que só o servidor escreve).
+ */
+export async function planAmountFor(companyId: string, plan: Plan): Promise<{ amount: number; coupon: string | null }> {
+    const db = initializeAdmin().firestore();
+    const company = await db.doc(`companies/${companyId}`).get();
+    const coupon = findCoupon(company.get('coupon.code') || '');
+    let amount = plan.amount;
+    if (coupon) {
+        const used = (await db.collection(`companies/${companyId}/payments`).where('coupon', '==', coupon.code).where('status', '==', 'paid').get()).size;
+        const c = couponAmount(coupon.def, used, plan.id);
+        if (c.amount != null) amount = c.amount;
+    }
+    return { amount, coupon: coupon && amount !== plan.amount ? coupon.code : null };
 }

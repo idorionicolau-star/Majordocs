@@ -28,6 +28,7 @@ import { Lock, ShieldAlert, CheckCircle, Clock, AlertOctagon } from 'lucide-reac
 import { Company } from '@/lib/types';
 import { ZumboPayCheck } from '@/components/admin/zumbopay-check';
 import { EscalepayPanel } from '@/components/admin/escalepay-panel';
+import { ManualPaymentsPanel } from '@/components/admin/manual-payments-panel';
 import { isSuperAdminEmail } from '@/lib/super-admin';
 
 
@@ -157,6 +158,8 @@ export default function SubscriptionsAdminPage() {
           Ative, suspenda ou configure os períodos de teste (Trial) de todas as empresas no sistema.
         </p>
       </div>
+
+      <ManualPaymentsPanel />
 
       <EscalepayPanel ownEmail={userEmail} />
 
