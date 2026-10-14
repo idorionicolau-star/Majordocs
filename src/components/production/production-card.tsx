@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { EditProductionDialog } from "./edit-production-dialog";
+import { ProductionDateEdit } from "./production-date-edit";
 
 
 interface ProductionCardProps {
@@ -101,9 +102,8 @@ export function ProductionCard({ production, onTransfer, onDelete, onUpdate, vie
                 </div>
 
                 <div className={cn("text-xs text-muted-foreground space-y-1", isCondensed && "text-center")}>
-                    <div className="flex items-center gap-1.5 justify-center">
-                        <Calendar size={12} />
-                        <span>{new Date(production.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
+                    <div className="flex items-center gap-1.5 justify-center" data-tour="prod-card-date">
+                        <ProductionDateEdit date={production.date} canEdit={canEdit} onChange={(date) => onUpdate(production.id, { date })} />
                     </div>
                     {locationName && (
                         <div className="flex items-center gap-1.5 justify-center">
