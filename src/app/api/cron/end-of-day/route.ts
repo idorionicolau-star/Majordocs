@@ -6,7 +6,7 @@ import { initializeAdmin } from '@/lib/firebase-admin';
 import { Resend } from 'resend';
 import { formatCurrency } from '@/lib/utils';
 import { isCountableSale, saleIncome } from '@/lib/sale-filters';
-import { criticalProducts, escapeHtml, reportDay, saleOnDay, topProducts } from '@/lib/daily-report';
+import { criticalProducts, escapeHtml, reportDay, reportTime, saleOnDay, topProducts } from '@/lib/daily-report';
 import { runFollowups } from '@/lib/followups-run';
 
 const APP_URL = 'https://stock.majorgroup.app';
@@ -23,6 +23,9 @@ export async function GET(req: Request) {
         const db = adminApp.firestore();
         const apiKey = process.env.RESEND_API_KEY;
         const resend = new Resend(apiKey);
+
+        // Cada hora possível tem o seu cron (vercel.json): este envia só às empresas que escolheram esta hora
+        const slot = reportTime(new URL(req.url).searchParams.get('slot'));
 
         // O dia de hoje em Maputo, da meia-noite até agora — igual ao "Hoje" do Financeiro
         const now = new Date();
@@ -42,7 +45,7 @@ export async function GET(req: Request) {
                 targetEmails.push(...settings.emails.filter((e: any) => e.onEndOfDayReport && e.email && e.email.trim() !== ''));
             }
 
-            if (targetEmails.length > 0) {
+            if (targetEmails.length > 0 && reportTime(settings?.endOfDayTime) === slot) {
                 // We need to fetch stats for this company
                 const companyId = companyDoc.id;
 
@@ -163,11 +166,13 @@ export async function GET(req: Request) {
 
         await Promise.allSettled(emailsPromises);
 
-        // a seguir, os emails de acompanhamento (um cron só: o plano Hobby da Vercel limita os crons)
+        // os emails de acompanhamento saem uma vez por dia, no envio das 18h30 (a hora de sempre)
         let followups: unknown = null;
-        try { followups = await runFollowups(); } catch (e) { console.error('followups', e); }
+        if (slot === '18:30') {
+            try { followups = await runFollowups(); } catch (e) { console.error('followups', e); }
+        }
 
-        return NextResponse.json({ success: true, message: "End of day reports generated and dispatched", followups });
+        return NextResponse.json({ success: true, message: "End of day reports generated and dispatched", slot, sent: emailsPromises.length, followups });
     } catch (error: any) {
         console.error('Error executing End-of-Day cron:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });

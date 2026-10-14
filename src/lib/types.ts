@@ -47,6 +47,8 @@ export type NotificationSettings = {
 
   // New multi-email structure
   emails?: NotificationEmail[];
+  /** Hora (Maputo) do relatório do fim do dia: uma de REPORT_TIMES; sem valor = 21:30 */
+  endOfDayTime?: string;
 };
 
 export type Company = {
