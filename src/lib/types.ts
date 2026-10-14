@@ -436,7 +436,7 @@ export interface InventoryContextType {
   confirmSalePickup: (sale: Sale) => void;
   deleteSale: (saleId: string) => void;
   addProductionLog: (orderId: string, logData: { quantity: number; notes?: string; }) => void;
-  addProduction: (data: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => Promise<void>;
+  addProduction: (data: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'> & { date?: string }, opts?: { silent?: boolean }) => Promise<void>;
   updateProduction: (productionId: string, data: Partial<Production>) => void;
   deleteProduction: (productionId: string) => void;
   deleteOrder: (orderId: string) => void;

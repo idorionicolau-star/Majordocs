@@ -1,279 +1,252 @@
 "use client";
 
-import { useState, useEffect, useContext } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { safeReturn } from '@/lib/deep-links';
-import { useFirestore } from '@/firebase/provider';
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, CalendarDays, Check, Factory, FlaskConical, Loader2, MapPin, Minus, Plus, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MathInput } from "@/components/ui/math-input";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useToast } from '@/hooks/use-toast';
-import type { Location, Product } from '@/lib/types';
-import { InventoryContext } from '@/context/inventory-context';
-import { CatalogProductSelector } from '@/components/catalog/catalog-product-selector';
-import { Card } from "@/components/ui/card";
-import Link from 'next/link';
-import { ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { useInventory } from "@/context/inventory-context";
+import { useToast } from "@/hooks/use-toast";
+import { safeReturn } from "@/lib/deep-links";
+import { findRecipe } from "@/lib/production-materials";
+import { catalogChoices, dateLabel, mostProduced, todayMz, validProductionDate, yesterdayMz } from "@/lib/production-core";
+import { clampQty } from "@/lib/transfer-core";
+import { isFamilyGroup, variantLabel } from "@/lib/variants";
+import { cn } from "@/lib/utils";
 
-type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
+type Item = { name: string; unit: string; qty: string };
 
-const formSchema = z.object({
-    productName: z.string().nonempty({ message: "Por favor, selecione um produto." }),
-    quantity: z.preprocess((val) => {
-        if (val === undefined || val === "" || val === null) return 0;
-        const num = Number(val);
-        return isNaN(num) ? 0 : num;
-    }, z.number().min(0.01, { message: "A quantidade deve ser maior que zero." })),
-    unit: z.string().default('un'),
-    location: z.string().optional(),
-});
-
-type AddProductionFormValues = z.infer<typeof formSchema>;
-
+/**
+ * Registar produção, ao estilo da Venda Rápida: escolhe-se o dia (hoje, ontem ou outro), pesquisa-se no catálogo
+ * (as variações aparecem juntas por família) e juntam-se vários produtos; um botão regista tudo. Cada produção
+ * põe o produto no stock e desconta a matéria-prima da receita.
+ * Vindo do "O que produzir": ?produto=&quantidade=&local=&voltar= já preenchem a lista.
+ */
 export default function NewProductionPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    // Vindo do "O que produzir": produto, quantidade e local já escolhidos; no fim volta ao plano.
-    const preProduct = searchParams.get('produto') || '';
-    const preQuantity = Number(searchParams.get('quantidade')) || undefined;
-    const preLocation = searchParams.get('local') || '';
-    const backHref = safeReturn(searchParams.get('voltar'), '/production', '/production');
-    const firestore = useFirestore();
-    const inventoryContext = useContext(InventoryContext);
+    const { catalogProducts, productions, recipes, locations, isMultiLocation, addProduction, canEdit, isReadOnly } = useInventory();
     const { toast } = useToast();
+    const backHref = safeReturn(searchParams.get("voltar"), "/production", "/production");
 
-    const {
-        catalogProducts,
-        catalogCategories,
-        locations,
-        isMultiLocation,
-        availableUnits,
-        companyId,
-        user,
-        addProduction
-    } = inventoryContext || { catalogProducts: [], catalogCategories: [], locations: [], isMultiLocation: false, availableUnits: [], companyId: null, user: null, addProduction: async () => { } };
+    const [day, setDay] = useState(() => todayMz());
+    const [location, setLocation] = useState("");
+    const [text, setText] = useState("");
+    const [items, setItems] = useState<Item[]>([]);
+    const [busy, setBusy] = useState(false);
+    const searchRef = useRef<HTMLInputElement>(null);
 
-    const form = useForm<AddProductionFormValues>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-            productName: "",
-            location: "",
-            unit: "un",
-        },
-    });
+    // um nome aparece uma vez (o catálogo pode ter o mesmo produto repetido)
+    const catalog = useMemo(() => {
+        const seen = new Set<string>();
+        return (catalogProducts || []).filter((p) => p.name && !seen.has(p.name) && (seen.add(p.name), true));
+    }, [catalogProducts]);
+    const unitOf = (name: string) => catalog.find((p) => p.name === name)?.unit || "un";
 
-    const handleProductSelect = (productName: string, product?: CatalogProduct) => {
-        form.setValue('productName', productName, { shouldValidate: true });
-        if (product) {
-            form.setValue('unit', product.unit || 'un');
+    // localização: a do link, a última usada, ou a primeira
+    useEffect(() => {
+        if (!isMultiLocation || !locations?.length || location) return;
+        let saved: string | null = null;
+        try { saved = localStorage.getItem("majorstockx-last-product-location"); } catch { /* ignore */ }
+        const wanted = searchParams.get("local");
+        const pick = [wanted, saved].find((id) => id && locations.some((l) => l.id === id));
+        setLocation(pick || locations[0].id);
+    }, [isMultiLocation, locations, location, searchParams]);
+
+    // vindo do plano: o produto e a quantidade já na lista
+    const prefilled = useRef(false);
+    useEffect(() => {
+        const name = searchParams.get("produto");
+        if (prefilled.current || !name || !catalog.length) return;
+        prefilled.current = true;
+        const q = Number(searchParams.get("quantidade")) || 1;
+        setItems([{ name, unit: unitOf(name), qty: String(q) }]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [catalog, searchParams]);
+
+    const choices = useMemo(() => catalogChoices(catalog, text), [catalog, text]);
+    const top = useMemo(() => mostProduced(productions || [], new Set(catalog.map((c) => c.name))), [productions, catalog]);
+    const inList = new Set(items.map((i) => i.name));
+    const valid = items.map((i) => ({ ...i, n: clampQty(i.qty, Number.MAX_SAFE_INTEGER) })).filter((i) => i.n > 0);
+    const dateOk = validProductionDate(day);
+    const locName = (id: string) => locations?.find((l) => l.id === id)?.name || id;
+
+    const add = (name: string) => {
+        setItems((list) => (list.some((i) => i.name === name) ? list : [...list, { name, unit: unitOf(name), qty: "1" }]));
+        setText("");
+        requestAnimationFrame(() => { const el = document.getElementById(`pq-${name}`) as HTMLInputElement | null; el?.focus(); el?.select(); });
+    };
+    const setQty = (name: string, qty: string) => setItems((list) => list.map((i) => (i.name === name ? { ...i, qty } : i)));
+    const step = (name: string, d: number) => setItems((list) => list.map((i) => (i.name === name ? { ...i, qty: String(Math.max(0, (clampQty(i.qty, Number.MAX_SAFE_INTEGER) || 0) + d)) } : i)));
+    const remove = (name: string) => setItems((list) => list.filter((i) => i.name !== name));
+
+    const submit = async () => {
+        if (!valid.length || busy || !dateOk) return;
+        setBusy(true);
+        if (location) { try { localStorage.setItem("majorstockx-last-product-location", location); } catch { /* ignore */ } }
+        const failed: { name: string; error: string }[] = [];
+        let done = 0;
+        for (const it of valid) {
+            try {
+                await addProduction({ productName: it.name, quantity: it.n, unit: it.unit, ...(isMultiLocation && location ? { location } : {}), date: day }, { silent: true });
+                done++;
+            } catch (e) {
+                failed.push({ name: it.name, error: e instanceof Error ? e.message : "erro" });
+            }
         }
+        setBusy(false);
+        const when = dateLabel(day);
+        toast({
+            variant: failed.length && !done ? "destructive" : undefined,
+            title: done ? `${done} ${done === 1 ? "produção registada" : "produções registadas"} (${when})` : "Nada foi registado",
+            description: [done ? "Já entraram no stock." : "", failed.length ? `Falharam: ${failed.map((f) => `${f.name}: ${f.error}`).join(" · ")}` : ""].filter(Boolean).join(" "),
+        });
+        if (!failed.length) { router.push(backHref); return; }
+        setItems((list) => list.filter((i) => failed.some((f) => f.name === i.name)));
     };
 
-    useEffect(() => {
-        const savedLocation = localStorage.getItem('majorstockx-last-product-location');
-        const finalLocation = preLocation && locations.some(l => l.id === preLocation)
-            ? preLocation
-            : savedLocation && locations.some(l => l.id === savedLocation)
-                ? savedLocation
-                : (locations.length > 0 ? locations[0].id : "");
+    if (!canEdit("production")) return <div className="p-8 text-center text-muted-foreground">Sem permissão para registar produção.</div>;
 
-        form.reset({
-            productName: preProduct,
-            ...(preQuantity ? { quantity: preQuantity } : {}),
-            location: finalLocation,
-            unit: 'un',
-        });
-        if (preProduct) form.trigger(); // já preenchido: o botão Guardar fica logo activo
-    }, [form, locations, preProduct, preQuantity, preLocation]);
-
-    // a unidade do produto pré-escolhido (o catálogo pode chegar depois)
-    useEffect(() => {
-        const unit = preProduct ? catalogProducts.find((p: CatalogProduct) => p.name === preProduct)?.unit : undefined;
-        if (unit) form.setValue('unit', unit);
-    }, [form, catalogProducts, locations, preProduct]);
-
-    async function onSubmit(values: AddProductionFormValues) {
-        if (!firestore || !companyId || !user) {
-            toast({ variant: "destructive", title: "Erro de Autenticação", description: "Utilizador não autenticado ou sessão inválida." });
-            return;
-        }
-
-        if (isMultiLocation && !values.location) {
-            form.setError("location", { type: "manual", message: "Selecione uma localização." });
-            return;
-        }
-
-        if (values.location) {
-            localStorage.setItem('majorstockx-last-product-location', values.location);
-        }
-
-        const newProduction = {
-            productName: values.productName,
-            quantity: values.quantity,
-            unit: values.unit || 'un',
-            ...(isMultiLocation && values.location ? { location: values.location } : {}),
-        };
-
-        try {
-            // regista a produção E põe o produto no stock (e desconta a matéria-prima da receita)
-            await addProduction(newProduction);
-
-            toast({
-                title: "Produção Registrada",
-                description: `${newProduction.quantity} ${newProduction.unit} de ${newProduction.productName} registadas e adicionadas ao stock.`,
-                action: <CheckCircle2 className="text-emerald-500" />
-            });
-            router.push(backHref);
-        } catch {
-            // o erro (ex.: falta de matéria-prima) já foi mostrado por addProduction; a página fica aberta
-        }
-    }
-
-    const isSubmitDisabled = !form.formState.isValid || form.formState.isSubmitting;
-
-    if (!inventoryContext) {
-        return null;
-    }
+    const Chip = ({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) => (
+        <button type="button" onClick={onClick} aria-pressed={active}
+            className={cn("rounded-full border px-3 py-1.5 text-sm font-medium transition", active ? "border-primary bg-primary text-primary-foreground" : "hover:border-primary/60")}>
+            {children}
+        </button>
+    );
+    const isOtherDay = day !== todayMz() && day !== yesterdayMz();
 
     return (
-        <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full pb-20 animate-in fade-in duration-500">
-            <div className="flex items-center gap-4">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 pb-28">
+            <div className="flex items-center gap-3">
                 <Button variant="ghost" size="icon" asChild className="rounded-full">
-                    <Link href={backHref}>
-                        <ArrowLeft className="h-5 w-5" />
-                        <span className="sr-only">Voltar à Produção</span>
-                    </Link>
+                    <Link href={backHref} aria-label="Voltar à produção"><ArrowLeft className="h-5 w-5" /></Link>
                 </Button>
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-headline font-bold">Novo Registo de Produção</h1>
-                    <p className="text-muted-foreground text-sm">Adicione uma nova produção ao sistema. O produto entra no stock e a matéria-prima da receita é descontada ao guardar.</p>
+                    <h1 className="text-2xl font-bold tracking-tight">Registar produção</h1>
+                    <p className="text-sm text-muted-foreground">Escolha o dia, procure os produtos e junte-os à lista. Entram no stock ao registar.</p>
                 </div>
             </div>
 
-            <Card className="glass-panel p-6 border-none shadow-lg">
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                        <div className="space-y-4 rounded-lg border p-4">
-                            <h3 className="font-semibold leading-none tracking-tight">Informações de Produção</h3>
-                            <div className="space-y-4">
-                                <FormField
-                                    control={form.control}
-                                    name="productName"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Produto Fabricado</FormLabel>
-                                            <CatalogProductSelector
-                                                selectedValue={field.value}
-                                                onValueChange={handleProductSelect}
-                                                products={catalogProducts}
-                                                categories={catalogCategories}
-                                                placeholder="Pesquise no catálogo..."
-                                            />
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+            <div className="space-y-3 rounded-2xl border bg-card p-3">
+                <div data-tour="prod-date">
+                    <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> Dia da produção</p>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <Chip active={day === todayMz()} onClick={() => setDay(todayMz())}>Hoje</Chip>
+                        <Chip active={day === yesterdayMz()} onClick={() => setDay(yesterdayMz())}>Ontem</Chip>
+                        <label className={cn("flex items-center gap-2 rounded-full border px-3 py-1 text-sm", isOtherDay && "border-primary")}>
+                            Outro dia
+                            <input type="date" aria-label="Outro dia" value={day} max={todayMz()} onChange={(e) => e.target.value && setDay(e.target.value)} className="bg-transparent text-sm outline-none" />
+                        </label>
+                    </div>
+                    {!dateOk && <p className="mt-1 text-xs text-red-600">Escolha um dia até hoje (no máximo um ano atrás).</p>}
+                </div>
+                {isMultiLocation && (locations?.length || 0) > 1 && (
+                    <div data-tour="prod-location">
+                        <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><MapPin className="h-3.5 w-3.5" /> Onde foi produzido</p>
+                        <div className="flex flex-wrap gap-1.5">
+                            {locations.map((l) => <Chip key={l.id} active={location === l.id} onClick={() => setLocation(l.id)}>{l.name}</Chip>)}
+                        </div>
+                    </div>
+                )}
+            </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="quantity"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Quantidade Produzida</FormLabel>
-                                                <FormControl>
-                                                    <MathInput
-                                                        {...field}
-                                                        onValueChange={field.onChange}
-                                                        placeholder="0"
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+            <div className="relative" data-tour="prod-search">
+                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <Input ref={searchRef} value={text} onChange={(e) => setText(e.target.value)} placeholder="Procurar no catálogo…" aria-label="Procurar no catálogo"
+                    className="h-12 rounded-2xl pl-12 pr-10 text-base" autoComplete="off"
+                    onKeyDown={(e) => {
+                        if (e.key !== "Enter" || !choices[0]) return;
+                        e.preventDefault();
+                        const c = choices[0];
+                        if (!isFamilyGroup(c)) add(c.name); else if (c.members.length === 1) add(c.members[0].name);
+                    }} />
+                {text && <button type="button" aria-label="Limpar" onClick={() => setText("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground"><X className="h-5 w-5" /></button>}
+            </div>
 
-                                    <FormField
-                                        control={form.control}
-                                        name="unit"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Unidade</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Selecione..." />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {availableUnits.map((u: string) => (
-                                                            <SelectItem key={u} value={u}>{u}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+            {items.length > 0 && (
+                <section data-tour="prod-basket" className="rounded-2xl border border-primary/40 bg-primary/5 p-3">
+                    <p className="mb-2 text-sm font-semibold">A registar ({items.length}) · {dateLabel(day)}{isMultiLocation && location ? ` · ${locName(location)}` : ""}</p>
+                    <ul className="space-y-2">
+                        {items.map((it) => {
+                            const recipe = findRecipe(recipes || undefined, it.name);
+                            return (
+                                <li key={it.name} className="flex flex-wrap items-center gap-2 rounded-xl bg-background px-3 py-2">
+                                    <div className="min-w-[10rem] flex-1">
+                                        <p className="font-medium leading-snug">{it.name}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {it.unit}{recipe ? <> · <FlaskConical className="inline h-3 w-3" /> desconta {recipe.ingredients.map((g) => g.rawMaterialName).join(", ")}</> : ""}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Button type="button" size="icon" variant="outline" className="h-9 w-9" onClick={() => step(it.name, -1)} aria-label={`Menos ${it.name}`}><Minus className="h-4 w-4" /></Button>
+                                        <Input id={`pq-${it.name}`} inputMode="decimal" value={it.qty} onChange={(e) => setQty(it.name, e.target.value)} onFocus={(e) => e.target.select()}
+                                            aria-label={`Quantidade de ${it.name}`} className="h-9 w-24 text-center" />
+                                        <Button type="button" size="icon" variant="outline" className="h-9 w-9" onClick={() => step(it.name, 1)} aria-label={`Mais ${it.name}`}><Plus className="h-4 w-4" /></Button>
+                                        <Button type="button" size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground" onClick={() => remove(it.name)} aria-label={`Tirar ${it.name}`}><Trash2 className="h-4 w-4" /></Button>
+                                    </div>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </section>
+            )}
+
+            {!text && top.length > 0 && (
+                <section data-tour="prod-top">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mais produzidos</p>
+                    <div className="flex flex-wrap gap-1.5">
+                        {top.map((n) => (
+                            <button key={n} type="button" onClick={() => add(n)} className={cn("rounded-full border px-3 py-1.5 text-sm", inList.has(n) ? "border-primary bg-primary/10" : "hover:border-primary/60")}>
+                                {inList.has(n) ? <Check className="mr-1 inline h-3.5 w-3.5" /> : <Plus className="mr-1 inline h-3.5 w-3.5" />}{n}
+                            </button>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            <section data-tour="prod-list">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{text ? `Resultados (${choices.length})` : `Catálogo (${catalog.length})`}</p>
+                {catalog.length === 0 ? (
+                    <div className="rounded-2xl border p-4 text-sm text-muted-foreground">
+                        O catálogo está vazio. <Link href="/catalog" className="text-primary underline">Adicione os produtos no Catálogo</Link> primeiro.
+                    </div>
+                ) : choices.length === 0 ? (
+                    <p className="rounded-2xl border p-4 text-sm text-muted-foreground">Nenhum produto do catálogo com esse nome.</p>
+                ) : (
+                    <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
+                        {choices.map((c) => isFamilyGroup(c) ? (
+                            <li key={`f-${c.key}`} className="px-4 py-3" data-tour="prod-family">
+                                <p className="font-medium">{c.group} <span className="text-xs font-normal text-muted-foreground">· {c.members.length} variações — escolha</span></p>
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {c.members.map((m) => (
+                                        <button key={m.name} type="button" onClick={() => add(m.name)} aria-label={`Juntar ${m.name}`}
+                                            className={cn("rounded-full border px-3 py-1 text-sm", inList.has(m.name) ? "border-primary bg-primary/10 font-medium" : "hover:border-primary/60")}>
+                                            {inList.has(m.name) && <Check className="mr-1 inline h-3.5 w-3.5" />}{variantLabel(m)}
+                                        </button>
+                                    ))}
                                 </div>
-                                {isMultiLocation && (
-                                    <FormField
-                                        control={form.control}
-                                        name="location"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Localização de Fabrico</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Selecione uma localização" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {locations.map((location: Location) => (
-                                                            <SelectItem key={location.id} value={location.id}>
-                                                                {location.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                )}
-                            </div>
-                        </div>
+                            </li>
+                        ) : (
+                            <li key={c.name}>
+                                <button type="button" onClick={() => add(c.name)} className={cn("flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-muted/50", inList.has(c.name) && "bg-primary/5")}>
+                                    <span className="min-w-0 flex-1 truncate font-medium">{c.name}</span>
+                                    <span className="text-xs text-muted-foreground">{c.unit || "un"}</span>
+                                    {inList.has(c.name) ? <Check className="h-5 w-5 shrink-0 text-primary" /> : <Plus className="h-5 w-5 shrink-0 text-muted-foreground" />}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </section>
 
-                        <div className="flex flex-col sm:flex-row items-center gap-3 pt-6 border-t border-border">
-                            <Button type="button" variant="outline" className="w-full sm:w-auto h-12" onClick={() => router.push(backHref)}>
-                                Cancelar
-                            </Button>
-                            <Button type="submit" className="w-full sm:w-auto h-12 px-8 bg-emerald-600 hover:bg-emerald-700 text-white" disabled={isSubmitDisabled}>
-                                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Salvar Registo e Sair
-                            </Button>
-                        </div>
-                    </form>
-                </Form>
-            </Card>
+            <div className="fixed inset-x-0 bottom-16 z-30 px-4 md:bottom-4 md:left-auto md:right-6 md:w-[28rem] md:px-0">
+                <Button type="button" onClick={submit} disabled={!valid.length || busy || isReadOnly || !dateOk}
+                    className="h-14 w-full rounded-2xl bg-emerald-600 text-base text-white shadow-xl hover:bg-emerald-700" data-tour="prod-submit">
+                    {busy ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Factory className="mr-2 h-5 w-5" />}
+                    {busy ? "A registar…" : valid.length ? `Registar ${valid.length} ${valid.length === 1 ? "produção" : "produções"} (${dateLabel(day)})` : "Escolha os produtos"}
+                </Button>
+            </div>
         </div>
     );
 }

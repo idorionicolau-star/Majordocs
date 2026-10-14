@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
+import { todayMz } from '@/lib/production-core';
 import type { Product, Production, ProductionLog, StockMovement, RawMaterial } from '@/lib/types';
 import { collection, doc, getDocs, query, where, runTransaction, getDoc, serverTimestamp, arrayUnion, DocumentReference, limit } from 'firebase/firestore';
 import { ref } from "firebase/storage";
@@ -15,20 +16,27 @@ export function useProductionActions(core: InventoryCore) {
   const { assertOnline, isReadOnly, toast, firestore, companyId, user, isMultiLocation, locations, recipesData, catalogProductsData, addNotification, productsData, ordersData, productionsCollectionRef, productionsData } = core;
 
 
-  const addProduction = useCallback(async (prodData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'>) => {
+  /**
+   * Regista uma produção: o produto entra no stock e a matéria-prima da receita é descontada, numa transacção.
+   * `date` (AAAA-MM-DD): o dia em que foi produzida (ex.: ontem); por defeito, hoje. `silent`: sem avisos nem
+   * notificação (a página de produção regista vários de seguida e mostra um resumo). Erros são lançados.
+   */
+  const addProduction = useCallback(async (prodData: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'> & { date?: string }, opts: { silent?: boolean } = {}) => {
     assertOnline('registar a produção');
     if (isReadOnly) {
-      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
-      return;
+      if (!opts.silent) toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      throw new Error('Conta em modo leitura.');
     }
     if (!firestore || !companyId || !user) throw new Error("Contexto não pronto.");
 
     const { productName, quantity, location, orderId, unit } = prodData;
     if (!Number.isFinite(Number(quantity)) || Number(quantity) <= 0) {
       const description = 'A quantidade produzida tem de ser maior que zero.';
-      toast({ variant: 'destructive', title: 'Quantidade inválida', description });
+      if (!opts.silent) toast({ variant: 'destructive', title: 'Quantidade inválida', description });
       throw new Error(description);
     }
+    const today = todayMz(); // dia de Maputo (à meia-noite e meia já é o dia seguinte, não o de UTC)
+    const prodDate = prodData.date && /^\d{4}-\d{2}-\d{2}$/.test(prodData.date) && prodData.date <= today ? prodData.date : today;
     const targetLocation = location || (isMultiLocation && locations.length > 0 ? locations[0].id : 'Principal');
 
     // 1. Move product lookup OUTSIDE the transaction because transactions don't support queries
@@ -111,7 +119,7 @@ export function useProductionActions(core: InventoryCore) {
 
         // 7. Create Production Record
         const newProduction: any = {
-          date: new Date().toISOString().split('T')[0],
+          date: prodDate,
           productName: productName || 'Produto Desconhecido',
           quantity: Number(quantity) || 0,
           unit: unit || 'un',
@@ -136,7 +144,7 @@ export function useProductionActions(core: InventoryCore) {
           type: 'IN',
           quantity,
           toLocationId: targetLocation,
-          reason: `Produção: ${quantity} ${unit || 'un'}`,
+          reason: `Produção: ${quantity} ${unit || 'un'}${prodDate !== today ? ` (produzido a ${prodDate.split('-').reverse().join('/')})` : ''}`,
           userId: user.id,
           userName: user.username,
         };
@@ -145,7 +153,7 @@ export function useProductionActions(core: InventoryCore) {
       }); // End Transaction
 
 
-      addNotification({
+      if (!opts.silent) addNotification({
         type: 'production',
         message: `Produção de ${quantity} ${unit || 'un'} de ${productName} registada e stock atualizado.`,
         href: '/production',
@@ -153,7 +161,7 @@ export function useProductionActions(core: InventoryCore) {
 
     } catch (e: any) {
       console.error("Production error:", e);
-      toast({ variant: 'destructive', title: 'Erro na Produção', description: e.message });
+      if (!opts.silent) toast({ variant: 'destructive', title: 'Erro na Produção', description: e.message });
       throw e; // Re-throw so the dialog knows to stay open or handle error
     }
   }, [firestore, companyId, user, addNotification, recipesData, productsData, catalogProductsData, isMultiLocation, locations, toast]);
