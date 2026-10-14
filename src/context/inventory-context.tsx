@@ -27,7 +27,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const { addSale, addBulkSale, confirmSalePickup, deleteSale, recalculateReservedStock } = salesActions;
   const { pendingOfflineSales, syncOfflineSales } = useOfflineSync(core, { product_actions: productActions });
   const productionActions = useProductionActions(core);
-  const { addProduction, addProductionLog, deleteProduction, updateProduction, restoreProduction } = productionActions;
+  const { addProduction, addProductionLog, deleteProduction, updateProduction, restoreProduction, editProduction } = productionActions;
   const orderActions = useOrderActions(core);
   const { deleteOrder, finalizeOrder } = orderActions;
   const settingsActions = useSettingsActions(core);
@@ -178,7 +178,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     chatHistory, setChatHistory,
     addProduct, updateProduct: updateProductEverywhere, deleteProduct,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, addBulkSale, confirmSalePickup, addProductionLog,
-    addProduction, updateProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
+    addProduction, updateProduction, editProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
     clearProductsCollection,
     mergeProducts, renameProduct, mergeIntoVariant,
     restoreItem,
@@ -216,7 +216,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     chatHistory, setChatHistory,
     addProduct, updateProductEverywhere, deleteProduct,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, addBulkSale, confirmSalePickup, addProductionLog,
-    addProduction, updateProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
+    addProduction, updateProduction, editProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
     clearProductsCollection,
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
     recalculateReservedStock, pendingOfflineSales, syncOfflineSales,

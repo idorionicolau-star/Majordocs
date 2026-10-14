@@ -19,7 +19,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
-import { EditProductionDialog } from "./edit-production-dialog";
+import { ProductionEditor } from "./production-editor";
 import { ProductionDateEdit } from "./production-date-edit";
 
 
@@ -56,7 +56,7 @@ export function ProductionCard({ production, onTransfer, onDelete, onUpdate, vie
                     </div>
                     {canEdit && (
                         <div className="flex items-center gap-1">
-                            {!isTransferred && <EditProductionDialog production={production} onUpdate={onUpdate} />}
+                            <ProductionEditor production={production} />
                             <AlertDialog>
                                 <TooltipProvider>
                                     <Tooltip>
@@ -115,6 +115,14 @@ export function ProductionCard({ production, onTransfer, onDelete, onUpdate, vie
                         <User size={12} />
                         <span>{production.registeredBy}</span>
                     </div>
+                    {!isCondensed && production.materialsUsed && production.materialsUsed.length > 0 && (
+                        <p className="text-center text-[11px]" data-tour="prod-card-materials">
+                            Gastou: {production.materialsUsed.map((m) => `${m.quantity} ${m.unit || ""} ${m.name}`.replace(/\s+/g, " ").trim()).join(", ")}
+                        </p>
+                    )}
+                    {!isCondensed && production.notes && (
+                        <p className="line-clamp-3 rounded bg-amber-500/10 px-2 py-1 text-left text-[11px] text-foreground" title={production.notes} data-tour="prod-card-notes">📝 {production.notes}</p>
+                    )}
                 </div>
             </CardContent>
             {canEdit && <CardFooter className="flex justify-center gap-1 sm:gap-2 p-1 sm:p-2 pt-2">

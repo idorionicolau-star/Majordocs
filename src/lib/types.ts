@@ -242,6 +242,21 @@ export type Production = {
   orderId?: string;
   deletedAt?: string;
   deletedBy?: string;
+  /** Notas livres (ex.: "foram usados 3 sacos, faltou água"). */
+  notes?: string;
+  /** Matéria-prima realmente gasta (pré-preenchida pela receita, corrigível). Apagar/editar usa estes valores. */
+  materialsUsed?: { rawMaterialId: string; name: string; quantity: number; unit?: string }[];
+};
+
+/** Edição de uma produção já registada (ver editProduction). */
+export type ProductionEdit = {
+  productName: string;
+  quantity: number;
+  unit?: string;
+  date: string;
+  location?: string;
+  notes?: string;
+  materialsUsed: { rawMaterialId: string; name: string; quantity: number; unit?: string }[];
 };
 
 export type ProductionLog = {
@@ -437,6 +452,7 @@ export interface InventoryContextType {
   deleteSale: (saleId: string) => void;
   addProductionLog: (orderId: string, logData: { quantity: number; notes?: string; }) => void;
   addProduction: (data: Omit<Production, 'id' | 'date' | 'registeredBy' | 'status'> & { date?: string }, opts?: { silent?: boolean }) => Promise<void>;
+  editProduction: (productionId: string, data: ProductionEdit) => Promise<void>;
   updateProduction: (productionId: string, data: Partial<Production>) => void;
   deleteProduction: (productionId: string) => void;
   deleteOrder: (orderId: string) => void;

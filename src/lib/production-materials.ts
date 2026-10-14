@@ -1,7 +1,8 @@
 // Matéria-prima gasta (ou devolvida) por uma produção, dentro de uma transacção do Firestore.
 // Usado por todos os caminhos que põem produto no stock, para nenhum deixar a matéria-prima por descontar.
 import { doc, type DocumentReference, type Firestore, type Transaction } from 'firebase/firestore';
-import type { RawMaterial, Recipe } from '@/lib/types';
+import type { Production, RawMaterial, Recipe } from '@/lib/types';
+import { cleanMaterials, recipeMaterials, type MaterialLine } from '@/lib/production-core';
 import { ingredientRequiredQty } from '@/lib/order-stock';
 import { nameKey } from '@/lib/catalog-view';
 
@@ -37,4 +38,22 @@ export function assertMaterialEnough(uses: MaterialUse[]) {
 /** ESCREVER: desconta (sign -1) ou devolve (sign +1) a matéria-prima. */
 export function applyMaterialUse(transaction: Transaction, uses: MaterialUse[], sign: 1 | -1) {
     for (const u of uses) transaction.update(u.ref, { stock: Math.max(0, (u.data.stock || 0) + sign * u.qty) });
+}
+
+/** A matéria-prima de uma produção: a que ficou registada; nas antigas (sem registo), a da receita. */
+export function productionMaterials(prod: Pick<Production, 'productName' | 'quantity' | 'materialsUsed'>, recipes: Recipe[] | undefined, raw: RawMaterial[] = []): MaterialLine[] {
+    if (Array.isArray(prod.materialsUsed)) return cleanMaterials(prod.materialsUsed);
+    return recipeMaterials(findRecipe(recipes, prod.productName), prod.quantity, raw);
+}
+
+/** LER: os documentos das matérias-primas de uma lista (a quantidade de cada `MaterialUse` é a da linha). */
+export async function readMaterialLines(transaction: Transaction, firestore: Firestore, companyId: string, lines: MaterialLine[]): Promise<MaterialUse[]> {
+    const uses: MaterialUse[] = [];
+    for (const l of cleanMaterials(lines)) {
+        const ref = doc(firestore, `companies/${companyId}/rawMaterials`, l.rawMaterialId);
+        const snap = await transaction.get(ref);
+        if (!snap.exists()) throw new Error(`A matéria-prima "${l.name}" já não existe.`);
+        uses.push({ ref, data: snap.data() as RawMaterial, qty: l.quantity });
+    }
+    return uses;
 }

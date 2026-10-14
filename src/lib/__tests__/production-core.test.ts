@@ -48,3 +48,35 @@ describe('Produção: escolher no catálogo', () => {
         expect(mostProduced(prods, new Set(catalog.map((c) => c.name)), 6, now)).toEqual(['Bloco 15', 'Lancil']);
     });
 });
+
+import { cleanMaterials, materialDelta, recipeMaterials } from '@/lib/production-core';
+
+describe('Produção: matéria-prima usada', () => {
+    const recipe = { ingredients: [
+        { rawMaterialId: 'cim', rawMaterialName: 'Cimento', quantity: 1, yieldPerUnit: 75 },
+        { rawMaterialId: 'are', rawMaterialName: 'Areia', quantity: 0.02 },
+    ] };
+    it('a receita dá o ponto de partida (sacos arredondados para cima)', () => {
+        expect(recipeMaterials(recipe, 150, [{ id: 'cim', unit: 'saco' }])).toEqual([
+            { rawMaterialId: 'cim', name: 'Cimento', quantity: 2, unit: 'saco' },
+            { rawMaterialId: 'are', name: 'Areia', quantity: 3, unit: undefined },
+        ]);
+        expect(recipeMaterials(undefined, 10)).toEqual([]);
+    });
+    it('junta repetidas e tira as linhas a zero', () => {
+        expect(cleanMaterials([
+            { rawMaterialId: 'cim', name: 'Cimento', quantity: 2 },
+            { rawMaterialId: 'cim', name: 'Cimento', quantity: 1.5 },
+            { rawMaterialId: 'are', name: 'Areia', quantity: 0 },
+            { rawMaterialId: '', name: 'x', quantity: 4 },
+        ])).toEqual([{ rawMaterialId: 'cim', name: 'Cimento', quantity: 3.5 }]);
+    });
+    it('ao editar: o que volta e o que sai a mais', () => {
+        const d = materialDelta(
+            [{ rawMaterialId: 'cim', name: 'Cimento', quantity: 2 }, { rawMaterialId: 'are', name: 'Areia', quantity: 3 }],
+            [{ rawMaterialId: 'cim', name: 'Cimento', quantity: 3 }, { rawMaterialId: 'cal', name: 'Cal', quantity: 1 }],
+        );
+        expect(Object.fromEntries(d)).toEqual({ cim: -1, are: 3, cal: -1 });
+        expect(materialDelta([{ rawMaterialId: 'cim', name: 'C', quantity: 2 }], [{ rawMaterialId: 'cim', name: 'C', quantity: 2 }]).size).toBe(0);
+    });
+});
