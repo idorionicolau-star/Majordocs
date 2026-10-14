@@ -85,3 +85,18 @@ export function saleOnDay(date: unknown, day: string): boolean {
     if (isNaN(t)) return false;
     return new Date(t + 2 * 3600_000).toISOString().slice(0, 10) === day;
 }
+
+/**
+ * Horas a que o relatório pode sair (Maputo). Cada uma tem um cron diário em vercel.json (`?slot=HH:MM`); no plano
+ * Hobby da Vercel o cron corre algures dentro dessa hora UTC, por isso o email diz sempre "até às HH:MM".
+ */
+export const REPORT_TIMES = ['17:30', '18:30', '19:30', '20:30', '21:30', '22:30'] as const;
+export type ReportTime = (typeof REPORT_TIMES)[number];
+export const DEFAULT_REPORT_TIME: ReportTime = '21:30';
+
+/** A hora escolhida pela empresa (ou a padrão, se não escolheu ou o valor não serve). */
+export const reportTime = (v: unknown): ReportTime =>
+    (REPORT_TIMES as readonly string[]).includes(String(v)) ? (v as ReportTime) : DEFAULT_REPORT_TIME;
+
+/** "21:30" → "21h30" para mostrar. */
+export const reportTimeLabel = (t: string) => t.replace(':', 'h');

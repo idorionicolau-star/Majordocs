@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { criticalProducts, escapeHtml, topProducts } from '@/lib/daily-report';
-import { reportDay, saleOnDay } from '@/lib/daily-report';
+import { DEFAULT_REPORT_TIME, REPORT_TIMES, reportDay, reportTime, reportTimeLabel, saleOnDay } from '@/lib/daily-report';
+import vercel from '../../../vercel.json';
 
 describe('Relatório do dia: mais vendidos', () => {
     it('soma por produto e ordena por quantidade (empate: valor)', () => {
@@ -67,5 +68,24 @@ describe('reportDay / saleOnDay (o dia de Maputo, como o Financeiro)', () => {
 
     it('logo depois da meia-noite já é o dia seguinte', () => {
         expect(reportDay(new Date('2026-10-14T22:30:00.000Z')).day).toBe('2026-10-15');
+    });
+});
+
+describe('Hora do relatório', () => {
+    it('sem escolha (ou valor estranho) é 21:30', () => {
+        expect(DEFAULT_REPORT_TIME).toBe('21:30');
+        expect(reportTime(undefined)).toBe('21:30');
+        expect(reportTime('03:00')).toBe('21:30');
+        expect(reportTime('18:30')).toBe('18:30');
+        expect(reportTimeLabel('21:30')).toBe('21h30');
+    });
+
+    it('cada hora tem o seu cron em vercel.json, à hora certa de Maputo (UTC+2)', () => {
+        const crons = vercel.crons.filter((c) => c.path.startsWith('/api/cron/end-of-day'));
+        expect(crons.map((c) => c.path.split('slot=')[1]).sort()).toEqual([...REPORT_TIMES].sort());
+        for (const c of crons) {
+            const [h, m] = c.path.split('slot=')[1].split(':').map(Number);
+            expect(c.schedule).toBe(`${m} ${h - 2} * * *`);
+        }
     });
 });

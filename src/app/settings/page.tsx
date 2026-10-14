@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { countEvery, DEFAULT_COUNT_EVERY_DAYS } from "@/lib/followups-core";
+import { REPORT_TIMES, reportTime, reportTimeLabel, type ReportTime } from "@/lib/daily-report";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PushSettingsCard } from "@/components/push-notifications";
 import {
@@ -258,6 +259,7 @@ export default function SettingsPage() {
     countEveryDays: DEFAULT_COUNT_EVERY_DAYS,
     emailTips: true,
     notificationSettings: {
+      endOfDayTime: reportTime(undefined) as ReportTime,
       emails: [] as {
         email: string;
         onSale: boolean;
@@ -322,6 +324,7 @@ export default function SettingsPage() {
         countEveryDays: countEvery(companyData.countEveryDays),
         emailTips: companyData.emailTips !== false,
         notificationSettings: {
+          endOfDayTime: reportTime(companyData.notificationSettings?.endOfDayTime),
           emails: companyData.notificationSettings?.emails || (
             companyData.notificationSettings?.email ? [{
               email: companyData.notificationSettings.email,
@@ -769,6 +772,22 @@ export default function SettingsPage() {
                           <Button type="button" variant="outline" size="sm" onClick={addEmailSetting}>
                             + Adicionar E-mail
                           </Button>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4 bg-card" data-tour="eod-time">
+                          <div className="min-w-[12rem] flex-1">
+                            <Label htmlFor="endOfDayTime" className="text-sm">Hora do Relatório Fecho do Dia</Label>
+                            <p className="text-xs text-muted-foreground">Conta as vendas de hoje até essa hora, iguais ao Financeiro. O envio pode variar uns 30 minutos.</p>
+                          </div>
+                          <Select
+                            value={companyDetails.notificationSettings.endOfDayTime}
+                            onValueChange={(v) => setCompanyDetails(prev => ({ ...prev, notificationSettings: { ...prev.notificationSettings, endOfDayTime: reportTime(v) } }))}
+                          >
+                            <SelectTrigger id="endOfDayTime" className="w-32" aria-label="Hora do relatório"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {REPORT_TIMES.map((t) => <SelectItem key={t} value={t}>{reportTimeLabel(t)}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
                         </div>
 
                         {(!companyDetails?.notificationSettings?.emails || companyDetails.notificationSettings.emails.length === 0) ? (
