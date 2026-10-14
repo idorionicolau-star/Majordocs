@@ -1,19 +1,19 @@
 'use client';
 
 import { useCallback } from 'react';
-import { todayMz } from '@/lib/production-core';
-import type { Product, Production, ProductionLog, StockMovement, RawMaterial } from '@/lib/types';
+import { cleanMaterials, materialDelta, recipeMaterials, todayMz, validProductionDate } from '@/lib/production-core';
+import type { Product, Production, ProductionEdit, ProductionLog, StockMovement, RawMaterial } from '@/lib/types';
 import { collection, doc, getDocs, query, where, runTransaction, getDoc, serverTimestamp, arrayUnion, DocumentReference, limit } from 'firebase/firestore';
 import { ref } from "firebase/storage";
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { InventoryCore } from './core';
-import { locationIn, pickActive, resolveInventoryProductRef } from '@/lib/product-ref';
+import { locationIn, pickActive, resolveInventoryProductRef, sameLocation } from '@/lib/product-ref';
 import { ingredientRequiredQty } from '@/lib/order-stock';
-import { applyMaterialUse, assertMaterialEnough, findRecipe, readMaterialUse } from '@/lib/production-materials';
+import { applyMaterialUse, assertMaterialEnough, findRecipe, productionMaterials, readMaterialLines, readMaterialUse } from '@/lib/production-materials';
 import { isProductionInStock } from '@/lib/production';
 
 export function useProductionActions(core: InventoryCore) {
-  const { assertOnline, isReadOnly, toast, firestore, companyId, user, isMultiLocation, locations, recipesData, catalogProductsData, addNotification, productsData, ordersData, productionsCollectionRef, productionsData } = core;
+  const { assertOnline, isReadOnly, toast, firestore, companyId, user, isMultiLocation, locations, recipesData, catalogProductsData, addNotification, productsData, ordersData, productionsCollectionRef, productionsData, rawMaterialsData } = core;
 
 
   /**
@@ -53,45 +53,19 @@ export function useProductionActions(core: InventoryCore) {
         const productDocRef = existingProductId ? doc(productsRef, existingProductId) : doc(productsRef);
         const pDoc = await transaction.get(productDocRef);
 
-        // 3. Check for Recipe and Read all Raw Materials
-        const recipe = findRecipe(recipesData ?? undefined, productName);
-        const ingredientDocs: { ref: DocumentReference, data: RawMaterial, requiredQty: number }[] = [];
+        // 3. Matéria-prima: a que foi indicada (pode diferir da receita: sacos a mais, outro material) ou a da receita
+        const materialLines = Array.isArray(prodData.materialsUsed)
+          ? cleanMaterials(prodData.materialsUsed)
+          : recipeMaterials(findRecipe(recipesData ?? undefined, productName), quantity, rawMaterialsData || []);
+        const materialUses = await readMaterialLines(transaction, firestore, companyId, materialLines);
 
-        if (recipe) {
-          for (const ingredient of recipe.ingredients) {
-            const materialRef = doc(firestore, `companies/${companyId}/rawMaterials`, ingredient.rawMaterialId);
-            const materialDoc = await transaction.get(materialRef);
-
-            if (!materialDoc.exists()) {
-              throw new Error(`Matéria-prima não encontrada (ID: ${ingredient.rawMaterialId}) para a receita de ${productName}.`);
-            }
-
-            // 1 saco → 75 peças arredonda para cima (76 peças = 2 sacos); sem rendimento é linear
-            const requiredQty = ingredientRequiredQty(ingredient, quantity);
-
-            ingredientDocs.push({
-              ref: materialRef,
-              data: materialDoc.data() as RawMaterial,
-              requiredQty: requiredQty
-            });
-          }
-        }
-
-        // --- ALL VALIDATION AND CALCULATIONS ---
-
-        // 4. Validate Raw Material Stock
-        for (const ingDoc of ingredientDocs) {
-          if ((ingDoc.data.stock || 0) < ingDoc.requiredQty) {
-            throw new Error(`Stock insuficiente de ${ingDoc.data.name}. Necessário: ${ingDoc.requiredQty}, Disponível: ${ingDoc.data.stock}.`);
-          }
-        }
+        // 4. Recusa se faltar matéria-prima
+        assertMaterialEnough(materialUses);
 
         // --- ALL WRITES MUST COME LAST ---
 
-        // 5. Update Raw Materials
-        for (const ingDoc of ingredientDocs) {
-          transaction.update(ingDoc.ref, { stock: ingDoc.data.stock - ingDoc.requiredQty });
-        }
+        // 5. Desconta a matéria-prima
+        applyMaterialUse(transaction, materialUses, -1);
 
         // 6. Update/Create Product Stock
         if (pDoc.exists()) {
@@ -126,6 +100,9 @@ export function useProductionActions(core: InventoryCore) {
           registeredBy: user.username || 'Desconhecido',
           status: 'Transferido', // já entrou no stock nesta mesma transacção
           location: targetLocation || 'Principal',
+          // o que foi realmente gasto: apagar ou editar depois devolve exactamente isto
+          materialsUsed: materialLines,
+          ...(prodData.notes && prodData.notes.trim() ? { notes: prodData.notes.trim().slice(0, 1000) } : {}),
         };
 
         // Explicitly include orderId ONLY if it has a valid string value
@@ -164,7 +141,7 @@ export function useProductionActions(core: InventoryCore) {
       if (!opts.silent) toast({ variant: 'destructive', title: 'Erro na Produção', description: e.message });
       throw e; // Re-throw so the dialog knows to stay open or handle error
     }
-  }, [firestore, companyId, user, addNotification, recipesData, productsData, catalogProductsData, isMultiLocation, locations, toast]);
+  }, [firestore, companyId, user, addNotification, recipesData, rawMaterialsData, productsData, catalogProductsData, isMultiLocation, locations, toast]);
 
 
   const addProductionLog = useCallback(async (orderId: string, logData: { quantity: number; notes?: string }) => {
@@ -245,7 +222,9 @@ export function useProductionActions(core: InventoryCore) {
           location: orderToUpdate.location,
           registeredBy: user.username || 'Desconhecido',
           status: 'Concluído',
-          orderId: orderId
+          orderId: orderId,
+          materialsUsed: ingredientDocs.map((g) => ({ rawMaterialId: g.ref.id, name: g.data.name, quantity: g.requiredQty, unit: g.data.unit })),
+          ...(logData.notes && logData.notes.trim() ? { notes: logData.notes.trim().slice(0, 1000) } : {}),
         };
         transaction.set(doc(productionsRef), newProduction);
 
@@ -339,7 +318,8 @@ export function useProductionActions(core: InventoryCore) {
       const p = pSnap.data() as Product;
       const orderRef = prod.orderId && order ? doc(firestore, `companies/${companyId}/orders`, prod.orderId) : null;
       const oSnap = orderRef ? await transaction.get(orderRef) : null;
-      const materials = await readMaterialUse(transaction, firestore, companyId, recipesData ?? undefined, prod.productName, prod.quantity);
+      // a matéria-prima que esta produção gastou (a registada; nas antigas, a da receita)
+      const materials = await readMaterialLines(transaction, firestore, companyId, productionMaterials(prod, recipesData ?? undefined, rawMaterialsData || []));
 
       if (undo && (p.stock || 0) < prod.quantity) {
         throw new Error(`Não dá para apagar: o stock atual de ${prod.productName} (${p.stock || 0}) é menor do que o que esta produção acrescentou (${prod.quantity}). Já foi vendido ou movido.`);
@@ -365,7 +345,7 @@ export function useProductionActions(core: InventoryCore) {
         timestamp: serverTimestamp(),
       });
     });
-  }, [firestore, companyId, user, productionsCollectionRef, ordersData, isMultiLocation, locations, recipesData]);
+  }, [firestore, companyId, user, productionsCollectionRef, ordersData, isMultiLocation, locations, recipesData, rawMaterialsData]);
 
   const deleteProduction = useCallback(async (productionId: string) => {
     if (isReadOnly) {
@@ -400,7 +380,120 @@ export function useProductionActions(core: InventoryCore) {
     updateDocumentNonBlocking(docRef, data);
     toast({ title: 'Registo de Produção Atualizado' });
   }, [productionsCollectionRef, toast]);
-  return { addProduction, addProductionLog, deleteProduction, restoreProduction, updateProduction };
+  /**
+   * Edita tudo numa produção já registada (produto, quantidade, data, local, notas, matéria-prima usada) e acerta o
+   * stock pela diferença, numa transacção: o produto antigo perde o que esta produção lhe deu e o novo ganha a nova
+   * quantidade; cada matéria-prima volta ou sai conforme o que mudou. Recusa se o stock já não chegar (já vendido).
+   * Produção de encomenda: o produto e o local não mudam (a encomenda é desse produto).
+   */
+  const editProduction = useCallback(async (productionId: string, data: ProductionEdit) => {
+    assertOnline('editar a produção');
+    if (isReadOnly) throw new Error('Conta em modo leitura.');
+    if (!firestore || !companyId || !user || !productionsCollectionRef) throw new Error('Contexto não pronto.');
+    const qty = Number(data.quantity);
+    if (!Number.isFinite(qty) || qty <= 0) throw new Error('A quantidade tem de ser maior que zero.');
+    if (!validProductionDate(data.date)) throw new Error('Escolha um dia até hoje (no máximo um ano atrás).');
+    const productName = (data.productName || '').trim();
+    if (!productName) throw new Error('Escolha o produto.');
+
+    const prodRef = doc(productionsCollectionRef, productionId);
+    const prodSnap = await getDoc(prodRef);
+    if (!prodSnap.exists()) throw new Error('Esta produção já não existe.');
+    const prod = prodSnap.data() as Production;
+    const defaultLoc = (isMultiLocation ? locations[0]?.id : 'Principal') || 'Principal';
+    const oldLoc = prod.location || defaultLoc;
+    const newLoc = (isMultiLocation ? data.location : undefined) || oldLoc;
+    if (prod.orderId && (productName !== prod.productName || !sameLocation(oldLoc, newLoc))) {
+      throw new Error('Esta produção é de uma encomenda: o produto e o local não podem mudar (apague-a e registe de novo, se preciso).');
+    }
+    const newLines = cleanMaterials(data.materialsUsed || []);
+    const oldLines = productionMaterials(prod, recipesData ?? undefined, rawMaterialsData || []);
+    const unit = data.unit || prod.unit || 'un';
+    const notes = (data.notes || '').trim().slice(0, 1000);
+    const fields = { productName, quantity: qty, unit, date: data.date, location: newLoc, notes, materialsUsed: newLines };
+
+    const order = prod.orderId ? ordersData?.find(o => o.id === prod.orderId) : undefined;
+    // não entrou no stock (registo antigo) ou a encomenda já foi entregue: só o registo muda
+    if (!isProductionInStock(prod) || order?.status === 'Entregue') {
+      await updateDocumentNonBlocking(prodRef, fields);
+      return;
+    }
+
+    const oldRef = await resolveInventoryProductRef(firestore, companyId, { productName: prod.productName, location: oldLoc });
+    if (!oldRef) throw new Error(`O produto "${prod.productName}" já não existe no inventário: não dá para corrigir esta produção.`);
+    const sameProduct = productName === prod.productName && sameLocation(oldLoc, newLoc);
+    const productsRef = collection(firestore, `companies/${companyId}/products`);
+    const foundNew = sameProduct ? oldRef : await resolveInventoryProductRef(firestore, companyId, { productName, location: newLoc });
+    const newRef = foundNew || doc(productsRef);
+    const delta = materialDelta(oldLines, newLines);
+    const nameOf = new Map([...oldLines, ...newLines].map((l) => [l.rawMaterialId, l.name]));
+    const now = new Date().toISOString();
+
+    await runTransaction(firestore, async (transaction) => {
+      // --- LER ---
+      const oldSnap = await transaction.get(oldRef);
+      if (!oldSnap.exists()) throw new Error(`O produto "${prod.productName}" já não existe no inventário.`);
+      const newSnap = !sameProduct && foundNew ? await transaction.get(newRef) : null;
+      const orderRef = prod.orderId && order ? doc(firestore, `companies/${companyId}/orders`, prod.orderId) : null;
+      const oSnap = orderRef ? await transaction.get(orderRef) : null;
+      const mats: { ref: DocumentReference; stock: number; d: number; name: string }[] = [];
+      for (const [id, d] of delta) {
+        const ref = doc(firestore, `companies/${companyId}/rawMaterials`, id);
+        const snap = await transaction.get(ref);
+        if (!snap.exists()) {
+          if (d > 0) continue; // devolver a uma matéria-prima apagada: nada a fazer
+          throw new Error(`A matéria-prima "${nameOf.get(id) || id}" já não existe.`);
+        }
+        mats.push({ ref, stock: Number(snap.get('stock')) || 0, d, name: snap.get('name') || nameOf.get(id) || id });
+      }
+
+      // --- VALIDAR ---
+      const oldStock = Number(oldSnap.get('stock')) || 0;
+      if (sameProduct) {
+        if (oldStock + (qty - prod.quantity) < 0) throw new Error(`Não dá para baixar para ${qty}: o stock atual de ${prod.productName} (${oldStock}) já não chega — parte já foi vendida ou movida.`);
+      } else if (oldStock < prod.quantity) {
+        throw new Error(`Não dá para mudar o produto: o stock atual de ${prod.productName} (${oldStock}) é menor do que esta produção lhe deu (${prod.quantity}).`);
+      }
+      for (const m of mats) if (m.stock + m.d < 0) throw new Error(`Stock insuficiente de ${m.name}. Precisa de mais ${-m.d}, há ${m.stock}.`);
+
+      // --- ESCREVER ---
+      const movementsRef = collection(firestore, `companies/${companyId}/stockMovements`);
+      const move = (productId: string, name: string, q: number, loc: string, reason: string) => transaction.set(doc(movementsRef), {
+        productId, productName: name, type: q >= 0 ? 'IN' : 'OUT', quantity: q,
+        ...(q >= 0 ? { toLocationId: loc } : { fromLocationId: loc }),
+        reason, userId: user.id, userName: user.username, timestamp: serverTimestamp(),
+      });
+      if (sameProduct) {
+        const dq = qty - prod.quantity;
+        if (dq !== 0) {
+          transaction.update(oldRef, { stock: oldStock + dq, lastUpdated: now });
+          move(oldRef.id, productName, dq, newLoc, `Produção corrigida: ${prod.quantity} → ${qty} ${unit}`);
+        }
+      } else {
+        transaction.update(oldRef, { stock: oldStock - prod.quantity, lastUpdated: now });
+        move(oldRef.id, prod.productName, -prod.quantity, oldLoc, `Produção corrigida: passou para ${productName}`);
+        if (newSnap?.exists()) {
+          transaction.update(newRef, { stock: (Number(newSnap.get('stock')) || 0) + qty, lastUpdated: now });
+        } else {
+          const cp = catalogProductsData?.find(p => p.name === productName);
+          transaction.set(newRef, {
+            name: productName, category: cp?.category || 'Geral', stock: qty, reservedStock: 0, price: cp?.price || 0,
+            location: newLoc, lastUpdated: now, unit: unit || cp?.unit || 'un',
+            lowStockThreshold: cp?.lowStockThreshold || 10, criticalStockThreshold: cp?.criticalStockThreshold || 5,
+            ...(cp?.variantGroup ? { variantGroup: cp.variantGroup, variantValues: cp.variantValues || {} } : {}),
+          });
+        }
+        move(newRef.id, productName, qty, newLoc, `Produção corrigida: era ${prod.productName}`);
+      }
+      for (const m of mats) transaction.update(m.ref, { stock: Math.max(0, m.stock + m.d) });
+      if (orderRef && oSnap?.exists() && qty !== prod.quantity) {
+        transaction.update(orderRef, { quantityProduced: Math.max(0, (Number(oSnap.get('quantityProduced')) || 0) + qty - prod.quantity) });
+      }
+      transaction.update(prodRef, { ...fields, editedAt: now, editedBy: user.username || user.id });
+    });
+  }, [assertOnline, isReadOnly, firestore, companyId, user, productionsCollectionRef, isMultiLocation, locations, recipesData, rawMaterialsData, ordersData, catalogProductsData]);
+
+  return { addProduction, addProductionLog, deleteProduction, restoreProduction, updateProduction, editProduction };
 }
 
 export type ProductionActions = ReturnType<typeof useProductionActions>;

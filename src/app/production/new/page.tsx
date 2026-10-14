@@ -3,19 +3,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, CalendarDays, Check, Factory, FlaskConical, Loader2, MapPin, Minus, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, Check, ChevronDown, Factory, FlaskConical, Loader2, MapPin, Minus, Plus, Search, StickyNote, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useInventory } from "@/context/inventory-context";
 import { useToast } from "@/hooks/use-toast";
 import { safeReturn } from "@/lib/deep-links";
 import { findRecipe } from "@/lib/production-materials";
-import { catalogChoices, dateLabel, mostProduced, todayMz, validProductionDate, yesterdayMz } from "@/lib/production-core";
+import { fromDrafts, MaterialsEditor, toDrafts, type MaterialDraft } from "@/components/production/materials-editor";
+import { Textarea } from "@/components/ui/textarea";
+import { catalogChoices, dateLabel, mostProduced, recipeMaterials, todayMz, validProductionDate, yesterdayMz } from "@/lib/production-core";
 import { clampQty } from "@/lib/transfer-core";
 import { isFamilyGroup, variantLabel } from "@/lib/variants";
 import { cn } from "@/lib/utils";
 
-type Item = { name: string; unit: string; qty: string };
+/** materials: undefined = segue a receita (acompanha a quantidade); depois de mexer, fica o que se escreveu. */
+type Item = { name: string; unit: string; qty: string; notes?: string; materials?: MaterialDraft[]; open?: boolean };
 
 /**
  * Registar produção, ao estilo da Venda Rápida: escolhe-se o dia (hoje, ontem ou outro), pesquisa-se no catálogo
@@ -26,7 +29,7 @@ type Item = { name: string; unit: string; qty: string };
 export default function NewProductionPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { catalogProducts, productions, recipes, locations, isMultiLocation, addProduction, canEdit, isReadOnly } = useInventory();
+    const { catalogProducts, productions, recipes, rawMaterials, locations, isMultiLocation, addProduction, canEdit, isReadOnly } = useInventory();
     const { toast } = useToast();
     const backHref = safeReturn(searchParams.get("voltar"), "/production", "/production");
 
@@ -80,6 +83,9 @@ export default function NewProductionPage() {
     const setQty = (name: string, qty: string) => setItems((list) => list.map((i) => (i.name === name ? { ...i, qty } : i)));
     const step = (name: string, d: number) => setItems((list) => list.map((i) => (i.name === name ? { ...i, qty: String(Math.max(0, (clampQty(i.qty, Number.MAX_SAFE_INTEGER) || 0) + d)) } : i)));
     const remove = (name: string) => setItems((list) => list.filter((i) => i.name !== name));
+    const patch = (name: string, p: Partial<Item>) => setItems((list) => list.map((i) => (i.name === name ? { ...i, ...p } : i)));
+    /** a matéria-prima da receita para esta quantidade */
+    const recipeFor = (it: Item) => recipeMaterials(findRecipe(recipes || undefined, it.name), clampQty(it.qty, Number.MAX_SAFE_INTEGER), rawMaterials || []);
 
     const submit = async () => {
         if (!valid.length || busy || !dateOk) return;
@@ -89,7 +95,11 @@ export default function NewProductionPage() {
         let done = 0;
         for (const it of valid) {
             try {
-                await addProduction({ productName: it.name, quantity: it.n, unit: it.unit, ...(isMultiLocation && location ? { location } : {}), date: day }, { silent: true });
+                await addProduction({
+                    productName: it.name, quantity: it.n, unit: it.unit, ...(isMultiLocation && location ? { location } : {}), date: day,
+                    ...(it.materials ? { materialsUsed: fromDrafts(it.materials) } : {}),
+                    ...(it.notes && it.notes.trim() ? { notes: it.notes } : {}),
+                }, { silent: true });
                 done++;
             } catch (e) {
                 failed.push({ name: it.name, error: e instanceof Error ? e.message : "erro" });
@@ -169,22 +179,38 @@ export default function NewProductionPage() {
                     <p className="mb-2 text-sm font-semibold">A registar ({items.length}) · {dateLabel(day)}{isMultiLocation && location ? ` · ${locName(location)}` : ""}</p>
                     <ul className="space-y-2">
                         {items.map((it) => {
-                            const recipe = findRecipe(recipes || undefined, it.name);
+                            const recipeLines = recipeFor(it);
+                            const mats = it.materials ?? toDrafts(recipeLines);
+                            const summary = mats.filter((m) => Number(String(m.qty).replace(",", ".")) > 0).map((m) => `${m.qty} ${m.unit || ""} ${m.name}`.replace(/\s+/g, " ").trim()).join(", ");
                             return (
-                                <li key={it.name} className="flex flex-wrap items-center gap-2 rounded-xl bg-background px-3 py-2">
-                                    <div className="min-w-[10rem] flex-1">
-                                        <p className="font-medium leading-snug">{it.name}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {it.unit}{recipe ? <> · <FlaskConical className="inline h-3 w-3" /> desconta {recipe.ingredients.map((g) => g.rawMaterialName).join(", ")}</> : ""}
-                                        </p>
+                                <li key={it.name} className="rounded-xl bg-background px-3 py-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <div className="min-w-[10rem] flex-1">
+                                            <p className="font-medium leading-snug">{it.name}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {it.unit}{summary ? <> · <FlaskConical className="inline h-3 w-3" /> gasta {summary}</> : ""}{it.notes ? <> · <StickyNote className="inline h-3 w-3" /> nota</> : ""}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Button type="button" size="icon" variant="outline" className="h-9 w-9" onClick={() => step(it.name, -1)} aria-label={`Menos ${it.name}`}><Minus className="h-4 w-4" /></Button>
+                                            <Input id={`pq-${it.name}`} inputMode="decimal" value={it.qty} onChange={(e) => setQty(it.name, e.target.value)} onFocus={(e) => e.target.select()}
+                                                aria-label={`Quantidade de ${it.name}`} className="h-9 w-24 text-center" />
+                                            <Button type="button" size="icon" variant="outline" className="h-9 w-9" onClick={() => step(it.name, 1)} aria-label={`Mais ${it.name}`}><Plus className="h-4 w-4" /></Button>
+                                            <Button type="button" size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground" onClick={() => remove(it.name)} aria-label={`Tirar ${it.name}`}><Trash2 className="h-4 w-4" /></Button>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <Button type="button" size="icon" variant="outline" className="h-9 w-9" onClick={() => step(it.name, -1)} aria-label={`Menos ${it.name}`}><Minus className="h-4 w-4" /></Button>
-                                        <Input id={`pq-${it.name}`} inputMode="decimal" value={it.qty} onChange={(e) => setQty(it.name, e.target.value)} onFocus={(e) => e.target.select()}
-                                            aria-label={`Quantidade de ${it.name}`} className="h-9 w-24 text-center" />
-                                        <Button type="button" size="icon" variant="outline" className="h-9 w-9" onClick={() => step(it.name, 1)} aria-label={`Mais ${it.name}`}><Plus className="h-4 w-4" /></Button>
-                                        <Button type="button" size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground" onClick={() => remove(it.name)} aria-label={`Tirar ${it.name}`}><Trash2 className="h-4 w-4" /></Button>
-                                    </div>
+                                    <button type="button" onClick={() => patch(it.name, { open: !it.open })} aria-expanded={!!it.open}
+                                        className="mt-1 flex items-center gap-1 text-xs font-medium text-primary" data-tour="prod-item-details">
+                                        <ChevronDown className={cn("h-3.5 w-3.5 transition", it.open && "rotate-180")} /> Matéria-prima e notas
+                                    </button>
+                                    {it.open && (
+                                        <div className="mt-2 space-y-3 border-t pt-3">
+                                            <MaterialsEditor value={mats} onChange={(v) => patch(it.name, { materials: v })} rawMaterials={rawMaterials || []}
+                                                recipe={recipeLines} onUseRecipe={() => patch(it.name, { materials: undefined })} />
+                                            <Textarea rows={2} value={it.notes || ""} onChange={(e) => patch(it.name, { notes: e.target.value })} maxLength={1000}
+                                                aria-label={`Notas de ${it.name}`} placeholder="Notas (ex.: foram usados 3 sacos; faltou água a meio)" />
+                                        </div>
+                                    )}
                                 </li>
                             );
                         })}
