@@ -46,6 +46,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Textarea } from '../ui/textarea';
 import { DatePicker } from '../ui/date-picker';
 import { Check, ChevronsUpDown, UserPlus } from 'lucide-react';
+import { paidAfterEdit } from '@/lib/sale-filters';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
@@ -180,18 +181,25 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
   const isManager = inventoryContext?.user?.role === 'Admin' || inventoryContext?.user?.role === 'Dono';
   const stockLocked = sale.status !== 'Pendente';
 
+  // o pago acompanha o novo total numa venda que estava paga por inteiro (o Financeiro e o relatório do dia contam o pago)
+  const paidPreview = paidAfterEdit(sale, totalValue, watchedAmountPaid, isFromOrder);
+  useEffect(() => {
+    if (!isFromOrder && form.getValues('amountPaid') !== paidPreview) form.setValue('amountPaid', paidPreview);
+  }, [isFromOrder, paidPreview, form]);
+
   function onSubmit(values: EditSaleFormValues) {
     const total = (values.unitPrice || 0) * (values.quantity || 0);
+    const paid = paidAfterEdit(sale, total, values.amountPaid, isFromOrder);
     onUpdateSale({
       ...sale,
       ...values,
       date: values.date.toISOString(),
       subtotal: total,
       totalValue: total,
-      amountPaid: values.amountPaid ?? 0,
+      amountPaid: paid,
       status: sale.status === 'Levantado'
         ? 'Levantado'
-        : ((values.amountPaid ?? 0) >= total ? 'Pago' : 'Pendente'),
+        : (paid >= total ? 'Pago' : 'Pendente'),
     });
     onOpenChange(false);
   }
@@ -402,7 +410,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
                 <FormDescription>
                   {isFromOrder
                     ? "Atualize este campo para registar pagamentos adicionais do cliente."
-                    : "Este valor não pode ser editado para este tipo de documento."
+                    : "Acompanha o total: uma venda paga por inteiro continua paga com o novo valor (também no Financeiro e no relatório do dia)."
                   }
                 </FormDescription>
                 <FormMessage />
