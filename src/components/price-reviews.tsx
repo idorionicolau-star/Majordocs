@@ -30,9 +30,11 @@ export type PriceReview = {
     resolvedAt?: string;
 };
 
+// As regras (priceReviews: isAdminOf) só deixam o Administrador ler. Antes contava também o Dono e quem edita os
+// Ajustes: a escuta era recusada e o Firestore rebentava ("INTERNAL ASSERTION FAILED (ca9)" → "Algo correu mal!").
 function useIsManager() {
-    const { user, canEdit } = useInventory();
-    return !!user && (user.role === "Admin" || user.role === "Dono" || canEdit("settings"));
+    const { user } = useInventory();
+    return !!user && user.role === "Admin";
 }
 
 /** Live list of price reviews for managers. */

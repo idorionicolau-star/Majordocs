@@ -74,7 +74,8 @@ function BillingInner() {
 
     // History (admins can read companies/{id}/payments)
     useEffect(() => {
-        if (!companyId || !isAdmin) return;
+        // o histórico de pagamentos só o Administrador pode ler (regras: isAdminOf); o Dono via a escuta recusada
+        if (!companyId || user?.role !== "Admin") return;
         const q = query(collection(firestore, `companies/${companyId}/payments`), orderBy("createdAt", "desc"), limit(20));
         return onSnapshot(q, (s) => setHistory(s.docs.map((d) => d.data() as Payment)), () => {});
     }, [firestore, companyId, isAdmin]);
