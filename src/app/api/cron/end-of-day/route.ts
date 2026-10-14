@@ -5,9 +5,8 @@ import { NextResponse } from 'next/server';
 import { initializeAdmin } from '@/lib/firebase-admin';
 import { Resend } from 'resend';
 import { formatCurrency } from '@/lib/utils';
-import { format, startOfDay, endOfDay } from 'date-fns';
-import { isCountableSale } from '@/lib/sale-filters';
-import { criticalProducts, escapeHtml, topProducts } from '@/lib/daily-report';
+import { isCountableSale, saleIncome } from '@/lib/sale-filters';
+import { criticalProducts, escapeHtml, reportDay, saleOnDay, topProducts } from '@/lib/daily-report';
 import { runFollowups } from '@/lib/followups-run';
 
 const APP_URL = 'https://stock.majorgroup.app';
@@ -25,13 +24,9 @@ export async function GET(req: Request) {
         const apiKey = process.env.RESEND_API_KEY;
         const resend = new Resend(apiKey);
 
-        // Obtém o horário exato de agora e subtrai 24 horas
+        // O dia de hoje em Maputo, da meia-noite até agora — igual ao "Hoje" do Financeiro
         const now = new Date();
-        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-
-        const startISO = yesterday.toISOString();
-        const endISO = now.toISOString();
-        const formattedDate = format(now, 'dd/MM/yyyy');
+        const { day, startISO, endISO, label: formattedDate } = reportDay(now);
 
         // Fetch all companies
         const companiesSnapshot = await db.collection('companies').get();
@@ -52,7 +47,7 @@ export async function GET(req: Request) {
                 const companyId = companyDoc.id;
 
                 const computeAndSend = async () => {
-                    // 1. Fetch Sales for the last 24h
+                    // 1. Vendas de hoje (as mesmas contas do Financeiro: isCountableSale + saleIncome)
                     const salesSnapshot = await db.collection(`companies/${companyId}/sales`)
                         .where('date', '>=', startISO)
                         .where('date', '<=', endISO)
@@ -64,9 +59,9 @@ export async function GET(req: Request) {
 
                     salesSnapshot.forEach(saleDoc => {
                         const sale = saleDoc.data();
-                        if (isCountableSale(sale as any)) {
+                        if (isCountableSale(sale as any) && saleOnDay(sale.date, day)) {
                             totalSalesCount++;
-                            totalSalesValue += (sale.amountPaid ?? (sale.totalValue || 0));
+                            totalSalesValue += saleIncome(sale as any);
                             countable.push(sale);
                         }
                     });
@@ -128,7 +123,7 @@ export async function GET(req: Request) {
                  📊 Relatório de Fecho do Dia
                </h2>
                <p>Olá,</p>
-               <p>Aqui está o resumo das atividades da sua empresa no dia <strong>${formattedDate}</strong>:</p>
+               <p>Aqui está o resumo das atividades da sua empresa no dia <strong>${formattedDate}</strong> (até às ${new Date(now.getTime() + 2 * 3600_000).toISOString().slice(11, 16)}):</p>
                
                <div style="background-color: ${accentColor}; border: 1px solid ${color}; padding: 16px; border-radius: 8px; margin: 20px 0;">
                  <p style="margin: 4px 0; font-size: 16px;"><strong>Vendas Realizadas:</strong> ${totalSalesCount}</p>

@@ -62,3 +62,26 @@ export function criticalProducts(products: ReportProduct[], locations: ReportLoc
 /** Texto seguro para pôr no HTML do email (nomes de produtos vêm dos utilizadores). */
 export const escapeHtml = (s: string) =>
     String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * O dia do relatório: o dia de calendário de Maputo (UTC+2), da meia-noite até agora — o mesmo "Hoje" do Financeiro.
+ * Antes eram "as últimas 24 horas", que juntavam as vendas da noite anterior.
+ */
+export function reportDay(now = new Date()) {
+    const day = new Date(now.getTime() + 2 * 3600_000).toISOString().slice(0, 10);
+    const [y, m, d] = day.split('-').map(Number);
+    const start = new Date(Date.UTC(y, m - 1, d) - 2 * 3600_000);
+    const end = new Date(start.getTime() + 86_400_000 - 1);
+    return { day, startISO: start.toISOString(), endISO: end.toISOString(), label: `${pad2(d)}/${pad2(m)}/${y}` };
+}
+
+/** A venda é deste dia de Maputo? Datas só com o dia ("2026-10-14") contam como esse dia, como no Financeiro. */
+export function saleOnDay(date: unknown, day: string): boolean {
+    if (typeof date !== 'string' || !date) return false;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date === day;
+    const t = new Date(date).getTime();
+    if (isNaN(t)) return false;
+    return new Date(t + 2 * 3600_000).toISOString().slice(0, 10) === day;
+}

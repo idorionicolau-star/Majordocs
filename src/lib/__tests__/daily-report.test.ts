@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { criticalProducts, escapeHtml, topProducts } from '@/lib/daily-report';
+import { reportDay, saleOnDay } from '@/lib/daily-report';
 
 describe('Relatório do dia: mais vendidos', () => {
     it('soma por produto e ordena por quantidade (empate: valor)', () => {
@@ -39,4 +40,32 @@ describe('Relatório do dia: stock crítico', () => {
 
 it('escapa HTML', () => {
     expect(escapeHtml('<b>"A" & \'B\'</b>')).toBe('&lt;b&gt;&quot;A&quot; &amp; &#39;B&#39;&lt;/b&gt;');
+});
+
+describe('reportDay / saleOnDay (o dia de Maputo, como o Financeiro)', () => {
+    // cron às 16:30 UTC = 18:30 em Maputo
+    const now = new Date('2026-10-14T16:30:00.000Z');
+
+    it('vai da meia-noite de Maputo até ao fim do dia', () => {
+        expect(reportDay(now)).toEqual({ day: '2026-10-14', startISO: '2026-10-13T22:00:00.000Z', endISO: '2026-10-14T21:59:59.999Z', label: '14/10/2026' });
+    });
+
+    it('não junta as vendas de ontem à noite', () => {
+        const { day } = reportDay(now);
+        expect(saleOnDay('2026-10-13T19:00:00.000Z', day)).toBe(false); // ontem 21:00 em Maputo
+        expect(saleOnDay('2026-10-13T21:59:59.000Z', day)).toBe(false);
+        expect(saleOnDay('2026-10-13T22:00:00.000Z', day)).toBe(true); // hoje 00:00
+        expect(saleOnDay('2026-10-14T15:59:00.000Z', day)).toBe(true); // hoje 17:59
+    });
+
+    it('datas só com o dia contam como esse dia', () => {
+        expect(saleOnDay('2026-10-14', '2026-10-14')).toBe(true);
+        expect(saleOnDay('2026-10-13', '2026-10-14')).toBe(false);
+        expect(saleOnDay(undefined, '2026-10-14')).toBe(false);
+        expect(saleOnDay('lixo', '2026-10-14')).toBe(false);
+    });
+
+    it('logo depois da meia-noite já é o dia seguinte', () => {
+        expect(reportDay(new Date('2026-10-14T22:30:00.000Z')).day).toBe('2026-10-15');
+    });
 });
