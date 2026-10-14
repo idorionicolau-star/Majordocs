@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isCountableSale } from '../sale-filters';
+import { isCountableSale, paidAfterEdit } from '../sale-filters';
 
 describe('isCountableSale', () => {
     it('conta vendas normais', () => {
@@ -13,5 +13,21 @@ describe('isCountableSale', () => {
     });
     it('não conta as apagadas (lixeira)', () => {
         expect(isCountableSale({ documentType: 'Venda a Dinheiro', deletedAt: '2026-10-02T10:00:00Z' })).toBe(false);
+    });
+});
+
+describe('paidAfterEdit', () => {
+    it('venda paga por inteiro: o pago acompanha o novo preço', () => {
+        expect(paidAfterEdit({ totalValue: 1000, amountPaid: 1000 }, 800)).toBe(800);
+        expect(paidAfterEdit({ totalValue: 1000, amountPaid: 1000 }, 1200)).toBe(1200);
+        expect(paidAfterEdit({ totalValue: 1000 }, 900)).toBe(900); // antiga, sem amountPaid = paga
+    });
+    it('a crédito: o pago fica, mas nunca acima do novo total', () => {
+        expect(paidAfterEdit({ totalValue: 1000, amountPaid: 300 }, 1200)).toBe(300);
+        expect(paidAfterEdit({ totalValue: 1000, amountPaid: 300 }, 200)).toBe(200);
+        expect(paidAfterEdit({ totalValue: 1000, amountPaid: 0 }, 500)).toBe(0);
+    });
+    it('encomenda: o que se escreveu', () => {
+        expect(paidAfterEdit({ totalValue: 1000, amountPaid: 300 }, 1000, 650, true)).toBe(650);
     });
 });

@@ -15,3 +15,22 @@ export const isCountableSale = (s: Pick<Sale, 'documentType'> & { deletedAt?: st
  * Atenção: `amountPaid || totalValue` estava errado — um 0 (venda a crédito por pagar) virava o valor total.
  */
 export const saleIncome = (s: Pick<Sale, 'amountPaid' | 'totalValue'>): number => Number(s.amountPaid ?? s.totalValue) || 0;
+
+/**
+ * Ao editar o preço/quantidade de uma venda: quanto fica pago. Uma venda que estava paga por inteiro continua paga
+ * por inteiro (o pago acompanha o novo total — senão o Financeiro e o relatório do dia ficavam com o preço antigo).
+ * A crédito (parcial), o pago não muda, mas nunca passa do novo total. Encomendas: o que se escreveu.
+ */
+export function paidAfterEdit(
+    before: Pick<Sale, 'amountPaid' | 'totalValue'>,
+    newTotal: number,
+    typedPaid?: number | null,
+    isOrder = false,
+): number {
+    const total = Math.max(0, Number(newTotal) || 0);
+    if (isOrder) return Math.max(0, Number(typedPaid) || 0);
+    const oldTotal = Number(before.totalValue) || 0;
+    const oldPaid = before.amountPaid == null ? oldTotal : Number(before.amountPaid) || 0;
+    if (oldPaid >= oldTotal - 0.005) return total;
+    return Math.min(oldPaid, total);
+}
