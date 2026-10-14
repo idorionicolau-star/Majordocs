@@ -17,12 +17,14 @@ interface FinanceContextType {
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
-    const { companyId, user } = useInventory();
+    const { companyId, user, canView } = useInventory();
+    // só quem tem acesso ao Financeiro lê as despesas (uma escuta recusada pelas regras rebentava a app)
+    const canFinance = !!user && canView('finance');
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!companyId) {
+        if (!companyId || !canFinance) {
             setExpenses([]);
             setLoading(false);
             return;
@@ -47,7 +49,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         });
 
         return () => unsubscribe();
-    }, [companyId]);
+    }, [companyId, canFinance]);
 
     const addExpense = async (expenseData: Omit<Expense, 'id' | 'registeredBy'>) => {
         if (!companyId || !user) return;

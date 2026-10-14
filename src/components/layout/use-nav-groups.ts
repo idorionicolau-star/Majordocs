@@ -17,7 +17,9 @@ const MANUFACTURING_ONLY = new Set(["production", "orders", "raw-materials"]);
  */
 export function useNavGroups() {
     const pathname = usePathname();
-    const { canView, companyData, companyId, sales } = useContext(InventoryContext) || { canView: () => false, companyData: null, companyId: null, sales: [] };
+    const { canView, companyData, companyId, sales, user } = useContext(InventoryContext) || { canView: () => false, companyData: null, companyId: null, sales: [], user: null };
+    // Funcionários e Subscrição: só o Dono e o Administrador (as páginas também o exigem)
+    const isManager = user?.role === "Admin" || user?.role === "Dono";
     const reseller = companyData?.businessType === "reseller";
 
     // Menu simples: uma empresa nova (sem vendas) começa só com o essencial; um toque mostra tudo e a escolha fica guardada.
@@ -34,8 +36,9 @@ export function useNavGroups() {
     const allowed = useMemo(() => mainNavItems.filter((item) => {
         if (!canView(item.id as ModulePermission)) return false;
         if (reseller && MANUFACTURING_ONLY.has(item.id)) return false;
+        if (item.adminOnly && !isManager) return false;
         return true;
-    }), [canView, reseller]);
+    }), [canView, reseller, isManager]);
     const hiddenCount = allowed.filter((i) => ADVANCED_HREFS.has(i.href)).length;
 
     const groups = useMemo(() => {

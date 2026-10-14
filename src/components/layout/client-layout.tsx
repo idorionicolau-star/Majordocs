@@ -52,6 +52,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const authContext = React.useContext(InventoryContext);
+  const isManager = authContext?.user?.role === 'Admin' || authContext?.user?.role === 'Dono';
   const isAuthPage = pathname === '/login' || pathname === '/register';
   // páginas que qualquer pessoa pode ler, com ou sem conta (termos, privacidade)
   const isPublicPage = pathname === '/termos' || pathname === '/privacidade';
@@ -154,7 +155,14 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <NavigationObserver onNavigate={handleNavigationTransition} />
         </Suspense>
 
-        {isReadOnly && (
+        {/* Avisos de subscrição: o pagamento é do Dono / Administrador. Um funcionário não pode pagar — vê só,
+            se a conta estiver parada, que deve falar com o responsável (sem preços nem "subscreva"). */}
+        {isReadOnly && !isManager && (
+          <div role="status" className="bg-slate-700 text-white text-center py-2.5 px-4 text-sm font-medium sticky top-0 z-[60] shadow-md">
+            Modo leitura — por agora não é possível registar. Fale com o responsável da empresa.
+          </div>
+        )}
+        {isReadOnly && isManager && (
           <div className="bg-gradient-to-r from-amber-600 to-rose-600 text-white text-center py-2.5 px-4 text-sm font-medium sticky top-0 z-[60] shadow-md flex flex-wrap justify-center items-center gap-3 animate-in slide-in-from-top duration-300">
             <span>Modo leitura — a sua assinatura não está activa. Pague para voltar a ter acesso completo na hora.</span>
             <a
@@ -175,9 +183,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         )}
 
         {/* quem veio da EscalePay já pagou lá: sem contagem do teste */}
-        {isTrial && (fromEscalepay ? <EscalepayPendingBanner daysLeft={daysLeft} /> : <TrialBanner companyId={authContext?.companyId} daysLeft={daysLeft} coupon={authContext?.companyData?.coupon} />)}
+        {isTrial && isManager && (fromEscalepay ? <EscalepayPendingBanner daysLeft={daysLeft} /> : <TrialBanner companyId={authContext?.companyId} daysLeft={daysLeft} coupon={authContext?.companyData?.coupon} />)}
 
-        {!isReadOnly && !isTrial && typeof renewInDays === 'number' && <RenewBanner companyId={authContext?.companyId} renewInDays={renewInDays} coupon={authContext?.companyData?.coupon} />}
+        {isManager && !isReadOnly && !isTrial && typeof renewInDays === 'number' && <RenewBanner companyId={authContext?.companyId} renewInDays={renewInDays} coupon={authContext?.companyData?.coupon} />}
 
         <div className={`flex min-h-screen w-full bg-transparent ${isTrial ? 'pt-0' : ''}`}>
           <Sidebar />

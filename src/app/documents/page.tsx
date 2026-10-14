@@ -44,19 +44,21 @@ export default function DocumentsPage() {
     const { toast } = useToast();
     const companyId = inv?.companyId ?? null;
     const canWrite = !!inv?.canEdit?.("sales");
+    const canRead = !!inv?.canView?.("sales");
     const [docs, setDocs] = useState<AppDocument[] | null>(null);
     const [search, setSearch] = useState("");
     const [type, setType] = useState("all");
     const [status, setStatus] = useState("all");
 
     useEffect(() => {
-        if (!firestore || !companyId) return;
+        // as regras só deixam ler os documentos a quem vê as Vendas (uma escuta recusada rebentava a app)
+        if (!firestore || !companyId || !canRead) { setDocs([]); return; }
         const q = query(collection(firestore, `companies/${companyId}/documents`), orderBy("updatedAt", "desc"));
         return onSnapshot(q, (s) => setDocs(s.docs.map((d) => ({ ...(d.data() as AppDocument), id: d.id }))), () => {
             setDocs([]);
             toast({ variant: "destructive", title: "Não foi possível carregar os documentos", description: "Confirme que as regras do Firestore foram publicadas." });
         });
-    }, [firestore, companyId, toast]);
+    }, [firestore, companyId, canRead, toast]);
 
     const list = useMemo(() => {
         const s = search.trim().toLowerCase();

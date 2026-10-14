@@ -399,58 +399,71 @@ export function useInventoryCore() {
 
 
 
+  // Só se escuta o que as regras deixam ler a este utilizador (as mesmas condições do firestore.rules). Uma escuta
+  // recusada (ex.: funcionário sem acesso às Encomendas) fazia o Firestore rebentar — "INTERNAL ASSERTION FAILED
+  // (ca9)" — e a app mostrava "Algo correu mal!" a qualquer funcionário com permissões limitadas.
+  const permKey = user ? `${user.role}|${JSON.stringify(user.permissions || {})}` : '';
+  const may = useMemo(() => {
+    const has = (m: ModulePermission) => !!user && (user.role === 'Admin' || user.role === 'Dono' || ['read', 'write'].includes(String(user.permissions?.[m] || '')));
+    return {
+      inventory: has('inventory'), sales: has('sales'), production: has('production'), orders: has('orders'),
+      raw: has('raw-materials'), catalog: has('settings') || has('inventory') || has('sales'),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- permKey resume o user (papel + permissões)
+  }, [permKey]);
+
   const productsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId) return null;
+    if (!firestore || !companyId || !may.inventory) return null;
     return collection(firestore, `companies/${companyId}/products`);
-  }, [firestore, companyId]);
+  }, [firestore, companyId, may.inventory]);
 
 
   const salesCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId) return null;
+    if (!firestore || !companyId || !may.sales) return null;
     return collection(firestore, `companies/${companyId}/sales`);
-  }, [firestore, companyId]);
+  }, [firestore, companyId, may.sales]);
 
 
   const productionsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId) return null;
+    if (!firestore || !companyId || !may.production) return null;
     return collection(firestore, `companies/${companyId}/productions`);
-  }, [firestore, companyId]);
+  }, [firestore, companyId, may.production]);
 
 
   const ordersCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId) return null;
+    if (!firestore || !companyId || !may.orders) return null;
     return collection(firestore, `companies/${companyId}/orders`);
-  }, [firestore, companyId]);
+  }, [firestore, companyId, may.orders]);
 
 
   const stockMovementsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId) return null;
+    if (!firestore || !companyId || !may.inventory) return null;
     return collection(firestore, `companies/${companyId}/stockMovements`);
-  }, [firestore, companyId]);
+  }, [firestore, companyId, may.inventory]);
 
 
   const catalogProductsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId) return null;
+    if (!firestore || !companyId || !may.catalog) return null;
     return collection(firestore, `companies/${companyId}/catalogProducts`);
-  }, [firestore, companyId]);
+  }, [firestore, companyId, may.catalog]);
 
 
   const catalogCategoriesCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId) return null;
+    if (!firestore || !companyId || !may.catalog) return null;
     return collection(firestore, `companies/${companyId}/catalogCategories`);
-  }, [firestore, companyId]);
+  }, [firestore, companyId, may.catalog]);
 
 
   const rawMaterialsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId) return null;
+    if (!firestore || !companyId || !may.raw) return null;
     return collection(firestore, `companies/${companyId}/rawMaterials`);
-  }, [firestore, companyId]);
+  }, [firestore, companyId, may.raw]);
 
 
   const recipesCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId) return null;
+    if (!firestore || !companyId || !may.raw) return null;
     return collection(firestore, `companies/${companyId}/recipes`);
-  }, [firestore, companyId]);
+  }, [firestore, companyId, may.raw]);
 
 
   const companyDocRef = useMemoFirebase(() => {
