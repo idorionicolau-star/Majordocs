@@ -14,10 +14,12 @@ import { ConnectionStatus } from "../connection-status";
 import { useTheme } from "../theme-provider";
 import { PageHelpButton } from "@/components/guide/page-help";
 import React from "react";
+import { BackButton, useNavTracker } from "./back-button";
 
 export function Header({ onSearchClick }: { onSearchClick: () => void }) {
   const pathname = usePathname();
   const { setMode } = useTheme();
+  useNavTracker();
   const [isMounted, setIsMounted] = React.useState(false)
 
   React.useEffect(() => {
@@ -48,7 +50,8 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 dark:bg-slate-950 sm:px-6 border-slate-200/60 dark:border-slate-800/60">
 
       {/* Theme Toggle for mobile (Left side) */}
-      <div className="flex items-center gap-3 md:hidden">
+      <div className="flex items-center gap-1 md:hidden">
+        <BackButton />
         {isMounted ? (
           <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-8 w-8">
             <Sun className="h-[1rem] w-[1rem] rotate-0 scale-100 transition-all ease-overshoot duration-500 dark:-rotate-90 dark:scale-0" />
@@ -77,7 +80,8 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
       </div>
 
       {/* Search bar for desktop, hidden on mobile */}
-      <div className="hidden md:flex flex-1">
+      <div className="hidden md:flex flex-1 items-center gap-2">
+        <BackButton />
         <Button
           variant="outline"
           className="relative w-full max-w-sm px-4 py-2 h-11 justify-start items-center text-left font-normal bg-slate-100 text-slate-500 hover:bg-slate-200 border-slate-300/70 dark:bg-slate-800/50 dark:text-slate-400 dark:hover:bg-slate-800/80 dark:border-slate-700"

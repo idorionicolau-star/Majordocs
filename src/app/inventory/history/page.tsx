@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { startOfDay, endOfDay, isWithinInterval, format } from 'date-fns';
 import { Button } from "@/components/ui/button";
-import { Printer, Download, ArrowLeft } from "lucide-react";
+import { Printer, Download } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -245,12 +245,6 @@ export default function InventoryHistoryPage() {
     <>
       <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <Button asChild variant="outline" className="h-12">
-            <Link href={backHref}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar ao Inventário
-            </Link>
-          </Button>
           <div className="flex items-center gap-2">
             <Button onClick={handleDownloadPdf} variant="outline" className="h-12">
               <Download className="mr-2 h-4 w-4" />

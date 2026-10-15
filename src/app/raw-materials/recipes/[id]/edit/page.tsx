@@ -20,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Loader2, PlusCircle, Trash2 } from "lucide-react";
+import { Loader2, PlusCircle, Trash2 } from "lucide-react";
 import Link from 'next/link';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -122,12 +122,6 @@ export default function EditRecipePage() {
     return (
         <div className="flex flex-col gap-6 max-w-2xl mx-auto w-full pb-20 animate-in fade-in duration-500">
             <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" asChild className="rounded-full">
-                    <Link href="/raw-materials">
-                        <ArrowLeft className="h-5 w-5" />
-                        <span className="sr-only">Voltar aos Insumos</span>
-                    </Link>
-                </Button>
                 <div>
                     <h1 className="text-2xl md:text-3xl font-headline font-bold">Editar Receita</h1>
                     <p className="text-muted-foreground text-sm">Atualize os componentes produtivos de {recipeToEdit.productName}.</p>

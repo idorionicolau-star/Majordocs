@@ -37,7 +37,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Loader2, Image as ImageIcon, X, ArrowLeft, AlertTriangle, BrainCircuit, Info, ScanBarcode } from "lucide-react";
+import { Loader2, Image as ImageIcon, X, AlertTriangle, BrainCircuit, Info, ScanBarcode } from "lucide-react";
 import { BarcodeScanner } from "@/components/scan/barcode-scanner";
 import { findByBarcode, normalizeBarcode } from "@/lib/barcode";
 
@@ -227,12 +227,6 @@ export default function EditInventoryProductPage() {
     return (
         <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full pb-20 animate-in fade-in duration-500">
             <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" asChild className="rounded-full">
-                    <Link href={backHref}>
-                        <ArrowLeft className="h-5 w-5" />
-                        <span className="sr-only">Voltar ao Inventário</span>
-                    </Link>
-                </Button>
                 <div>
                     <h1 className="text-2xl md:text-3xl font-headline font-bold">Editar Produto</h1>
                     <p className="text-muted-foreground text-sm">Atualize os detalhes do produto no catálogo global.</p>

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, CalendarDays, Check, ChevronDown, Factory, FlaskConical, Loader2, MapPin, Minus, Plus, Search, StickyNote, Trash2, X } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, Factory, FlaskConical, Loader2, MapPin, Minus, Plus, Search, StickyNote, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useInventory } from "@/context/inventory-context";
@@ -129,9 +129,6 @@ export default function NewProductionPage() {
     return (
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 pb-28">
             <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" asChild className="rounded-full">
-                    <Link href={backHref} aria-label="Voltar à produção"><ArrowLeft className="h-5 w-5" /></Link>
-                </Button>
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Registar produção</h1>
                     <p className="text-sm text-muted-foreground">Escolha o dia, procure os produtos e junte-os à lista. Entram no stock ao registar.</p>

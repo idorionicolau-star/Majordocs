@@ -104,9 +104,6 @@ export default function TransferStockPage() {
     return (
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 pb-28">
             <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" asChild className="rounded-full">
-                    <Link href="/inventory" aria-label="Voltar ao inventário"><ArrowLeft className="h-5 w-5" /></Link>
-                </Button>
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Transferir stock</h1>
                     <p className="text-sm text-muted-foreground">Escolha de onde e para onde, procure os produtos e junte-os à lista.</p>
