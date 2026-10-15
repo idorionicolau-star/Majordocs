@@ -39,6 +39,29 @@ import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
 import { forwardRef } from 'react';
 import { ProductionPlan } from "@/components/production/production-plan";
 
+// Os contentores da grelha são criados uma vez por número de colunas: se fossem criados a cada render, cada
+// actualização desmontava os cartões e fechava os painéis abertos (ex.: "Editar produção").
+const productionGrids = new Map<string, { List: React.ComponentType<any>; Item: React.ComponentType<any> }>();
+function productionGrid(gridCols: string) {
+  let g = productionGrids.get(gridCols);
+  if (!g) {
+    const List = forwardRef<HTMLDivElement>((props, ref) => (
+      <div {...props} ref={ref} className={cn(
+        "grid gap-2 sm:gap-4 pb-20",
+        gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
+        gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
+        gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
+      )} />
+    ));
+    List.displayName = 'ProductionVirtuosoList';
+    const Item = forwardRef<HTMLDivElement>((props, ref) => <div {...props} ref={ref} className="h-full" />);
+    Item.displayName = 'ProductionVirtuosoItem';
+    g = { List, Item };
+    productionGrids.set(gridCols, g);
+  }
+  return g;
+}
+
 export default function ProductionPage() {
   const inventoryContext = useContext(InventoryContext);
   const searchParams = useSearchParams();
@@ -394,29 +417,7 @@ export default function ProductionPage() {
               increaseViewportBy={500}
               data={filteredProductions}
               totalCount={filteredProductions.length}
-              components={{
-                List: (() => {
-                  const List = forwardRef<HTMLDivElement>((props, ref) => (
-                    <div
-                      {...props}
-                      ref={ref}
-                      className={cn(
-                        "grid gap-2 sm:gap-4 pb-20",
-                        gridCols === '3' && "grid-cols-2 sm:grid-cols-3",
-                        gridCols === '4' && "grid-cols-2 sm:grid-cols-4",
-                        gridCols === '5' && "grid-cols-2 sm:grid-cols-4 lg:grid-cols-5"
-                      )}
-                    />
-                  ));
-                  List.displayName = 'ProductionVirtuosoList';
-                  return List;
-                })(),
-                Item: (() => {
-                  const Item = forwardRef<HTMLDivElement>((props, ref) => <div {...props} ref={ref} className="h-full" />);
-                  Item.displayName = 'ProductionVirtuosoItem';
-                  return Item;
-                })()
-              }}
+              components={productionGrid(gridCols)}
               itemContent={(index, production) => (
                 <ProductionCard
                   key={production.id}

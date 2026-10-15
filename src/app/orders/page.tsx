@@ -37,6 +37,16 @@ import { applyMaterialUse, assertMaterialEnough, readMaterialUse } from "@/lib/p
 import { orderToProduce } from "@/lib/order-stock";
 
 
+// Fora do componente: se fossem criados a cada render, cada actualização (dados, teclado do telemóvel) desmontava os
+// cartões e fechava os painéis abertos ("Registar", "Levantar parte").
+const OrdersVirtuosoList = forwardRef<HTMLDivElement>((props, ref) => (
+  <div {...props} ref={ref} className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-20" />
+));
+OrdersVirtuosoList.displayName = 'OrdersVirtuosoList';
+const OrdersVirtuosoItem = forwardRef<HTMLDivElement>((props, ref) => <div {...props} ref={ref} className="h-full" />);
+OrdersVirtuosoItem.displayName = 'OrdersVirtuosoItem';
+const ORDER_GRID = { List: OrdersVirtuosoList, Item: OrdersVirtuosoItem };
+
 export default function OrdersPage() {
   const searchParams = useSearchParams();
   const [nameFilter, setNameFilter] = useState("");
@@ -456,24 +466,7 @@ export default function OrdersPage() {
               increaseViewportBy={500}
               data={filteredOrders}
               totalCount={filteredOrders.length}
-              components={{
-                List: (() => {
-                  const List = forwardRef<HTMLDivElement>((props, ref) => (
-                    <div
-                      {...props}
-                      ref={ref}
-                      className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-20"
-                    />
-                  ));
-                  List.displayName = 'OrdersVirtuosoList';
-                  return List;
-                })(),
-                Item: (() => {
-                  const Item = forwardRef<HTMLDivElement>((props, ref) => <div {...props} ref={ref} className="h-full" />);
-                  Item.displayName = 'OrdersVirtuosoItem';
-                  return Item;
-                })()
-              }}
+              components={ORDER_GRID}
               itemContent={(index, order) => (
                 <OrderCard
                   key={order.id}
