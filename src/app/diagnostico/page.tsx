@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { InventoryContext } from "@/context/inventory-context";
 import { CRMContext } from "@/context/crm-context";
-import { analyzeBusiness, type Alert, type Severity } from "@/lib/business-analysis";
+import { analyzeBusiness, runoutLabel, type Alert, type Severity } from "@/lib/business-analysis";
 import { StockHealthScore } from "@/components/diagnostico/stock-health-score";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -143,18 +143,18 @@ export default function DiagnosticoPage() {
             <Section title="Vão esgotar em ≤ 14 dias">
               {salesStale ? (
                 <Empty>Sem vendas recentes registadas não dá para prever. Registe as vendas e esta lista passa a funcionar.</Empty>
-              ) : a.stock.runout.length ? (
-                a.stock.runout.slice(0, 6).map((r) => (
-                  <Row key={`${r.name}${r.location}`} left={r.name} right={`~${r.daysLeft} dias · ${qty(r.available)} ${r.unit}`} tone={r.daysLeft <= 5 ? "bad" : "warn"} href={links.product(r.name, r.location)} />
+              ) : a.stock.runout.some((r) => r.available > 0) ? (
+                a.stock.runout.filter((r) => r.available > 0).slice(0, 6).map((r) => (
+                  <Row key={`${r.name}${r.location}`} left={r.name} right={`${runoutLabel(r.daysLeft)} · ${qty(r.available)} ${r.unit}`} tone={r.daysLeft <= 5 ? "bad" : "warn"} href={links.product(r.name, r.location)} />
                 ))
               ) : <Empty>Nada em risco ao ritmo actual de vendas. 👍</Empty>}
             </Section>
-            <Section title="Stock parado (90 dias sem vendas)">
+            <Section title={`Stock parado (${a.stock.dead.days >= 30 ? a.stock.dead.days : 90} dias sem vendas)`}>
               {salesStale ? (
                 <Empty>Parece tudo parado porque as vendas não estão a ser registadas — não é sinal para liquidar stock.</Empty>
               ) : a.stock.dead.count ? (
                 <p className="text-sm"><b>{formatCurrency(a.stock.dead.value)}</b> em {a.stock.dead.count} produtos ({a.stock.dead.pctOfValue}% do valor). Ex.: {a.stock.dead.examples.slice(0, 3).join(", ")}.</p>
-              ) : <Empty>Todo o stock teve vendas nos últimos 90 dias.</Empty>}
+              ) : <Empty>{a.stock.dead.days >= 30 ? `Todo o stock teve vendas nos últimos ${a.stock.dead.days} dias.` : "Ainda há poucas vendas registadas na app (menos de 30 dias) para saber o que está parado."}</Empty>}
             </Section>
             <p className="text-xs text-muted-foreground">Última contagem física: <b>{a.stock.lastCountDate ? fmtDate(a.stock.lastCountDate) : "nunca feita no sistema"}</b>.{" "}
               <Link className="underline" href="/inventory/quick?modo=contagem">Fazer contagem</Link></p>

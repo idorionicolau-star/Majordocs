@@ -15,7 +15,6 @@ export const PAGE_GUIDES: Guide[] = [
             { target: "dash-tiles", title: "Os números de hoje", body: <><b>Vendido hoje</b> e <b>este mês</b>; <b>por receber</b> (clientes que devem) e <b>por levantar</b> (vendas pagas com o material ainda reservado). Toque num número para ver a lista.</> },
             { target: "dash-shortcuts", title: "Atalhos do dia-a-dia", body: <><b>Vender</b>, dar <b>entrada</b> de mercadoria, fazer uma <b>contagem</b> e ver a <b>lista de carga</b> — a um toque.</> },
             { target: "dash-attention", title: "Atenção", body: <>Problemas a resolver, cada um com ligação directa: stock a acabar, reservas presas, dias sem vendas registadas. O <b>Diagnóstico</b> mostra tudo em detalhe.</> },
-            { target: "dash-insights", title: "Sugestões do dia", body: <>Ideias calculadas a partir das suas vendas e do seu stock — o que encomendar, o que está parado, o que vende mais.</> },
             { target: "dash-kpis", title: "Números e gráficos", body: <>Só para o dono e administradores: lucro, crescimento, ticket médio, gráfico das vendas e o que mais vende.</> },
             { title: "Perguntas rápidas", body: <>Na <b>lupa</b> 🔍 lá em cima procura produtos e também pode perguntar em português, por exemplo: <b>«quanto vendi esta semana?»</b> ou <b>«stock de pavê»</b>.</> },
             { title: "Para chegar a tudo", body: MENU_TIP },

@@ -63,7 +63,7 @@ export function formatCompactNumber(value: number) {
 
 export function formatCurrency(value: number, options?: Intl.NumberFormatOptions & { compact?: boolean }) {
   if (options?.compact) {
-    return `${formatCompactNumber(value)} MT`;
+    return `${formatCompactNumber(value)} MTn`;
   }
 
   return new Intl.NumberFormat('pt-MZ', {
