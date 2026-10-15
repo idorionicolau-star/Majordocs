@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, query, runTransaction, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
 import {
-    ArrowDown, ArrowLeft, ArrowUp, Ban, Check, CheckCircle2, ChevronDown, Copy, Download, Eye, FilePlus2, Loader2, Lock, MoreHorizontal, MoreVertical, Pencil, Percent, Plus, Printer, Redo2, Save, Share2, Trash2, Undo2,
+    ArrowDown, ArrowUp, Ban, Check, CheckCircle2, ChevronDown, Copy, Download, Eye, FilePlus2, Loader2, Lock, MoreHorizontal, MoreVertical, Pencil, Percent, Plus, Printer, Redo2, Save, Share2, Trash2, Undo2,
 } from "lucide-react";
 import { InventoryContext } from "@/context/inventory-context";
 import { useCRM } from "@/context/crm-context";
@@ -353,7 +353,6 @@ export function DocumentEditor({ docId: docIdProp, initialType }: Props) {
             {/* barra superior */}
             <div className="sticky top-0 z-30 -mx-2 mb-3 border-b bg-background/95 px-2 pb-1.5 pt-2 backdrop-blur">
             <div className="flex items-center gap-1.5 sm:gap-2">
-                <Button variant="ghost" size="icon" asChild className="h-9 w-9 shrink-0 rounded-full"><Link href="/documents" aria-label="Voltar"><ArrowLeft className="h-5 w-5" /></Link></Button>
                 <h1 className="min-w-0 flex-1 truncate text-base font-bold leading-tight sm:text-lg">{title}</h1>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-9 px-2.5" aria-label="Exportar"><Download className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Exportar</span></Button></DropdownMenuTrigger>

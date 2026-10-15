@@ -39,7 +39,7 @@ import { InventoryContext } from '@/context/inventory-context';
 import { findNameMatches } from '@/lib/new-product';
 import { CatalogProductSelector } from '@/components/catalog/catalog-product-selector';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, AlertTriangle, Image as ImageIcon, Loader2, ArrowLeft } from 'lucide-react';
+import { PlusCircle, AlertTriangle, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { uploadProductImage } from '@/lib/upload-product-image';
 import { getFirebaseAuth } from '@/firebase/provider';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -231,12 +231,6 @@ export default function NewInventoryProductPage() {
     return (
         <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full pb-20 animate-in fade-in duration-500">
             <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" asChild className="rounded-full">
-                    <Link href={backHref}>
-                        <ArrowLeft className="h-5 w-5" />
-                        <span className="sr-only">Voltar ao Inventário</span>
-                    </Link>
-                </Button>
                 <div>
                     <h1 className="text-2xl md:text-3xl font-headline font-bold">Adicionar Novo Produto</h1>
                     <p className="text-muted-foreground text-sm">Preencha os dados do novo produto no inventário.</p>
