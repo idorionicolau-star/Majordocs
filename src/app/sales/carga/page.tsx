@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Clock, PackageX, Truck } from "lucide-react";
+import { CheckCircle2, ClipboardList, Clock, PackageX, Truck } from "lucide-react";
 import { useInventory } from "@/context/inventory-context";
 import { useToast } from "@/hooks/use-toast";
 import { useCuring } from "@/hooks/use-curing";
@@ -13,13 +13,14 @@ import { cn, formatCurrency, normalizeString } from "@/lib/utils";
 import { sameLocation } from "@/lib/product-ref";
 import { links } from "@/lib/deep-links";
 import type { Sale } from "@/lib/types";
+import { orderToDeliver } from "@/lib/order-stock";
 
 const fmtQ = (n: number) => (Number.isInteger(n) ? String(n) : n.toLocaleString("pt-PT", { maximumFractionDigits: 2 }));
 const fmtDay = (d: Date) => d.toLocaleDateString("pt-PT", { weekday: "short", day: "2-digit", month: "2-digit" });
 
 /** Lista de carga: as vendas pagas à espera de levantar, separadas em "pode carregar", "ainda a secar" e "falta produzir". */
 export default function LoadingListPage() {
-    const { sales, products, locations, isMultiLocation, loading, confirmSalePickup, canEdit } = useInventory();
+    const { sales, products, orders, locations, isMultiLocation, loading, confirmSalePickup, canEdit } = useInventory();
     const { toast } = useToast();
     const curing = useCuring();
     const [busy, setBusy] = useState<string | null>(null);
@@ -42,6 +43,20 @@ export default function LoadingListPage() {
                 .reduce((t, p) => t + (p.stock || 0), 0);
         return allocatePickups(pending.map((s) => ({ id: s.id, productName: s.productName, quantity: s.quantity, date: s.date, location: saleLoc(s.location) })), stockOf, curing.batches);
     }, [pending, products, curing.batches, isMultiLocation, locations]);
+
+    // encomendas ainda não entregues: o cliente leva-as pela página da encomenda ("Levantar parte" / "Entregar")
+    const openOrders = useMemo(() => {
+        const stockOf = (name: string, location?: string) =>
+            products
+                .filter((p) => !p.deletedAt && normalizeString(p.name) === normalizeString(name) && sameLocation(p.location, location))
+                .reduce((t, p) => t + (p.stock || 0), 0);
+        return (orders || [])
+            .filter((o) => !o.deletedAt && o.status !== "Entregue" && orderToDeliver(o) > 0)
+            .map((o) => {
+                const left = orderToDeliver(o);
+                return { o, left, readyNow: Math.min(left, Math.max(0, stockOf(o.productName, o.location || (isMultiLocation ? locations[0]?.id : "")))) };
+            });
+    }, [orders, products, isMultiLocation, locations]);
 
     const locName = (id?: string) => locations.find((l) => l.id === id)?.name || "";
     const canConfirm = canEdit("sales");
@@ -75,7 +90,7 @@ export default function LoadingListPage() {
                 </p>
             </div>
 
-            {!rows.length && (
+            {!rows.length && !openOrders.length && (
                 <div className="rounded-2xl border bg-card p-8 text-center text-muted-foreground">Nada à espera de levantamento. 🎉</div>
             )}
 
@@ -93,6 +108,25 @@ export default function LoadingListPage() {
                 <Card key={r.s.id} sale={r.s} where={isMultiLocation ? locName(r.s.location) : ""}
                     note="Não há peças suficientes, nem contando as que estão a secar." />
             )} />
+
+            {openOrders.length > 0 && (
+                <section data-tour="carga-orders">
+                    <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary"><ClipboardList className="h-4 w-4" /> Encomendas ({openOrders.length})</h2>
+                    <div className="space-y-2">
+                        {openOrders.map(({ o, left, readyNow }) => (
+                            <Link key={o.id} href={links.order(o.id)} className="flex items-center justify-between gap-3 rounded-2xl border bg-card p-3 hover:border-primary/60">
+                                <div className="min-w-0">
+                                    <p className="truncate font-semibold">{o.productName} × {fmtQ(left)} {o.unit || ""}</p>
+                                    <p className="text-xs text-muted-foreground">{[o.clientName || "cliente", isMultiLocation ? locName(o.location) : ""].filter(Boolean).join(" · ")}</p>
+                                </div>
+                                <span className={cn("shrink-0 text-right text-xs font-medium", readyNow >= left ? "text-emerald-600" : readyNow > 0 ? "text-amber-600" : "text-red-600")}>
+                                    {readyNow >= left ? "Tudo pronto" : readyNow > 0 ? `${fmtQ(readyNow)} prontas` : "Falta produzir"}
+                                </span>
+                            </Link>
+                        ))}
+                    </div>
+                </section>
+            )}
 
             <p className="text-xs text-muted-foreground">
                 <Link href={links.salesByStatus("Pago")} className="underline">Ver estas vendas no histórico</Link>
