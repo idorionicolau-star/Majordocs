@@ -24,6 +24,7 @@ import { Search, Plus, User, Phone, Mail, Calendar, Edit, Trash2 } from 'lucide-
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
+import { isCountableSale, saleCustomerId } from '@/lib/sale-filters';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
@@ -42,25 +43,32 @@ export default function CustomersPage() {
 
     const filteredCustomers = useFuse(customers, searchTerm, { keys: ['name', 'phone', 'email'] });
 
+    // As vendas de cada cliente: pelo customerId, ou pelo nome nas que só o guardaram (ex.: encomendas antigas)
+    const salesByCustomer = useMemo(() => {
+        const by = new Map<string, typeof sales>();
+        for (const sale of sales) {
+            if (!isCountableSale(sale)) continue;
+            const id = saleCustomerId(sale, customers);
+            if (!id) continue;
+            by.set(id, [...(by.get(id) || []), sale]);
+        }
+        return by;
+    }, [sales, customers]);
+
     // Compute customer stats from actual sales data
     const customerStats = useMemo(() => {
         const stats: Record<string, { totalPurchases: number; lastVisit: string | null }> = {};
-        for (const sale of sales) {
-            if (!sale.customerId) continue;
-            if (!stats[sale.customerId]) {
-                stats[sale.customerId] = { totalPurchases: 0, lastVisit: null };
-            }
-            stats[sale.customerId].totalPurchases += sale.totalValue || 0;
-            const saleDate = sale.date;
-            if (!stats[sale.customerId].lastVisit || saleDate > stats[sale.customerId].lastVisit!) {
-                stats[sale.customerId].lastVisit = saleDate;
-            }
+        for (const [id, list] of salesByCustomer) {
+            stats[id] = {
+                totalPurchases: list.reduce((t, s) => t + (s.totalValue || 0), 0),
+                lastVisit: list.reduce<string | null>((d, s) => (!d || s.date > d ? s.date : d), null),
+            };
         }
         return stats;
-    }, [sales]);
+    }, [salesByCustomer]);
 
     const getCustomerHistory = (customerId: string) => {
-        return sales.filter(s => s.customerId === customerId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return [...(salesByCustomer.get(customerId) || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     };
 
     if (!canView('customers')) {
