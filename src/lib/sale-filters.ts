@@ -34,3 +34,19 @@ export function paidAfterEdit(
     if (oldPaid >= oldTotal - 0.005) return total;
     return Math.min(oldPaid, total);
 }
+
+const normName = (s?: string | null) => String(s || '').trim().toLowerCase();
+
+/**
+ * A que cliente pertence a venda: pelo customerId, ou — nas que só guardaram o nome (encomendas antigas, vendas
+ * escritas à mão) — pelo nome do cliente, sem distinguir maiúsculas.
+ */
+export function saleCustomerId(
+    sale: { customerId?: string | null; clientName?: string | null },
+    customers: { id: string; name: string }[],
+): string | null {
+    if (sale.customerId) return sale.customerId;
+    const n = normName(sale.clientName);
+    if (!n) return null;
+    return customers.find((c) => normName(c.name) === n)?.id ?? null;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isCountableSale, paidAfterEdit } from '../sale-filters';
+import { isCountableSale, paidAfterEdit, saleCustomerId } from '../sale-filters';
 
 describe('isCountableSale', () => {
     it('conta vendas normais', () => {
@@ -29,5 +29,19 @@ describe('paidAfterEdit', () => {
     });
     it('encomenda: o que se escreveu', () => {
         expect(paidAfterEdit({ totalValue: 1000, amountPaid: 300 }, 1000, 650, true)).toBe(650);
+    });
+});
+
+describe('saleCustomerId (de que cliente é a venda)', () => {
+    const customers = [{ id: 'c1', name: 'Sr. Ngwenha' }, { id: 'c2', name: 'Mahete' }];
+    it('usa o customerId quando existe', () => {
+        expect(saleCustomerId({ customerId: 'c2', clientName: 'Sr. Ngwenha' }, customers)).toBe('c2');
+    });
+    it('encomendas antigas: só com o nome, sem distinguir maiúsculas nem espaços', () => {
+        expect(saleCustomerId({ clientName: '  sr. ngwenha ' }, customers)).toBe('c1');
+    });
+    it('sem cliente ou nome desconhecido → nenhum', () => {
+        expect(saleCustomerId({}, customers)).toBeNull();
+        expect(saleCustomerId({ clientName: 'Outro' }, customers)).toBeNull();
     });
 });

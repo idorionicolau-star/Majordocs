@@ -178,13 +178,16 @@ export default function NewOrderPage() {
             localStorage.setItem('majorstockx-last-product-location', formData.location);
         }
 
+        // o cliente da encomenda (criado se for novo): a venda fica ligada a ele, para contar em Clientes
+        let customerId: string | undefined;
         if (formData.clientName) {
             const normalizedName = formData.clientName.trim();
             const existingCustomer = customers.find(c => c.name.toLowerCase() === normalizedName.toLowerCase());
+            customerId = existingCustomer?.id;
 
             if (!existingCustomer) {
                 try {
-                    await addCustomer({ name: normalizedName });
+                    customerId = (await addCustomer({ name: normalizedName })) || undefined;
                 } catch (error) {
                     console.error("Failed to auto-create customer from order:", error);
                 }
@@ -273,6 +276,7 @@ export default function NewOrderPage() {
                     status: 'Pago',
                     documentType: 'Encomenda',
                     clientName: formData.clientName,
+                    ...(customerId ? { customerId } : {}),
                 };
                 transaction.set(saleRef, newSale);
 
