@@ -29,7 +29,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const productionActions = useProductionActions(core);
   const { addProduction, addProductionLog, deleteProduction, updateProduction, restoreProduction, editProduction } = productionActions;
   const orderActions = useOrderActions(core);
-  const { deleteOrder, finalizeOrder } = orderActions;
+  const { deleteOrder, finalizeOrder, deliverOrderPart } = orderActions;
   const settingsActions = useSettingsActions(core);
   const { addCatalogProduct, addCatalogCategory, deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem: restoreItemBase, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts, renameProduct, mergeIntoVariant } = settingsActions;
   // Restaurar uma produção refaz o stock e a matéria-prima; o resto da lixeira usa a regra geral
@@ -178,7 +178,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     chatHistory, setChatHistory,
     addProduct, updateProduct: updateProductEverywhere, deleteProduct,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, addBulkSale, confirmSalePickup, addProductionLog,
-    addProduction, updateProduction, editProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
+    addProduction, updateProduction, editProduction, deleteProduction, deleteOrder, finalizeOrder, deliverOrderPart, deleteSale,
     clearProductsCollection,
     mergeProducts, renameProduct, mergeIntoVariant,
     restoreItem,
@@ -216,7 +216,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     chatHistory, setChatHistory,
     addProduct, updateProductEverywhere, deleteProduct,
     auditStock, transferStock, updateProductStock, updateCompany, addSale, addBulkSale, confirmSalePickup, addProductionLog,
-    addProduction, updateProduction, editProduction, deleteProduction, deleteOrder, finalizeOrder, deleteSale,
+    addProduction, updateProduction, editProduction, deleteProduction, deleteOrder, finalizeOrder, deliverOrderPart, deleteSale,
     clearProductsCollection,
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
     recalculateReservedStock, pendingOfflineSales, syncOfflineSales,

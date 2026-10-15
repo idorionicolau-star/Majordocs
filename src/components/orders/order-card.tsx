@@ -2,6 +2,8 @@
 
 import type { Order, Sale } from "@/lib/types";
 import { FinalizeOrderDialog } from "./finalize-order-dialog";
+import { PartialPickupDialog } from "./partial-pickup-dialog";
+import { orderDelivered, orderToProduce } from "@/lib/order-stock";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, User, Play, Check, CircleHelp, TrendingUp, Trash2 } from "lucide-react";
@@ -42,8 +44,11 @@ const statusConfig = {
 
 export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteOrder, canEdit, associatedSale }: OrderCardProps) {
     const { icon: StatusIcon, color: statusColor } = statusConfig[order.status];
-    const progress = order.quantity > 0 ? (order.quantityProduced / order.quantity) * 100 : 0;
-    const remainingQuantity = order.quantity - order.quantityProduced;
+    // pronto = produzido (no stock) + o que o cliente já levou
+    const delivered = orderDelivered(order);
+    const ready = Math.min(order.quantity, (order.quantityProduced || 0) + delivered);
+    const progress = order.quantity > 0 ? (ready / order.quantity) * 100 : 0;
+    const remainingQuantity = orderToProduce(order);
 
     const calculateEstimatedCompletionDate = () => {
         if (!order.productionStartDate || order.quantityProduced <= 0) {
@@ -106,14 +111,19 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
                     <Progress data-tour="orders-progress" value={progress} className="h-8" />
                     <div className="absolute inset-0 flex items-center justify-center">
                         <span className="text-white text-xs font-bold drop-shadow-md">
-                            {order.quantityProduced} / {order.quantity} ({progress.toFixed(0)}%)
+                            {Number(ready.toFixed(2))} / {order.quantity} ({progress.toFixed(0)}%)
                         </span>
                     </div>
                 </div>
 
                 <p className="text-center text-sm font-semibold text-muted-foreground">
-                    Faltam {Number(remainingQuantity.toFixed(2))} {order.unit}
+                    {remainingQuantity > 0 ? `Faltam produzir ${Number(remainingQuantity.toFixed(2))} ${order.unit}` : 'Tudo produzido'}
                 </p>
+                {delivered > 0 && order.status !== 'Entregue' && (
+                    <p className="text-center text-sm font-semibold text-emerald-600" data-tour="orders-delivered">
+                        Já levou {Number(delivered.toFixed(2))} {order.unit} · faltam levar {Number((order.quantity - delivered).toFixed(2))}
+                    </p>
+                )}
 
                 <div className="text-sm text-muted-foreground space-y-1.5">
                     {order.clientName && (
@@ -137,6 +147,7 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
                 </div>
             </CardContent>
             {canEdit && <CardFooter data-tour="orders-actions" className="flex flex-col sm:flex-row justify-center gap-2 p-2 pt-4">
+                {order.status !== 'Entregue' && <PartialPickupDialog order={order} />}
                 {order.status === 'Pendente' && (
                     <Button onClick={() => onUpdateStatus(order.id, 'Em produção')} className="flex-1" variant="outline">
                         <Play className="mr-2 h-4 w-4" />

@@ -284,7 +284,11 @@ export type Order = {
   /** Quanto esta encomenda reservou no stock ao ser registada (para libertar o certo). Ausente nas antigas. */
   reservedQuantity?: number;
   productionStartDate?: string | null;
+  /** Produzido para a encomenda e ainda no stock (o que o cliente leva antes sai daqui primeiro) */
   quantityProduced: number;
+  /** Quanto o cliente já levou (levantamentos parciais); o resto sai em "Entregar" */
+  quantityDelivered?: number;
+  deliveries?: { date: string; quantity: number; by: string }[];
   productionLogs: ProductionLog[];
   deletedAt?: string;
   deletedBy?: string;
@@ -459,6 +463,7 @@ export interface InventoryContextType {
   deleteProduction: (productionId: string) => void;
   deleteOrder: (orderId: string) => void;
   finalizeOrder: (orderId: string, finalPayment: number) => Promise<void>;
+  deliverOrderPart: (orderId: string, qty: number) => Promise<boolean>;
 
   clearProductsCollection: () => Promise<void>;
   markNotificationAsRead: (id: string) => void;

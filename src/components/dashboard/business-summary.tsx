@@ -155,6 +155,9 @@ const BusinessSummaryInner = ({ context }: { context: NonNullable<React.ContextT
     }
 
     const a = analysis;
+    // por levantar: as vendas pagas e as encomendas ainda não entregues (antes as encomendas não contavam)
+    const pickupSales = a.stock.pendingPickups.length;
+    const pickupOrders = a.orders.open.length;
     const attention = a.alerts.filter(al => al.severity !== 'good').slice(0, 4);
     const lateSales = a.sales.daysSinceLastSale === null || a.sales.daysSinceLastSale > 7;
 
@@ -189,9 +192,9 @@ const BusinessSummaryInner = ({ context }: { context: NonNullable<React.ContextT
                 <Tile href={links.salesByStatus('Pendente')} icon={CircleDollarSign} label="Por receber" tone={a.sales.receivables > 0 ? 'rose' : 'slate'}
                     value={formatCurrency(a.sales.receivables, { compact: true })}
                     sub={a.sales.receivablesList.length ? plural(a.sales.receivablesList.length, 'cliente deve', 'clientes devem') : 'nada em falta'} />
-                <Tile href={links.salesByStatus('Pago')} icon={PackageCheck} label="Por levantar" tone={a.stock.pendingPickups.length > 0 ? 'amber' : 'slate'}
-                    value={String(a.stock.pendingPickups.length)}
-                    sub={a.stock.pendingPickups.length ? 'vendas pagas, material reservado' : 'nada à espera'} />
+                <Tile href={pickupSales === 0 && pickupOrders > 0 ? '/orders' : links.salesByStatus('Pago')} icon={PackageCheck} label="Por levantar" tone={pickupSales + pickupOrders > 0 ? 'amber' : 'slate'}
+                    value={String(pickupSales + pickupOrders)}
+                    sub={pickupSales + pickupOrders === 0 ? 'nada à espera' : [pickupSales ? plural(pickupSales, 'venda paga', 'vendas pagas') : '', pickupOrders ? plural(pickupOrders, 'encomenda', 'encomendas') : ''].filter(Boolean).join(' · ')} />
             </div>
 
             {/* 2. Atalhos — o que se faz todos os dias */}
