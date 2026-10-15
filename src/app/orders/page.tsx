@@ -34,6 +34,7 @@ import { VirtuosoGrid } from 'react-virtuoso';
 import { forwardRef } from 'react';
 import { resolveInventoryProductRef } from "@/lib/product-ref";
 import { applyMaterialUse, assertMaterialEnough, readMaterialUse } from "@/lib/production-materials";
+import { orderToProduce } from "@/lib/order-stock";
 
 
 export default function OrdersPage() {
@@ -76,7 +77,7 @@ export default function OrdersPage() {
     let orderToUpdate = orders.find(o => o.id === orderId);
 
     if (orderToUpdate) {
-      if (newStatus === 'Concluída' && orderToUpdate.quantityProduced < orderToUpdate.quantity) {
+      if (newStatus === 'Concluída' && orderToProduce(orderToUpdate) > 0) {
         setPendingConclusionOrder(orderToUpdate);
         setShowAutoProductionConfirm(true);
         return;
@@ -108,7 +109,7 @@ export default function OrdersPage() {
     if (!firestore || !companyId || !user || !pendingConclusionOrder) return;
 
     try {
-      const missingQty = pendingConclusionOrder.quantity - pendingConclusionOrder.quantityProduced;
+      const missingQty = orderToProduce(pendingConclusionOrder);
       const orderRef = doc(firestore, `companies/${companyId}/orders`, pendingConclusionOrder.id);
 
       // Resolve Product Reference Logic
@@ -161,7 +162,7 @@ export default function OrdersPage() {
 
         transaction.update(orderRef, {
           status: 'Concluída',
-          quantityProduced: pendingConclusionOrder.quantity,
+          quantityProduced: (Number(pendingConclusionOrder.quantityProduced) || 0) + missingQty,
           productionLogs: arrayUnion(newLog)
         });
 
@@ -388,9 +389,9 @@ export default function OrdersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Produção Incompleta</AlertDialogTitle>
             <AlertDialogDescription>
-              A encomenda de **{pendingConclusionOrder?.productName}** tem apenas **{pendingConclusionOrder?.quantityProduced}** de **{pendingConclusionOrder?.quantity}** unidades produzidas.
+              A encomenda de **{pendingConclusionOrder?.productName}** ainda tem **{pendingConclusionOrder && orderToProduce(pendingConclusionOrder)}** de **{pendingConclusionOrder?.quantity}** unidades por produzir.
               <br /><br />
-              Deseja registar automaticamente a produção das **{pendingConclusionOrder && (pendingConclusionOrder.quantity - pendingConclusionOrder.quantityProduced)}** unidades restantes e adicionar ao stock?
+              Deseja registar automaticamente a produção das **{pendingConclusionOrder && orderToProduce(pendingConclusionOrder)}** unidades restantes e adicionar ao stock?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

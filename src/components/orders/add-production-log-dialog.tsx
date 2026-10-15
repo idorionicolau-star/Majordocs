@@ -19,6 +19,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Order } from '@/lib/types';
 import { InventoryContext } from '@/context/inventory-context';
+import { orderToProduce } from '@/lib/order-stock';
 
 const formSchema = z.object({
   quantity: z.preprocess((val) => {
@@ -49,7 +50,7 @@ export function AddProductionLogDialog({ order, onAddLog }: AddProductionLogDial
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const remainingQuantity = order.quantity - order.quantityProduced;
+  const remainingQuantity = orderToProduce(order);
 
   async function onSubmit(values: AddLogFormValues) {
     if (values.quantity > remainingQuantity) {

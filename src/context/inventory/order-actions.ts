@@ -6,7 +6,7 @@ import { collection, doc, getDocs, query, where, runTransaction, getDoc, serverT
 import { ref } from "firebase/storage";
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { InventoryCore } from './core';
-import { reservedToRelease } from '@/lib/order-stock';
+import { orderToDeliver, orderToProduce, planPartialDelivery, reservedToRelease } from '@/lib/order-stock';
 import { resolveInventoryProductRef } from '@/lib/product-ref';
 import { applyMaterialUse, assertMaterialEnough, readMaterialUse } from '@/lib/production-materials';
 
@@ -149,7 +149,9 @@ export function useOrderActions(core: InventoryCore) {
         const stockAlreadyOut = freshSaleData?.status === 'Levantado';
 
         // A parte que ainda não foi produzida é produzida agora: gasta a matéria-prima da receita (lê antes de escrever)
-        const missingNow = Math.max(0, orderData.quantity - Math.min(Number(orderData.quantityProduced) || 0, orderData.quantity));
+        const missingNow = orderToProduce(orderData);
+        // o que o cliente já levou em levantamentos parciais já saiu do stock
+        const toDeliver = orderToDeliver(orderData);
         const materials = productRef && freshProductData && missingNow > 0
           ? await readMaterialUse(transaction, firestore, companyId, recipesData ?? undefined, orderData.productName, missingNow)
           : [];
@@ -168,7 +170,7 @@ export function useOrderActions(core: InventoryCore) {
         }
 
         // 5. Update Order Status
-        transaction.update(orderRef, { status: 'Entregue' });
+        transaction.update(orderRef, { status: 'Entregue', quantityDelivered: orderData.quantity });
 
         // 6. Create Production Record & Stock Movements
         if (productRef && freshProductData) {
@@ -177,8 +179,7 @@ export function useOrderActions(core: InventoryCore) {
 
           // Parte já produzida (registos de produção / conclusão) JÁ entrou no stock.
           // Só a parte em falta é produzida agora.
-          const alreadyInStock = Math.min(Number(orderData.quantityProduced) || 0, orderData.quantity);
-          const missing = Math.max(0, orderData.quantity - alreadyInStock);
+          const missing = missingNow;
 
           if (missing > 0) {
             applyMaterialUse(transaction, materials, -1);
@@ -211,9 +212,9 @@ export function useOrderActions(core: InventoryCore) {
               productId: productRef.id,
               productName: orderData.productName,
               type: 'OUT',
-              quantity: -orderData.quantity,
+              quantity: -toDeliver,
               fromLocationId: locationToUse,
-              reason: `Venda (Levantamento Encomenda #${orderId.slice(-6).toUpperCase()}): ${orderData.quantity} ${orderData.unit || 'un'}`,
+              reason: `Venda (Levantamento Encomenda #${orderId.slice(-6).toUpperCase()}): ${toDeliver} ${orderData.unit || 'un'}`,
               userId: user.id,
               userName: user.username,
               ...(saleRef ? { saleId: saleRef.id } : {}),
@@ -222,7 +223,7 @@ export function useOrderActions(core: InventoryCore) {
           }
 
           // Stock: + parte produzida agora − entregue (se ainda não saiu). Reserva: libertada.
-          const newStock = (freshProductData.stock || 0) + missing - (stockAlreadyOut ? 0 : orderData.quantity);
+          const newStock = (freshProductData.stock || 0) + missing - (stockAlreadyOut ? 0 : toDeliver);
           const newReserved = stockAlreadyOut ? (freshProductData.reservedStock || 0) : Math.max(0, (freshProductData.reservedStock || 0) - reservedToRelease(orderData));
           shortfall = Math.max(0, -newStock);
           transaction.update(productRef, {
@@ -242,7 +243,67 @@ export function useOrderActions(core: InventoryCore) {
       toast({ variant: 'destructive', title: 'Erro ao Finalizar', description: e.message });
     }
   }, [firestore, companyId, user, toast, isMultiLocation, locations, ordersData, recipesData]);
-  return { deleteOrder, finalizeOrder };
+  /** O cliente leva já uma parte da encomenda, do que há em stock (o resto fica à espera; ver planPartialDelivery). */
+  const deliverOrderPart = useCallback(async (orderId: string, qty: number): Promise<boolean> => {
+    assertOnline('registar o levantamento');
+    if (isReadOnly) {
+      toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
+      return false;
+    }
+    if (!firestore || !companyId || !user) return false;
+    const orderPre = ordersData?.find(o => o.id === orderId);
+    if (!orderPre) return false;
+    try {
+      const productRef = await resolveInventoryProductRef(firestore, companyId, {
+        productId: orderPre.productId,
+        productName: orderPre.productName,
+        location: orderPre.location || (isMultiLocation ? locations[0]?.id : 'Principal') || 'Principal',
+      });
+      if (!productRef) throw new Error(`O produto "${orderPre.productName}" não existe no inventário.`);
+      await runTransaction(firestore, async (transaction) => {
+        const orderRef = doc(firestore, `companies/${companyId}/orders`, orderId);
+        const oSnap = await transaction.get(orderRef);
+        const pSnap = await transaction.get(productRef);
+        if (!oSnap.exists()) throw new Error("Encomenda não encontrada.");
+        const order = oSnap.data() as Order;
+        if (order.status === 'Entregue') throw new Error("Esta encomenda já foi entregue.");
+        if (!pSnap.exists()) throw new Error(`O produto "${order.productName}" não existe no inventário.`);
+        const product = pSnap.data() as Product;
+        const plan = planPartialDelivery(order, qty, product.stock || 0);
+        if (!plan.ok) throw new Error(plan.error);
+        const loc = order.location || (isMultiLocation ? locations[0]?.id : 'Principal');
+        transaction.update(productRef, {
+          stock: Math.max(0, (product.stock || 0) - qty),
+          reservedStock: Math.max(0, (product.reservedStock || 0) - plan.releaseReserved),
+          lastUpdated: new Date().toISOString(),
+        });
+        transaction.update(orderRef, {
+          quantityDelivered: plan.quantityDelivered,
+          quantityProduced: plan.quantityProduced,
+          reservedQuantity: plan.reservedQuantity,
+          deliveries: [...(order.deliveries || []), { date: new Date().toISOString(), quantity: qty, by: user.username || 'Sistema' }],
+        });
+        transaction.set(doc(collection(firestore, `companies/${companyId}/stockMovements`)), {
+          productId: productRef.id,
+          productName: order.productName,
+          type: 'OUT',
+          quantity: -qty,
+          fromLocationId: loc,
+          reason: `Levantamento parcial (Encomenda #${orderId.slice(-6).toUpperCase()}): ${qty} ${order.unit || 'un'}`,
+          userId: user.id,
+          userName: user.username,
+          timestamp: serverTimestamp(),
+        });
+      });
+      toast({ title: 'Levantamento registado', description: `${qty} ${orderPre.unit || 'un'} de ${orderPre.productName} saíram do stock.` });
+      return true;
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Não foi possível registar', description: e.message });
+      return false;
+    }
+  }, [firestore, companyId, user, toast, isReadOnly, isMultiLocation, locations, ordersData, assertOnline]);
+
+  return { deleteOrder, finalizeOrder, deliverOrderPart };
 }
 
 export type OrderActions = ReturnType<typeof useOrderActions>;
