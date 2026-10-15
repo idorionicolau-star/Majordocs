@@ -3,7 +3,7 @@
  * device (Firestore local cache). No internet, no API key, no cost, instant.
  */
 import type { Customer, Location, Order, Product, Production, Sale, StockMovement } from "@/lib/types";
-import { analyzeBusiness, runoutLabel, type Analysis } from "@/lib/business-analysis";
+import { analyzeBusiness, isLearning, rateLabel, runoutLabel, type Analysis } from "@/lib/business-analysis";
 import { searchProducts } from "@/lib/quick-stock";
 import { formatCurrency, normalizeString, plural } from "@/lib/utils";
 
@@ -95,7 +95,7 @@ export function answerOffline(question: string, data: AssistantData, cached?: An
     // ---------- runout / out of stock ----------
     if (has(q, "esgot", "acabar", "vai acabar", "rutura", "ruptura", "falta", "repor", "produzir", "reabastec")) {
         let md = "";
-        if (a.stock.runout.length) md += `### ⏳ Vão esgotar em ≤ 14 dias\n${list(a.stock.runout.map((r) => `**${r.name}** — ${runoutLabel(r.daysLeft)} (${qty(r.available)} ${r.unit}, vende ${qty(r.soldPerDay)}/dia)`))}\n\n`;
+        { const soon = a.stock.runout.filter((r) => r.available > 0 && !isLearning(r)); if (soon.length) md += `### ⏳ Vão esgotar em ≤ 14 dias\n${list(soon.map((r) => `**${r.name}** — ${runoutLabel(r.daysLeft)} (${qty(r.available)} ${r.unit}, vende ${rateLabel(r.soldPerDay, r.unit)})`))}\n\n`; }
         if (a.stock.outOfStock.length) md += `### ❌ Esgotados (${a.stock.outOfStock.length})\n${list(a.stock.outOfStock.map((p) => `${p.name}${data.locations.length > 1 ? ` · ${locName(p.location)}` : ""}`))}\n\n`;
         if (a.stock.critical.length) md += `### 🟠 Nível crítico (${a.stock.critical.length})\n${list(a.stock.critical.map((p) => `${p.name}: ${qty(p.stock - p.reservedStock)} ${p.unit || "un"}`))}`;
         if (!md) md = "✅ Nada esgotado nem a acabar ao ritmo actual de vendas.";
