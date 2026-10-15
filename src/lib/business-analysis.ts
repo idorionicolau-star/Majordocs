@@ -29,7 +29,20 @@ export type DataTask = {
     action?: { label: string; href: string };
 };
 
-export type ProductRisk = { name: string; location?: string; unit: string; available: number; daysLeft: number; soldPerDay: number };
+/** saleDays: em quantos dias diferentes vendeu nos últimos 30 (o padrão de procura; ver isLearning) */
+export type ProductRisk = { name: string; location?: string; unit: string; available: number; daysLeft: number; soldPerDay: number; saleDays: number };
+
+/** Abaixo disto (dias com vendas nos últimos 30) não há padrão: a app ainda está "a aprender" e não sugere quantidades. */
+export const MIN_SALE_DAYS = 3;
+export const isLearning = (r: Pick<ProductRisk, "saleDays">) => r.saleDays < MIN_SALE_DAYS;
+
+/** Ritmo de venda legível: "~3 un/dia", "~2 un/semana" ou "~1 un/mês" (em vez de "~0,2 un/dia"). */
+export function rateLabel(perDay: number, unit = "un"): string {
+    const f = (n: number) => (n >= 10 ? Math.round(n) : Math.round(n * 10) / 10).toLocaleString("pt-PT");
+    if (perDay >= 1) return `~${f(perDay)} ${unit}/dia`;
+    if (perDay * 7 >= 1) return `~${f(perDay * 7)} ${unit}/semana`;
+    return `~${f(Math.max(perDay * 30, 0))} ${unit}/mês`;
+}
 
 /** Dias de vendas que uma produção (ou reposição) sugerida deve cobrir. */
 export const PLAN_COVER_DAYS = 30;
@@ -152,6 +165,13 @@ export function analyzeBusiness(input: {
     const sold30 = new Map<string, number>();
     s30.forEach((s) => sold30.set(key(s.productName), (sold30.get(key(s.productName)) || 0) + (s.quantity || 0)));
     const soldEver90 = new Set(inRange(ago(90)).map((s) => key(s.productName)));
+    // em quantos dias (de Maputo) diferentes cada produto vendeu nos últimos 30
+    const saleDays30 = new Map<string, Set<string>>();
+    dated.filter((x) => x.d >= ago(30) && x.d <= now).forEach((x) => {
+        const k = key(x.s.productName);
+        const dayMz = new Date(x.d.getTime() + 2 * 3600_000).toISOString().slice(0, 10);
+        saleDays30.set(k, (saleDays30.get(k) || new Set()).add(dayMz));
+    });
 
     const topMap = new Map<string, { name: string; qty: number; revenue: number; unit: string }>();
     s30.forEach((s) => {
@@ -197,7 +217,7 @@ export function analyzeBusiness(input: {
         .map((p) => {
             const perDay = (sold30.get(key(p.name)) || 0) / 30;
             const av = available(p);
-            return { name: p.name, location: p.location, unit: p.unit || "un", available: av, soldPerDay: perDay, daysLeft: perDay > 0 ? Math.floor(Math.max(0, av) / perDay) : Infinity };
+            return { name: p.name, location: p.location, unit: p.unit || "un", available: av, soldPerDay: perDay, daysLeft: perDay > 0 ? Math.floor(Math.max(0, av) / perDay) : Infinity, saleDays: saleDays30.get(key(p.name))?.size || 0 };
         })
         .filter((r) => r.soldPerDay > 0 && r.daysLeft <= 14)
         .sort((a, b) => a.daysLeft - b.daysLeft);
@@ -331,7 +351,8 @@ export function analyzeBusiness(input: {
     if (negative.length) alerts.push({ id: "negative", severity: "critical", title: `${plural(negative.length, "produto", "produtos")} com stock negativo`, detail: reseller ? "Saiu mais do que entrou — falta registar a entrada (compra) desse produto." : "Saiu mais do que entrou — falta registar entradas ou produção.", items: negative.slice(0, 5).map((p) => `${p.name}: ${fmtQty(p.stock)} ${p.unit || "un"}`), itemLinks: negative.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Ver produtos com stock negativo", href: links.inventoryProblem("negativo") } });
     if (overdue.length) alerts.push({ id: "overdue", severity: "critical", title: `${plural(overdue.length, "encomenda atrasada", "encomendas atrasadas")}`, detail: "Passou a data de entrega combinada com o cliente.", items: overdue.slice(0, 5).map((o) => `${o.productName} — ${o.clientName || "cliente"}`), itemLinks: overdue.slice(0, 5).map((o) => links.order(o.id)), action: { label: "Ver encomendas atrasadas", href: overdue.length === 1 ? links.order(overdue[0].id) : "/orders" } });
     // os já esgotados têm o seu alerta ("produtos esgotados"): aqui só os que ainda têm stock
-    const runoutSoon = runout.filter((r) => r.available > 0);
+    // e só com padrão de vendas (uma venda isolada não é procura)
+    const runoutSoon = runout.filter((r) => r.available > 0 && !isLearning(r));
     if (runoutSoon.length) alerts.push({ id: "runout", severity: "warning", title: `${plural(runoutSoon.length, "produto vai", "produtos vão")} esgotar em ≤ 14 dias`, detail: "Ao ritmo de venda do último mês.", items: runoutSoon.slice(0, 5).map((r) => `${r.name}: ${runoutLabel(r.daysLeft)} (${fmtQty(r.available)} ${r.unit})`), itemLinks: runoutSoon.slice(0, 5).map((r) => links.product(r.name, r.location)), action: reseller ? { label: "Repor stock", href: "/inventory/quick?modo=entrada" } : { label: "Planear produção", href: links.productionPlan() } });
     if (outOfStock.length) alerts.push({ id: "out", severity: "warning", title: `${plural(outOfStock.length, "produto esgotado", "produtos esgotados")}`, detail: reseller ? "Não podem ser vendidos até haver nova entrada de stock." : "Não podem ser vendidos até haver entrada ou produção.", items: outOfStock.slice(0, 5).map((p) => p.name), itemLinks: outOfStock.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Ver produtos esgotados", href: links.inventoryProblem("esgotado") } });
     if (pendingPickups.some((p) => p.days > 7)) {

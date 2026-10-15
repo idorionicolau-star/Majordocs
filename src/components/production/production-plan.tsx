@@ -2,10 +2,10 @@
 
 import { useContext, useMemo } from "react";
 import Link from "next/link";
-import { CalendarClock, Factory, X } from "lucide-react";
+import { CalendarClock, Factory, GraduationCap, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
-import { analyzeBusiness, PLAN_COVER_DAYS, suggestedQuantity } from "@/lib/business-analysis";
+import { analyzeBusiness, isLearning, MIN_SALE_DAYS, PLAN_COVER_DAYS, rateLabel, runoutLabel, suggestedQuantity, type ProductRisk } from "@/lib/business-analysis";
 import { links } from "@/lib/deep-links";
 
 const fmt = (n: number) => (Number.isInteger(n) ? n : Number(n.toFixed(1))).toLocaleString("pt-PT");
@@ -21,8 +21,15 @@ export function ProductionPlan({ onClose, canRegister }: { onClose: () => void; 
     const locations = inv?.locations || [];
     const multi = !!inv?.isMultiLocation;
 
-    const plan = useMemo(() => analyzeBusiness({ products: products || [], sales: sales || [], businessType: "manufacturer", multiLocation: multi })
-        .stock.runout.map((r) => ({ ...r, suggested: suggestedQuantity(r) })), [products, sales, multi]);
+    // com padrão de vendas → quanto produzir; poucas vendas → "a aprender", sem quantidade (uma venda não é procura)
+    const { plan, learning } = useMemo(() => {
+        const runout = analyzeBusiness({ products: products || [], sales: sales || [], businessType: "manufacturer", multiLocation: multi }).stock.runout;
+        return {
+            plan: runout.filter((r) => !isLearning(r)).map((r) => ({ ...r, suggested: suggestedQuantity(r) })),
+            learning: runout.filter(isLearning),
+        };
+    }, [products, sales, multi]);
+    const when = (r: ProductRisk) => (r.available <= 0 ? <span className="font-medium text-red-600">Já esgotado</span> : r.daysLeft <= 1 ? <span className="font-medium text-amber-600">{runoutLabel(r.daysLeft)}</span> : <>Esgota em {runoutLabel(r.daysLeft)}</>);
 
     const locName = (id?: string) => (multi ? locations.find((l) => l.id === id)?.name || (!id ? locations[0]?.name : id) : "");
 
@@ -33,13 +40,13 @@ export function ProductionPlan({ onClose, canRegister }: { onClose: () => void; 
                 <div className="min-w-0 flex-1">
                     <h2 className="font-semibold leading-snug">O que produzir</h2>
                     <p className="text-sm text-muted-foreground">
-                        Produtos que esgotam em 14 dias ou menos, ao ritmo de venda do último mês. A sugestão cobre {PLAN_COVER_DAYS} dias de vendas.
+                        Produtos que vendem com regularidade e esgotam em 14 dias ou menos. A sugestão cobre {PLAN_COVER_DAYS} dias de vendas.
                     </p>
                 </div>
                 <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Fechar plano"><X className="h-4 w-4" /></Button>
             </div>
             {plan.length === 0 ? (
-                <p className="text-sm text-emerald-600">Nada vai esgotar nas próximas 2 semanas. 🎉</p>
+                <p className="text-sm text-emerald-600">{learning.length ? "Nenhum produto com vendas regulares vai esgotar nas próximas 2 semanas." : "Nada vai esgotar nas próximas 2 semanas. 🎉"}</p>
             ) : (
                 <ul className="divide-y rounded-xl border bg-background">
                     {plan.map((r) => (
@@ -50,8 +57,8 @@ export function ProductionPlan({ onClose, canRegister }: { onClose: () => void; 
                                     {locName(r.location) && <span className="text-sm font-normal text-muted-foreground"> · {locName(r.location)}</span>}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                    {r.daysLeft <= 0 ? <span className="font-medium text-red-600">Já esgotado</span> : <>Esgota em ~{r.daysLeft} {r.daysLeft === 1 ? "dia" : "dias"}</>}
-                                    {" · "}{fmt(Math.max(0, r.available))} {r.unit} disponíveis · vende ~{fmt(r.soldPerDay)} {r.unit}/dia
+                                    {when(r)}
+                                    {" · "}{fmt(Math.max(0, r.available))} {r.unit} disponíveis · vende {rateLabel(r.soldPerDay, r.unit)}
                                 </p>
                             </div>
                             <div className="text-right">
@@ -68,6 +75,27 @@ export function ProductionPlan({ onClose, canRegister }: { onClose: () => void; 
                         </li>
                     ))}
                 </ul>
+            )}
+            {learning.length > 0 && (
+                <div className="mt-4" data-tour="production-plan-learning">
+                    <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold"><GraduationCap className="h-4 w-4 text-sky-600" /> A aprender ({learning.length})</p>
+                    <p className="mb-2 text-xs text-muted-foreground">
+                        Venderam em menos de {MIN_SALE_DAYS} dias no último mês: ainda não há vendas suficientes para dizer quanto produzir. Produza à medida das encomendas — com mais vendas registadas passam para a lista de cima.
+                    </p>
+                    <ul className="divide-y rounded-xl border bg-background/60">
+                        {learning.map((r) => (
+                            <li key={`${r.name}|${r.location || ""}`} className="px-3 py-2">
+                                <p className="text-sm font-medium leading-snug">
+                                    {r.name}
+                                    {locName(r.location) && <span className="font-normal text-muted-foreground"> · {locName(r.location)}</span>}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {when(r)} · {fmt(Math.max(0, r.available))} {r.unit} disponíveis · vendeu em {r.saleDays} {r.saleDays === 1 ? "dia" : "dias"} no último mês
+                                </p>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
             )}
         </section>
     );

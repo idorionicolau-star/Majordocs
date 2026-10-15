@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { InventoryContext } from "@/context/inventory-context";
 import { CRMContext } from "@/context/crm-context";
-import { analyzeBusiness, runoutLabel, type Alert, type Severity } from "@/lib/business-analysis";
+import { analyzeBusiness, isLearning, runoutLabel, type Alert, type Severity } from "@/lib/business-analysis";
 import { StockHealthScore } from "@/components/diagnostico/stock-health-score";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -143,8 +143,8 @@ export default function DiagnosticoPage() {
             <Section title="Vão esgotar em ≤ 14 dias">
               {salesStale ? (
                 <Empty>Sem vendas recentes registadas não dá para prever. Registe as vendas e esta lista passa a funcionar.</Empty>
-              ) : a.stock.runout.some((r) => r.available > 0) ? (
-                a.stock.runout.filter((r) => r.available > 0).slice(0, 6).map((r) => (
+              ) : a.stock.runout.some((r) => r.available > 0 && !isLearning(r)) ? (
+                a.stock.runout.filter((r) => r.available > 0 && !isLearning(r)).slice(0, 6).map((r) => (
                   <Row key={`${r.name}${r.location}`} left={r.name} right={`${runoutLabel(r.daysLeft)} · ${qty(r.available)} ${r.unit}`} tone={r.daysLeft <= 5 ? "bad" : "warn"} href={links.product(r.name, r.location)} />
                 ))
               ) : <Empty>Nada em risco ao ritmo actual de vendas. 👍</Empty>}
