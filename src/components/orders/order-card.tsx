@@ -146,7 +146,7 @@ export function OrderCard({ order, onUpdateStatus, onAddProductionLog, onDeleteO
                     )}
                 </div>
             </CardContent>
-            {canEdit && <CardFooter data-tour="orders-actions" className="flex flex-col sm:flex-row justify-center gap-2 p-2 pt-4">
+            {canEdit && <CardFooter data-tour="orders-actions" className="flex flex-wrap justify-center gap-2 p-2 pt-4 [&>*]:min-w-[7.5rem] [&>*]:flex-1">
                 {order.status !== 'Entregue' && <PartialPickupDialog order={order} />}
                 {order.status === 'Pendente' && (
                     <Button onClick={() => onUpdateStatus(order.id, 'Em produção')} className="flex-1" variant="outline">
