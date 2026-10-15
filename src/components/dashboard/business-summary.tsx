@@ -1,8 +1,7 @@
 "use client";
 
-import { useContext, useMemo, useState, useEffect, useCallback } from "react";
+import { useContext, useMemo } from "react";
 import { InventoryContext } from "@/context/inventory-context";
-import { useAuth } from "@/firebase/provider";
 import { useCRM } from "@/context/crm-context";
 import Link from "next/link";
 import { cn, daysAgo, formatCurrency, plural } from "@/lib/utils";
@@ -11,17 +10,7 @@ import { links } from "@/lib/deep-links";
 import {
     ShoppingCart, AlertTriangle, TrendingUp, Sun, Zap, PackagePlus, PackageCheck,
     ClipboardCheck, Truck, CircleDollarSign, CheckCircle2, ChevronRight,
-    Sparkles, ChevronDown, RefreshCw
 } from "lucide-react";
-import { isToday } from 'date-fns';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { useTypingEffect } from "@/hooks/use-typing-effect";
-
-const INSIGHTS_STORAGE_KEY = 'majorstockx-daily-insights-v2';
 
 const SEVERITY: Record<Severity, { box: string; dot: string }> = {
     critical: { box: "border-red-500/30 bg-red-500/5", dot: "bg-red-500" },
@@ -63,12 +52,6 @@ export const BusinessSummary = () => {
 };
 
 const BusinessSummaryInner = ({ context }: { context: NonNullable<React.ContextType<typeof InventoryContext>> }) => {
-    const auth = useAuth();
-    const [insightsOpen, setInsightsOpen] = useState(false);
-    const [insights, setInsights] = useState<string | null>(null);
-    const [insightsLoading, setInsightsLoading] = useState(false);
-    const [insightsFetched, setInsightsFetched] = useState(false);
-    const [isFreshlyGenerated, setIsFreshlyGenerated] = useState(false);
 
     const { sales, products, companyData, loading } = context;
     const inv = context;
@@ -88,61 +71,6 @@ const BusinessSummaryInner = ({ context }: { context: NonNullable<React.ContextT
         });
     }, [loading, sales, products, customers, inv.orders, inv.productions, inv.stockMovements, companyData?.businessType, companyData?.countEveryDays]);
 
-
-    const fetchInsights = useCallback(async (forceRefresh = false) => {
-        if (insightsLoading) return;
-
-        const storageKey = `${INSIGHTS_STORAGE_KEY}-${auth.currentUser?.uid || 'guest'}`;
-
-        // Check cache first (once per day)
-        if (!forceRefresh) {
-            try {
-                const cached = localStorage.getItem(storageKey);
-                if (cached) {
-                    const { text, timestamp } = JSON.parse(cached);
-                    if (isToday(new Date(timestamp))) {
-                        setIsFreshlyGenerated(false);
-                        setInsights(text);
-                        setInsightsFetched(true);
-                        return;
-                    }
-                }
-            } catch (e) { /* ignore */ }
-        }
-
-        setInsightsLoading(true);
-        try {
-            const { analyzeBusiness, analysisToMarkdown } = await import('@/lib/business-analysis');
-
-            const text = analysisToMarkdown(analyzeBusiness({ products: products || [], sales: sales || [], customers: customers || [], orders: (inv as any)?.orders || [], productions: (inv as any)?.productions || [], stockMovements: (inv as any)?.stockMovements || [], businessType: companyData?.businessType }));
-
-            setIsFreshlyGenerated(true);
-            setInsights(text);
-            setInsightsFetched(true);
-
-            // Cache for the rest of the day
-            localStorage.setItem(storageKey, JSON.stringify({
-                text: text,
-                timestamp: new Date().toISOString()
-            }));
-        } catch (error: any) {
-            setInsights(`Não foi possível gerar as sugestões: ${error.message}`);
-            setInsightsFetched(true);
-        } finally {
-            setInsightsLoading(false);
-        }
-    }, [sales, products, customers, companyData, auth.currentUser?.uid]);
-
-    // Fetch insights when expanded for the first time
-    useEffect(() => {
-        if (insightsOpen && !insightsFetched && sales && sales.length > 0) {
-            fetchInsights();
-        }
-    }, [insightsOpen, insightsFetched, sales, fetchInsights]);
-
-    const displayedInsights = useTypingEffect(insights || "", 15, isFreshlyGenerated, () => {
-        setIsFreshlyGenerated(false);
-    });
 
     if (loading || !analysis) {
         return (
@@ -252,52 +180,6 @@ const BusinessSummaryInner = ({ context }: { context: NonNullable<React.ContextT
                 )}
             </div>
 
-            {/* AI Insights - Collapsible */}
-            <Collapsible open={insightsOpen} onOpenChange={setInsightsOpen} className="mt-4" data-tour="dash-insights">
-                <div className="flex items-center gap-2">
-                    <CollapsibleTrigger asChild>
-                        <button className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-950/30 dark:to-indigo-950/30 border border-sky-100 dark:border-sky-900/30 hover:shadow-sm transition-all group text-left">
-                            <Sparkles className="h-3.5 w-3.5 text-sky-500 flex-shrink-0" />
-                            <span className="text-xs font-semibold text-sky-700 dark:text-sky-400">Sugestões do dia</span>
-                            <span className="text-[10px] text-muted-foreground truncate">— calculadas no aparelho, sem internet</span>
-                            <ChevronDown className={cn(
-                                "h-3.5 w-3.5 text-muted-foreground ml-auto transition-transform duration-200",
-                                insightsOpen && "rotate-180"
-                            )} />
-                        </button>
-                    </CollapsibleTrigger>
-                    {insightsOpen && insightsFetched && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 flex-shrink-0"
-                            onClick={(e) => { e.stopPropagation(); fetchInsights(true); }}
-                            disabled={insightsLoading}
-                        >
-                            <RefreshCw className={cn("h-3.5 w-3.5", insightsLoading && "animate-spin")} />
-                        </Button>
-                    )}
-                </div>
-                <CollapsibleContent className="mt-2">
-                    <div className="rounded-lg border border-sky-100 dark:border-sky-900/20 bg-white/60 dark:bg-slate-800/50 p-4 max-h-72 overflow-y-auto scrollbar-thin">
-                        {insightsLoading ? (
-                            <div className="space-y-2">
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-5/6" />
-                                <Skeleton className="h-4 w-4/6" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-3/4" />
-                            </div>
-                        ) : (
-                            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-slate-600 dark:prose-p:text-slate-400 prose-strong:text-sky-600 dark:prose-strong:text-sky-400">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                    {isFreshlyGenerated ? displayedInsights : (insights || "Toque para gerar as sugestões do dia.")}
-                                </ReactMarkdown>
-                            </div>
-                        )}
-                    </div>
-                </CollapsibleContent>
-            </Collapsible>
         </div>
     );
 };

@@ -59,7 +59,8 @@ export type Analysis = {
         /** reservado sem nenhuma venda paga por levantar nem encomenda por trás (reserva presa) */
         reservedDrift: { product: Product; drift: number }[];
         runout: ProductRisk[];
-        dead: { count: number; value: number; pctOfValue: number; examples: string[] };
+        /** days: a janela usada (90, ou menos se a app tem vendas há menos tempo) */
+        dead: { count: number; value: number; pctOfValue: number; examples: string[]; days: number };
         healthScore: number;
         pendingPickups: { sale: Sale; days: number }[];
         lastCountDate: Date | null; daysSinceCount: number | null;
@@ -90,6 +91,8 @@ const safeDate = (v: unknown): Date | null => {
 };
 const revenueOf = (s: Sale) => Number(s.amountPaid ?? s.totalValue ?? 0) || 0;
 const available = (p: Product) => (p.stock || 0) - (p.reservedStock || 0);
+/** "acaba hoje", "acaba amanhã", "~5 dias" — em vez de "~0 dias". */
+export const runoutLabel = (daysLeft: number) => (daysLeft <= 0 ? "acaba hoje" : daysLeft === 1 ? "acaba amanhã" : `~${daysLeft} dias`);
 const key = (name: string) => normalizeString((name || "").trim());
 const fmtQty = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
@@ -199,7 +202,10 @@ export function analyzeBusiness(input: {
         .filter((r) => r.soldPerDay > 0 && r.daysLeft <= 14)
         .sort((a, b) => a.daysLeft - b.daysLeft);
 
-    const deadList = products.filter((p) => available(p) > 0 && !soldEver90.has(key(p.name)));
+    // "sem vendas há N dias" só se a app tem vendas registadas desde há N dias (antes disso não sabe o que se vendeu)
+    const firstSaleDate = dated.length ? new Date(Math.min(...dated.map((x) => x.d.getTime()))) : null;
+    const deadWindow = firstSaleDate ? Math.min(90, days(now, firstSaleDate)) : 0;
+    const deadList = deadWindow >= 30 ? products.filter((p) => available(p) > 0 && !soldEver90.has(key(p.name))) : [];
     const deadValue = deadList.reduce((t, p) => t + available(p) * (p.price || 0), 0);
 
     const inStock = products.filter((p) => available(p) > 0);
@@ -324,7 +330,9 @@ export function analyzeBusiness(input: {
     }
     if (negative.length) alerts.push({ id: "negative", severity: "critical", title: `${plural(negative.length, "produto", "produtos")} com stock negativo`, detail: reseller ? "Saiu mais do que entrou — falta registar a entrada (compra) desse produto." : "Saiu mais do que entrou — falta registar entradas ou produção.", items: negative.slice(0, 5).map((p) => `${p.name}: ${fmtQty(p.stock)} ${p.unit || "un"}`), itemLinks: negative.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Ver produtos com stock negativo", href: links.inventoryProblem("negativo") } });
     if (overdue.length) alerts.push({ id: "overdue", severity: "critical", title: `${plural(overdue.length, "encomenda atrasada", "encomendas atrasadas")}`, detail: "Passou a data de entrega combinada com o cliente.", items: overdue.slice(0, 5).map((o) => `${o.productName} — ${o.clientName || "cliente"}`), itemLinks: overdue.slice(0, 5).map((o) => links.order(o.id)), action: { label: "Ver encomendas atrasadas", href: overdue.length === 1 ? links.order(overdue[0].id) : "/orders" } });
-    if (runout.length) alerts.push({ id: "runout", severity: "warning", title: `${plural(runout.length, "produto vai", "produtos vão")} esgotar em ≤ 14 dias`, detail: "Ao ritmo de venda do último mês.", items: runout.slice(0, 5).map((r) => `${r.name}: ~${r.daysLeft} dias (${fmtQty(r.available)} ${r.unit})`), itemLinks: runout.slice(0, 5).map((r) => links.product(r.name, r.location)), action: reseller ? { label: "Repor stock", href: "/inventory/quick?modo=entrada" } : { label: "Planear produção", href: links.productionPlan() } });
+    // os já esgotados têm o seu alerta ("produtos esgotados"): aqui só os que ainda têm stock
+    const runoutSoon = runout.filter((r) => r.available > 0);
+    if (runoutSoon.length) alerts.push({ id: "runout", severity: "warning", title: `${plural(runoutSoon.length, "produto vai", "produtos vão")} esgotar em ≤ 14 dias`, detail: "Ao ritmo de venda do último mês.", items: runoutSoon.slice(0, 5).map((r) => `${r.name}: ${runoutLabel(r.daysLeft)} (${fmtQty(r.available)} ${r.unit})`), itemLinks: runoutSoon.slice(0, 5).map((r) => links.product(r.name, r.location)), action: reseller ? { label: "Repor stock", href: "/inventory/quick?modo=entrada" } : { label: "Planear produção", href: links.productionPlan() } });
     if (outOfStock.length) alerts.push({ id: "out", severity: "warning", title: `${plural(outOfStock.length, "produto esgotado", "produtos esgotados")}`, detail: reseller ? "Não podem ser vendidos até haver nova entrada de stock." : "Não podem ser vendidos até haver entrada ou produção.", items: outOfStock.slice(0, 5).map((p) => p.name), itemLinks: outOfStock.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Ver produtos esgotados", href: links.inventoryProblem("esgotado") } });
     if (pendingPickups.some((p) => p.days > 7)) {
         const stale = pendingPickups.filter((p) => p.days > 7);
@@ -338,7 +346,7 @@ export function analyzeBusiness(input: {
     }
     if (zeroPrice.length) alerts.push({ id: "zero-price", severity: "warning", title: `${plural(zeroPrice.length, "produto sem preço", "produtos sem preço")}`, detail: "Podem sair a 0 MT numa venda.", items: zeroPrice.slice(0, 5).map((p) => p.name), itemLinks: zeroPrice.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Corrigir preços", href: links.inventoryProblem("sem-preco") } });
     if (deadValue > 0 && valueAtPrice > 0 && daysSinceLastSale !== null && daysSinceLastSale <= 30) {
-        alerts.push({ id: "dead", severity: "info", title: `${formatCurrency(deadValue)} em stock sem vendas há 90 dias`, detail: "Capital parado — considere promoção, pacote ou desconto por volume.", items: deadList.slice(0, 5).map((p) => p.name), itemLinks: deadList.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Ver estes produtos", href: links.products(deadList.map((p) => p.name), "Stock parado há 90 dias") } });
+        alerts.push({ id: "dead", severity: "info", title: `${formatCurrency(deadValue)} em stock sem vendas registadas há ${deadWindow} dias`, detail: "Capital parado — considere promoção, pacote ou desconto por volume.", items: deadList.slice(0, 5).map((p) => p.name), itemLinks: deadList.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Ver estes produtos", href: links.products(deadList.map((p) => p.name), `Stock parado há ${deadWindow} dias`) } });
     }
     if (duplicates.length) alerts.push({ id: "dups", severity: "info", title: `${plural(duplicates.length, "produto parece duplicado", "produtos parecem duplicados")}`, detail: "O mesmo artigo registado duas vezes divide o stock e confunde as vendas.", items: duplicates.slice(0, 5), itemLinks: duplicates.slice(0, 5).map((n) => links.product(n)), action: { label: "Rever duplicados", href: links.products([...duplicateNames], "Possíveis duplicados") } });
     if (fractionalUnits.length) alerts.push({ id: "units", severity: "info", title: `${plural(fractionalUnits.length, "produto em 'un'", "produtos em 'un'")} com quantidades decimais`, detail: "Ex.: 23.8 un. Provavelmente a unidade certa é m² ou m — confirme a unidade.", items: fractionalUnits.slice(0, 5).map((p) => `${p.name}: ${fmtQty(p.stock)} un`), itemLinks: fractionalUnits.slice(0, 5).map((p) => links.product(p.name, p.location)), action: { label: "Rever unidades", href: links.inventoryProblem("unidades") } });
@@ -378,7 +386,7 @@ export function analyzeBusiness(input: {
         stock: {
             productCount: products.length, valueAtPrice, valueAtCost,
             outOfStock, critical, low, negative, reservedOverStock, reservedDrift, runout,
-            dead: { count: deadList.length, value: deadValue, pctOfValue: valueAtPrice > 0 ? Math.round((deadValue / valueAtPrice) * 100) : 0, examples: deadList.slice(0, 5).map((p) => p.name) },
+            dead: { count: deadList.length, value: deadValue, pctOfValue: valueAtPrice > 0 ? Math.round((deadValue / valueAtPrice) * 100) : 0, examples: deadList.slice(0, 5).map((p) => p.name), days: deadWindow },
             healthScore, pendingPickups, lastCountDate, daysSinceCount,
         },
         production: { lastDate: lastProd, daysSince: daysSinceProd, last30Qty, pendingTransfers: 0 },
