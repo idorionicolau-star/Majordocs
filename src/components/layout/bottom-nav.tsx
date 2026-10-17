@@ -70,6 +70,7 @@ export function BottomNav({ onMenuClick }: BottomNavProps) {
             <Link
               key={item.id}
               href={item.href}
+              data-tour={`nav:${item.href}`}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 transition-colors relative touch-manipulation",
                 isActive
@@ -93,6 +94,7 @@ export function BottomNav({ onMenuClick }: BottomNavProps) {
 
         {/* Menu Button */}
         <button
+          data-tour="nav-more"
           onClick={onMenuClick}
           className="flex flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors touch-manipulation"
         >

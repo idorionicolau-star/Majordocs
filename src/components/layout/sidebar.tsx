@@ -57,6 +57,7 @@ export function Sidebar() {
                                 <Link
                                     key={item.href}
                                     href={item.href}
+                                    data-tour={`nav:${item.href}`}
                                     onClick={() => window.dispatchEvent(new CustomEvent('navigation-start'))}
                                     className={cn(
                                         "flex items-center gap-3 rounded-xl transition-all duration-200 group relative",

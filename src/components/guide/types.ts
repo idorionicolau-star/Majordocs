@@ -48,6 +48,17 @@ export function findTarget(names: string): HTMLElement | null {
 /** Condições para `done`: quando um elemento aparece / desaparece do ecrã. */
 export const appears = (names: string) => () => !!findTarget(names);
 export const disappears = (names: string) => () => !findTarget(names);
+/** A pessoa já está nesta página (os passos "abra o menu…" acabam quando ela lá chega pelo próprio toque). */
+export const onPage = (path: string) => () => typeof window !== "undefined" && window.location.pathname === path;
+
+/**
+ * Passo "abra esta página pelo menu": destaca o item do menu lateral (computador) ou da barra de baixo; se não estiver à
+ * vista (telemóvel, dentro do "Mais"), destaca o botão Mais e, quando o menu abre, o item lá dentro.
+ */
+export function navStep(href: string, label: string, title: string, body: ReactNode): GuideStep {
+    return { target: `nav:${href}|nav-more`, advance: "auto", done: onPage(href), hint: `Toque em ${label}`, title, body };
+}
+
 /** O campo (input dentro do elemento) já tem pelo menos `min` caracteres — ou, com `positive`, um número maior que zero. */
 export const filled = (names: string, min = 1, positive = false) => () => {
     const el = findTarget(names);

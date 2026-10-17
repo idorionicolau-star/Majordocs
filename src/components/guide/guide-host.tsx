@@ -123,6 +123,7 @@ export function GuideHost() {
         let scrolled = false;
         let blurred = false;
         let lastKb = false;
+        let lastEl: HTMLElement | null = null;
         const t0 = Date.now();
         let onPageAt = 0; // quando chegou à página do passo (a página pode demorar a abrir)
         let grace = 1200; // já estava na página quando o passo começou → o elemento ou existe já, ou não existe: espera pouco
@@ -142,6 +143,11 @@ export function GuideHost() {
             const kb = keyboardOpen(vh, vis);
             const el = step.target ? findTarget(step.target) : null;
             targetRef.current = el;
+            if (el && el !== lastEl) {
+                // o destaque mudou de elemento (ex.: o botão Mais → o item dentro do menu): volta a pô-lo à vista
+                lastEl = el;
+                scrolled = false;
+            }
             if (el) {
                 // um campo de outro passo ainda com o teclado aberto → fecha-o (senão o teclado tapa o passo novo)
                 if (!blurred) {
@@ -263,6 +269,8 @@ export function GuideHost() {
     const keep = (e: React.SyntheticEvent) => e.stopPropagation();
     // Tocar nos botões do balão não tira o foco ao campo (o teclado não fecha e o ecrã não salta).
     const keepFocus = (e: React.MouseEvent) => { e.stopPropagation(); e.preventDefault(); };
+    // passo "abra pelo menu" no telemóvel: primeiro o destaque está no botão Mais
+    const hintNow = targetRef.current?.dataset.tour === "nav-more" ? "Toque em Mais" : step.hint || "Aqui";
     const badgeTop = hole ? (hole.top > 44 ? hole.top - 34 : hole.top + hole.height + 8) : 0;
 
     return createPortal(
@@ -275,7 +283,7 @@ export function GuideHost() {
             )}
             {hole && action && (
                 <div aria-hidden className="pointer-events-none fixed z-[301] rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground shadow-lg motion-safe:animate-bounce" style={{ top: badgeTop, left: Math.min(Math.max(8, hole.left + 8), vp.w - 180) }}>
-                    👆 {step.hint || "Aqui"}
+                    👆 {hintNow}
                 </div>
             )}
             {!searching && <div
@@ -325,7 +333,7 @@ export function GuideHost() {
                             </Button>
                         )}
                         {action ? (
-                            <span className="text-sm font-semibold text-primary motion-safe:animate-pulse">{step.hint || "Faça no ecrã"}</span>
+                            <span className="text-sm font-semibold text-primary motion-safe:animate-pulse">{targetRef.current ? hintNow : step.hint || "Faça no ecrã"}</span>
                         ) : (
                             <Button type="button" size="sm" onClick={next}>
                                 {last ? (guide.next ? "Continuar" : "Terminar") : "Seguinte"}

@@ -66,6 +66,7 @@ export function MobileNav({ onLinkClick }: MobileNavProps) {
                                 <Link
                                     key={item.href}
                                     href={item.href}
+                                    data-tour={`nav:${item.href}`}
                                     onClick={handleLinkClick}
                                     className={cn(
                                         "flex items-center gap-4 rounded-xl transition-all font-medium",
