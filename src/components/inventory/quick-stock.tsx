@@ -1195,7 +1195,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                         <li>Junte vários artigos e confirme tudo de uma vez no fim.</li>
                         <li>O lote fica guardado no aparelho mesmo que a página feche.</li>
                     </ul>
-                    <Link href="/inventory/fast-entry" className="mt-3 inline-flex items-center gap-1.5 text-xs underline">
+                    <Link href="/inventory/quick?vista=folha" data-tour="qs-sheet-link" className="mt-3 inline-flex items-center gap-1.5 text-xs underline">
                         <Sheet className="h-3.5 w-3.5" /> Preferir o modo folha de cálculo
                     </Link>
                 </div>

@@ -32,7 +32,6 @@ export const mainNavItems: NavItem[] = [
   // Stock
   // Produtos: o stock (Inventário) e o Catálogo (preços) são abas da mesma secção
   { title: 'Produtos', href: '/inventory', id: 'inventory', icon: Box, group: 'stock', also: ['/catalog'] },
-  { title: 'Stock Rápido', href: '/inventory/quick', id: 'inventory', isSubItem: true, icon: ClipboardList, group: 'stock' },
   { title: 'Histórico', href: '/inventory/history', id: 'inventory', isSubItem: true, icon: History, group: 'stock' },
   { title: 'Perdas', href: '/inventory/perdas', id: 'inventory', isSubItem: true, icon: TrendingDown, group: 'stock' },
   { title: 'Produção', href: '/production', id: 'production', icon: Hammer, group: 'stock' },

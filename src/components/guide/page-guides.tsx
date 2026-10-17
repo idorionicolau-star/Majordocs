@@ -86,7 +86,7 @@ const PAGES: Guide[] = [
             { target: "inv-quick|inv-count", title: "O seu stock", body: <>Tudo o que tem, em cada local. Use o <b>Stock Rápido</b> para entradas e saídas, e a <b>Contagem</b> para acertar o stock (as diferenças aparecem nas Perdas).</> },
             { target: "inv-search|inv-filters", title: "Procurar e filtrar", body: <>Por nome ou código de barras; filtre por categoria, estado (baixo, crítico, esgotado), local e data, e escolha lista ou cartões.</> },
             { target: "inv-stock|inv-card|inv-list", title: "O número grande", body: <>É o que pode <b>vender agora</b>: o stock menos o reservado. Toque em «reservados» para ver de que vendas ou encomendas são.</> },
-            { target: "inv-card-actions", title: "Ações", body: <><b>Auditar</b> (acertar a contagem deste produto), <b>editar</b>, ver o histórico e <b>apagar</b>.</> },
+            { target: "inv-card-actions", title: "Ações", body: <><b>Contar</b> (acertar o stock deste produto), <b>editar</b>, ver o histórico e <b>apagar</b>.</> },
             { target: "inv-more", title: "Mais", body: <>Histórico de movimentos, perdas e quebras, o relatório e a <b>folha de contagem em papel</b>.</> },
             { target: "inv-add", title: "Produto novo", body: <>Toque no <b>+</b> para criar um produto: nome, preço e, se já o tem, a quantidade.</> },
             { title: "Quer ver passo a passo?", body: <>Mostramos-lhe como dar entrada de stock no <b>Stock Rápido</b>, campo a campo.</>, cta: { label: "Ver passo a passo", guide: "stock-inicial" } },
