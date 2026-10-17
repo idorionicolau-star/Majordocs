@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn, formatCurrency, normalizeString, plural } from "@/lib/utils";
 import type { CartItem, Product, Sale } from "@/lib/types";
 import { parseQuickInput, searchProducts, toNumber } from "@/lib/quick-stock";
+import { posTotals } from "@/lib/pos-totals";
 import { variantChoice, variantLabel } from "@/lib/variants";
 import { VariantChooser, chooserKey } from "@/components/catalog/variant-chooser";
 import { Check, ChevronDown, GraduationCap, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, Truck, X } from "lucide-react";
@@ -86,6 +87,7 @@ export function FastSale() {
     const [more, setMore] = useState(false);
     const [docType, setDocType] = useState<Sale["documentType"]>("Venda a Dinheiro");
     const [discountText, setDiscountText] = useState("");
+    const [vatText, setVatText] = useState("");
     const [notes, setNotes] = useState("");
     const [saving, setSaving] = useState(false);
     const [lastSale, setLastSale] = useState<{ total: number; items: number; client: string } | null>(null);
@@ -312,8 +314,7 @@ export function FastSale() {
     const remove = (key: string) => setLines((prev) => prev.filter((l) => l.key !== key));
 
     const subtotal = lines.reduce((t, l) => t + l.qty * l.price, 0);
-    const discount = Math.min(subtotal, Math.max(0, toNumber(discountText) || 0));
-    const total = subtotal - discount;
+    const { discount, discountInput, vatPercentage, vat, total } = posTotals(subtotal, discountText, vatText);
     const paid = paidText.trim() === "" ? total : Math.max(0, toNumber(paidText) || 0);
     const debt = Math.max(0, total - paid);
     const change = Math.max(0, paid - total);
@@ -333,7 +334,7 @@ export function FastSale() {
             // demonstração: mostra como ficaria, sem gravar nada
             setDemoDone({ total, items: lines.length, client: client.trim() });
             markDemoSaleDone(companyId);
-            setLines([]); setClient(""); setPaidText(""); setDiscountText(""); setNotes(""); setPickedUp(true); setDocType("Venda a Dinheiro"); setMore(false);
+            setLines([]); setClient(""); setPaidText(""); setDiscountText(""); setVatText(""); setNotes(""); setPickedUp(true); setDocType("Venda a Dinheiro"); setMore(false);
             return;
         }
         if (isReadOnly) {
@@ -369,9 +370,9 @@ export function FastSale() {
                 clientName: name,
                 documentType: docType,
                 notes: notes.trim() || undefined,
-                discount: discount > 0 ? { type: "fixed", value: discount } : undefined,
-                applyVat: false,
-                vatPercentage: 0,
+                discount: discountInput,
+                applyVat: vat > 0,
+                vatPercentage: vat > 0 ? vatPercentage : 0,
                 isPickedUp: pickedUp,
                 date: isToday ? new Date().toISOString() : new Date(`${date}T12:00:00`).toISOString(),
                 paymentMethod: payment,
@@ -384,6 +385,7 @@ export function FastSale() {
             setClient("");
             setPaidText("");
             setDiscountText("");
+            setVatText("");
             setNotes("");
             setPickedUp(true);
             setDocType("Venda a Dinheiro");
@@ -707,7 +709,7 @@ export function FastSale() {
                         </div>
 
                         <button type="button" data-tour="pos-more" onClick={() => setMore((m) => !m)} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground">
-                            <ChevronDown className={cn("h-4 w-4 transition", more && "rotate-180")} /> Mais opções (documento, desconto, nota)
+                            <ChevronDown className={cn("h-4 w-4 transition", more && "rotate-180")} /> Mais opções (documento, desconto, IVA, nota)
                         </button>
                         {more && (
                             <div className="grid gap-3 sm:grid-cols-2">
@@ -720,8 +722,13 @@ export function FastSale() {
                                     {isProforma && <p className="mt-1 text-xs text-muted-foreground">Proforma não mexe no stock nem conta como venda.</p>}
                                 </div>
                                 <div>
-                                    <label className="text-xs font-semibold text-muted-foreground">Desconto (MT)</label>
-                                    <Input inputMode="decimal" value={discountText} onChange={(e) => setDiscountText(e.target.value)} placeholder="0" className="mt-1 h-11 rounded-xl" />
+                                    <label className="text-xs font-semibold text-muted-foreground">Desconto (MT ou %)</label>
+                                    <Input data-tour="pos-discount" value={discountText} onChange={(e) => setDiscountText(e.target.value)} placeholder="Ex.: 50 ou 10%" className="mt-1 h-11 rounded-xl" />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-muted-foreground">IVA (%)</label>
+                                    <Input data-tour="pos-vat" inputMode="decimal" value={vatText} onChange={(e) => setVatText(e.target.value)} placeholder="Sem IVA" className="mt-1 h-11 rounded-xl" />
+                                    {vat > 0 && <p className="mt-1 text-xs text-muted-foreground">IVA: {formatCurrency(vat)}</p>}
                                 </div>
                                 <div className="sm:col-span-2">
                                     <label className="text-xs font-semibold text-muted-foreground">Nota</label>
@@ -750,7 +757,7 @@ export function FastSale() {
                 <div className={cn("fixed inset-x-0 z-40 border-t bg-background p-3 md:bottom-0 md:left-64", !keyboardInset && "bottom-16")} style={keyboardInset ? { bottom: keyboardInset } : undefined}>
                     <div className="mx-auto flex max-w-3xl items-center gap-3">
                         <div className="min-w-0 flex-1" data-tour="pos-total">
-                            <p className="text-[11px] text-muted-foreground">{plural(lines.length, "produto", "produtos")}{discount > 0 ? ` · desconto ${formatCurrency(discount)}` : ""}</p>
+                            <p className="text-[11px] text-muted-foreground">{plural(lines.length, "produto", "produtos")}{discount > 0 ? ` · desconto ${formatCurrency(discount)}` : ""}{vat > 0 ? ` · IVA ${formatCurrency(vat)}` : ""}</p>
                             <p className="text-xl font-bold tabular-nums">{formatCurrency(total)}</p>
                         </div>
                         <Button type="button" data-tour="pos-confirm" onClick={confirm} disabled={!canConfirm} className="h-12 shrink-0 rounded-xl bg-emerald-600 px-5 text-base text-white hover:bg-emerald-700">

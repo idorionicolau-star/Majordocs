@@ -39,7 +39,7 @@ const PAGES: Guide[] = [
             { target: "sales-view", title: "Lista ou cartões", body: <>No computador, escolha ver em lista ou em cartões.</> },
             { target: "sales-list", title: "As vendas", body: <>Cada venda mostra o valor, a data e a hora, o cliente e o estado.</> },
             { target: "sales-actions|sales-item", title: "O que pode fazer", body: <><b>Ver detalhes</b>, <b>editar</b>, <b>baixar o PDF</b>, <b>imprimir</b>, confirmar que o cliente <b>levantou</b> e <b>apagar</b> (o stock volta).</> },
-            { target: "sales-add", title: "Nova venda", body: <>Para vender no dia-a-dia use a <b>Venda Rápida</b>. Aqui também há o formulário completo, com mais opções.</> },
+            { target: "sales-add", title: "Nova venda", body: <>Abre a <b>Venda Rápida</b>. Para registar uma venda de outro dia, mude lá a <b>data da venda</b>; documento, desconto e IVA estão em <b>Mais opções</b>.</> },
         ],
     },
     {

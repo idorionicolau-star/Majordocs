@@ -137,9 +137,9 @@ export default function SalesPage() {
           </div>
           {canEditSales && (
             <Button asChild data-tour="sales-add" className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
-              <Link href="/sales/new">
+              <Link href="/pos">
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Adicionar Venda
+                Nova venda
               </Link>
             </Button>
           )}
