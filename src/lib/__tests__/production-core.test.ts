@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { catalogChoices, dateLabel, mostProduced, todayMz, validProductionDate, yesterdayMz } from '@/lib/production-core';
+import { catalogChoices, checkNewMaterial, dateLabel, mostProduced, todayMz, validProductionDate, yesterdayMz } from '@/lib/production-core';
 import { isFamilyGroup } from '@/lib/variants';
 
 const now = new Date('2026-10-14T23:30:00Z'); // já é dia 15 em Maputo
@@ -78,5 +78,22 @@ describe('Produção: matéria-prima usada', () => {
         );
         expect(Object.fromEntries(d)).toEqual({ cim: -1, are: 3, cal: -1 });
         expect(materialDelta([{ rawMaterialId: 'cim', name: 'C', quantity: 2 }], [{ rawMaterialId: 'cim', name: 'C', quantity: 2 }]).size).toBe(0);
+    });
+});
+
+describe('checkNewMaterial (matéria-prima criada na produção)', () => {
+    const existing = [{ id: 'm1', name: 'Areia Grossa' }, { id: 'm2', name: 'Cimento' }];
+    it('cria com nome, unidade e o stock de agora', () => {
+        expect(checkNewMaterial({ name: '  pedra   britada ', unit: 'm³', stock: '12,5' }, existing))
+            .toEqual({ kind: 'ok', value: { name: 'Pedra britada', unit: 'm³', stock: 12.5 } });
+        expect(checkNewMaterial({ name: 'Saco', unit: '', stock: '0' }, existing)).toEqual({ kind: 'ok', value: { name: 'Saco', unit: 'un', stock: 0 } });
+    });
+    it('não repete: o mesmo nome (sem acentos/maiúsculas) usa a que existe', () => {
+        expect(checkNewMaterial({ name: 'areia  grossa', unit: 'kg', stock: '5' }, existing)).toEqual({ kind: 'existing', id: 'm1', name: 'Areia Grossa' });
+    });
+    it('pede o nome e um stock válido', () => {
+        expect(checkNewMaterial({ name: 'a', unit: 'un', stock: '1' }, existing).kind).toBe('error');
+        expect(checkNewMaterial({ name: 'Tinta', unit: 'un', stock: '' }, existing).kind).toBe('error');
+        expect(checkNewMaterial({ name: 'Tinta', unit: 'un', stock: '-2' }, existing).kind).toBe('error');
     });
 });

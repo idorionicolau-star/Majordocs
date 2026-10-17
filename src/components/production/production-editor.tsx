@@ -13,6 +13,7 @@ import { findRecipe, productionMaterials } from "@/lib/production-materials";
 import { isFamilyGroup, variantLabel } from "@/lib/variants";
 import type { Production } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { friendlyError } from "@/lib/friendly-error";
 import { fromDrafts, MaterialsEditor, toDrafts, type MaterialDraft } from "./materials-editor";
 
 /**
@@ -75,7 +76,7 @@ function EditorBody({ production, onDone }: { production: Production; onDone: ()
             toast({ title: "Produção corrigida", description: "O stock do produto e da matéria-prima foram acertados." });
             onDone();
         } catch (e) {
-            toast({ variant: "destructive", title: "Não foi possível guardar", description: e instanceof Error ? e.message : "Tente de novo." });
+            toast({ variant: "destructive", title: "Não foi possível guardar", description: friendlyError(e, "editar Produção, Inventário e Matéria-Prima") });
         } finally {
             setBusy(false);
         }

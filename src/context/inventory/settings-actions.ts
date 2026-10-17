@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from 'react';
 import type { Order, Product, RawMaterial, Recipe, Sale } from '@/lib/types';
-import { collection, doc, getDoc, getDocs, query, where, runTransaction, serverTimestamp, writeBatch, updateDoc, deleteDoc, arrayUnion, type CollectionReference, arrayRemove } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, where, runTransaction, serverTimestamp, writeBatch, updateDoc, deleteDoc, setDoc, arrayUnion, type CollectionReference, arrayRemove } from 'firebase/firestore';
 import { resolveInventoryProductRef } from '@/lib/product-ref';
 import { reservedToRelease } from '@/lib/order-stock';
 import { updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -162,6 +162,19 @@ export function useSettingsActions(core: InventoryCore) {
     addDocumentNonBlocking(rawMaterialsCollectionRef, material);
     toast({ title: 'Matéria-Prima Adicionada' });
   }, [rawMaterialsCollectionRef, toast]);
+
+
+  /**
+   * Cria uma matéria-prima e devolve o id — espera que fique gravada, porque a produção a seguir lê-a numa
+   * transacção (se ainda não estivesse no servidor, dava "já não existe").
+   */
+  const createRawMaterial = useCallback(async (material: Omit<RawMaterial, 'id'>): Promise<string> => {
+    if (isReadOnly) throw new Error('Conta em modo leitura.');
+    if (!rawMaterialsCollectionRef) throw new Error('Sem acesso à matéria-prima.');
+    const ref = doc(rawMaterialsCollectionRef as CollectionReference);
+    await setDoc(ref, material);
+    return ref.id;
+  }, [rawMaterialsCollectionRef, isReadOnly]);
 
 
   const updateRawMaterial = useCallback(async (materialId: string, data: Partial<RawMaterial>) => {
@@ -682,7 +695,7 @@ export function useSettingsActions(core: InventoryCore) {
     }
   }, [isReadOnly, toast, firestore, companyId, canEdit, catalogProductsData, productsData, recipesData, ordersData, user]);
 
-  return { addCatalogProduct, addCatalogCategory, deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts, renameProduct, mergeIntoVariant };
+  return { addCatalogProduct, addCatalogCategory, deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory, addRawMaterial, createRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts, renameProduct, mergeIntoVariant };
 }
 
 export type SettingsActions = ReturnType<typeof useSettingsActions>;

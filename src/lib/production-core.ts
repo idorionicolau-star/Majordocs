@@ -91,3 +91,27 @@ export function materialDelta(before: MaterialLine[], after: MaterialLine[]): Ma
     for (const [k, v] of [...d]) { if (Math.abs(v) < 1e-9) d.delete(k); else d.set(k, round(v)); }
     return d;
 }
+
+// ---------- matéria-prima nova, criada a partir da produção ----------
+const normName = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
+
+export type NewMaterialInput = { name: string; unit: string; stock: string };
+export type NewMaterialCheck =
+    | { kind: 'ok'; value: { name: string; unit: string; stock: number } }
+    | { kind: 'existing'; id: string; name: string }
+    | { kind: 'error'; error: string };
+
+/**
+ * Validar uma matéria-prima nova escrita na produção. Se já existe com esse nome (sem acentos nem maiúsculas), usa-se
+ * a que existe — não se cria repetida. O stock é o que há agora (antes desta produção): a produção desconta dele.
+ */
+export function checkNewMaterial(i: NewMaterialInput, existing: { id: string; name: string }[]): NewMaterialCheck {
+    const name = i.name.trim().replace(/\s+/g, ' ');
+    if (name.length < 2) return { kind: 'error', error: 'Escreva o nome da matéria-prima (ex.: Cimento, Areia, Saco).' };
+    const same = existing.find((m) => normName(m.name) === normName(name));
+    if (same) return { kind: 'existing', id: same.id, name: same.name };
+    const raw = String(i.stock).replace(/\s/g, '').replace(',', '.');
+    const stock = raw === '' ? NaN : Number(raw);
+    if (!Number.isFinite(stock) || stock < 0) return { kind: 'error', error: 'Quanto há em stock agora? (0 ou mais)' };
+    return { kind: 'ok', value: { name: name.charAt(0).toUpperCase() + name.slice(1), unit: (i.unit || 'un').trim() || 'un', stock } };
+}
