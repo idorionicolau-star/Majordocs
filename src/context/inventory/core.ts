@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { registrationPending } from '@/lib/registration-guard';
 import { useRouter } from 'next/navigation';
 import type { Product, Sale, Production, Order, Company, Employee, ModulePermission, StockMovement, AppNotification, ChatMessage, RawMaterial, Recipe, NotificationEmail } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -303,6 +304,11 @@ export function useInventoryCore() {
       setAuthReady(true);
       if (fbUser) {
         setFirebaseUser(fbUser);
+        // Registo a meio: a empresa está gravada só neste aparelho até o servidor confirmar. Abrir já a sessão lia essa
+        // cópia local, os dados da empresa eram pedidos antes de ela existir no servidor (recusados → "Algo correu mal")
+        // e, se a página fechasse, a gravação perdia-se: ficava a conta sem empresa ("email já está a ser utilizado").
+        const registering = registrationPending();
+        if (registering) await registering;
         const userMapDocRef = doc(firestore, `users/${fbUser.uid}`);
         // Falha de rede (sem sinal, ligação a acordar) NÃO é motivo para terminar a sessão: tenta de novo.
         for (let attempt = 0; attempt < 6 && !cancelled; attempt++) {

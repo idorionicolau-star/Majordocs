@@ -79,7 +79,10 @@ export default function RegisterPage() {
     keepInvite();
     try {
       const success = await context.registerCompany(data.companyName, data.adminUsername?.trim() || deriveUsername(data.adminEmail), data.adminEmail, data.adminPassword, data.businessType);
-      if (success) {
+      if (success === 'existing') {
+        dropInvite(); // o código de convite é para empresas novas
+        toast({ title: 'Já tinha conta', description: 'Este email já tinha uma empresa — a entrar nela…' });
+      } else if (success) {
         toast({
           title: 'Empresa Registada com Sucesso!',
           description: `A fazer login com a conta "${data.adminEmail}"...`,
