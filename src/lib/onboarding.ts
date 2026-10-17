@@ -49,8 +49,8 @@ export function gettingStarted(s: { demoDone: boolean; catalog: number; stock: n
 
 /** Entradas do menu que ficam escondidas no "menu simples" (o resto da app continua a um toque de distância). */
 export const ADVANCED_HREFS = new Set([
-  '/diagnostico', '/sales/carga', '/inventory/history', '/inventory/perdas',
-  '/raw-materials', '/production', '/orders', '/reports/inventory-impact',
+  '/sales/carga', '/inventory/history', '/inventory/perdas',
+  '/raw-materials', '/production', '/orders',
 ]);
 
 /** Empresa nova (ainda sem vendas) começa com o menu simples; quem escolheu mantém a escolha. */

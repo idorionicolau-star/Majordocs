@@ -11,8 +11,6 @@ import {
   FileText,
   History,
   Layers, // Using Layers for raw materials
-  BrainCircuit,
-  Banknote,
   Zap,
   TrendingDown,
   Truck,
@@ -21,8 +19,8 @@ import {
 
 export const mainNavItems: NavItem[] = [
   // Início
-  { title: 'Dashboard', href: '/dashboard', id: 'dashboard', icon: LayoutDashboard, group: 'inicio' },
-  { title: 'Diagnóstico', href: '/diagnostico', id: 'diagnostico', icon: BrainCircuit, group: 'inicio' },
+  // o Diagnóstico (a análise completa) abre-se do Painel
+  { title: 'Dashboard', href: '/dashboard', id: 'dashboard', icon: LayoutDashboard, group: 'inicio', also: ['/diagnostico'] },
   // Vender
   { title: 'Venda Rápida', href: '/pos', id: 'sales', icon: Zap, group: 'vender' },
   { title: 'Histórico de Vendas', href: '/sales', id: 'sales', icon: ShoppingCart, group: 'vender' },
@@ -31,7 +29,7 @@ export const mainNavItems: NavItem[] = [
   { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList, group: 'vender' },
   // Stock
   // Produtos: o stock (Inventário) e o Catálogo (preços) são abas da mesma secção
-  { title: 'Produtos', href: '/inventory', id: 'inventory', icon: Box, group: 'stock', also: ['/catalog'] },
+  { title: 'Produtos', href: '/inventory', id: 'inventory', icon: Box, group: 'stock', also: ['/catalog'], fallback: { id: 'settings', href: '/catalog' } },
   { title: 'Histórico', href: '/inventory/history', id: 'inventory', isSubItem: true, icon: History, group: 'stock' },
   { title: 'Perdas', href: '/inventory/perdas', id: 'inventory', isSubItem: true, icon: TrendingDown, group: 'stock' },
   { title: 'Produção', href: '/production', id: 'production', icon: Hammer, group: 'stock' },
@@ -40,9 +38,8 @@ export const mainNavItems: NavItem[] = [
   { title: 'Clientes', href: '/customers', id: 'customers', icon: Users, group: 'pessoas' },
   { title: 'Funcionários', href: '/users', id: 'users', icon: Users, adminOnly: true, group: 'pessoas' },
   // Dinheiro
-  { title: 'Financeiro', href: '/finance', id: 'finance', icon: Banknote, group: 'dinheiro' },
-  { title: 'Relatórios', href: '/reports', id: 'reports', icon: FileText, group: 'dinheiro' },
-  { title: 'Impacto de Auditoria', href: '/reports/inventory-impact', id: 'reports', isSubItem: true, icon: TrendingDown, group: 'dinheiro' },
+  // Relatórios: as vendas e o Financeiro são abas da mesma secção
+  { title: 'Relatórios', href: '/reports', id: 'reports', icon: FileText, group: 'dinheiro', also: ['/finance'], fallback: { id: 'finance', href: '/finance' } },
   // Ajustes
   { title: 'Ajustes', href: '/settings', id: 'settings', icon: Settings, group: 'ajustes' },
   { title: 'Subscrição', href: '/billing', id: 'settings', icon: CreditCard, adminOnly: true, group: 'ajustes' },
