@@ -151,7 +151,7 @@ const AuditStockTrigger = React.forwardRef<HTMLButtonElement, { trigger: 'icon' 
         <TooltipTrigger asChild>
           <Button ref={ref} {...rest} disabled={disabled} variant="ghost" size="icon" className={`p-3 h-auto w-auto rounded-xl transition-all ${buttonClasses}`}>
             <FileCheck className="h-4 w-4" />
-            <span className="sr-only">Auditar Stock</span>
+            <span className="sr-only">Contar este produto</span>
           </Button>
         </TooltipTrigger>
       );
@@ -160,7 +160,7 @@ const AuditStockTrigger = React.forwardRef<HTMLButtonElement, { trigger: 'icon' 
       <TooltipTrigger asChild>
         <Button ref={ref} {...rest} disabled={disabled} variant="outline" size="icon" className={`flex-1 h-8 sm:h-9 ${buttonClasses}`}>
           <FileCheck className="h-4 w-4" />
-          <span className="sr-only">Auditar Stock</span>
+          <span className="sr-only">Contar este produto</span>
         </Button>
       </TooltipTrigger>
     );
@@ -179,14 +179,14 @@ export function AuditStockDialog({ product, trigger, disabled }: AuditStockDialo
           <ResponsiveDialog
             open={open}
             onOpenChange={setOpen}
-            title={`Auditoria de Stock: ${product.name}`}
-            description="Insira a contagem física para ajustar o stock do sistema."
+            title={`Contar: ${product.name}`}
+            description="Conte o que tem na prateleira e escreva aqui: o stock fica certo e a diferença vai para as Perdas."
             trigger={<AuditStockTrigger trigger={trigger} />}
           >
             <AuditStockDialogContent product={product} setOpen={setOpen} />
           </ResponsiveDialog>
         )}
-        <TooltipContent><p>{disabled ? "Indisponível em modo leitura" : "Auditar Stock"}</p></TooltipContent>
+        <TooltipContent><p>{disabled ? "Indisponível em modo leitura" : "Contar este produto"}</p></TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
