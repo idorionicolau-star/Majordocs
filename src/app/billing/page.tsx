@@ -63,7 +63,7 @@ function BillingInner() {
             if (!r.ok) throw new Error(j.error || "Código inválido.");
             setCodeText("");
             setSelected("mensal");
-            toast({ title: "Código aplicado", description: couponReminder(j.coupon, formatCurrency) || undefined });
+            toast({ title: "Código aplicado", description: j.coupon ? couponReminder(j.coupon, formatCurrency) || undefined : "Registado — quem o convidou fica a saber." });
         } catch (e) {
             toast({ variant: "destructive", title: "Não foi possível usar o código", description: e instanceof Error ? e.message : "" });
         } finally {
