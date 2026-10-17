@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     const db = initializeAdmin().firestore();
     const taken = staticCouponCodes();
     (await db.collection('affiliates').select().get()).docs.forEach((d) => taken.add(d.id));
-    const c = checkAffiliate(body || {}, taken, planById('mensal')?.amount || 899);
+    const c = checkAffiliate(body || {}, taken, planById('mensal')?.amount || 1000);
     if (!c.ok) return NextResponse.json({ error: c.error }, { status: 400 });
     const affiliate: Affiliate = { ...c.value, active: true, createdAt: new Date().toISOString() };
     const ref = db.doc(`affiliates/${affiliate.code}`);
