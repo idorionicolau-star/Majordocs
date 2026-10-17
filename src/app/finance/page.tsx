@@ -371,7 +371,8 @@ export default function FinancePage() {
                                                     </span>
                                                 </TableCell>
                                                 <TableCell className="font-bold text-green-600 dark:text-green-400">
-                                                    +{formatCurrency(sale.amountPaid || sale.totalValue)}
+                                                    +{formatCurrency(saleIncome(sale))}
+                                                    {saleIncome(sale) < sale.totalValue && <div className="text-xs font-medium text-amber-600">falta {formatCurrency(sale.totalValue - saleIncome(sale))}</div>}
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-1 text-slate-500 text-sm">
@@ -402,9 +403,12 @@ export default function FinancePage() {
                                                         {sale.clientName || 'Cliente Balcão'}
                                                     </span>
                                                 </div>
-                                                <p className="text-lg font-black text-green-600 dark:text-green-400">
-                                                    +{formatCurrency(sale.amountPaid || sale.totalValue)}
-                                                </p>
+                                                <div className="text-right">
+                                                    <p className="text-lg font-black text-green-600 dark:text-green-400">
+                                                        +{formatCurrency(saleIncome(sale))}
+                                                    </p>
+                                                    {saleIncome(sale) < sale.totalValue && <p className="text-xs font-medium text-amber-600">falta {formatCurrency(sale.totalValue - saleIncome(sale))}</p>}
+                                                </div>
                                             </div>
                                             <div className="flex justify-between items-center pt-3 border-t border-slate-100 dark:border-slate-800">
                                                 <div className="flex items-center gap-1.5 text-slate-500 text-xs">
