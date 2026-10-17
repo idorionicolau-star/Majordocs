@@ -2,7 +2,7 @@
 // Se o elemento não estiver no ecrã, o balão aparece ao centro e a pessoa pode seguir — um guia nunca encrava.
 import type { Guide, GuideStep } from "./types";
 import { appears, disappears, filled, navStep } from "./types";
-import { PAGE_GUIDES } from "./page-guides";
+import { PAGE_GUIDES, congrats } from "./page-guides";
 
 // ---------------------------------------------------------------------------------------------
 // Venda de demonstração (produtos de exemplo, nada é gravado)
@@ -54,20 +54,6 @@ const demoSteps = (closing: GuideStep): GuideStep[] => [
     closing,
 ];
 
-const vendaDemo: Guide = {
-    id: "venda-demo",
-    title: "Venda de treino",
-    next: "stock-inicial",
-    steps: [
-        navStep("/pos", "Venda Rápida", "Abra a Venda Rápida", <>É aqui que se vende, todos os dias. Toque em <b>Venda Rápida</b>.</>),
-        ...demoSteps({
-            route: DEMO,
-            target: "pos-demo-done",
-            title: "Já sabe vender 🎉",
-            body: <>É sempre assim. Numa venda a sério o stock desce sozinho e o recibo fica pronto a imprimir ou enviar. <br />Falta só dizer <b>quanto tem em stock</b> — mostramos onde.</>,
-        }),
-    ],
-};
 
 // ---------------------------------------------------------------------------------------------
 // Stock: a primeira entrada (a sério) — Inventário → Stock Rápido → procurar → quantidade → registar
@@ -95,7 +81,7 @@ const stockInicial: Guide = {
             settle: 1500,
             hint: "Escreva aqui",
             title: "Procure o produto",
-            body: <>Está em <b>Entrada</b>. Escreva o nome do produto que acabou de pôr no catálogo.</>,
+            body: <>Está em <b>Entrada</b>. Escreva o nome do produto (tem de estar no catálogo).</>,
         },
         {
             route: QS,
@@ -124,10 +110,7 @@ const stockInicial: Guide = {
             title: "Confirme",
             body: <>Toque em <b>Confirmar entrada</b> (o botão verde). O stock sobe na hora.</>,
         },
-        {
-            title: "Está pronto 🎉",
-            body: <>Já tem produto, sabe vender e o stock está certo. Agora é vender a sério na <b>Venda Rápida</b>. Cada página tem a sua ajuda no botão <b>?</b> lá em cima.</>,
-        },
+        congrats(<>Agora já sabe dar <b>entrada de stock</b>. O stock desse produto já está certo.</>),
     ],
 };
 
@@ -137,8 +120,6 @@ const stockInicial: Guide = {
 const catalogo: Guide = {
     id: "catalogo",
     title: "O seu primeiro produto",
-    // depois do produto, mostra-se como se vende (treino, nada é gravado)
-    next: "venda-demo",
     steps: [
         navStep("/catalog", "Catálogo", "Abra o Catálogo", <>O Catálogo é a lista do que vende, com os preços. Toque em <b>Catálogo</b> no menu (no telemóvel, primeiro em <b>Mais</b>).</>),
         {
@@ -176,6 +157,7 @@ const catalogo: Guide = {
             title: "Guarde",
             body: <>Toque em <b>Adicionar ao Catálogo</b>. Foto, custo, código de barras e variações são opcionais — pode completar depois.</>,
         },
+        congrats(<>Agora já sabe pôr produtos no <b>catálogo</b>. Faça o mesmo para os outros.</>),
     ],
 };
 
@@ -186,17 +168,17 @@ const paginaPos: Guide = {
     steps: demoSteps({
         route: DEMO,
         target: "pos-demo-done",
-        title: "É assim que se vende 🎉",
-        body: <>Agora já sabe. Saia da demonstração para vender a sério — os seus produtos aparecem na pesquisa e nos <b>mais vendidos</b>.</>,
+        title: "Parabéns! 🎉",
+        body: <>Agora já sabe <b>vender</b>. Saia da demonstração para vender a sério — os seus produtos aparecem na pesquisa e nos <b>mais vendidos</b>.</>,
         cta: { label: "Sair da demonstração", href: "/pos" },
     }),
 };
 
 export const GUIDES: Record<string, Guide> = Object.fromEntries(
-    [vendaDemo, catalogo, stockInicial, paginaPos, ...PAGE_GUIDES].map((g) => [g.id, g]),
+    [catalogo, stockInicial, paginaPos, ...PAGE_GUIDES].map((g) => [g.id, g]),
 );
 
-/** O tutorial de cada página (botão "?" e convite na primeira visita). A rota mais específica ganha. */
+/** O tutorial de cada página (botão "?"). */
 export const PAGE_TUTORIALS: { path: string; guide: string; title: string }[] = [
     { path: "/pos", guide: "pagina-pos", title: "Venda Rápida" },
     ...PAGE_GUIDES.filter((g) => g.path).map((g) => ({ path: g.path!, guide: g.id, title: g.title })),
