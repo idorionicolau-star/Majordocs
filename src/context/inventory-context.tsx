@@ -31,7 +31,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const orderActions = useOrderActions(core);
   const { deleteOrder, finalizeOrder, deliverOrderPart } = orderActions;
   const settingsActions = useSettingsActions(core);
-  const { addCatalogProduct, addCatalogCategory, deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory, addRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem: restoreItemBase, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts, renameProduct, mergeIntoVariant } = settingsActions;
+  const { addCatalogProduct, addCatalogCategory, deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory, addRawMaterial, createRawMaterial, updateRawMaterial, deleteRawMaterial, addRecipe, updateRecipe, restoreItem: restoreItemBase, hardDelete, exportCompanyData, availableUnits, addUnit, editUnit, removeUnit, availableCategories, addCategory, editCategory, removeCategory, mergeProducts, renameProduct, mergeIntoVariant } = settingsActions;
   // Restaurar uma produção refaz o stock e a matéria-prima; o resto da lixeira usa a regra geral
   // Editar um produto e mudar-lhe o nome: muda em todo o programa (senão o stock das outras localizações,
   // o catálogo e as encomendas ficavam com o nome antigo e deixavam de bater certo).
@@ -193,6 +193,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     pendingOfflineSales, syncOfflineSales,
     addCatalogProduct, addCatalogCategory,
     addRawMaterial,
+    createRawMaterial,
     updateRawMaterial,
     deleteRawMaterial,
     addRecipe,
@@ -222,6 +223,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     recalculateReservedStock, pendingOfflineSales, syncOfflineSales,
     addCatalogProduct, addCatalogCategory,
     addRawMaterial,
+    createRawMaterial,
     updateRawMaterial,
     addRecipe,
     updateRecipe,

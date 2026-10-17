@@ -488,6 +488,7 @@ export interface InventoryContextType {
 
   // Raw Materials & Recipes
   addRawMaterial: (material: Omit<RawMaterial, 'id'>) => Promise<void>;
+  createRawMaterial: (material: Omit<RawMaterial, 'id'>) => Promise<string>;
   updateRawMaterial: (materialId: string, data: Partial<RawMaterial>) => Promise<void>;
   deleteRawMaterial: (materialId: string) => Promise<void>;
   addRecipe: (recipe: Omit<Recipe, 'id'>) => Promise<void>;

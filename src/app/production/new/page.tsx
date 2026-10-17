@@ -16,6 +16,7 @@ import { catalogChoices, dateLabel, mostProduced, recipeMaterials, todayMz, vali
 import { clampQty } from "@/lib/transfer-core";
 import { isFamilyGroup, variantLabel } from "@/lib/variants";
 import { cn } from "@/lib/utils";
+import { friendlyError } from "@/lib/friendly-error";
 
 /** materials: undefined = segue a receita (acompanha a quantidade); depois de mexer, fica o que se escreveu. */
 type Item = { name: string; unit: string; qty: string; notes?: string; materials?: MaterialDraft[]; open?: boolean };
@@ -102,7 +103,7 @@ export default function NewProductionPage() {
                 }, { silent: true });
                 done++;
             } catch (e) {
-                failed.push({ name: it.name, error: e instanceof Error ? e.message : "erro" });
+                failed.push({ name: it.name, error: friendlyError(e, "editar Produção, Inventário e Matéria-Prima") });
             }
         }
         setBusy(false);
