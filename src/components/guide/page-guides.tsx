@@ -1,10 +1,17 @@
-// Tutorial de cada página ("Como funciona esta página"): abre pelo botão "?" do topo ou pelo convite da
-// primeira visita. São explicações (não obrigam a gravar nada); os alvos são os `data-tour` de cada página.
-import type { Guide } from "./types";
+// Tutorial de cada página ("Como funciona esta página"): abre pelo botão "?" do topo. São explicações (não obrigam
+// a gravar nada); os alvos são os `data-tour` de cada página. Cada um acaba na própria página, com os parabéns.
+import type { ReactNode } from "react";
+import type { Guide, GuideStep } from "./types";
+
+/** O último balão de um guia: acaba onde a pessoa está, sem a levar para outra página. */
+export const congrats = (body: ReactNode): GuideStep => ({
+    title: "Parabéns! 🎉",
+    body: <>{body} Se tiver dúvidas, toque outra vez no <b>?</b> lá em cima.</>,
+});
 
 const MENU_TIP = <>No telemóvel, o menu completo está em <b>Mais</b> (em baixo, à direita). Em cada página, o botão <b>?</b> no topo explica como ela funciona.</>;
 
-export const PAGE_GUIDES: Guide[] = [
+const PAGES: Guide[] = [
     {
         id: "pagina-dashboard",
         path: "/dashboard",
@@ -80,6 +87,7 @@ export const PAGE_GUIDES: Guide[] = [
             { target: "inv-card-actions", title: "Ações", body: <><b>Auditar</b> (acertar a contagem deste produto), <b>editar</b>, ver o histórico e <b>apagar</b>.</> },
             { target: "inv-more", title: "Mais", body: <>Histórico de movimentos, perdas e quebras, o relatório e a <b>folha de contagem em papel</b>.</> },
             { target: "inv-add", title: "Produto novo", body: <>Toque no <b>+</b> para adicionar um produto com o formulário completo.</> },
+            { title: "Quer ver passo a passo?", body: <>Mostramos-lhe como dar entrada de stock no <b>Stock Rápido</b>, campo a campo.</>, cta: { label: "Ver passo a passo", guide: "stock-inicial" } },
         ],
     },
     {
@@ -220,3 +228,8 @@ export const PAGE_GUIDES: Guide[] = [
         ],
     },
 ];
+
+export const PAGE_GUIDES: Guide[] = PAGES.map((g) => ({
+    ...g,
+    steps: [...g.steps, congrats(<>Agora já sabe como funciona a página <b>{g.title}</b>.</>)],
+}));
