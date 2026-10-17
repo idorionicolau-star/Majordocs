@@ -14,6 +14,7 @@ import { sameLocation } from "@/lib/product-ref";
 import { links } from "@/lib/deep-links";
 import type { Sale } from "@/lib/types";
 import { orderToDeliver } from "@/lib/order-stock";
+import { openSale } from "@/components/sales/sale-sheet";
 
 const fmtQ = (n: number) => (Number.isInteger(n) ? String(n) : n.toLocaleString("pt-PT", { maximumFractionDigits: 2 }));
 const fmtDay = (d: Date) => d.toLocaleDateString("pt-PT", { weekday: "short", day: "2-digit", month: "2-digit" });
@@ -150,13 +151,13 @@ function Group({ title, icon: Icon, tone, rows, render }: { title: string; icon:
 function Card({ sale, where, note, action }: { sale: Sale; where?: string; note?: string; action?: React.ReactNode }) {
     return (
         <div className="flex items-center justify-between gap-3 rounded-2xl border bg-card p-3">
-            <div className="min-w-0">
+            <button type="button" onClick={() => openSale(sale.id)} className="min-w-0 text-left">
                 <p className="truncate font-semibold">{sale.productName} × {fmtQ(sale.quantity)} {sale.unit || ""}</p>
                 <p className="truncate text-xs text-muted-foreground">
                     {sale.clientName || "Cliente"} · {sale.guideNumber}{where ? ` · ${where}` : ""} · {formatCurrency(sale.totalValue || 0)}
                 </p>
                 {note && <p className="mt-0.5 text-xs font-medium text-amber-600">{note}</p>}
-            </div>
+            </button>
             {action}
         </div>
     );

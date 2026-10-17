@@ -27,7 +27,9 @@ export function DatePicker({ date, setDate }: DatePickerProps) {
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <div className="relative w-full md:w-[280px]">
+          {/* type="button": dentro de um formulário, um botão sem tipo submete-o (tocar na data gravava e fechava) */}
           <Button
+            type="button"
             variant={"outline"}
             className={cn(
               "w-full justify-start text-left font-normal h-12",
@@ -39,6 +41,7 @@ export function DatePicker({ date, setDate }: DatePickerProps) {
           </Button>
           {date && (
              <Button
+              type="button"
               variant="ghost"
               size="icon"
               className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"

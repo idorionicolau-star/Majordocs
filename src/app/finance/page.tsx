@@ -32,13 +32,14 @@ import {
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { formatCurrency, normalizeString } from '@/lib/utils';
-import { Search, Plus, TrendingUp, TrendingDown, DollarSign, Calendar, Trash2, Printer, Download, CreditCard, ShoppingBag } from 'lucide-react';
+import { Search, Plus, TrendingUp, TrendingDown, DollarSign, Calendar, Trash2, Printer, Download, CreditCard, ShoppingBag, ChevronRight } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
 import { pt, ptBR } from 'date-fns/locale';
 import { isCountableSale, saleIncome } from '@/lib/sale-filters';
 import { printFinancialReport } from '@/lib/report-utils';
 import { useToast } from '@/hooks/use-toast';
 import { DatePicker } from '@/components/ui/date-picker';
+import { openSale } from '@/components/sales/sale-sheet';
 
 type Period = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -357,7 +358,7 @@ export default function FinancePage() {
                                         </TableRow>
                                     ) : (
                                         filteredSales.map((sale) => (
-                                            <TableRow key={sale.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                            <TableRow key={sale.id} data-tour="finance-sale" onClick={() => openSale(sale.id)} className="group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                                 <TableCell className="font-medium">
                                                     Venda: {sale.productName} <span className="text-xs text-slate-400 ml-1">({sale.quantity} unid.)</span>
                                                 </TableCell>
@@ -392,7 +393,7 @@ export default function FinancePage() {
                                 </Card>
                             ) : (
                                 filteredSales.map((sale) => (
-                                    <Card key={sale.id} className="overflow-hidden border-slate-200 dark:border-green-800/30">
+                                    <Card key={sale.id} data-tour="finance-sale" role="button" onClick={() => openSale(sale.id)} className="cursor-pointer overflow-hidden border-slate-200 dark:border-green-800/30 active:bg-slate-50 dark:active:bg-slate-800/50">
                                         <CardContent className="p-4">
                                             <div className="flex justify-between items-start mb-3">
                                                 <div className="space-y-1">
@@ -410,8 +411,8 @@ export default function FinancePage() {
                                                     <Calendar className="w-3.5 h-3.5" />
                                                     {format(new Date(sale.date), "d MMM yyyy", { locale: ptBR })}
                                                 </div>
-                                                <div className="flex items-center gap-1.5 text-slate-500 text-xs">
-                                                    <ShoppingBag className="w-3.5 h-3.5" /> Venda
+                                                <div className="flex items-center gap-1 text-primary text-xs font-medium">
+                                                    <ShoppingBag className="w-3.5 h-3.5" /> Abrir venda <ChevronRight className="w-3.5 h-3.5" />
                                                 </div>
                                             </div>
                                         </CardContent>

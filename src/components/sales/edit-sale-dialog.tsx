@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useContext, useMemo, useRef } from 'react';
+import { withSaleTime } from '@/lib/sale-time';
 import {
   Dialog,
   DialogContent,
@@ -193,7 +194,7 @@ function EditSaleDialogContent({ sale, onUpdateSale, onOpenChange, open }: EditS
     onUpdateSale({
       ...sale,
       ...values,
-      date: values.date.toISOString(),
+      date: withSaleTime(values.date, sale.date),
       subtotal: total,
       totalValue: total,
       amountPaid: paid,

@@ -15,6 +15,11 @@ describe('sale-audit', () => {
         expect(diffSale(sale, { date: '2026-06-01T10:00:00.000Z' })).toEqual({});
     });
 
+    it('nota vazia onde não havia nota não conta como mudança, apagar uma nota conta', () => {
+        expect(diffSale(sale, { notes: '' })).toEqual({});
+        expect(diffSale({ ...sale, notes: 'pagar sexta' }, { notes: '' })).toEqual({ notes: { de: 'pagar sexta', para: '' } });
+    });
+
     it('changesToUpdate troca undefined por null (Firestore não aceita undefined)', () => {
         expect(changesToUpdate({ note: { de: 'x', para: undefined } })).toEqual({ note: null });
     });

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { formatSaleMoment, saleMoment, toDate } from '../sale-time';
+import { formatSaleMoment, saleMoment, toDate, withSaleTime } from '../sale-time';
 
 const OLD = process.env.TZ;
 beforeAll(() => { process.env.TZ = 'Africa/Maputo'; }); // UTC+2, como os utilizadores
@@ -34,5 +34,18 @@ describe('data e hora da venda (Maputo, UTC+2)', () => {
         expect(saleMoment({ date: 'lixo' })).toEqual({ day: '', time: null });
         expect(saleMoment({})).toEqual({ day: '', time: null });
         expect(toDate(null)).toBeNull();
+    });
+});
+
+describe('corrigir o dia de uma venda (Maputo, UTC+2)', () => {
+    it('outro dia mantém a hora da venda', () => {
+        expect(withSaleTime(new Date(2026, 9, 14), '2026-10-17T10:06:00.000Z')).toBe('2026-10-14T10:06:00.000Z');
+    });
+    it('o mesmo dia fica exactamente como estava', () => {
+        expect(withSaleTime(new Date(2026, 9, 17), '2026-10-17T10:06:00.000Z')).toBe('2026-10-17T10:06:00.000Z');
+        expect(withSaleTime(new Date('2026-10-01'), '2026-10-01')).toBe('2026-10-01');
+    });
+    it('venda sem hora: o novo dia fica sem hora (meia-noite local)', () => {
+        expect(saleMoment({ date: withSaleTime(new Date(2026, 9, 5), '2026-10-01') })).toEqual({ day: '05/10/2026', time: null });
     });
 });

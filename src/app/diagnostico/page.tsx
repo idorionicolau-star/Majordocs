@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, daysAgo, formatCurrency, plural } from "@/lib/utils";
 import { links } from "@/lib/deep-links";
+import { openSale } from "@/components/sales/sale-sheet";
 
 const SEV: Record<Severity, { box: string; icon: React.ElementType; iconColor: string; label: string }> = {
   critical: { box: "border-red-500/30 bg-red-500/5", icon: ShieldAlert, iconColor: "text-red-500", label: "Urgente" },
@@ -201,7 +202,7 @@ export default function DiagnosticoPage() {
             {a.stock.pendingPickups.length > 0 && (
               <Section title="Vendas pagas ainda não levantadas">
                 <Row left="Abrir lista de carga" right="→" href="/sales/carga" />
-                {a.stock.pendingPickups.slice(0, 5).map((p) => <Row key={p.sale.id} left={`${p.sale.productName} × ${qty(p.sale.quantity)}`} right={`${p.sale.clientName || "cliente"} · ${daysAgo(p.days)}`} tone={p.days > 7 ? "warn" : undefined} href={links.sale(p.sale.guideNumber || p.sale.productName)} />)}
+                {a.stock.pendingPickups.slice(0, 5).map((p) => <Row key={p.sale.id} left={`${p.sale.productName} × ${qty(p.sale.quantity)}`} right={`${p.sale.clientName || "cliente"} · ${daysAgo(p.days)}`} tone={p.days > 7 ? "warn" : undefined} onClick={() => openSale(p.sale.id)} />)}
               </Section>
             )}
             {!a.orders.open.length && !a.stock.pendingPickups.length && <Empty>Nada pendente.</Empty>}
@@ -309,7 +310,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Row({ left, right, tone, href }: { left: string; right: string; tone?: "bad" | "warn"; href?: string }) {
+function Row({ left, right, tone, href, onClick }: { left: string; right: string; tone?: "bad" | "warn"; href?: string; onClick?: () => void }) {
   const body = (
     <>
       <span className="min-w-0 truncate">{left}</span>
@@ -317,6 +318,7 @@ function Row({ left, right, tone, href }: { left: string; right: string; tone?: 
     </>
   );
   const cls = "flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-muted/40";
+  if (onClick) return <button type="button" onClick={onClick} className={cn(cls, "w-full text-left")}>{body}</button>;
   return href ? <Link href={href} className={cls}>{body}</Link> : <div className={cls}>{body}</div>;
 }
 
