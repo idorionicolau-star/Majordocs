@@ -5,7 +5,7 @@ import type { Product, Location } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertCircle, Trash2, PackageCheck, History, Edit2, MoreHorizontal } from "lucide-react";
+import { AlertCircle, Trash2, PackageCheck, History, Edit2, MoreHorizontal, FileText } from "lucide-react";
 import { getStockStatus } from "./columns";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -119,6 +119,11 @@ export function ProductCard({ product, onProductUpdate, onAttemptDelete, viewMod
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                    <DropdownMenuItem asChild>
+                                        <Link href={`/catalog?produto=${encodeURIComponent(product.name)}`}>
+                                            <FileText className="mr-2 h-4 w-4" /> Ficha (preço e vendas)
+                                        </Link>
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem asChild>
                                         <Link href={`/inventory/history?productName=${encodeURIComponent(product.name)}`}>
                                             <History className="mr-2 h-4 w-4" /> Ver histórico

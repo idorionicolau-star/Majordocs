@@ -25,7 +25,7 @@ export function PwaRegister() {
                 let last = 0;
                 try { last = Number(localStorage.getItem(WARM_KEY) || 0); } catch { /* ignore */ }
                 if (Date.now() - last < WARM_EVERY_MS) return;
-                const urls = Array.from(new Set(["/dashboard", ...mainNavItems.map((i) => i.href)]));
+                const urls = Array.from(new Set(["/dashboard", ...mainNavItems.flatMap((i) => [i.href, ...(i.also || [])])]));
                 (reg.active || navigator.serviceWorker.controller)?.postMessage({ type: "WARM", urls });
                 try { localStorage.setItem(WARM_KEY, String(Date.now())); } catch { /* ignore */ }
             } catch (e) {

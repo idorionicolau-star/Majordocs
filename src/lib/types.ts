@@ -334,6 +334,8 @@ export type NavItem = {
   isSubItem?: boolean;
   /** Secção do menu (por tarefa). */
   group?: NavGroup;
+  /** Outras páginas que pertencem a esta entrada (abas da mesma secção): acendem-na e usam o seu título. */
+  also?: string[];
 };
 
 export type NavGroup = 'inicio' | 'vender' | 'stock' | 'pessoas' | 'dinheiro' | 'ajustes';

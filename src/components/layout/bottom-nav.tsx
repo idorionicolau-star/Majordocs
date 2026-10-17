@@ -28,7 +28,7 @@ export function useNavTabs() {
   };
 
   // Logic to determine the 4th item (Production vs Orders)
-  let fourthItem: { title: string; href: string; icon: any; id: string } | null = null;
+  let fourthItem: { title: string; href: string; icon: any; id: string; also?: string[] } | null = null;
 
   const showProduction = canView('production' as ModulePermission) &&
     companyData?.businessType !== 'reseller';
@@ -44,7 +44,7 @@ export function useNavTabs() {
 
   const items = [
     { title: "Início", href: "/dashboard", icon: LayoutDashboard, id: "dashboard" },
-    { title: "Inventário", href: "/inventory", icon: Package, id: "inventory" },
+    { title: "Produtos", href: "/inventory", icon: Package, id: "inventory", also: ["/catalog"] },
     { title: "Venda Rápida", href: "/pos", icon: Zap, id: "pos" },
   ];
   if (fourthItem) items.push(fourthItem);
@@ -63,7 +63,7 @@ export function BottomNav({ onMenuClick }: BottomNavProps) {
     <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 md:hidden pb-safe touch-none select-none">
       <div className="grid h-full grid-flow-col auto-cols-fr">
         {items.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+          const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)) || !!item.also?.some((p) => pathname.startsWith(p));
           const Icon = item.icon;
 
           return (
