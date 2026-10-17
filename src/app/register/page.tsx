@@ -42,8 +42,12 @@ export default function RegisterPage() {
   // Código de convite: vem no link (/register?codigo=XXXX) ou escreve-se; aplica-se quando a empresa abrir.
   const [inviteCode, setInviteCode] = useState('');
   const [fromEscalepay, setFromEscalepay] = useState(false);
+  // vindo de "Entrar com o Google" numa conta sem empresa: só falta o nome da empresa (email e senha escondidos)
+  const [googleOnly, setGoogleOnly] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState('');
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
+    if (q.get('google') === '1') { setGoogleOnly(true); setGoogleEmail(q.get('email') || ''); }
     const c = q.get('codigo') || q.get('convite') || q.get('cupao') || q.get('code');
     if (c) setInviteCode(c.trim().toUpperCase());
     // comprou na EscalePay (link dos afiliados): a compra activa a conta quando for confirmada
@@ -142,12 +146,20 @@ export default function RegisterPage() {
           <div className="flex justify-center mb-4">
             <Image src="/logo.svg" alt="MajorStockX Logo" width={48} height={48} />
           </div>
-          <CardTitle className="text-2xl font-bold">Crie a sua Conta</CardTitle>
-          <CardDescription>Registe a sua empresa para começar a usar o MajorStockX.</CardDescription>
+          <CardTitle className="text-2xl font-bold">{googleOnly ? 'Falta só a empresa' : 'Crie a sua Conta'}</CardTitle>
+          <CardDescription>{googleOnly ? 'Escreva o nome da sua empresa e continue com o Google.' : 'Registe a sua empresa para começar a usar o MajorStockX.'}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={handleSubmit(handleRegister)} className="space-y-4">
+              {googleOnly && (
+                <div data-tour="google-no-company" className="rounded-xl border border-primary/40 bg-primary/5 p-3 text-sm">
+                  <p className="font-semibold">A sua conta Google ainda não tem empresa</p>
+                  <p className="mt-1 text-muted-foreground">
+                    {googleEmail ? <><b className="text-foreground">{googleEmail}</b> — </> : null}escreva o nome da empresa, escolha o tipo e toque em <b className="text-foreground">Criar empresa com o Google</b> (escolha a mesma conta). O teste grátis começa já.
+                  </p>
+                </div>
+              )}
               {fromEscalepay && (
                 <div data-tour="escalepay-note" className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
                   <p className="font-semibold text-emerald-700 dark:text-emerald-400">Comprou na EscalePay? 🎉</p>
@@ -205,6 +217,7 @@ export default function RegisterPage() {
                   </FormItem>
                 )}
               />
+              {!googleOnly && <>
               <FormField
                 control={form.control}
                 name="adminEmail"
@@ -259,13 +272,21 @@ export default function RegisterPage() {
                   <span className="bg-background px-2 text-muted-foreground">Ou continuar com</span>
                 </div>
               </div>
+              </>}
+              {googleOnly && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="inviteCode">Código de convite <span className="font-normal text-muted-foreground">(opcional)</span></Label>
+                  <Input id="inviteCode" value={inviteCode} onChange={(e) => setInviteCode(e.target.value.toUpperCase())} placeholder="Só se recebeu um código" autoComplete="off" autoCapitalize="characters" />
+                </div>
+              )}
 
               <Button
                 variant="outline"
                 type="button"
                 disabled={isLoading || isGoogleLoading}
                 onClick={handleGoogleRegister}
-                className="w-full bg-white text-black hover:bg-gray-100 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                data-tour="google-register"
+                className={googleOnly ? "h-12 w-full border-2 border-primary bg-white text-base font-semibold text-black hover:bg-gray-100 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800" : "w-full bg-white text-black hover:bg-gray-100 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"}
               >
                 {isGoogleLoading ? (
                   'A autenticar...'
@@ -290,10 +311,16 @@ export default function RegisterPage() {
                       />
                       <path d="M1 1h22v22H1z" fill="none" />
                     </svg>
-                    Registar com o Google
+                    {googleOnly ? 'Criar empresa com o Google' : 'Registar com o Google'}
                   </>
                 )}
               </Button>
+              {googleOnly && (
+                <p className="text-center text-xs text-muted-foreground">
+                  Ao continuar, aceita os <a href="/termos" target="_blank" className="underline">Termos de Uso</a> e a <a href="/privacidade" target="_blank" className="underline">Política de Privacidade</a>.{' '}
+                  <button type="button" className="underline" onClick={() => setGoogleOnly(false)}>Prefiro email e senha</button>
+                </p>
+              )}
 
             </form>
           </Form>

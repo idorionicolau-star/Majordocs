@@ -77,7 +77,10 @@ export default function LoginPage() {
     }
     try {
       const success = await loginWithGoogle();
-      if (success) {
+      if (success && typeof success === 'object') {
+        // conta Google sem empresa: leva ao registo, já só a pedir o nome da empresa
+        router.push(`/register?google=1${success.noCompany ? `&email=${encodeURIComponent(success.noCompany)}` : ''}`);
+      } else if (success) {
         toast({
           title: 'Login com Google bem-sucedido!',
           description: 'A redirecionar para o dashboard...',

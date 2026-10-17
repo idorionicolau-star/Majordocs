@@ -40,7 +40,10 @@ export function useAuthActions(core: InventoryCore) {
   };
 
 
-  const loginWithGoogle = async (): Promise<boolean> => {
+  /** true = entrou; { noCompany: email } = a conta Google ainda não tem empresa (a página leva ao registo); false = falhou. */
+  const loginWithGoogle = async (): Promise<boolean | { noCompany: string }> => {
+    // enquanto se verifica se a conta tem empresa, a abertura da sessão espera (sem "Sessão terminada" pelo meio)
+    beginRegistration();
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -49,14 +52,9 @@ export function useAuthActions(core: InventoryCore) {
       if (firestore) {
         const userDoc = await getDoc(doc(firestore, `users/${result.user.uid}`));
         if (!userDoc.exists()) {
-          // User authenticated with Google but has no company mapping
+          // Conta Google sem empresa: em vez de a pôr fora, leva-a a criar a empresa (só falta o nome)
           await auth.signOut();
-          toast({
-            variant: 'destructive',
-            title: 'Conta não encontrada',
-            description: 'Esta conta Google não está associada a nenhuma empresa. Por favor, faça o registo.'
-          });
-          return false;
+          return { noCompany: result.user.email || '' };
         }
       }
 
@@ -77,6 +75,8 @@ export function useAuthActions(core: InventoryCore) {
       }
       toast({ variant: 'destructive', title: 'Erro de Login', description: message });
       return false;
+    } finally {
+      endRegistration();
     }
   };
 
@@ -237,7 +237,7 @@ export function useAuthActions(core: InventoryCore) {
       console.error('Registration error: ', error);
       let message = 'Ocorreu um erro inesperado durante o registo.';
       if (error.code === 'msx/email-taken' || error.code === 'auth/email-already-in-use') {
-        message = 'Este email já tem uma conta com outra senha. Se é seu, toque em "Faça login" (ou recupere a senha).';
+        message = 'Este email já tem uma conta. Se entrou antes com o Google, toque em "Registar com o Google". Se não, toque em "Faça login" (ou recupere a senha).';
       } else if (error.code === 'auth/weak-password') {
         message = 'A senha tem de ter pelo menos 6 caracteres.';
       } else if (error.code === 'auth/invalid-email') {
