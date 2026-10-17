@@ -29,7 +29,7 @@ export function SectionTabs({ tabs, label, tourId, className }: { tabs: SectionT
                         href={t.href}
                         data-tour={`${tourId}:${t.href}`}
                         aria-current={active ? "page" : undefined}
-                        className={cn("truncate rounded-lg px-2 py-2 text-center text-sm font-semibold transition-colors", active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+                        className={cn("truncate rounded-lg py-2 text-center font-semibold transition-colors", visible.length > 3 ? "px-1 text-xs sm:px-2 sm:text-sm" : "px-2 text-sm", active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
                     >
                         {t.label}
                     </Link>

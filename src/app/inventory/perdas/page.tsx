@@ -6,6 +6,7 @@ import { DeepLinkBanner } from "@/components/deep-link-banner";
 import Link from "next/link";
 import { AlertTriangle, ClipboardCheck, MapPin, PackageMinus, ShieldAlert, User } from "lucide-react";
 import { useInventory } from "@/context/inventory-context";
+import { ProductsTabs } from "@/components/inventory/products-tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn, formatCurrency, normalizeString } from "@/lib/utils";
@@ -89,6 +90,7 @@ export default function LossesPage() {
 
     return (
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 pb-24">
+            <ProductsTabs />
             <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                     <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight"><ShieldAlert className="h-6 w-6 text-red-500" /> Perdas e faltas</h1>

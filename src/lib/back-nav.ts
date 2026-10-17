@@ -3,7 +3,7 @@
 
 /** Páginas principais (menu e barra de baixo): sem seta. */
 export const TOP_LEVEL_PATHS = [
-    '/dashboard', '/pos', '/sales', '/documents', '/orders', '/inventory', '/production',
+    '/dashboard', '/pos', '/sales', '/documents', '/orders', '/inventory', '/inventory/history', '/inventory/perdas', '/production',
     '/raw-materials', '/catalog', '/customers', '/users', '/finance', '/reports', '/settings', '/billing',
     '/calendar', '/admin/subscriptions', '/admin/errors',
 ] as const;

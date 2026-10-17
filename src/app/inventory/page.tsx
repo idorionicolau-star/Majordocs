@@ -7,7 +7,7 @@ import type { Product, Location, ModulePermission } from "@/lib/types";
 import { columns } from "@/components/inventory/columns";
 import { InventoryDataTable } from "@/components/inventory/data-table";
 import { Button } from "@/components/ui/button";
-import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, History, Plus, ChevronsUpDown, Printer, Download, ScanBarcode, ClipboardList, WandSparkles, MoreHorizontal, TrendingDown, Truck } from "lucide-react";
+import { FileText, ListFilter, MapPin, List, LayoutGrid, ChevronDown, Plus, ChevronsUpDown, Printer, Download, ScanBarcode, ClipboardList, WandSparkles, MoreHorizontal, Truck } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -668,15 +668,6 @@ export default function InventoryPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-60">
-              <DropdownMenuItem asChild>
-                <Link href="/inventory/history"><History className="mr-2 h-4 w-4" /> Histórico de movimentos</Link>
-              </DropdownMenuItem>
-              {canViewInventory && (
-                <DropdownMenuItem asChild>
-                  <Link href="/inventory/perdas"><TrendingDown className="mr-2 h-4 w-4" /> Perdas e quebras</Link>
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-xs text-muted-foreground">Imprimir / exportar (lista filtrada)</DropdownMenuLabel>
               <DropdownMenuItem onClick={handleDownloadPdfReport}>
                 <Download className="mr-2 h-4 w-4" /> Descarregar PDF

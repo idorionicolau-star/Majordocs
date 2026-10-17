@@ -6,6 +6,7 @@ import { useState, useMemo, useContext, useEffect } from "react";
 import { useInventoryBackHref } from "@/hooks/use-inventory-back";
 import { useSearchParams } from "next/navigation";
 import { InventoryContext } from "@/context/inventory-context";
+import { ProductsTabs } from "@/components/inventory/products-tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { StockMovement } from "@/lib/types";
 import { useFirestore } from '@/firebase/provider';
@@ -244,6 +245,7 @@ export default function InventoryHistoryPage() {
   return (
     <>
       <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
+        <ProductsTabs />
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-2">
             <Button onClick={handleDownloadPdf} variant="outline" className="h-12">
