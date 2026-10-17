@@ -49,7 +49,7 @@ describe('Produção: escolher no catálogo', () => {
     });
 });
 
-import { cleanMaterials, materialDelta, recipeMaterials } from '@/lib/production-core';
+import { cleanMaterials, materialDelta, recipeMaterials, wasteHint } from '@/lib/production-core';
 
 describe('Produção: matéria-prima usada', () => {
     const recipe = { ingredients: [
@@ -95,5 +95,17 @@ describe('checkNewMaterial (matéria-prima criada na produção)', () => {
         expect(checkNewMaterial({ name: 'a', unit: 'un', stock: '1' }, existing).kind).toBe('error');
         expect(checkNewMaterial({ name: 'Tinta', unit: 'un', stock: '' }, existing).kind).toBe('error');
         expect(checkNewMaterial({ name: 'Tinta', unit: 'un', stock: '-2' }, existing).kind).toBe('error');
+    });
+});
+
+describe('aviso de desperdício (material aberto para poucas unidades)', () => {
+    const recipe = { ingredients: [{ rawMaterialId: 'c', rawMaterialName: 'Cimento', quantity: 1, yieldPerUnit: 75 }, { rawMaterialId: 'a', rawMaterialName: 'Areia', quantity: 0.01 }] };
+    it('80 blocos abrem um 2.º saco que dá para 150', () => {
+        expect(wasteHint(recipe, 80, [{ id: 'c', name: 'Cimento 32,5', unit: 'saco' }])).toMatchObject({ material: 'Cimento 32,5', used: 2, unit: 'saco', capacity: 150 });
+    });
+    it('sem desperdício que valha a pena, não diz nada', () => {
+        expect(wasteHint(recipe, 75)).toBeNull();
+        expect(wasteHint(recipe, 140)).toBeNull(); // 7% de sobra
+        expect(wasteHint({ ingredients: [{ rawMaterialId: 'a', rawMaterialName: 'Areia', quantity: 2 }] }, 5)).toBeNull();
     });
 });

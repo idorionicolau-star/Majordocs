@@ -85,6 +85,9 @@ export function MaterialsEditor({ value, onChange, rawMaterials, recipe, onUseRe
                         <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium">{m.name}</p>
                             {r && <p className="text-[11px] text-muted-foreground">Em stock: {r.stock} {r.unit}</p>}
+                            {r && Number(String(m.qty).replace(",", ".")) > r.stock && (
+                                <p className="text-[11px] font-semibold text-red-600">Falta {Math.round((Number(String(m.qty).replace(",", ".")) - r.stock) * 1000) / 1000} {r.unit} — dê entrada antes ou corrija.</p>
+                            )}
                         </div>
                         <Input inputMode="decimal" value={m.qty} onChange={(e) => set(i, { qty: e.target.value })} onFocus={(e) => e.target.select()}
                             aria-label={`Quantidade de ${m.name}`} className="h-9 w-20 text-center" />
