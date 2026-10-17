@@ -39,7 +39,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  // Código de convite: vem no link (/register?codigo=MJTP86) ou escreve-se; aplica-se quando a empresa abrir.
+  // Código de convite: vem no link (/register?codigo=XXXX) ou escreve-se; aplica-se quando a empresa abrir.
   const [inviteCode, setInviteCode] = useState('');
   const [fromEscalepay, setFromEscalepay] = useState(false);
   useEffect(() => {
@@ -229,7 +229,7 @@ export default function RegisterPage() {
               />
               <div className="space-y-1.5">
                 <Label htmlFor="inviteCode">Código de convite <span className="font-normal text-muted-foreground">(opcional)</span></Label>
-                <Input id="inviteCode" value={inviteCode} onChange={(e) => setInviteCode(e.target.value.toUpperCase())} placeholder="Ex.: MJTP86" autoComplete="off" autoCapitalize="characters" />
+                <Input id="inviteCode" value={inviteCode} onChange={(e) => setInviteCode(e.target.value.toUpperCase())} placeholder="Só se recebeu um código" autoComplete="off" autoCapitalize="characters" />
                 {inviteCode && <p className="text-[11px] text-muted-foreground">O desconto do convite aplica-se ao plano Mensal quando subscrever.</p>}
               </div>
               <div className="flex items-center space-x-2">

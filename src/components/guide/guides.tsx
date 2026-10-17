@@ -1,7 +1,7 @@
 // Os guias da app. Cada passo aponta para um elemento com `data-tour="…"` (ver o componente da página).
 // Se o elemento não estiver no ecrã, o balão aparece ao centro e a pessoa pode seguir — um guia nunca encrava.
 import type { Guide, GuideStep } from "./types";
-import { appears, disappears, filled } from "./types";
+import { appears, disappears, filled, navStep } from "./types";
 import { PAGE_GUIDES } from "./page-guides";
 
 // ---------------------------------------------------------------------------------------------
@@ -57,13 +57,78 @@ const demoSteps = (closing: GuideStep): GuideStep[] => [
 const vendaDemo: Guide = {
     id: "venda-demo",
     title: "Venda de treino",
-    steps: demoSteps({
-        route: DEMO,
-        target: "pos-demo-done",
-        title: "Já sabe vender 🎉",
-        body: <>É sempre assim. Numa venda a sério o stock desce sozinho e o recibo fica pronto a imprimir ou enviar. <br />Falta só dizer <b>quanto tem em stock</b> dos seus produtos — faz-se no <b>Stock Rápido</b>.</>,
-        cta: { label: "Dar entrada do stock", href: "/inventory/quick?modo=entrada" },
-    }),
+    next: "stock-inicial",
+    steps: [
+        navStep("/pos", "Venda Rápida", "Abra a Venda Rápida", <>É aqui que se vende, todos os dias. Toque em <b>Venda Rápida</b>.</>),
+        ...demoSteps({
+            route: DEMO,
+            target: "pos-demo-done",
+            title: "Já sabe vender 🎉",
+            body: <>É sempre assim. Numa venda a sério o stock desce sozinho e o recibo fica pronto a imprimir ou enviar. <br />Falta só dizer <b>quanto tem em stock</b> — mostramos onde.</>,
+        }),
+    ],
+};
+
+// ---------------------------------------------------------------------------------------------
+// Stock: a primeira entrada (a sério) — Inventário → Stock Rápido → procurar → quantidade → registar
+// ---------------------------------------------------------------------------------------------
+const QS = "/inventory/quick";
+const stockInicial: Guide = {
+    id: "stock-inicial",
+    title: "O seu stock",
+    steps: [
+        navStep("/inventory", "Inventário", "Abra o Inventário", <>O Inventário mostra quanto tem de cada produto. Toque em <b>Inventário</b>.</>),
+        {
+            // sem `route`: este passo acaba precisamente por sair do Inventário (o guia pararia ao mudar de página)
+            target: "inv-quick",
+            advance: "auto",
+            done: () => window.location.pathname === QS,
+            hint: "Toque em Stock Rápido",
+            title: "Stock Rápido",
+            body: <>Para dar <b>entrada</b> do que chegou (ou do que já tem), toque em <b>Stock Rápido</b>.</>,
+        },
+        {
+            route: QS,
+            target: "qs-search",
+            advance: "auto",
+            done: () => appears("qs-panel")() || (filled("qs-search", 2)() && appears("qs-results")()),
+            settle: 1500,
+            hint: "Escreva aqui",
+            title: "Procure o produto",
+            body: <>Está em <b>Entrada</b>. Escreva o nome do produto que acabou de pôr no catálogo.</>,
+        },
+        {
+            route: QS,
+            target: "qs-results",
+            advance: "auto",
+            done: appears("qs-panel"),
+            hint: "Toque no produto",
+            title: "Toque no produto",
+            body: <>Toque no seu produto.</>,
+        },
+        {
+            route: QS,
+            target: "qs-panel",
+            advance: "auto",
+            done: appears("qs-lot"),
+            hint: "Quantidade e Adicionar",
+            title: "Quantos tem?",
+            body: <>Escreva a quantidade que tem (ou que chegou) e toque em <b>Adicionar</b>. Pode juntar vários produtos antes de registar.</>,
+        },
+        {
+            route: QS,
+            target: "qs-confirm",
+            advance: "auto",
+            done: disappears("qs-lot"),
+            hint: "Toque em Confirmar entrada",
+            title: "Confirme",
+            body: <>Toque em <b>Confirmar entrada</b> (o botão verde). O stock sobe na hora.</>,
+        },
+        {
+            title: "Está pronto 🎉",
+            body: <>Já tem produto, sabe vender e o stock está certo. Agora é vender a sério na <b>Venda Rápida</b>. Cada página tem a sua ajuda no botão <b>?</b> lá em cima.</>,
+        },
+    ],
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -75,6 +140,7 @@ const catalogo: Guide = {
     // depois do produto, mostra-se como se vende (treino, nada é gravado)
     next: "venda-demo",
     steps: [
+        navStep("/catalog", "Catálogo", "Abra o Catálogo", <>O Catálogo é a lista do que vende, com os preços. Toque em <b>Catálogo</b> no menu (no telemóvel, primeiro em <b>Mais</b>).</>),
         {
             route: "/catalog",
             target: "catalog-new",
@@ -127,7 +193,7 @@ const paginaPos: Guide = {
 };
 
 export const GUIDES: Record<string, Guide> = Object.fromEntries(
-    [vendaDemo, catalogo, paginaPos, ...PAGE_GUIDES].map((g) => [g.id, g]),
+    [vendaDemo, catalogo, stockInicial, paginaPos, ...PAGE_GUIDES].map((g) => [g.id, g]),
 );
 
 /** O tutorial de cada página (botão "?" e convite na primeira visita). A rota mais específica ganha. */

@@ -852,7 +852,9 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                                 {picked.product
                                     ? (blind ? `Conte e escreva a quantidade que está lá (${picked.product.unit || "un"})` : `Stock actual: ${fmt(picked.product.stock || 0)} ${picked.product.unit || "un"}`)
                                     : picked.from
-                                        ? `Primeira entrada nesta localização — preço, unidade e categoria copiados de ${locName(picked.from.location || "")}`
+                                        ? (picked.from.location
+                                            ? `Primeira entrada nesta localização — preço, unidade e categoria copiados de ${locName(picked.from.location)}`
+                                            : "Primeira entrada deste produto — preço, unidade e categoria vêm do catálogo")
                                         : "Produto novo — confirme o nome, a categoria e a unidade"}
                             </p>
                         </div>
