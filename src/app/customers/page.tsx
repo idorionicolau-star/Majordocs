@@ -29,6 +29,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
 import { useFuse } from '@/hooks/use-fuse';
+import { openSale } from '@/components/sales/sale-sheet';
 
 export default function CustomersPage() {
     const { canView, companyData, sales, confirmAction } = useInventory();
@@ -273,13 +274,13 @@ export default function CustomersPage() {
                             <div className="space-y-2">
                                 {viewingCustomer && getCustomerHistory(viewingCustomer.id).length > 0 ? (
                                     getCustomerHistory(viewingCustomer.id).slice(0, 10).map(sale => (
-                                        <div key={sale.id} className="flex justify-between items-center p-3 border border-slate-100 dark:border-slate-800 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                        <button type="button" key={sale.id} data-tour="customer-sale" onClick={() => openSale(sale.id)} className="flex w-full text-left justify-between items-center p-3 border border-slate-100 dark:border-slate-800 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                             <div className="flex flex-col">
                                                 <span className="font-medium text-slate-800 dark:text-slate-200">{sale.productName} <span className="text-slate-400 text-xs">x{sale.quantity}</span></span>
                                                 <span className="text-xs text-slate-500">{format(new Date(sale.date), "d MMM yyyy HH:mm", { locale: ptBR })} • {sale.guideNumber}</span>
                                             </div>
                                             <span className="font-mono font-bold text-slate-900 dark:text-white">{formatCurrency(sale.totalValue)}</span>
-                                        </div>
+                                        </button>
                                     ))
                                 ) : (
                                     <p className="text-center text-slate-500 text-sm py-4">Sem registo de compras.</p>

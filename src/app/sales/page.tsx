@@ -1,5 +1,4 @@
 "use client";
-import { formatCurrency } from "@/lib/utils";
 
 import { useState, useEffect, useMemo, useContext } from "react";
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -8,7 +7,6 @@ import { columns } from "@/components/sales/columns";
 import { SalesDataTable } from "@/components/sales/sales-data-table";
 import { VirtualSalesGrid } from "@/components/sales/virtual-sales-grid";
 
-import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { List, LayoutGrid, ChevronDown, Filter, MapPin, PlusCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -17,15 +15,12 @@ import { Input } from "@/components/ui/input";
 import Link from 'next/link';
 import { InventoryContext } from "@/context/inventory-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import { collection, doc, serverTimestamp, writeBatch } from "firebase/firestore";
-import { changesToUpdate, diffSale, sellerBlockedFields } from "@/lib/sale-audit";
-import { useFirestore } from '@/firebase/provider';
+import { useSaleActions } from "@/components/sales/use-sale-actions";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Card } from "@/components/ui/card";
 import { useFuse } from "@/hooks/use-fuse";
 import { DeepLinkBanner } from "@/components/deep-link-banner";
-import { links } from '@/lib/deep-links';
 // Removed useFirestorePagination and firestore query imports
 
 export default function SalesPage() {
@@ -48,17 +43,12 @@ export default function SalesPage() {
     setLinkFocus(venda || st || null);
   }, [searchParams]);
   const clearLinkFocus = () => { setNameFilter(''); setStatusFilter('all'); setLinkFocus(null); router.replace('/sales'); };
-  const { toast } = useToast();
   const inventoryContext = useContext(InventoryContext);
-  const firestore = useFirestore();
 
   const {
     loading: inventoryLoading,
     sales: contextSales,
     addSale,
-    confirmSalePickup,
-    deleteSale,
-    user,
     companyId,
     canEdit,
     canView,
@@ -68,9 +58,6 @@ export default function SalesPage() {
     loading: true,
     sales: [],
     addSale: async () => { },
-    confirmSalePickup: () => { },
-    deleteSale: () => { },
-    user: null,
     companyId: null,
     canEdit: () => false,
     canView: () => false,
@@ -134,95 +121,7 @@ export default function SalesPage() {
     localStorage.setItem('majorstockx-sales-grid-cols', cols);
   }
 
-  const handleUpdateSale = async (updatedSale: Sale) => {
-    const before = (contextSales || []).find((s: Sale) => s.id === updatedSale.id);
-    if (!before || !updatedSale.id || !firestore || !companyId || !user) return;
-
-    // Só o que mudou de facto — e cada mudança fica registada (quem, quando, antes e depois).
-    const diff = diffSale(before, updatedSale);
-    if (!Object.keys(diff).length) return;
-
-    const isManager = user.role === 'Admin' || user.role === 'Dono';
-    const blocked = sellerBlockedFields(diff);
-    if (!isManager && blocked.length) {
-      toast({ variant: "destructive", title: "Só o gestor pode alterar isto", description: "Produto, quantidade, preço e valores de uma venda já feita só podem ser corrigidos pelo gestor." });
-      return;
-    }
-    // Defesa: mudar produto/quantidade de uma venda que já mexeu no stock deixaria o stock errado.
-    if (before.status !== 'Pendente' && (diff.quantity || diff.productName)) {
-      toast({ variant: "destructive", title: "Não é possível", description: "Para trocar produto ou quantidade, apague a venda (o stock volta) e faça outra." });
-      return;
-    }
-
-    // Anti-roubo: alterações a valores de uma venda já feita avisam o gestor.
-    if (inventoryContext?.notifyManagers) {
-      const changes: string[] = [];
-      const fmt = (n: number) => formatCurrency(Number(n) || 0);
-      if (diff.quantity) changes.push(`qtd ${before.quantity} → ${updatedSale.quantity}`);
-      if (diff.unitPrice) changes.push(`preço ${fmt(before.unitPrice)} → ${fmt(updatedSale.unitPrice)}`);
-      if (diff.totalValue) changes.push(`total ${fmt(before.totalValue)} → ${fmt(updatedSale.totalValue)}`);
-      if (diff.amountPaid) changes.push(`pago ${fmt(before.amountPaid ?? 0)} → ${fmt(updatedSale.amountPaid ?? 0)}`);
-      if (diff.productName) changes.push(`produto ${before.productName} → ${updatedSale.productName}`);
-      if (changes.length) {
-        inventoryContext.notifyManagers({
-          type: 'security',
-          title: `✏️ Venda ${before.guideNumber || ''} alterada`,
-          body: `${user.username || '—'} · ${changes.join(' · ')}`,
-          link: before.guideNumber ? links.sale(before.guideNumber) : '/sales',
-        });
-      }
-    }
-
-    try {
-      const saleRef = doc(firestore, `companies/${companyId}/sales`, updatedSale.id);
-      const batch = writeBatch(firestore);
-      batch.update(saleRef, changesToUpdate(diff));
-      batch.set(doc(collection(saleRef, 'history')), {
-        action: 'editada',
-        userId: user.id,
-        userName: user.username,
-        at: serverTimestamp(),
-        guideNumber: before.guideNumber || null,
-        changes: diff,
-      });
-      await batch.commit();
-      // Proforma que passa a paga tem de reservar o stock (antes ficava "Pago" sem reserva).
-      if (before.status === 'Pendente' && updatedSale.status === 'Pago') {
-        try { await (inventoryContext as any)?.recalculateReservedStock?.(); } catch { /* o botão de recalcular continua disponível */ }
-      }
-      toast({
-        title: "Venda Atualizada",
-        description: `A venda #${updatedSale.guideNumber} foi atualizada com sucesso.`,
-      });
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Não foi possível atualizar a venda", description: e?.message || "Tente de novo." });
-    }
-  };
-
-  const handleConfirmPickup = async (sale: Sale) => {
-    try {
-      if (!confirmSalePickup) throw new Error("Função de levantamento não disponível.");
-      await confirmSalePickup(sale);
-      toast({
-        title: "Material Levantado",
-        description: `O stock foi atualizado para a venda #${sale.guideNumber}.`,
-      });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro no Levantamento",
-        description: error.message || "Não foi possível confirmar o levantamento.",
-      });
-    }
-  };
-
-  const handleDeleteSale = async (saleId: string) => {
-    try {
-      await deleteSale(saleId);
-    } catch (error: any) {
-      // Error handled in context
-    }
-  };
+  const { updateSale: handleUpdateSale, confirmPickup: handleConfirmPickup, removeSale: handleDeleteSale } = useSaleActions();
 
   if (!companyId) {
     return <div className="p-10 text-center"><Skeleton className="h-10 w-full" /></div>

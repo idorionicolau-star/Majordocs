@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { explainReserved } from "@/lib/reserved-stock";
 import { links } from "@/lib/deep-links";
+import { openSale } from "@/components/sales/sale-sheet";
 import { formatCurrency } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 
@@ -76,10 +77,10 @@ function ReservedDialog({ product, onClose }: { product: Product; onClose: () =>
                         <ul className="divide-y rounded-xl border">
                             {e.sales.map((s) => (
                                 <li key={s.id}>
-                                    <Link href={links.sale(s.guideNumber || s.productName)} onClick={onClose} className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-muted/50">
+                                    <button type="button" onClick={() => { onClose(); openSale(s.id); }} className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted/50">
                                         <span className="min-w-0"><span className="block truncate font-medium">{s.guideNumber}{s.clientName ? ` · ${s.clientName}` : ""}</span><span className="block text-xs text-muted-foreground">{fmtDate(s.date)} · {formatCurrency(s.totalValue || 0)}</span></span>
                                         <span className="shrink-0 tabular-nums">{fmtQty(s.quantity)} {unit}</span>
-                                    </Link>
+                                    </button>
                                 </li>
                             ))}
                         </ul>

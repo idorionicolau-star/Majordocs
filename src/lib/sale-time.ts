@@ -47,3 +47,17 @@ export const formatSaleMoment = (sale: { date?: string; timestamp?: unknown }) =
     const m = saleMoment(sale);
     return m.time ? `${m.day} às ${m.time}` : m.day;
 };
+
+/**
+ * A data a gravar quando se escolhe um dia no calendário ao corrigir uma venda: o mesmo dia fica exactamente como
+ * estava; outro dia mantém a hora a que a venda foi feita (antes ficava à meia-noite e a hora perdia-se).
+ */
+export function withSaleTime(day: Date, original?: string): string {
+    const picked = dayOf(day.getFullYear(), day.getMonth() + 1, day.getDate());
+    const before = saleMoment({ date: original });
+    if (original && before.day === picked) return original;
+    const d = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+    const o = toDate(original);
+    if (o && before.time) d.setHours(o.getHours(), o.getMinutes(), o.getSeconds(), o.getMilliseconds());
+    return d.toISOString();
+}

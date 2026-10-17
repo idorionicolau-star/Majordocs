@@ -9,7 +9,9 @@ export const MANAGER_ONLY_SALE_FIELDS = [
 
 const sameValue = (key: string, a: unknown, b: unknown) => {
     if (key === 'date' && a && b) return new Date(a as string).getTime() === new Date(b as string).getTime();
-    return (a ?? null) === (b ?? null);
+    // vazio = nada (uma nota que não existia não "muda" para "" só por se abrir e gravar o formulário)
+    const none = (v: unknown) => (v === undefined || v === '' ? null : v);
+    return none(a) === none(b);
 };
 
 /** Só os campos que realmente mudaram (evita regravar a venda inteira e apagar o que outro fez). */

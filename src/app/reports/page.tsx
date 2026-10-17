@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { openSale } from '@/components/sales/sale-sheet';
 
 type Period = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -49,7 +50,7 @@ const SaleReportCard = ({ sale }: { sale: Sale }) => {
   const isPartiallyPaid = sale.amountPaid !== undefined && sale.amountPaid < sale.totalValue;
 
   return (
-    <Card className="glass-card">
+    <Card className="glass-card cursor-pointer" role="button" onClick={() => openSale(sale.id)}>
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
         <div>
           <CardTitle className="text-base font-bold">{sale.productName}</CardTitle>
@@ -408,7 +409,7 @@ export default function ReportsPage() {
                 <TableBody>
                   {salesForPeriod.length > 0 ? (
                     salesForPeriod.sort((a: Sale, b: Sale) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale: Sale) => (
-                      <TableRow key={sale.id}>
+                      <TableRow key={sale.id} className="cursor-pointer" onClick={() => openSale(sale.id)}>
                         <TableCell>{format(new Date(sale.date), 'dd/MM/yy')}</TableCell>
                         <TableCell className="font-medium">{sale.guideNumber}</TableCell>
                         <TableCell>{sale.productName}</TableCell>

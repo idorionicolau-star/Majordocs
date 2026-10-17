@@ -181,6 +181,7 @@ const PAGES: Guide[] = [
             { target: "fin-period", title: "Período", body: <>Dia, semana, mês ou ano, a partir da data escolhida.</> },
             { target: "fin-kpis", title: "Resultado", body: <>Entradas, saídas e o que sobrou. Conta só o que foi <b>pago</b>; cotações e proformas não contam.</> },
             { target: "fin-tabs", title: "As listas", body: <>Veja uma a uma as entradas e as saídas do período.</> },
+            { target: "finance-sale", title: "Abrir uma venda", body: <>Toque numa venda para ver tudo dela e <b>corrigir</b> (data, cliente, pagamento), imprimir ou marcar como levantada — sem sair daqui.</> },
             { target: "fin-print", title: "Relatório", body: <>Imprima ou baixe o relatório financeiro.</> },
         ],
     },

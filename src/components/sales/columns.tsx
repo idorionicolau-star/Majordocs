@@ -7,11 +7,11 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Sale, Company } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Edit, Printer, FileSearch, CheckCircle, PackageCheck, Download, DollarSign, Mail, Trash2 } from "lucide-react"
-import { useCRM } from "@/context/crm-context"
-import { useToast } from "@/hooks/use-toast"
-import { SaleDetailsDialog } from "./sale-details-dialog"
-import { formatCurrency, downloadSaleDocument } from "@/lib/utils"
+import { formatCurrency } from "@/lib/utils"
 import { EditSaleDialog } from "./edit-sale-dialog"
+import { openSale } from "./sale-sheet"
+import { paidInFull } from "./use-sale-actions"
+import { useSaleDocument } from "./use-sale-document"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
 import {
     Dialog,
@@ -31,106 +31,23 @@ interface ColumnsOptions {
 }
 
 const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) => {
-    const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
     const sale = row.original as Sale;
     const { canEdit } = options;
     const inventoryContext = React.useContext(InventoryContext);
-    const { companyData } = inventoryContext || {};
     const isManagerUser = inventoryContext?.user?.role === 'Admin' || inventoryContext?.user?.role === 'Dono';
-    const { customers } = useCRM();
-    const { toast } = useToast();
-    const customer = customers.find(c => c.id === sale.customerId);
-
-    const handleSendReceipt = async () => {
-        if (!customer || !customer.email) {
-            toast({ variant: 'destructive', title: 'Erro', description: 'Cliente sem email registado.' });
-            return;
-        }
-
-        toast({ title: 'A enviar recibo...', description: `Para: ${customer.email}` });
-
-        try {
-            // Get auth token for the API
-            const { getAuth } = await import('firebase/auth');
-            const auth = getAuth();
-            const token = await auth.currentUser?.getIdToken();
-
-            if (!token) {
-                toast({ variant: 'destructive', title: 'Erro', description: 'Sessão expirada. Faça login novamente.' });
-                return;
-            }
-
-            const response = await fetch('/api/email', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    type: 'RECEIPT',
-                    to: customer.email,
-                    subject: `Recibo de Venda - ${sale.guideNumber}`,
-                    companyId: companyData?.id,
-                    logoUrl: companyData?.logoUrl,
-                    customerName: customer.name,
-                    guideNumber: sale.guideNumber,
-                    items: [{ productName: sale.productName, quantity: sale.quantity, subtotal: sale.totalValue }],
-                    totalValue: sale.totalValue,
-                    date: sale.date,
-                    companyName: companyData?.name || 'Major Group'
-                })
-            });
-
-            if (response.ok) {
-                toast({ title: 'Recibo Enviado', description: 'O cliente receberá o email em breve.' });
-            } else {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `Erro ${response.status}`);
-            }
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Erro', description: `Não foi possível enviar o recibo: ${error.message || error}` });
-        }
-    };
-
-    // O documento leva todos os artigos com o mesmo número (uma venda com vários produtos).
-    const documentLines = () => {
-        const same = sale.guideNumber
-            ? (inventoryContext?.sales || []).filter(s => s.guideNumber === sale.guideNumber && s.documentType === sale.documentType)
-            : [];
-        return same.length ? same : [sale];
-    };
-
-    const handleDownload = async () => {
-        try {
-            const { downloadSaleDocumentPDF } = await import("@/lib/sale-document-pdf");
-            await downloadSaleDocumentPDF(documentLines(), companyData || null);
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: 'Não foi possível gerar o PDF', description: e?.message || 'Tente de novo.' });
-        }
-    };
-
-    const handlePrint = () => {
-        downloadSaleDocument(documentLines(), companyData || null);
-    };
+    const { customer, sendReceipt: handleSendReceipt, download: handleDownload, print: handlePrint } = useSaleDocument(sale);
 
     return (
         <div className="flex items-center justify-end gap-1" data-tour="sales-actions">
             <TooltipProvider>
                 <Tooltip>
-                    <SaleDetailsDialog
-                        sale={sale}
-                        open={isDetailsOpen}
-                        onOpenChange={setIsDetailsOpen}
-                        trigger={
-                            <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <FileSearch className="h-4 w-4" />
-                                    <span className="sr-only">Ver Detalhes</span>
-                                </Button>
-                            </TooltipTrigger>
-                        }
-                    />
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openSale(sale.id)}>
+                            <FileSearch className="h-4 w-4" />
+                            <span className="sr-only">Ver Detalhes</span>
+                        </Button>
+                    </TooltipTrigger>
                     <TooltipContent>
                         <p>Ver Detalhes</p>
                     </TooltipContent>
@@ -185,8 +102,7 @@ const ActionsCell = ({ row, options }: { row: any, options: ColumnsOptions }) =>
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-amber-600"
-                                onClick={() => options.onUpdateSale({ ...sale, amountPaid: sale.totalValue, // Não voltar a pôr 'Pago' numa venda já levantada — isso fazia o botão de levantar reaparecer e descontar o stock outra vez
-                                    status: sale.status === 'Levantado' ? 'Levantado' : 'Pago' })}
+                                onClick={() => options.onUpdateSale(paidInFull(sale))}
                             >
                                 <DollarSign className="h-4 w-4" />
                                 <span className="sr-only">Confirmar Pagamento Total</span>
