@@ -1,7 +1,7 @@
 // Os guias da app. Cada passo aponta para um elemento com `data-tour="…"` (ver o componente da página).
 // Se o elemento não estiver no ecrã, o balão aparece ao centro e a pessoa pode seguir — um guia nunca encrava.
 import type { Guide, GuideStep } from "./types";
-import { appears, disappears, filled, navStep } from "./types";
+import { appears, disappears, filled } from "./types";
 import { PAGE_GUIDES, congrats } from "./page-guides";
 
 // ---------------------------------------------------------------------------------------------
@@ -63,7 +63,6 @@ const stockInicial: Guide = {
     id: "stock-inicial",
     title: "O seu stock",
     steps: [
-        navStep("/inventory", "Inventário", "Abra o Inventário", <>O Inventário mostra quanto tem de cada produto. Toque em <b>Inventário</b>.</>),
         {
             // sem `route`: este passo acaba precisamente por sair do Inventário (o guia pararia ao mudar de página)
             target: "inv-quick",
@@ -121,7 +120,6 @@ const catalogo: Guide = {
     id: "catalogo",
     title: "O seu primeiro produto",
     steps: [
-        navStep("/catalog", "Catálogo", "Abra o Catálogo", <>O Catálogo é a lista do que vende, com os preços. Toque em <b>Catálogo</b> no menu (no telemóvel, primeiro em <b>Mais</b>).</>),
         {
             route: "/catalog",
             target: "catalog-new",
@@ -150,12 +148,19 @@ const catalogo: Guide = {
             body: <>O <b>preço de venda</b> de uma unidade (saco, lata, m²…). A unidade escolhe-se ao lado.</>,
         },
         {
+            // só aparece a quem pode mexer no stock; sem o campo, o passo salta
+            target: "catalog-f-stock",
+            optional: true,
+            title: "Quanto tem?",
+            body: <>Se já tem este produto, escreva a <b>quantidade</b>: entra logo no stock. Pode deixar vazio e dar entrada depois.</>,
+        },
+        {
             target: "catalog-f-submit",
             advance: "auto",
             done: disappears("catalog-form"),
-            hint: "Toque em Adicionar",
+            hint: "Toque em Guardar produto",
             title: "Guarde",
-            body: <>Toque em <b>Adicionar ao Catálogo</b>. Foto, custo, código de barras e variações são opcionais — pode completar depois.</>,
+            body: <>Toque em <b>Guardar produto</b>. Foto, custo, código de barras e variações são opcionais — pode completar depois.</>,
         },
         congrats(<>Agora já sabe pôr produtos no <b>catálogo</b>. Faça o mesmo para os outros.</>),
     ],

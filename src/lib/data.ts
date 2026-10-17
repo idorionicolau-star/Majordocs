@@ -13,7 +13,6 @@ import {
   Layers, // Using Layers for raw materials
   BrainCircuit,
   Banknote,
-  Book,
   Zap,
   TrendingDown,
   Truck,
@@ -31,19 +30,13 @@ export const mainNavItems: NavItem[] = [
   { title: 'Documentos', href: '/documents', id: 'sales', icon: FileText, group: 'vender' },
   { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList, group: 'vender' },
   // Stock
-  { title: 'Inventário', href: '/inventory', id: 'inventory', icon: Box, group: 'stock' },
+  // Produtos: o stock (Inventário) e o Catálogo (preços) são abas da mesma secção
+  { title: 'Produtos', href: '/inventory', id: 'inventory', icon: Box, group: 'stock', also: ['/catalog'] },
   { title: 'Stock Rápido', href: '/inventory/quick', id: 'inventory', isSubItem: true, icon: ClipboardList, group: 'stock' },
   { title: 'Histórico', href: '/inventory/history', id: 'inventory', isSubItem: true, icon: History, group: 'stock' },
   { title: 'Perdas', href: '/inventory/perdas', id: 'inventory', isSubItem: true, icon: TrendingDown, group: 'stock' },
   { title: 'Produção', href: '/production', id: 'production', icon: Hammer, group: 'stock' },
   { title: 'Matéria-Prima', href: '/raw-materials', id: 'raw-materials', icon: Layers, group: 'stock' },
-  {
-    title: "Catálogo",
-    id: "settings", // Using 'settings' permission for now as it was part of settings
-    href: "/catalog",
-    icon: Book,
-    group: 'stock',
-  },
   // Pessoas
   { title: 'Clientes', href: '/customers', id: 'customers', icon: Users, group: 'pessoas' },
   { title: 'Funcionários', href: '/users', id: 'users', icon: Users, adminOnly: true, group: 'pessoas' },

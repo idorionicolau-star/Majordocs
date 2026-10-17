@@ -1,6 +1,7 @@
 "use client";
 
-import { useContext, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { collection, doc, writeBatch } from "firebase/firestore";
 import { MoreHorizontal, Plus, RefreshCw } from "lucide-react";
 import { InventoryContext } from "@/context/inventory-context";
@@ -19,7 +20,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { CatalogProductsView, type CatalogRow } from "@/components/catalog/catalog-products-view";
 import { CatalogCategoriesView, type CategoryRow } from "@/components/catalog/catalog-categories-view";
-import { AddCatalogProductDialog } from "./add-catalog-product-dialog";
+import { AddCatalogProductDialog, type InitialStock } from "./add-catalog-product-dialog";
 import { EditCatalogProductDialog } from "./edit-catalog-product-dialog";
 import { CatalogImporter, type CatalogImportResult } from "./catalog-importer";
 import { adjustPrice, buildSyncPlan, categoryCounts, copyName, findBarcodeClash, findDuplicate, nameKey, parsePct, pushPriceHistory, sameCodeKey } from "@/lib/catalog-view";
@@ -64,7 +65,7 @@ export function CatalogManager() {
     /** variação cuja família vai mudar de nome (abre a janela "Editar" já em "A família") */
     const [familyRename, setFamilyRename] = useState<string | null>(null);
     /** família cujo preço se vai mudar de uma vez */
-    const [dup, setDup] = useState<{ data: Omit<CatalogProduct, "id">; existing: CatalogProduct } | null>(null);
+    const [dup, setDup] = useState<{ data: Omit<CatalogProduct, "id">; existing: CatalogProduct; initialStock?: InitialStock } | null>(null);
     const [bulk, setBulk] = useState<{ kind: "category" | "price" | "delete"; ids: string[] } | null>(null);
     const [bulkCat, setBulkCat] = useState("");
     const [bulkNewCat, setBulkNewCat] = useState("");
@@ -86,6 +87,29 @@ export function CatalogManager() {
     const detail = detailId ? catalog.find((p) => p.id === detailId) || null : null;
     const byId = useMemo(() => new Map(catalog.map((p) => [p.id, p])), [catalog]);
 
+    // Quem pode mexer no stock diz logo quanto tem do produto novo (um só formulário para criar um produto)
+    const stockLocations = useMemo(() => {
+        if (!ctx?.canEdit?.("inventory")) return undefined;
+        const locs = ctx.isMultiLocation ? (ctx.locations || []).map((l) => ({ id: l.id, name: l.name })) : [];
+        return locs.length ? locs : [{ id: "Principal", name: "Principal" }];
+    }, [ctx]);
+
+    // Chegou de outra aba de Produtos: `?novo=1` abre "Novo produto"; `?produto=Nome` abre a ficha desse produto
+    const params = useSearchParams();
+    const router = useRouter();
+    const wantsNew = params.get("novo") === "1";
+    const wantsProduct = params.get("produto");
+    useEffect(() => {
+        if (!wantsNew && !wantsProduct) return;
+        if (wantsProduct) {
+            if (!catalog.length) return; // espera pelo catálogo
+            const found = catalog.find((p) => nameKey(p.name) === nameKey(wantsProduct));
+            if (found) setDetailId(found.id);
+        }
+        if (wantsNew && !readOnly) { setAddPrefill(""); setAddOpen(true); }
+        router.replace("/catalog");
+    }, [wantsNew, wantsProduct, catalog, readOnly, router]);
+
     if (!ctx) return <div className="p-4 text-muted-foreground">A carregar o catálogo…</div>;
 
     // ---------- produtos ----------
@@ -94,19 +118,26 @@ export function CatalogManager() {
         const n = (name || "").trim();
         if (n && !categories.some((c) => nameKey(c.name) === nameKey(n))) ctx.addCatalogCategory(n);
     };
-    const commitAdd = (data: Omit<CatalogProduct, "id">) => {
+    const commitAdd = (data: Omit<CatalogProduct, "id">, initialStock?: InitialStock) => {
         ensureCategory(data.category);
         ctx.addCatalogProduct(data);
-        toast({ title: "Produto adicionado", description: `«${data.name}» está no catálogo.${offline() ? " Fica guardado neste aparelho até haver internet." : ""}` });
+        // o que já tem entra no stock (fica registado no histórico como "Criação de novo produto")
+        if (initialStock && initialStock.quantity > 0) {
+            // sem campos "undefined" (o Firestore recusa-os)
+            const { priceHistory: _ph, imageUrl, ...fields } = data;
+            ctx.addProduct({ ...fields, ...(imageUrl ? { imageUrl } : {}), stock: initialStock.quantity, location: initialStock.location || "Principal" } as Parameters<typeof ctx.addProduct>[0]);
+        }
+        const inStock = initialStock && initialStock.quantity > 0 ? ` e ${initialStock.quantity} ${data.unit || "un"} em stock` : "";
+        toast({ title: "Produto adicionado", description: `«${data.name}» está no catálogo${inStock}.${offline() ? " Fica guardado neste aparelho até haver internet." : ""}` });
     };
-    const handleAdd = (data: Omit<CatalogProduct, "id">) => {
+    const handleAdd = (data: Omit<CatalogProduct, "id">, initialStock?: InitialStock) => {
         if (data.barcode) {
             const clash = findBarcodeClash(catalog, data.barcode);
             if (clash) { toast({ variant: "destructive", title: "Esse código de barras já existe", description: `Pertence a «${clash.name}». Cada produto tem o seu código.` }); return; }
         }
         const existing = findDuplicate(catalog, data.name);
-        if (existing) { setDup({ data, existing }); return; } // pergunta antes de criar um repetido
-        commitAdd(data);
+        if (existing) { setDup({ data, existing, initialStock }); return; } // pergunta antes de criar um repetido
+        commitAdd(data, initialStock);
     };
     /** Produto com variações: uma entrada no catálogo por variação, todas com o mesmo `variantGroup`. */
     const handleAddVariants = (base: Omit<CatalogProduct, "id">, variants: { name: string; values: Record<string, string>; price: number }[], existing: string[]) => {
@@ -375,6 +406,7 @@ export function CatalogManager() {
                 initial={variantSource ? { name: variantSource.name, category: variantSource.category, price: variantSource.price, cost: variantSource.cost || 0, unit: variantSource.unit || "un", imageUrl: variantSource.imageUrl || "", barcode: "", lowStockThreshold: variantSource.lowStockThreshold, criticalStockThreshold: variantSource.criticalStockThreshold } : dupSource ? { name: copyName(catalog, dupSource.name), category: dupSource.category, price: dupSource.price, cost: dupSource.cost || 0, unit: dupSource.unit || "un", imageUrl: dupSource.imageUrl || "", barcode: "", lowStockThreshold: dupSource.lowStockThreshold, criticalStockThreshold: dupSource.criticalStockThreshold } : undefined}
                 startWithVariants={!!variantSource}
                 onAdd={handleAdd}
+                stockLocations={stockLocations}
                 onAddVariants={handleAddVariants}
             />
             {editing && (
@@ -430,7 +462,7 @@ export function CatalogManager() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => { if (dup) commitAdd(dup.data); setDup(null); }}>Criar mesmo assim</AlertDialogAction>
+                        <AlertDialogAction onClick={() => { if (dup) commitAdd(dup.data, dup.initialStock); setDup(null); }}>Criar mesmo assim</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

@@ -71,16 +71,28 @@ const formSchema = z.object({
     const num = Number(val);
     return isNaN(num) ? 0 : num;
   }, z.number().min(0)),
+  // "Quanto tem agora?": não vai para o catálogo, entra no stock
+  stock: z.preprocess((val) => {
+    if (val === undefined || val === "" || val === null) return 0;
+    const num = Number(String(val).replace(",", "."));
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(0, { message: "A quantidade não pode ser negativa." })),
+  stockLocation: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 const NEW_CATEGORY = "__nova_categoria__";
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
+/** O que a pessoa já tem deste produto: entra no stock ao criar (num só passo, sem ir ao Stock Rápido). */
+export type InitialStock = { quantity: number; location?: string };
+
 interface AddCatalogProductDialogProps {
   categories: string[];
   units: string[];
-  onAdd: (product: Omit<CatalogProduct, 'id'>) => void;
+  onAdd: (product: Omit<CatalogProduct, 'id'>, initialStock?: InitialStock) => void;
+  /** Locais onde pode entrar o stock inicial; sem isto (ex.: sem permissão de stock), o campo não aparece. */
+  stockLocations?: { id: string; name: string }[];
   /** Produto com variações: cria uma entrada por variação (cada uma com o seu stock e preço). */
   onAddVariants?: (base: Omit<CatalogProduct, 'id'>, variants: { name: string; values: Record<string, string>; price: number }[], existing: string[]) => void;
   /** Produtos já no catálogo (para avisar de códigos de barras repetidos). */
@@ -99,6 +111,7 @@ function AddCatalogProductForm({
   catalog,
   variants,
   setVariants,
+  stockLocations,
 }: AddCatalogProductDialogProps & { setOpen: (open: boolean) => void; form: any; namePlaceholder: string; pricePlaceholder: string; variants: VariantsState; setVariants: (v: VariantsState) => void }) {
   const { toast } = useToast();
   const [typingCategory, setTypingCategory] = useState(false);
@@ -124,8 +137,12 @@ function AddCatalogProductForm({
       setOpen(false);
       return;
     }
+    const { stock, stockLocation, ...product } = values;
     // sem "undefined" (o Firestore recusa): custo 0 e código '' querem dizer "não tem"
-    onAdd({ ...values, cost: values.cost || 0, barcode: (values.barcode || '').trim() } as Omit<CatalogProduct, 'id'>);
+    onAdd(
+      { ...product, cost: product.cost || 0, barcode: (product.barcode || '').trim() } as Omit<CatalogProduct, 'id'>,
+      stockLocations && stock > 0 ? { quantity: stock, location: stockLocation || stockLocations[0]?.id } : undefined,
+    );
     setOpen(false);
   }
 
@@ -221,6 +238,41 @@ function AddCatalogProductForm({
             )}
           />
         </div>
+        {stockLocations && !withVariants && (
+          <div className="grid grid-cols-2 gap-4" data-tour="catalog-f-stock">
+            <FormField
+              control={form.control}
+              name="stock"
+              render={({ field }) => (
+                <FormItem className={stockLocations.length > 1 ? undefined : "col-span-2"}>
+                  <FormLabel>Quanto tem agora? (opcional)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="any" min="0" inputMode="decimal" placeholder="0" {...field} value={field.value || ''} />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">Entra logo no stock. Pode deixar vazio e dar entrada depois.</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {stockLocations.length > 1 && (
+              <FormField
+                control={form.control}
+                name="stockLocation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Onde está</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || stockLocations[0]?.id}>
+                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {stockLocations.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+            )}
+          </div>
+        )}
         <div className="grid gap-4" data-tour="catalog-f-cost"><CostBarcodeFields catalog={catalog || []} noBarcode={withVariants} /></div>
         <div className="grid grid-cols-2 gap-4" data-tour="catalog-f-alerts">
           <FormField
@@ -255,14 +307,14 @@ function AddCatalogProductForm({
         )}
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
           <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button type="submit" data-tour="catalog-f-submit">{withVariants ? 'Criar variações' : 'Adicionar ao Catálogo'}</Button>
+          <Button type="submit" data-tour="catalog-f-submit">{withVariants ? 'Criar variações' : 'Guardar produto'}</Button>
         </div>
       </form>
     </Form>
   );
 }
 
-export function AddCatalogProductDialog({ categories, units, onAdd, onAddVariants, catalog, open: openProp, onOpenChange, hideTrigger, defaultCategory, defaultName, initial, startWithVariants }: AddCatalogProductDialogProps & {
+export function AddCatalogProductDialog({ categories, units, onAdd, onAddVariants, catalog, stockLocations, open: openProp, onOpenChange, hideTrigger, defaultCategory, defaultName, initial, startWithVariants }: AddCatalogProductDialogProps & {
   /** Modo controlado: a página decide quando abre (ex.: botão + no telemóvel). */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -293,6 +345,8 @@ export function AddCatalogProductDialog({ categories, units, onAdd, onAddVariant
       barcode: '',
       lowStockThreshold: 10,
       criticalStockThreshold: 5,
+      stock: 0,
+      stockLocation: '',
     },
   });
 
@@ -302,7 +356,7 @@ export function AddCatalogProductDialog({ categories, units, onAdd, onAddVariant
   // sempre que abre, o formulário começa limpo (antes ficava com o produto anterior)
   useEffect(() => {
     if (open) setVariants({ ...EMPTY_VARIANTS, enabled: !!startWithVariants });
-    if (open) form.reset({ name: defaultName || '', category: defaultCategory || categories[0] || 'Geral', price: 0, unit: 'un', imageUrl: '', cost: 0, barcode: '', lowStockThreshold: 10, criticalStockThreshold: 5, ...(initial || {}) });
+    if (open) form.reset({ name: defaultName || '', category: defaultCategory || categories[0] || 'Geral', price: 0, unit: 'un', imageUrl: '', cost: 0, barcode: '', lowStockThreshold: 10, criticalStockThreshold: 5, stock: 0, stockLocation: '', ...(initial || {}) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -317,8 +371,8 @@ export function AddCatalogProductDialog({ categories, units, onAdd, onAddVariant
     <ResponsiveDialog
       open={open}
       onOpenChange={setOpen}
-      title="Adicionar Produto ao Catálogo"
-      description="Crie um novo produto base que poderá ser usado no inventário."
+      title="Novo produto"
+      description="Fica no catálogo com o preço. Se já o tem, diga quanto: entra logo no stock."
       trigger={hideTrigger ? undefined : trigger}
     >
       <div className="md:max-h-[85vh] md:overflow-y-auto md:pr-2">
@@ -330,6 +384,7 @@ export function AddCatalogProductDialog({ categories, units, onAdd, onAddVariant
           variants={variants}
           setVariants={setVariants}
           catalog={catalog}
+          stockLocations={stockLocations}
           setOpen={setOpen}
           form={form}
           namePlaceholder={namePlaceholder}

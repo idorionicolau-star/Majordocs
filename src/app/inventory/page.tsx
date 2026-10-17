@@ -37,6 +37,7 @@ import { ProductCard } from "@/components/inventory/product-card";
 import { FamilyRow, ProductRow } from "@/components/inventory/product-row";
 import { FamilyCard } from "@/components/inventory/family-card";
 import { groupFamilies, isFamilyGroup, variantLabel, type FamilyGroup } from "@/lib/variants";
+import { ProductsTabs } from "@/components/inventory/products-tabs";
 import { ReservedDriftBanner } from "@/components/inventory/reserved-drift-banner";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useInventory } from "@/context/inventory-context";
@@ -45,7 +46,7 @@ import Link from "next/link";
 import { DatePicker } from "@/components/ui/date-picker";
 import { isSameDay } from "date-fns";
 import { Card } from "@/components/ui/card";
-import { formatCurrency, plural } from "@/lib/utils";
+import { formatCurrency, normalizeString, plural } from "@/lib/utils";
 import { generateInventoryReportPDF } from "@/lib/pdf-generator";
 import { Virtuoso } from 'react-virtuoso';
 
@@ -81,9 +82,17 @@ export default function InventoryPage() {
     syncSmartThresholds,
     setAutoThresholds,
     isReadOnly,
+    catalogProducts,
   } = useInventory();
   const searchParams = useSearchParams();
   const router = useRouter();
+  // Produtos do catálogo que ainda não têm stock (criados no Catálogo sem quantidade): não aparecem na lista abaixo
+  const withoutStock = useMemo(() => {
+    const inStock = new Set((products || []).map((p) => normalizeString(p.name)));
+    return (catalogProducts || []).filter((c) => !inStock.has(normalizeString(c.name)));
+  }, [products, catalogProducts]);
+  // Um só formulário para criar um produto: o do Catálogo (com "quanto tem agora?"). Sem acesso ao catálogo, o antigo.
+  const newProductHref = canView('settings') ? '/catalog?novo=1' : '/inventory/new';
   // Chegou por um aviso (notificação, diagnóstico)? Mostra só o caso pedido.
   const focus = useMemo(() => parseInventoryFocus(searchParams), [searchParams]);
   // Editar um produto e voltar regressa aqui com o mesmo filtro (ver useInventoryBackHref).
@@ -610,7 +619,21 @@ export default function InventoryPage() {
       </AlertDialog>
 
       <div className="flex flex-col gap-4">
+        <ProductsTabs />
         <ReservedDriftBanner />
+        {canEditInventory && withoutStock.length > 0 && (
+          <Link
+            href="/inventory/quick?modo=entrada"
+            data-tour="inv-without-stock"
+            className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-3 py-2.5 text-sm hover:bg-primary/10"
+          >
+            <span className="min-w-0">
+              <b>{plural(withoutStock.length, 'produto do catálogo', 'produtos do catálogo')}</b> ainda sem stock
+              <span className="block truncate text-xs text-muted-foreground">{withoutStock.slice(0, 3).map((c) => c.name).join(', ')}{withoutStock.length > 3 ? '…' : ''}</span>
+            </span>
+            <span className="shrink-0 font-semibold text-primary">Dar entrada ›</span>
+          </Link>
+        )}
         {/* Acções principais — só o que se usa todos os dias fica à vista */}
         <div className="flex items-center gap-2">
           {canEditInventory && (
@@ -942,7 +965,7 @@ export default function InventoryPage() {
             className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-20"
             size="icon"
           >
-            <Link href="/inventory/new">
+            <Link href={newProductHref}>
               <Plus className="h-6 w-6" />
               <span className="sr-only">Adicionar Produto</span>
             </Link>

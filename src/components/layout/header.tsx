@@ -33,11 +33,13 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
 
   const getPageTitle = () => {
     // Handle nested routes like /inventory/history by sorting by path length
-    const sortedNavItems = [...mainNavItems].sort((a, b) => b.href.length - a.href.length);
+    // as abas de uma secção (ex.: /catalog em Produtos) usam o título da secção
+    const paths = mainNavItems.flatMap(item => [item.href, ...(item.also || [])].map(path => ({ path, title: item.title })));
+    const sortedPaths = paths.sort((a, b) => b.path.length - a.path.length);
 
     if (pathname.startsWith('/settings')) return 'Ajustes';
 
-    const matchingItem = sortedNavItems.find(item => pathname.startsWith(item.href));
+    const matchingItem = sortedPaths.find(item => pathname.startsWith(item.path));
 
     if (matchingItem) return matchingItem.title;
 

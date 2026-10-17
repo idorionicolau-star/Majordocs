@@ -33,11 +33,13 @@ export function useNavGroups() {
         try { localStorage.setItem(storageKey, v); } catch { /* ignore */ }
     }, [storageKey]);
 
-    const allowed = useMemo(() => mainNavItems.filter((item) => {
-        if (!canView(item.id as ModulePermission)) return false;
-        if (reseller && MANUFACTURING_ONLY.has(item.id)) return false;
-        if (item.adminOnly && !isManager) return false;
-        return true;
+    const allowed = useMemo(() => mainNavItems.flatMap((item) => {
+        if (reseller && MANUFACTURING_ONLY.has(item.id)) return [];
+        if (item.adminOnly && !isManager) return [];
+        if (canView(item.id as ModulePermission)) return [item];
+        // Produtos sem acesso ao stock mas com acesso ao catálogo (era a permissão do Catálogo): abre o Catálogo
+        if (item.href === "/inventory" && canView("settings")) return [{ ...item, href: "/catalog" }];
+        return [];
     }), [canView, reseller, isManager]);
     const hiddenCount = allowed.filter((i) => ADVANCED_HREFS.has(i.href)).length;
 
@@ -51,13 +53,12 @@ export function useNavGroups() {
     // A página activa é a entrada mais específica que corresponde ao endereço
     // (em /inventory/quick acende "Stock Rápido", não também "Inventário").
     const activeHref = useMemo(() => {
-        const matches = mainNavItems
-            .map((i) => i.href)
-            .filter((href) => pathname === href || pathname.startsWith(href + "/"));
-        return matches.sort((a, b) => b.length - a.length)[0] || null;
+        const under = (path: string) => pathname === path || pathname.startsWith(path + "/");
+        const matches = mainNavItems.flatMap((i) => [i.href, ...(i.also || [])].filter(under).map((path) => ({ path, href: i.href })));
+        return matches.sort((a, b) => b.path.length - a.path.length)[0]?.href || null;
     }, [pathname]);
 
-    const isActive = (item: NavItem) => item.href === activeHref;
+    const isActive = (item: NavItem) => item.href === activeHref || (!!activeHref && mainNavItems.some((i) => i.href === activeHref && i.also?.includes(item.href)));
 
     return { groups, isActive, simple, hiddenCount, setSimple };
 }
