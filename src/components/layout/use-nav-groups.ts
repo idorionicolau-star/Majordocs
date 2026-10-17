@@ -37,8 +37,8 @@ export function useNavGroups() {
         if (reseller && MANUFACTURING_ONLY.has(item.id)) return [];
         if (item.adminOnly && !isManager) return [];
         if (canView(item.id as ModulePermission)) return [item];
-        // Produtos sem acesso ao stock mas com acesso ao catálogo (era a permissão do Catálogo): abre o Catálogo
-        if (item.href === "/inventory" && canView("settings")) return [{ ...item, href: "/catalog" }];
+        // sem acesso à página principal da secção mas com acesso a outra aba (ex.: só Financeiro): abre essa
+        if (item.fallback && canView(item.fallback.id)) return [{ ...item, href: item.fallback.href }];
         return [];
     }), [canView, reseller, isManager]);
     const hiddenCount = allowed.filter((i) => ADVANCED_HREFS.has(i.href)).length;

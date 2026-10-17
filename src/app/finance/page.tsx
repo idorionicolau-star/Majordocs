@@ -40,6 +40,7 @@ import { printFinancialReport } from '@/lib/report-utils';
 import { useToast } from '@/hooks/use-toast';
 import { DatePicker } from '@/components/ui/date-picker';
 import { openSale } from '@/components/sales/sale-sheet';
+import { ReportsTabs } from '@/components/layout/section-tabs';
 
 type Period = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -141,7 +142,7 @@ export default function FinancePage() {
 
     return (
         <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
-            {/* Header */}
+            <ReportsTabs />
             {/* Header */}
             <div className="flex flex-col gap-4">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

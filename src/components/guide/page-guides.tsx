@@ -181,6 +181,7 @@ const PAGES: Guide[] = [
         title: "Financeiro",
         steps: [
             { title: "O dinheiro", body: <>Entradas (vendas pagas) e saídas (despesas) — e quanto sobra.</> },
+            { target: "reports-tabs", title: "Vendas e Financeiro", body: <>Os relatórios têm duas abas: <b>Vendas</b> (o que se vendeu, produto a produto) e <b>Financeiro</b> (o dinheiro que entrou e saiu, com as despesas).</> },
             { target: "fin-expense", title: "Registar despesa", body: <>Luz, salários, renda, transporte, combustível… Escolha a categoria e a data.</> },
             { target: "fin-period", title: "Período", body: <>Dia, semana, mês ou ano, a partir da data escolhida.</> },
             { target: "fin-kpis", title: "Resultado", body: <>Entradas, saídas e o que sobrou. Conta só o que foi <b>pago</b>; cotações e proformas não contam.</> },
@@ -194,6 +195,7 @@ const PAGES: Guide[] = [
         path: "/reports",
         title: "Relatórios",
         steps: [
+            { target: "reports-tabs", title: "Vendas e Financeiro", body: <>Os relatórios têm duas abas: <b>Vendas</b> (o que se vendeu, produto a produto) e <b>Financeiro</b> (o dinheiro que entrou e saiu, com as despesas).</> },
             { target: "rep-period", title: "Período", body: <>Escolha dia, semana, mês ou ano, e a data.</> },
             { target: "rep-stats", title: "Resumo", body: <>Número de vendas, valor recebido e ticket médio do período.</> },
             { target: "rep-details", title: "Detalhe", body: <>As vendas do período, produto a produto.</> },

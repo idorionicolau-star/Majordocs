@@ -42,6 +42,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { openSale } from '@/components/sales/sale-sheet';
+import { ReportsTabs } from '@/components/layout/section-tabs';
 
 type Period = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -322,6 +323,7 @@ export default function ReportsPage() {
       </AlertDialog>
 
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+        <ReportsTabs />
         <div className="flex flex-col w-full md:flex-row justify-between items-start gap-4">
           <div data-tour="rep-period" className="flex flex-col w-full gap-2 sm:flex-row sm:flex-wrap md:items-center">
             <Select value={period} onValueChange={(value: Period) => setPeriod(value)}>

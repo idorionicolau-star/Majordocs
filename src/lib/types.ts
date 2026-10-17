@@ -336,6 +336,8 @@ export type NavItem = {
   group?: NavGroup;
   /** Outras páginas que pertencem a esta entrada (abas da mesma secção): acendem-na e usam o seu título. */
   also?: string[];
+  /** Sem permissão para a página principal, mas com esta: a entrada abre a outra aba (ex.: só Financeiro). */
+  fallback?: { id: ModulePermission; href: string };
 };
 
 export type NavGroup = 'inicio' | 'vender' | 'stock' | 'pessoas' | 'dinheiro' | 'ajustes';
