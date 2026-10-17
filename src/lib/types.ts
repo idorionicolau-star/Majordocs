@@ -377,7 +377,7 @@ export interface InventoryContextType {
   renewInDays?: number | null;
   subscriptionReason?: 'trial_expired' | 'suspended' | 'expired' | null;
   login: (email: string, pass: string) => Promise<boolean>;
-  loginWithGoogle: () => Promise<boolean>;
+  loginWithGoogle: () => Promise<boolean | { noCompany: string }>;
   logout: () => void;
   resetPassword: (email: string) => Promise<void>;
   changePassword: (currentPass: string, newPass: string) => Promise<boolean>;

@@ -308,7 +308,10 @@ export function useInventoryCore() {
         // cópia local, os dados da empresa eram pedidos antes de ela existir no servidor (recusados → "Algo correu mal")
         // e, se a página fechasse, a gravação perdia-se: ficava a conta sem empresa ("email já está a ser utilizado").
         const registering = registrationPending();
-        if (registering) await registering;
+        if (registering) {
+          await registering;
+          if (auth.currentUser?.uid !== fbUser.uid) return; // saiu entretanto (ex.: conta Google sem empresa)
+        }
         const userMapDocRef = doc(firestore, `users/${fbUser.uid}`);
         // Falha de rede (sem sinal, ligação a acordar) NÃO é motivo para terminar a sessão: tenta de novo.
         for (let attempt = 0; attempt < 6 && !cancelled; attempt++) {
