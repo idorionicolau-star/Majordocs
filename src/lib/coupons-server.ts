@@ -16,3 +16,6 @@ export function findCoupon(raw: string): { code: string; def: CouponDef } | null
     const def = COUPONS[code];
     return def ? { code, def } : null;
 }
+
+/** Os códigos fixos (para não se criar um afiliado com um código igual). */
+export const staticCouponCodes = () => new Set(Object.keys(COUPONS));

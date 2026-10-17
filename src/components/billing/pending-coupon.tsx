@@ -40,7 +40,8 @@ export function PendingCoupon() {
                 });
                 const j = await r.json().catch(() => ({}));
                 try { localStorage.removeItem(PENDING_COUPON_KEY); } catch { /* ignore */ }
-                if (r.ok) toast({ title: "Código de convite aplicado 🎟", description: `${couponReminder(j.coupon, formatCurrency)}, no plano Mensal — aplica-se quando subscrever.` });
+                if (r.ok && j.coupon) toast({ title: "Código de convite aplicado 🎟", description: `${couponReminder(j.coupon, formatCurrency)}, no plano Mensal — aplica-se quando subscrever.` });
+                else if (r.ok) toast({ title: "Código de convite registado 🤝", description: "Obrigado! Quem o convidou fica a saber que chegou." });
                 else toast({ variant: "destructive", title: "O código de convite não foi aplicado", description: j.error || "Pode tentar de novo na página de Subscrição." });
             } catch {
                 tried.current = false; // sem rede: tenta outra vez quando voltar

@@ -1,7 +1,7 @@
 import 'server-only';
 import { initializeAdmin } from '@/lib/firebase-admin';
 import { GRACE_DAYS, planById, type Plan } from '@/lib/plans';
-import { findCoupon } from '@/lib/coupons-server';
+import { findAnyCode } from '@/lib/affiliates-server';
 import { couponAmount } from '@/lib/coupon-core';
 import { amountLooksRight, parseZumboError } from '@/lib/zumbopay-core';
 
@@ -114,7 +114,8 @@ export async function companyPayer(companyId: string, decoded: { uid: string; su
 export async function planAmountFor(companyId: string, plan: Plan): Promise<{ amount: number; coupon: string | null }> {
     const db = initializeAdmin().firestore();
     const company = await db.doc(`companies/${companyId}`).get();
-    const coupon = findCoupon(company.get('coupon.code') || '');
+    const found = await findAnyCode(company.get('coupon.code') || '');
+    const coupon = found?.def ? { code: found.code, def: found.def } : null;
     let amount = plan.amount;
     if (coupon) {
         const used = (await db.collection(`companies/${companyId}/payments`).where('coupon', '==', coupon.code).where('status', '==', 'paid').get()).size;
