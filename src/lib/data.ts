@@ -9,10 +9,8 @@ import {
   ClipboardList,
   Users,
   FileText,
-  History,
   Layers, // Using Layers for raw materials
   Zap,
-  TrendingDown,
   Truck,
   CreditCard,
 } from 'lucide-react';
@@ -28,10 +26,8 @@ export const mainNavItems: NavItem[] = [
   { title: 'Documentos', href: '/documents', id: 'sales', icon: FileText, group: 'vender' },
   { title: 'Encomendas', href: '/orders', id: 'orders', icon: ClipboardList, group: 'vender' },
   // Stock
-  // Produtos: o stock (Inventário) e o Catálogo (preços) são abas da mesma secção
+  // Produtos: o stock (Inventário), o Catálogo (preços), os Movimentos e as Perdas são abas da mesma secção
   { title: 'Produtos', href: '/inventory', id: 'inventory', icon: Box, group: 'stock', also: ['/catalog'], fallback: { id: 'settings', href: '/catalog' } },
-  { title: 'Histórico', href: '/inventory/history', id: 'inventory', isSubItem: true, icon: History, group: 'stock' },
-  { title: 'Perdas', href: '/inventory/perdas', id: 'inventory', isSubItem: true, icon: TrendingDown, group: 'stock' },
   { title: 'Produção', href: '/production', id: 'production', icon: Hammer, group: 'stock' },
   { title: 'Matéria-Prima', href: '/raw-materials', id: 'raw-materials', icon: Layers, group: 'stock' },
   // Pessoas

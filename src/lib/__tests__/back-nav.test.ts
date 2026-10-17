@@ -3,7 +3,7 @@ import { parentPath } from '../back-nav';
 
 describe('parentPath (seta "voltar" do cabeçalho)', () => {
     it('páginas principais e de fora da app não têm seta', () => {
-        for (const p of ['/dashboard', '/inventory', '/production', '/sales', '/pos', '/settings', '/login', '/', '/termos', '/inventory/']) {
+        for (const p of ['/dashboard', '/inventory', '/inventory/history', '/inventory/perdas', '/production', '/sales', '/pos', '/settings', '/login', '/', '/termos', '/inventory/']) {
             expect(parentPath(p)).toBeNull();
         }
     });
