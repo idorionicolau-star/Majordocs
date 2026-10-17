@@ -131,7 +131,8 @@ const PAGES: Guide[] = [
         title: "Matéria-Prima",
         steps: [
             { title: "Os seus insumos", body: <>O que gasta para produzir: cimento, areia, ferro, tinta…</> },
-            { target: "rm-tabs", title: "Quatro partes", body: <><b>Insumos</b>: o stock de matéria-prima. <b>Receitas</b>: quanto de cada insumo leva cada produto. <b>Produção</b>: produzir a partir da receita. <b>Custos</b>: quanto custa produzir.</> },
+            { target: "rm-tabs", title: "Três partes", body: <><b>Insumos</b>: o stock de matéria-prima. <b>Receitas</b>: quanto de cada insumo leva cada produto. <b>Custos</b>: quanto custa produzir.</> },
+            { target: "rm-register-production", title: "Registar produção", body: <>A produção regista-se na página <b>Produção</b>: com a receita, a matéria-prima desconta-se sozinha.</> },
             { target: "rm-add", title: "Novo insumo", body: <>Adicione cada matéria-prima com a unidade e o custo.</> },
             { title: "Porquê receitas?", body: <>Com a receita, cada produção desconta a matéria-prima sozinha e a app calcula o custo real de cada produto.</> },
         ],

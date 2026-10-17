@@ -22,14 +22,6 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -39,19 +31,9 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { PlusCircle, Trash2, Edit, AlertTriangle, Printer, Download } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { PlusCircle, Trash2, Edit, AlertTriangle, Printer, Download, Factory } from 'lucide-react';
 import * as z from 'zod';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RawMaterial, Recipe, Product } from '@/lib/types';
@@ -82,15 +64,6 @@ const recipeSchema = z.object({
 });
 type RecipeFormValues = z.infer<typeof recipeSchema>;
 
-const productionSchema = z.object({
-    recipeId: z.string().nonempty("Selecione uma receita."),
-    quantity: z.preprocess((val) => {
-        if (val === undefined || val === "" || val === null) return 0;
-        const num = Number(val);
-        return isNaN(num) ? 0 : num;
-    }, z.number().min(1, "A quantidade a produzir deve ser pelo menos 1.")),
-});
-type ProductionFormValues = z.infer<typeof productionSchema>;
 
 
 // Raw Materials Manager Component
@@ -364,176 +337,6 @@ const RecipesManager = () => {
 };
 
 // Production From Recipe Component
-const ProductionFromRecipe = () => {
-    const { recipes, rawMaterials, addProduction, loading, isReadOnly } = useContext(InventoryContext)!;
-    const { toast } = useToast();
-    const form = useForm<ProductionFormValues>({
-        resolver: zodResolver(productionSchema),
-        defaultValues: { recipeId: '', quantity: 1 },
-    });
-
-    const selectedRecipeId = form.watch('recipeId');
-    const productionQty = form.watch('quantity');
-    const selectedRecipe = recipes.find(r => r.id === selectedRecipeId);
-
-    // Calculate consumption preview with waste detection
-    const consumptionPreview = useMemo(() => {
-        if (!selectedRecipe || !productionQty || productionQty <= 0) return [];
-        return selectedRecipe.ingredients.map(ing => {
-            const mat = rawMaterials.find(rm => rm.id === ing.rawMaterialId);
-            const yieldPer = ing.yieldPerUnit && ing.yieldPerUnit > 0 ? ing.yieldPerUnit : null;
-            const requiredQty = yieldPer
-                ? Math.ceil(productionQty / yieldPer) * ing.quantity
-                : ing.quantity * productionQty;
-
-            // Waste calculation (only for yield-based ingredients)
-            let wastePercent = 0;
-            let totalCapacity = productionQty;
-            if (yieldPer) {
-                const batches = Math.ceil(productionQty / yieldPer);
-                totalCapacity = batches * yieldPer; // max products from these batches
-                const waste = totalCapacity - productionQty;
-                wastePercent = totalCapacity > 0 ? (waste / totalCapacity) * 100 : 0;
-            }
-
-            return {
-                name: ing.rawMaterialName,
-                unit: mat?.unit || 'un',
-                required: requiredQty,
-                available: mat?.stock || 0,
-                sufficient: (mat?.stock || 0) >= requiredQty,
-                yieldInfo: yieldPer ? `${ing.quantity} ${mat?.unit || 'un'} → ${yieldPer} un` : null,
-                wastePercent,
-                totalCapacity,
-            };
-        });
-    }, [selectedRecipe, productionQty, rawMaterials]);
-
-    // Find the optimal quantity that minimizes waste across all yield ingredients
-    const optimizedQty = useMemo(() => {
-        if (!selectedRecipe || !productionQty || productionQty <= 0) return null;
-        const yieldIngredients = selectedRecipe.ingredients.filter(
-            ing => ing.yieldPerUnit && ing.yieldPerUnit > 0
-        );
-        if (yieldIngredients.length === 0) return null;
-
-        // Find the smallest yield-based capacity that is >= productionQty
-        // This is the LCM-like optimal that avoids waste on at least the most wasteful ingredient
-        const maxWasteIng = consumptionPreview.reduce((max, c) =>
-            c.wastePercent > max.wastePercent ? c : max, consumptionPreview[0]);
-
-        if (maxWasteIng.wastePercent <= 10) return null; // waste is acceptable
-        return maxWasteIng.totalCapacity;
-    }, [selectedRecipe, productionQty, consumptionPreview]);
-
-    const hasHighWaste = consumptionPreview.some(c => c.wastePercent > 30);
-
-    const onSubmit = async (values: ProductionFormValues) => {
-        if (isReadOnly) {
-            toast({ variant: 'destructive', title: 'Conta em modo leitura', description: 'Modo leitura activo — contacte o suporte para reactivar o acesso completo.' });
-            return;
-        }
-        try {
-            const recipe = recipes.find(r => r.id === values.recipeId);
-            if (!recipe) {
-                toast({ variant: 'destructive', title: 'Erro', description: 'Receita não encontrada.' });
-                return;
-            }
-
-            await addProduction({
-                productName: recipe.productName,
-                quantity: values.quantity,
-            });
-
-            toast({ title: 'Sucesso', description: 'Produção registada.' });
-            form.reset();
-        } catch (error: any) {
-            // Error is already toasted in context
-        }
-    };
-
-    if (loading) return <Skeleton className="h-64 w-full" />;
-
-    const hasInsufficientMaterial = consumptionPreview.some(c => !c.sufficient);
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Registrar Produção por Receita</CardTitle>
-                <CardDescription>Selecione uma receita para registrar a produção e abater a matéria-prima do stock.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField control={form.control} name="recipeId" render={({ field }) => (
-                            <FormItem><FormLabel>Receita</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>
-                                {recipes.map(r => <SelectItem key={r.id} value={r.id}>{r.productName}</SelectItem>)}
-                            </SelectContent></Select><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={form.control} name="quantity" render={({ field }) => (
-                            <FormItem><FormLabel>Quantidade a Produzir</FormLabel><FormControl><Input type="number" min={1} {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-
-                        {/* Consumption Preview */}
-                        {consumptionPreview.length > 0 && (
-                            <div className="rounded-lg border p-3 space-y-2 bg-slate-50 dark:bg-slate-800/50">
-                                <p className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Consumo de Matéria-Prima</p>
-                                {consumptionPreview.map((c, i) => (
-                                    <div key={i} className={`flex items-center justify-between text-sm p-2 rounded ${c.sufficient ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
-                                        <div className="flex flex-col">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-semibold">{c.name}</span>
-                                                {c.yieldInfo && <span className="text-xs text-muted-foreground">({c.yieldInfo})</span>}
-                                            </div>
-                                            {c.wastePercent > 10 && (
-                                                <span className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-0.5">
-                                                    ⚠ {Math.round(c.wastePercent)}% desperdício ({c.totalCapacity - productionQty} un de capacidade não usada)
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="text-right">
-                                            <span className={`font-bold font-mono ${c.sufficient ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                                {c.required} {c.unit}
-                                            </span>
-                                            <span className="text-xs text-muted-foreground ml-1">
-                                                / {c.available} disp.
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
-                                {hasInsufficientMaterial && (
-                                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-xs font-semibold mt-1">
-                                        <AlertTriangle className="h-3.5 w-3.5" />
-                                        Matéria-prima insuficiente para esta quantidade.
-                                    </div>
-                                )}
-                                {hasHighWaste && optimizedQty && optimizedQty !== productionQty && (
-                                    <div className="flex flex-col gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 mt-1">
-                                        <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
-                                            💡 Estás a abrir material novo para produzir poucas unidades extra. A capacidade restante será desperdiçada.
-                                        </p>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            className="w-full text-xs h-7 border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/40 font-semibold"
-                                            onClick={() => form.setValue('quantity', optimizedQty)}
-                                        >
-                                            Otimizar para {optimizedQty} unidades (sem desperdício)
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        <Button type="submit" disabled={form.formState.isSubmitting || hasInsufficientMaterial || isReadOnly} title={isReadOnly ? "Indisponível em modo leitura" : ""} className="w-full border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))] hover:shadow-[2px_2px_0px_hsl(var(--foreground))] active:shadow-[1px_1px_0px_hsl(var(--foreground))] transition-all">Registrar Produção</Button>
-                    </form>
-                </Form>
-            </CardContent>
-        </Card>
-    );
-}
-
 // Costs Manager Component
 const CostsManager = () => {
     const { recipes, rawMaterials, loading, companyData } = useContext(InventoryContext)!;
@@ -678,17 +481,22 @@ export default function RawMaterialsPage() {
 
     return (
         <div className="flex flex-col gap-6 pb-20 animate-in fade-in duration-500">
-            <div>
-                <h1 className="text-2xl md:text-3xl font-headline font-bold">Matéria-Prima e Produção</h1>
-                <p className="text-muted-foreground">
-                    Gira os seus insumos, receitas e registe a produção de novos itens.
-                </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-headline font-bold">Matéria-Prima</h1>
+                    <p className="text-muted-foreground">
+                        Os seus insumos, as receitas e quanto custa produzir.
+                    </p>
+                </div>
+                {/* a produção regista-se num só sítio: a página Produção (que desconta a matéria-prima pela receita) */}
+                <Button asChild variant="outline" data-tour="rm-register-production">
+                    <Link href="/production/new"><Factory className="mr-2 h-4 w-4" /> Registar produção</Link>
+                </Button>
             </div>
             <Tabs defaultValue="materials">
-                <TabsList data-tour="rm-tabs" className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto">
+                <TabsList data-tour="rm-tabs" className="grid w-full grid-cols-3 h-auto">
                     <TabsTrigger value="materials">Insumos</TabsTrigger>
                     <TabsTrigger value="recipes">Receitas</TabsTrigger>
-                    <TabsTrigger value="production">Produção</TabsTrigger>
                     <TabsTrigger value="costs">Custos</TabsTrigger>
                 </TabsList>
                 <TabsContent value="materials" className="mt-4">
@@ -696,9 +504,6 @@ export default function RawMaterialsPage() {
                 </TabsContent>
                 <TabsContent value="recipes" className="mt-4">
                     <RecipesManager />
-                </TabsContent>
-                <TabsContent value="production" className="mt-4">
-                    <ProductionFromRecipe />
                 </TabsContent>
                 <TabsContent value="costs" className="mt-4">
                     <CostsManager />

@@ -12,7 +12,7 @@ import { safeReturn } from "@/lib/deep-links";
 import { findRecipe } from "@/lib/production-materials";
 import { fromDrafts, MaterialsEditor, toDrafts, type MaterialDraft } from "@/components/production/materials-editor";
 import { Textarea } from "@/components/ui/textarea";
-import { catalogChoices, dateLabel, mostProduced, recipeMaterials, todayMz, validProductionDate, yesterdayMz } from "@/lib/production-core";
+import { catalogChoices, dateLabel, mostProduced, recipeMaterials, todayMz, validProductionDate, wasteHint, yesterdayMz } from "@/lib/production-core";
 import { clampQty } from "@/lib/transfer-core";
 import { isFamilyGroup, variantLabel } from "@/lib/variants";
 import { cn } from "@/lib/utils";
@@ -178,6 +178,8 @@ export default function NewProductionPage() {
                     <ul className="space-y-2">
                         {items.map((it) => {
                             const recipeLines = recipeFor(it);
+                            // só com a receita (sem matéria-prima mexida à mão): abrir material para poucas unidades
+                            const waste = it.materials ? null : wasteHint(findRecipe(recipes || undefined, it.name), clampQty(it.qty, Number.MAX_SAFE_INTEGER), rawMaterials || []);
                             const mats = it.materials ?? toDrafts(recipeLines);
                             const summary = mats.filter((m) => Number(String(m.qty).replace(",", ".")) > 0).map((m) => `${m.qty} ${m.unit || ""} ${m.name}`.replace(/\s+/g, " ").trim()).join(", ");
                             return (
@@ -197,6 +199,14 @@ export default function NewProductionPage() {
                                             <Button type="button" size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground" onClick={() => remove(it.name)} aria-label={`Tirar ${it.name}`}><Trash2 className="h-4 w-4" /></Button>
                                         </div>
                                     </div>
+                                    {waste && (
+                                        <div data-tour="prod-waste" className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800 dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-300">
+                                            <span>💡 Com {waste.used} {waste.unit || ""} de {waste.material} dá para <b>{waste.capacity}</b>: sobra para mais {waste.capacity - clampQty(it.qty, Number.MAX_SAFE_INTEGER)}.</span>
+                                            <Button type="button" size="sm" variant="outline" className="h-7 border-amber-300 px-2 text-xs dark:border-amber-700" onClick={() => setQty(it.name, String(waste.capacity))}>
+                                                Produzir {waste.capacity}
+                                            </Button>
+                                        </div>
+                                    )}
                                     <button type="button" onClick={() => patch(it.name, { open: !it.open })} aria-expanded={!!it.open}
                                         className="mt-1 flex items-center gap-1 text-xs font-medium text-primary" data-tour="prod-item-details">
                                         <ChevronDown className={cn("h-3.5 w-3.5 transition", it.open && "rotate-180")} /> Matéria-prima e notas

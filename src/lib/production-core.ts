@@ -115,3 +115,27 @@ export function checkNewMaterial(i: NewMaterialInput, existing: { id: string; na
     if (!Number.isFinite(stock) || stock < 0) return { kind: 'error', error: 'Quanto há em stock agora? (0 ou mais)' };
     return { kind: 'ok', value: { name: name.charAt(0).toUpperCase() + name.slice(1), unit: (i.unit || 'un').trim() || 'un', stock } };
 }
+
+export type WasteHint = { material: string; used: number; unit?: string; capacity: number; wastePercent: number };
+
+/**
+ * Abrir material a mais para poucas unidades: ex. 1 saco de cimento faz 75 blocos e vão fazer-se 80 → abre-se um
+ * 2.º saco que dá para 150. Devolve o caso pior (o que mais desperdiça), quando passa de 30%, com a quantidade que
+ * aproveita tudo. Só os ingredientes com rendimento (`yieldPerUnit`).
+ */
+export function wasteHint(recipe: RecipeLike | undefined, produced: number, raw: { id: string; unit?: string; name?: string }[] = []): WasteHint | null {
+    if (!recipe || !(produced > 0)) return null;
+    let worst: WasteHint | null = null;
+    for (const g of recipe.ingredients) {
+        const per = g.yieldPerUnit && g.yieldPerUnit > 0 ? g.yieldPerUnit : 0;
+        if (!per) continue;
+        const batches = Math.ceil(produced / per);
+        const capacity = batches * per;
+        const wastePercent = ((capacity - produced) / capacity) * 100;
+        if (!worst || wastePercent > worst.wastePercent) {
+            const r = raw.find((x) => x.id === g.rawMaterialId);
+            worst = { material: r?.name || g.rawMaterialName, used: round(batches * g.quantity), unit: r?.unit, capacity, wastePercent };
+        }
+    }
+    return worst && worst.wastePercent > 30 ? worst : null;
+}
