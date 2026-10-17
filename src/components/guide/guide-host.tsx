@@ -191,17 +191,22 @@ export function GuideHost() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stepKey]);
 
-    // passa sozinho quando a condição se cumpre (ex.: o produto entrou no carrinho)
+    // passa sozinho quando a condição se cumpre (ex.: o produto entrou no carrinho). Com `settle`, espera que a
+    // pessoa pare de escrever: antes, uma letra bastava para o guia saltar e fechar o teclado a meio da palavra.
     useEffect(() => {
         if (!step?.done) return;
+        let lastTyped = 0;
+        const typed = () => { lastTyped = Date.now(); };
+        document.addEventListener("input", typed, true);
         const id = window.setInterval(() => {
             try {
+                if (step.settle && Date.now() - lastTyped < step.settle) return;
                 if (step.done!()) next();
             } catch {
                 /* condição falhou: espera pelo botão */
             }
         }, 250);
-        return () => window.clearInterval(id);
+        return () => { window.clearInterval(id); document.removeEventListener("input", typed, true); };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stepKey, next]);
 
@@ -296,11 +301,11 @@ export function GuideHost() {
                 </div>
                 <h3 className="mt-2.5 text-base font-bold leading-snug">{step.title}</h3>
                 <div className="mt-1 space-y-1.5 text-sm text-muted-foreground [&_b]:text-foreground">{step.body}</div>
-                <div className="mt-3 flex items-center justify-between gap-2">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                     <Button type="button" variant="ghost" size="sm" onClick={prev} disabled={index === 0} className="px-2">
                         <ChevronLeft className="mr-0.5 h-4 w-4" /> Anterior
                     </Button>
-                    <div className="flex items-center gap-2">
+                    <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
                         {step.cta && (
                             <Button
                                 type="button"

@@ -14,8 +14,8 @@ const dismissKey = (companyId?: string | null) => `majorstockx-started-hidden-${
 
 /** Cada passo: o que é, porquê, e o botão que leva lá (um guia com destaque visual, ou uma página). */
 const COPY: Record<StepId, { icon: LucideIcon; title: string; hint: string; action: string; guide?: string; href?: string }> = {
-    demo: { icon: GraduationCap, title: "Ver como se vende", hint: "Uma venda de demonstração, passo a passo, com produtos de exemplo. Nada é gravado.", action: "Ver", guide: "venda-demo" },
-    catalog: { icon: PackagePlus, title: "Pôr os seus produtos no catálogo", hint: "Nome, preço, custo e foto — mostramos onde tocar.", action: "Adicionar", guide: "catalogo" },
+    demo: { icon: GraduationCap, title: "Fazer uma venda de treino", hint: "Passo a passo, com produtos de exemplo. Nada é gravado.", action: "Treinar", guide: "venda-demo" },
+    catalog: { icon: PackagePlus, title: "Pôr os seus produtos no catálogo", hint: "Nome e preço — mostramos onde tocar.", action: "Adicionar", guide: "catalogo" },
     stock: { icon: Boxes, title: "Dar entrada do stock", hint: "Quanto tem de cada produto, no Stock Rápido.", action: "Abrir", href: "/inventory/quick?modo=entrada" },
     sale: { icon: ShoppingCart, title: "Fazer a primeira venda a sério", hint: "Na Venda Rápida, com os seus produtos.", action: "Vender", href: "/pos" },
     company: { icon: Building2, title: "Completar os dados da empresa", hint: "Contactos e logótipo aparecem nos documentos. O NUIT é opcional.", action: "Preencher", href: "/settings#company" },
