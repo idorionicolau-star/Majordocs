@@ -8,6 +8,8 @@ export type GuideStep = {
     /** Como se passa ao passo seguinte: botão "Seguinte" (por defeito), tocar no elemento, ou quando `done` ficar verdadeiro. */
     advance?: "next" | "click" | "auto";
     done?: () => boolean;
+    /** Com `done`: só avança quando a pessoa parou de escrever há este tempo (ms) — o guia nunca salta a meio de uma palavra. */
+    settle?: number;
     /** O que a pessoa tem de fazer (aparece a piscar no lugar do "Seguinte"). */
     hint?: string;
     /** Página onde o passo acontece: o guia navega para lá se for preciso. */
@@ -46,3 +48,11 @@ export function findTarget(names: string): HTMLElement | null {
 /** Condições para `done`: quando um elemento aparece / desaparece do ecrã. */
 export const appears = (names: string) => () => !!findTarget(names);
 export const disappears = (names: string) => () => !findTarget(names);
+/** O campo (input dentro do elemento) já tem pelo menos `min` caracteres — ou, com `positive`, um número maior que zero. */
+export const filled = (names: string, min = 1, positive = false) => () => {
+    const el = findTarget(names);
+    const input = el?.matches("input, textarea") ? (el as HTMLInputElement) : el?.querySelector<HTMLInputElement>("input, textarea");
+    const v = (input?.value || "").trim();
+    if (positive) return Number(v.replace(/\s/g, "").replace(",", ".")) > 0;
+    return v.length >= min;
+};

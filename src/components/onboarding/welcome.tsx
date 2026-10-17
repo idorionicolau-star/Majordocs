@@ -2,7 +2,7 @@
 
 import { useContext, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { BookOpen, GraduationCap, HelpCircle, ShoppingCart } from "lucide-react";
+import { BookOpen, Boxes, GraduationCap, HelpCircle, ShoppingCart } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
@@ -63,21 +63,28 @@ export function OnboardingWelcome() {
             <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-md">
                 <DialogHeader className="text-left">
                     <DialogTitle className="text-xl">Bem-vindo à MajorStockX 👋</DialogTitle>
-                    <DialogDescription className="text-base">Em dois minutos mostramos-lhe como trabalhar, passo a passo, a mostrar onde tocar.</DialogDescription>
+                    <DialogDescription className="text-base">Em 2 minutos fica a saber trabalhar. Mostramos onde tocar — é só seguir.</DialogDescription>
                 </DialogHeader>
                 <ol className="space-y-3">
                     <li className="flex gap-3 rounded-xl border p-3">
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><BookOpen className="h-5 w-5" /></span>
                         <span className="min-w-0 text-sm">
-                            <b className="block text-base">1. O seu catálogo</b>
-                            Pôr os <b>seus</b> produtos (nome, preço, foto) e editá-los — este já é a sério.
+                            <b className="block text-base">1. Ponha um produto seu</b>
+                            Só o nome e o preço. Este fica gravado.
                         </span>
                     </li>
                     <li className="flex gap-3 rounded-xl border p-3">
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-600"><ShoppingCart className="h-5 w-5" /></span>
                         <span className="min-w-0 text-sm">
-                            <b className="block text-base">2. Como se vende</b>
-                            Uma venda de demonstração, do princípio ao fim. <b>Nada é gravado.</b>
+                            <b className="block text-base">2. Faça uma venda de treino</b>
+                            Do princípio ao fim, com produtos de exemplo. <b>Nada é gravado.</b>
+                        </span>
+                    </li>
+                    <li className="flex gap-3 rounded-xl border p-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600"><Boxes className="h-5 w-5" /></span>
+                        <span className="min-w-0 text-sm">
+                            <b className="block text-base">3. Diga quanto tem em stock</b>
+                            No Stock Rápido — e já pode vender a sério.
                         </span>
                     </li>
                     <li className="flex gap-3 rounded-xl border border-dashed p-3 text-sm text-muted-foreground">
