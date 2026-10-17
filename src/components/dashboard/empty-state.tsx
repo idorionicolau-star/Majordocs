@@ -86,7 +86,7 @@ export function EmptyStateWelcome() {
             <div className="text-center">
                 {companyData?.logoUrl && <img src={companyData.logoUrl} alt="" className="mx-auto mb-3 h-14 max-w-[180px] object-contain" />}
                 <h2 className="text-2xl font-bold tracking-tight md:text-3xl">Bem-vindo{companyData?.name ? `, ${companyData.name}` : ""}! 🚀</h2>
-                <p className="mt-2 text-muted-foreground">Vamos pôr a empresa a funcionar. Em cada passo mostramos-lhe onde tocar.</p>
+                <p className="mt-2 text-muted-foreground">Vamos pôr a empresa a funcionar. Dúvidas numa página? Toque no <b className="text-foreground">?</b> lá em cima.</p>
             </div>
 
             <GettingStartedCard />

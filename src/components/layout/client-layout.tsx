@@ -20,14 +20,12 @@ import { OfflineBanner, UpdateNotice } from '@/components/pwa-register';
 import { InstallPrompt } from '@/components/install-prompt';
 import { TourHost } from '@/components/onboarding/app-tour';
 import { GuideHost } from '@/components/guide/guide-host';
-import { PageTutorialHint } from '@/components/guide/page-help';
 import { SeenSync } from '@/components/guide/seen-sync';
 import { SupportDialog } from '@/components/support/support-dialog';
 import { PendingCoupon } from '@/components/billing/pending-coupon';
 import { EscalepayClaim, useFromEscalepay } from '@/components/billing/escalepay-claim';
 import { ActivityPing } from '@/components/layout/activity-ping';
 import { whatsappLink } from '@/lib/support';
-import { OnboardingWelcome } from '@/components/onboarding/welcome';
 
 import { LoadingBar } from './loading-bar';
 import { SubscriptionExpired } from './subscription-expired';
@@ -210,8 +208,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           </div>
           <BottomNav onMenuClick={() => setIsMobileNavOpen(true)} />
           <TourHost />
-          <OnboardingWelcome />
-          <PageTutorialHint />
           <SeenSync />
           <SupportDialog />
           <PendingCoupon />

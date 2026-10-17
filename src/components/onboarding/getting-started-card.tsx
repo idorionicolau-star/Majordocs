@@ -7,15 +7,14 @@ import { InventoryContext } from "@/context/inventory-context";
 import { Button } from "@/components/ui/button";
 import { gettingStarted, type StepId } from "@/lib/onboarding";
 import { isDemoSaleDone } from "@/lib/demo-data";
-import { startGuide } from "@/components/guide/guide-store";
 import { rememberSeen } from "@/lib/seen-store";
 
 const dismissKey = (companyId?: string | null) => `majorstockx-started-hidden-${companyId || "x"}`;
 
 /** Cada passo: o que é, porquê, e o botão que leva lá (um guia com destaque visual, ou uma página). */
-const COPY: Record<StepId, { icon: LucideIcon; title: string; hint: string; action: string; guide?: string; href?: string }> = {
-    demo: { icon: GraduationCap, title: "Fazer uma venda de treino", hint: "Passo a passo, com produtos de exemplo. Nada é gravado.", action: "Treinar", guide: "venda-demo" },
-    catalog: { icon: PackagePlus, title: "Pôr os seus produtos no catálogo", hint: "Nome e preço — mostramos onde tocar.", action: "Adicionar", guide: "catalogo" },
+const COPY: Record<StepId, { icon: LucideIcon; title: string; hint: string; action: string; href: string }> = {
+    demo: { icon: GraduationCap, title: "Fazer uma venda de treino", hint: "Com produtos de exemplo. Nada é gravado.", action: "Treinar", href: "/pos?demo=1" },
+    catalog: { icon: PackagePlus, title: "Pôr os seus produtos no catálogo", hint: "Nome e preço de cada produto.", action: "Adicionar", href: "/catalog" },
     stock: { icon: Boxes, title: "Dar entrada do stock", hint: "Quanto tem de cada produto, no Stock Rápido.", action: "Abrir", href: "/inventory/quick?modo=entrada" },
     sale: { icon: ShoppingCart, title: "Fazer a primeira venda a sério", hint: "Na Venda Rápida, com os seus produtos.", action: "Vender", href: "/pos" },
     company: { icon: Building2, title: "Completar os dados da empresa", hint: "Contactos e logótipo aparecem nos documentos. O NUIT é opcional.", action: "Preencher", href: "/settings#company" },
@@ -77,9 +76,7 @@ export function GettingStartedCard() {
                                 <p className={`text-sm font-medium ${s.done ? "text-muted-foreground line-through" : ""}`}>{t.title}</p>
                                 {!s.done && <p className="text-xs text-muted-foreground">{t.hint}</p>}
                             </div>
-                            {!s.done && (t.guide
-                                ? <Button size="sm" variant={primary ? "default" : "outline"} data-tour={`started-${s.id}`} onClick={() => startGuide(t.guide!)}>{t.action}</Button>
-                                : <Button asChild size="sm" variant={primary ? "default" : "outline"} data-tour={`started-${s.id}`}><Link href={t.href!}>{t.action}</Link></Button>)}
+                            {!s.done && <Button asChild size="sm" variant={primary ? "default" : "outline"} data-tour={`started-${s.id}`}><Link href={t.href}>{t.action}</Link></Button>}
                         </li>
                     );
                 })}
