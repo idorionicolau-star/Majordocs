@@ -5,13 +5,18 @@ import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
 import { hideKeyboard, isTouchDevice, keyboardIsOpenFor, keyboardWasOpenOnPress } from "@/lib/keyboard"
+import { useKeyboardInset } from "@/hooks/use-keyboard-inset"
 
+// repositionInputs desligado: o Vaul ajustava a altura da gaveta à mão quando o teclado abria e, nos browsers em que
+// a página encolhe com o teclado (Huawei, Samsung, WebViews), não a repunha ao fechá-lo — a gaveta ficava pequena e
+// cortada a meio. Agora a altura vem do estado do teclado (DrawerContent), por isso volta sozinha ao normal.
 const Drawer = ({
     shouldScaleBackground = false,
     ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
     <DrawerPrimitive.Root
         shouldScaleBackground={shouldScaleBackground}
+        repositionInputs={false}
         {...props}
     />
 )
@@ -38,7 +43,10 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 const DrawerContent = React.forwardRef<
     React.ElementRef<typeof DrawerPrimitive.Content>,
     React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, onPointerDownOutside, ...props }, ref) => {
+>(({ className, children, onPointerDownOutside, style, ...props }, ref) => {
+    // Teclado aberto (Chrome/Safari: só a parte visível encolhe): a gaveta sobe para ficar por cima do teclado e
+    // nunca é mais alta do que o que se vê. Sem teclado, não há estilo nenhum — nada fica "preso".
+    const keyboard = useKeyboardInset();
     // Prevent drawer from closing when focus moves outside (e.g., toast notifications
     // appearing or disappearing cause focus shifts that are misinterpreted as dismissal).
     const preventFocusOutside = React.useCallback((e: Event) => {
@@ -71,6 +79,7 @@ const DrawerContent = React.forwardRef<
                     "fixed inset-x-0 bottom-0 z-50 mt-24 flex max-h-[96dvh] flex-col rounded-t-[10px] border bg-background",
                     className
                 )}
+                style={keyboard ? { ...style, bottom: keyboard, maxHeight: `min(96dvh, calc(100dvh - ${keyboard}px - 16px))` } : style}
                 onFocusOutside={preventFocusOutside}
                 onPointerDownOutside={(e) => { onPointerDownOutside?.(e); if (!e.defaultPrevented) keyboardFirst(e) }}
                 onInteractOutside={preventInteractOutside}

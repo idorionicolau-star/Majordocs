@@ -21,7 +21,8 @@ export function useKeyboardInset() {
         if (!vv) return;
         const update = () => {
             const hidden = window.innerHeight - vv.height - vv.offsetTop;
-            setInset(hidden > KEYBOARD_MIN ? Math.round(hidden) : 0);
+            const zoomed = (vv.scale || 1) > 1.05; // ampliar com dois dedos também encolhe a parte visível: não é teclado
+            setInset(hidden > KEYBOARD_MIN && !zoomed ? Math.round(hidden) : 0);
         };
         update();
         vv.addEventListener("resize", update);
