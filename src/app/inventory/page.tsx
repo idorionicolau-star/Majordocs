@@ -1,6 +1,9 @@
 
 "use client";
 
+import { BarcodeScanner } from "@/components/scan/barcode-scanner";
+import { findByBarcode } from "@/lib/barcode";
+import { UNKNOWN_CODE } from "@/lib/scan-gate";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { Product, Location, ModulePermission } from "@/lib/types";
@@ -102,6 +105,7 @@ export default function InventoryPage() {
   }, [searchParams]);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [nameFilter, setNameFilter] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [dateFilter, setDateFilter] = useState<Date | undefined>();
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
@@ -697,7 +701,27 @@ export default function InventoryPage() {
         {/* Pesquisa e filtros */}
         <div className="w-full space-y-2">
           <div className="relative w-full">
-            <ScanBarcode className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            {/* procurar lendo o código de barras com a câmara (antes o ícone era só desenho e não fazia nada) */}
+            <button
+              type="button"
+              aria-label="Procurar pelo código de barras"
+              onClick={() => setScanOpen(true)}
+              className="absolute right-1 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <ScanBarcode className="h-5 w-5" />
+            </button>
+            <BarcodeScanner
+              open={scanOpen}
+              title="Aponte ao código do produto"
+              onClose={() => setScanOpen(false)}
+              onScan={(code) => {
+                const p = findByBarcode(products || [], code);
+                if (!p) return UNKNOWN_CODE;
+                setNameFilter(p.name);
+                setScanOpen(false);
+                return `✓ ${p.name}`;
+              }}
+            />
             <Input
               data-tour="inv-search"
               placeholder="Procurar por nome ou código..."
