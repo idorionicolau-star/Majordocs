@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 import { NextResponse } from 'next/server';
+import { isCronRequest } from '@/lib/cron-auth';
 import { del, list, put } from '@vercel/blob';
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 import { initializeAdmin } from '@/lib/firebase-admin';
@@ -32,7 +33,7 @@ async function dumpCollection(db: Firestore, name: string) {
 }
 
 export async function GET(req: Request) {
-    if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isCronRequest(req)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const storeId = process.env.BACKUP_BLOB_STORE_ID;

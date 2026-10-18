@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { takeAiQuota } from '@/lib/usage-quota-server';
 import { NextResponse } from "next/server";
 import { verifyIdToken } from "@/lib/firebase-admin";
 
@@ -8,6 +9,9 @@ export async function POST(req: Request) {
         const decodedToken = await verifyIdToken(req);
         if (!decodedToken) {
             return NextResponse.json({ error: "Não autorizado. Token inválido ou ausente." }, { status: 401 });
+        }
+        if (!(await takeAiQuota(decodedToken as any))) {
+            return NextResponse.json({ error: 'Limite diário de pedidos ao assistente atingido. Tente amanhã.' }, { status: 429 });
         }
 
         const { messages, context, userId, companyId } = await req.json();
