@@ -34,6 +34,7 @@ import { BarcodeScanner } from "@/components/scan/barcode-scanner";
 import { VoiceButton } from "@/components/scan/voice-button";
 import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode";
 import { softFocus } from "@/lib/keyboard";
+import { habitualLocation, recordLocation } from "@/lib/habitual-location";
 import { findBarcodeClash, nameKey } from "@/lib/catalog-view";
 import { parseVoice } from "@/lib/voice-parse";
 import { resolveVoice } from "@/lib/voice-approx";
@@ -187,9 +188,8 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     // Default location: last used, else first one.
     useEffect(() => {
         if (location) return;
-        let saved: string | null = null;
-        try { saved = localStorage.getItem("majorstockx-quick-location"); } catch { /* ignore */ }
-        if (saved && locations.some((l) => l.id === saved)) setLocation(saved);
+        const saved = habitualLocation(locations.map((l) => l.id));
+        if (saved) setLocation(saved);
         else if (locations.length) setLocation(locations[0].id);
     }, [locations, location]);
 
@@ -671,7 +671,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             });
             setLines({});
             setNote("");
-            try { localStorage.setItem("majorstockx-quick-location", location); } catch { /* ignore */ }
+            recordLocation(location);
             focusSearch();
         } catch (e) {
             console.error(e);

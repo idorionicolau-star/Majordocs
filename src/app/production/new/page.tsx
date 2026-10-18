@@ -1,5 +1,6 @@
 "use client";
 
+import { habitualLocation, recordLocation } from "@/lib/habitual-location";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -51,8 +52,7 @@ export default function NewProductionPage() {
     // localização: a do link, a última usada, ou a primeira
     useEffect(() => {
         if (!isMultiLocation || !locations?.length || location) return;
-        let saved: string | null = null;
-        try { saved = localStorage.getItem("majorstockx-last-product-location"); } catch { /* ignore */ }
+        const saved = habitualLocation(locations.map((l) => l.id));
         const wanted = searchParams.get("local");
         const pick = [wanted, saved].find((id) => id && locations.some((l) => l.id === id));
         setLocation(pick || locations[0].id);
@@ -91,7 +91,7 @@ export default function NewProductionPage() {
     const submit = async () => {
         if (!valid.length || busy || !dateOk) return;
         setBusy(true);
-        if (location) { try { localStorage.setItem("majorstockx-last-product-location", location); } catch { /* ignore */ } }
+        if (location) recordLocation(location);
         const failed: { name: string; error: string }[] = [];
         let done = 0;
         for (const it of valid) {

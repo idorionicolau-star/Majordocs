@@ -15,6 +15,7 @@ import type { CartItem, Product, Sale } from "@/lib/types";
 import { parseQuickInput, searchProducts, toNumber } from "@/lib/quick-stock";
 import { posTotals } from "@/lib/pos-totals";
 import { softFocus } from "@/lib/keyboard";
+import { habitualLocation, recordLocation } from "@/lib/habitual-location";
 import { variantChoice, variantLabel } from "@/lib/variants";
 import { VariantChooser, chooserKey } from "@/components/catalog/variant-chooser";
 import { Check, ChevronDown, GraduationCap, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, Truck, X } from "lucide-react";
@@ -111,8 +112,7 @@ export function FastSale() {
 
     useEffect(() => {
         if (location || !locations.length) return;
-        const saved = load<string>("majorstockx-fastsale-location", "");
-        setLocation(saved && locations.some((l) => l.id === saved) ? saved : locations[0].id);
+        setLocation(habitualLocation(locations.map((l) => l.id)) || locations[0].id);
     }, [locations, location]);
 
     // Keep the cart on the device (page reload, phone locked, bad connection)
@@ -382,7 +382,7 @@ export function FastSale() {
                 paymentMethod: payment,
                 amountPaid: isProforma ? 0 : Math.min(paid, total),
             });
-            save("majorstockx-fastsale-location", location);
+            recordLocation(location);
             if (firstEver) toast({ title: "🎉 Primeira venda registada!", description: "Está no Histórico de Vendas, com o documento para imprimir ou enviar." });
             setLastSale({ total, items: lines.length, client: name });
             setLines([]);

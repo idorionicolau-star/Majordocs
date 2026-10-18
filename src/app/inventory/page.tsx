@@ -122,7 +122,7 @@ export default function InventoryPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  const [sortBy, setSortBy] = useState<SortKey>('stock_desc');
+  const [sortBy, setSortBy] = useState<SortKey>('date_desc');
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const { toast } = useToast();
 

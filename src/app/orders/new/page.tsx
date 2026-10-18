@@ -1,5 +1,6 @@
 "use client";
 
+import { habitualLocation, recordLocation } from "@/lib/habitual-location";
 import { useState, useContext, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCRM } from '@/context/crm-context';
@@ -109,7 +110,7 @@ export default function NewOrderPage() {
     const watchedPartialPaymentValue = useWatch({ control: form.control, name: 'partialPaymentValue' });
 
     useEffect(() => {
-        const savedLocation = localStorage.getItem('majorstockx-last-product-location');
+        const savedLocation = habitualLocation(locations.map(l => l.id));
         const finalLocation = savedLocation && locations.some((l: Location) => l.id === savedLocation)
             ? savedLocation
             : (locations.length > 0 ? locations[0].id : "");
@@ -175,7 +176,7 @@ export default function NewOrderPage() {
         setIsSubmitting(true);
 
         if (formData.location) {
-            localStorage.setItem('majorstockx-last-product-location', formData.location);
+            recordLocation(formData.location);
         }
 
         // o cliente da encomenda (criado se for novo): a venda fica ligada a ele, para contar em Clientes

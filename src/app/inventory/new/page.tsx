@@ -1,5 +1,6 @@
 "use client";
 
+import { habitualLocation, recordLocation } from "@/lib/habitual-location";
 import { useState, useEffect, useContext } from 'react';
 import { useInventoryBackHref } from "@/hooks/use-inventory-back";
 import { useRouter } from 'next/navigation';
@@ -94,7 +95,7 @@ export default function NewInventoryProductPage() {
     });
 
     useEffect(() => {
-        const savedLocation = localStorage.getItem('majorstockx-last-product-location');
+        const savedLocation = habitualLocation(locations.map((l: Location) => l.id));
         const locationExists = locations.some(l => l.id === savedLocation);
         const finalLocation = (savedLocation && locationExists)
             ? savedLocation
@@ -187,7 +188,7 @@ export default function NewInventoryProductPage() {
         }
 
         if (values.location) {
-            localStorage.setItem('majorstockx-last-product-location', values.location);
+            recordLocation(values.location);
         }
 
         let imageUrl: string | null = null;

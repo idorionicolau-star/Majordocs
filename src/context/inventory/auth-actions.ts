@@ -32,7 +32,7 @@ export function useAuthActions(core: InventoryCore) {
       console.error("Firebase Auth login error:", error);
       let message = "Ocorreu um erro ao fazer login.";
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        message = "Email ou senha inválidos.";
+        message = "Email ou senha inválidos. Se já entrou com o Google, toque em \"Entrar com o Google\" — ou em \"Esqueceu a senha?\" para criar uma senha.";
       }
       toast({ variant: 'destructive', title: 'Erro de Login', description: message });
       throw error;
