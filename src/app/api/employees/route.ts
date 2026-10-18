@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { initializeAdmin, verifyIdToken } from '@/lib/firebase-admin';
 import { removeEmployee } from '@/lib/employee-admin';
+import { companyMaxUsers, tierById } from '@/lib/tiers';
 
 /**
  * Gestão de funcionários no servidor.
@@ -48,6 +49,16 @@ export async function POST(req: Request) {
     }
     if (String(password).length < 6) {
         return NextResponse.json({ error: 'A senha deve ter pelo menos 6 caracteres.' }, { status: 400 });
+    }
+    // utilizadores incluídos no plano (o Dono conta como um)
+    const company = (await db.doc(`companies/${companyId}`).get()).data();
+    const max = companyMaxUsers(company);
+    if (max != null && !a.decoded.superAdmin) {
+        const count = (await db.collection(`companies/${companyId}/employees`).count().get()).data().count;
+        if (count >= max) {
+            const label = tierById(company?.tier)?.label || '';
+            return NextResponse.json({ error: `O plano ${label} inclui ${max === 1 ? '1 utilizador' : `${max} utilizadores`}. Mude de plano (Subscrição) para juntar mais.`, code: 'plan-limit' }, { status: 403 });
+        }
     }
 
     let uid: string | null = null;

@@ -7,7 +7,7 @@ import { useContext } from "react";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { useNavGroups } from "./use-nav-groups";
-import { HelpCircle, LifeBuoy, LogOut, Settings, User as UserIcon, ShieldCheck } from "lucide-react";
+import { HelpCircle, LifeBuoy, Lock, LogOut, Settings, User as UserIcon, ShieldCheck } from "lucide-react";
 import { openTour } from "@/components/onboarding/app-tour";
 import { MenuModeToggle } from "./menu-mode-toggle";
 import { isSuperAdminEmail } from "@/lib/super-admin";
@@ -74,6 +74,7 @@ export function Sidebar() {
                                         )} />
                                     )}
                                     <span className="font-medium transition-colors duration-200">{item.title}</span>
+                                    {item.locked && <Lock className="ml-auto h-3.5 w-3.5 text-slate-400" aria-label="Não incluído no seu plano" />}
                                 </Link>
                             );
                         })}

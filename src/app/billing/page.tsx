@@ -11,12 +11,13 @@ import { useAuth, useFirestore } from "@/firebase/provider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { PLANS, type PlanId } from "@/lib/plans";
+import { TIERS, companyTierLabel, isTierId, onLegacyPlan, tierAmount, tierLabel, type PayTier } from "@/lib/tiers";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useFromEscalepay } from "@/components/billing/escalepay-claim";
 import { ManualPayInstructions } from "@/components/billing/manual-pay";
 import { MANUAL_CONFIRM_HOURS, MANUAL_CONFIRM_PROMISE, MANUAL_METHODS, type ManualMethod } from "@/lib/manual-pay-core";
 
-type Payment = { reference: string; planId: PlanId; amount: number; status: string; createdAt: string; paidAt?: string; periodEnd?: string; provider?: string; method?: ManualMethod };
+type Payment = { reference: string; planId: PlanId; tier?: PayTier; amount: number; status: string; createdAt: string; paidAt?: string; periodEnd?: string; provider?: string; method?: ManualMethod };
 
 /** M-Pesa / e-Mola: pagamento directo (confirmado à mão); cartão: ZumboPay. */
 type PayMethod = ManualMethod | "card";
@@ -34,6 +35,13 @@ function BillingInner() {
     const returnedRef = params.get("ref");
 
     const [selected, setSelected] = useState<PlanId>("mensal");
+    // nível: o que a empresa tem; quem ainda está no plano antigo começa nele (nada muda se não quiser)
+    const legacy = onLegacyPlan(companyData);
+    const [tier, setTier] = useState<PayTier>("pro");
+    // quem fabrica precisa da Produção (Business); os outros começam no Pro
+    const makesGoods = companyData?.businessType !== "reseller";
+    const tierKnown = companyData ? (isTierId(companyData.tier) ? companyData.tier : legacy ? "atual" : makesGoods ? "business" : "pro") : null;
+    useEffect(() => { if (tierKnown) setTier(tierKnown as PayTier); }, [tierKnown]);
     const [method, setMethod] = useState<PayMethod>("mpesa");
     const [busy, setBusy] = useState(false);
     const [returned, setReturned] = useState<{ status: string; periodEnd?: string | null } | null>(null);
@@ -43,10 +51,11 @@ function BillingInner() {
     const coupon = companyData?.coupon;
     const couponLeft = couponMonthsLeft(coupon);
     /** preço deste plano com o código (null = preço normal). O servidor volta a calcular ao pagar. */
-    const priceOf = (planId: PlanId) => {
-        const p = PLANS.find((x) => x.id === planId)!;
-        const c = coupon ? couponAmount({ price: coupon.price, months: coupon.months }, coupon.monthsUsed, planId) : { amount: null };
-        return { full: p.amount, amount: c.amount ?? p.amount, discounted: c.amount != null };
+    const priceOf = (planId: PlanId, t: PayTier = tier) => {
+        const full = tierAmount(t, planId);
+        // o código de convite vale no Pro (ou no plano antigo, ao mesmo preço)
+        const c = coupon && (t === "pro" || t === "atual") ? couponAmount({ price: coupon.price, months: coupon.months }, coupon.monthsUsed, planId) : { amount: null };
+        return { full, amount: c.amount ?? full, discounted: c.amount != null };
     };
 
     const applyCode = async () => {
@@ -125,14 +134,14 @@ function BillingInner() {
 
     const payManual = async (m: ManualMethod) => {
         // o mesmo pedido ainda por confirmar: não cria outro, mostra as instruções
-        if (pendingManual && pendingManual.planId === selected && pendingManual.method === m) { setShowRef(pendingManual.reference); return; }
+        if (pendingManual && pendingManual.planId === selected && (pendingManual.tier || "atual") === tier && pendingManual.method === m) { setShowRef(pendingManual.reference); return; }
         setBusy(true);
         try {
             const token = await auth.currentUser?.getIdToken();
             const r = await fetch("/api/billing/manual", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ planId: selected, method: m }),
+                body: JSON.stringify({ planId: selected, tier, method: m }),
             });
             const j = await r.json();
             if (!r.ok) throw new Error(j.error || "Erro ao registar o pagamento");
@@ -152,7 +161,7 @@ function BillingInner() {
             const r = await fetch("/api/billing/checkout", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ planId: selected }),
+                body: JSON.stringify({ planId: selected, tier }),
             });
             const j = await r.json();
             if (!r.ok || !j.checkoutUrl) throw new Error([j.error || "Erro ao iniciar o pagamento", j.details].filter(Boolean).join(" — "));
@@ -175,6 +184,7 @@ function BillingInner() {
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Subscrição MajorStockX</h1>
                 <p className={cn("mt-1 text-sm", isReadOnly ? "font-semibold text-red-600" : "text-muted-foreground")}>{statusLine}</p>
+                {companyData && <p className="mt-0.5 text-sm" data-testid="current-tier">Plano: <b>{companyTierLabel(companyData)}</b></p>}
             </div>
 
             {returnedRef && returned && (
@@ -199,11 +209,42 @@ function BillingInner() {
                             <Ticket className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
                             <p>
                                 <b>{couponReminder(coupon, formatCurrency)}.</b>{" "}
-                                O desconto vale no plano <b>Mensal</b>; depois passa ao preço normal ({formatCurrency(PLANS[0].amount)}/mês).
+                                O desconto vale no plano <b>Pro Mensal</b>; depois passa ao preço normal ({formatCurrency(tierAmount("pro", "mensal"))}/mês).
                             </p>
                         </div>
                     )}
 
+                    <div data-tour="bill-tiers">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Plano</p>
+                        <div className={cn("grid gap-3", legacy ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3")} role="radiogroup" aria-label="Plano">
+                            {legacy && (
+                                <button type="button" role="radio" aria-checked={tier === "atual"} onClick={() => setTier("atual")}
+                                    className={cn("rounded-2xl border-2 p-4 text-left transition", tier === "atual" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
+                                    <p className="font-semibold">O meu plano atual</p>
+                                    <p className="mt-1 text-xl font-bold tabular-nums">{formatCurrency(tierAmount("atual", "mensal"))}<span className="text-xs font-normal text-muted-foreground">/mês</span></p>
+                                    <p className="mt-1 text-xs text-muted-foreground">Tudo incluído, como até agora. Por ser cliente desde o início.</p>
+                                </button>
+                            )}
+                            {TIERS.map((t) => (
+                                <button key={t.id} type="button" role="radio" aria-checked={tier === t.id} onClick={() => setTier(t.id)}
+                                    className={cn("relative rounded-2xl border-2 p-4 text-left transition", tier === t.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
+                                    {t.id === "pro" && <span className="absolute right-3 top-3 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-bold text-primary">Mais escolhido</span>}
+                                    <p className="font-semibold">{t.label}</p>
+                                    <p className="text-xs text-muted-foreground">{t.forWho}</p>
+                                    <p className="mt-1 text-xl font-bold tabular-nums">{formatCurrency(t.monthly)}<span className="text-xs font-normal text-muted-foreground">/mês</span></p>
+                                    <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                                        {t.highlights.map((h) => <li key={h} className="flex gap-1"><CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600" />{h}</li>)}
+                                    </ul>
+                                </button>
+                            ))}
+                        </div>
+                        {legacy && tier !== "atual" && <p className="mt-2 text-xs text-amber-600">Ao mudar de plano deixa o plano atual (tudo incluído). Pode pedir para voltar a ele ao suporte.</p>}
+                        {makesGoods && tier !== "atual" && isTierId(tier) && !TIERS.find((t) => t.id === tier)!.features.includes("production") && (
+                            <p className="mt-2 text-xs font-semibold text-amber-600" data-testid="tier-warning">Atenção: o plano {tierLabel(tier)} não inclui a Produção e as matérias-primas, que a sua empresa usa.</p>
+                        )}
+                    </div>
+
+                    <p className="-mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Período</p>
                     <div className="grid gap-3 sm:grid-cols-3" data-tour="bill-plans">
                         {PLANS.map((p) => { const pr = priceOf(p.id); return (
                             <button key={p.id} type="button" onClick={() => setSelected(p.id)}
@@ -212,7 +253,7 @@ function BillingInner() {
                                 <p className="font-semibold">{p.label}</p>
                                 {pr.discounted && <p className="mt-2 text-sm text-muted-foreground line-through tabular-nums">{formatCurrency(pr.full)}</p>}
                                 <p className={cn("text-2xl font-bold tabular-nums", pr.discounted ? "text-emerald-600" : "mt-2")}>{formatCurrency(pr.amount)}</p>
-                                <p className="text-xs text-muted-foreground">{pr.discounted ? `com o código ${coupon?.code}` : p.months === 1 ? "por mês" : `${p.months} meses · ${formatCurrency(Math.round(p.amount / p.months))}/mês`}</p>
+                                <p className="text-xs text-muted-foreground">{pr.discounted ? `com o código ${coupon?.code}` : p.months === 1 ? "por mês" : `${p.months} meses · ${formatCurrency(Math.round(pr.full / p.months))}/mês`}</p>
                             </button>
                         ); })}
                     </div>
@@ -238,12 +279,12 @@ function BillingInner() {
 
                     <Button data-tour="bill-pay" onClick={pay} disabled={busy} className="h-12 rounded-xl text-base">
                         {busy ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : method === "card" ? <CreditCard className="mr-2 h-5 w-5" /> : <Smartphone className="mr-2 h-5 w-5" />}
-                        Pagar {formatCurrency(priceOf(selected).amount)}{method === "card" ? " com cartão" : ` por ${MANUAL_METHODS[method].label}`}
+                        Pagar {formatCurrency(priceOf(selected).amount)} · {tierLabel(tier)}{method === "card" ? " com cartão" : ` por ${MANUAL_METHODS[method].label}`}
                     </Button>
 
                     {pendingManual && (
                         <ManualPayInstructions method={pendingManual.method!} amount={pendingManual.amount} reference={pendingManual.reference}
-                            planLabel={PLANS.find((p) => p.id === pendingManual.planId)?.label || pendingManual.planId}
+                            planLabel={`${tierLabel(pendingManual.tier || "atual")} · ${PLANS.find((p) => p.id === pendingManual.planId)?.label || pendingManual.planId}`}
                             company={companyData?.name} email={auth.currentUser?.email} />
                     )}
 
@@ -272,7 +313,7 @@ function BillingInner() {
                         {history.map((h) => (
                             <div key={h.reference} className="flex items-center justify-between gap-3 border-b px-4 py-2.5 text-sm last:border-0">
                                 <div className="min-w-0">
-                                    <p className="font-medium">{PLANS.find((p) => p.id === h.planId)?.label || h.planId}{h.amount ? ` · ${formatCurrency(h.amount)}` : ""}</p>
+                                    <p className="font-medium">{h.tier ? `${tierLabel(h.tier)} · ` : ""}{PLANS.find((p) => p.id === h.planId)?.label || h.planId}{h.amount ? ` · ${formatCurrency(h.amount)}` : ""}</p>
                                     <p className="text-xs text-muted-foreground">{new Date(h.createdAt).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "short" })} · ref. {h.reference}{h.periodEnd ? ` · até ${fmtDate(h.periodEnd)}` : ""}</p>
                                 </div>
                                 <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",

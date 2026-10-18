@@ -8,10 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { MANUAL_METHODS, isManualMethod } from "@/lib/manual-pay-core";
 import { PLANS } from "@/lib/plans";
+import { tierLabel, type PayTier } from "@/lib/tiers";
 import { cn, formatCurrency } from "@/lib/utils";
 
 type ManualPayment = {
-    reference: string; companyId: string; companyName?: string; method: string; planId: string; amount: number;
+    reference: string; companyId: string; companyName?: string; method: string; planId: string; tier?: PayTier; amount: number;
     email?: string | null; createdBy?: string; createdAt: string; status: "pending" | "paid" | "rejected"; until?: string;
 };
 
@@ -73,7 +74,7 @@ export function ManualPaymentsPanel() {
                                         <div className="min-w-[14rem] flex-1">
                                             <p className="font-semibold">{p.companyName || p.companyId} · {formatCurrency(p.amount)}</p>
                                             <p className="text-xs text-muted-foreground">
-                                                {isManualMethod(p.method) ? MANUAL_METHODS[p.method].label : p.method} · {PLANS.find((x) => x.id === p.planId)?.label || p.planId} · ref. <b>{p.reference}</b>
+                                                {isManualMethod(p.method) ? MANUAL_METHODS[p.method].label : p.method} · {p.tier ? `${tierLabel(p.tier)} · ` : ""}{PLANS.find((x) => x.id === p.planId)?.label || p.planId} · ref. <b>{p.reference}</b>
                                                 {p.email ? ` · ${p.email}` : ""} · {fmt(p.createdAt)}
                                             </p>
                                         </div>

@@ -27,6 +27,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Lock, ShieldAlert, CheckCircle, Clock, AlertOctagon, Bug } from 'lucide-react';
 import Link from 'next/link';
 import { Company } from '@/lib/types';
+import { TIERS, isTierId, tierAmount } from '@/lib/tiers';
 import { ZumboPayCheck } from '@/components/admin/zumbopay-check';
 import { EscalepayPanel } from '@/components/admin/escalepay-panel';
 import { ManualPaymentsPanel } from '@/components/admin/manual-payments-panel';
@@ -92,7 +93,8 @@ export default function SubscriptionsAdminPage() {
     companyId: string,
     status: Company['status'],
     trialEndsAt: string,
-    subscriptionEndsAt: string
+    subscriptionEndsAt: string,
+    tier: string
   ) => {
     try {
       setUpdatingId(companyId);
@@ -101,13 +103,13 @@ export default function SubscriptionsAdminPage() {
       const r = await fetch('/api/admin/companies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ companyId, status, trialEndsAt, subscriptionEndsAt }),
+        body: JSON.stringify({ companyId, status, trialEndsAt, subscriptionEndsAt, tier }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || 'Não foi possível atualizar a subscrição.');
 
       setCompanies(prev => prev.map(c => c.id === companyId ? {
-        ...c, status: j.status, trialEndsAt: j.trialEndsAt || undefined, subscriptionEndsAt: j.subscriptionEndsAt || undefined,
+        ...c, status: j.status, trialEndsAt: j.trialEndsAt || undefined, subscriptionEndsAt: j.subscriptionEndsAt || undefined, tier: j.tier || undefined,
       } : c));
 
       toast({
@@ -244,6 +246,7 @@ export default function SubscriptionsAdminPage() {
                     <TableHead>Empresa</TableHead>
                     <TableHead>Tempo restante</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Plano</TableHead>
                     <TableHead>Término do Trial (AAAA-MM-DD)</TableHead>
                     <TableHead>Término da Subscrição (AAAA-MM-DD)</TableHead>
                     <TableHead className="text-right">Ação</TableHead>
@@ -256,7 +259,7 @@ export default function SubscriptionsAdminPage() {
                       company={company}
                       standing={standing}
                       isUpdating={updatingId === company.id}
-                      onSave={(status, trial, sub) => handleUpdateCompany(company.id, status, trial, sub)}
+                      onSave={(status, trial, sub, tier) => handleUpdateCompany(company.id, status, trial, sub, tier)}
                     />
                   ))}
                 </TableBody>
@@ -290,7 +293,7 @@ function CompanyRow({
   company: Company;
   standing: CompanyStanding;
   isUpdating: boolean;
-  onSave: (status: Company['status'], trial: string, sub: string) => void;
+  onSave: (status: Company['status'], trial: string, sub: string, tier: string) => void;
 }) {
   const [status, setStatus] = useState<Company['status']>(company.status || 'trial');
   // as datas vêm em ISO completo; a caixa de data só aceita AAAA-MM-DD (antes ficava vazia)
@@ -298,13 +301,17 @@ function CompanyRow({
   const savedSub = toDateInput(company.subscriptionEndsAt);
   const [trialEndsAt, setTrialEndsAt] = useState(savedTrial);
   const [subscriptionEndsAt, setSubscriptionEndsAt] = useState(savedSub);
-  useEffect(() => { setTrialEndsAt(savedTrial); setSubscriptionEndsAt(savedSub); setStatus(company.status || 'trial'); }, [savedTrial, savedSub, company.status]);
+  // plano (nível): "atual" = sem nível, o plano antigo com tudo incluído
+  const savedTier = isTierId(company.tier) ? company.tier! : 'atual';
+  const [tier, setTier] = useState(savedTier);
+  useEffect(() => { setTrialEndsAt(savedTrial); setSubscriptionEndsAt(savedSub); setStatus(company.status || 'trial'); setTier(savedTier); }, [savedTrial, savedSub, company.status, savedTier]);
   const urgent = (standing.kind === 'trial' || standing.kind === 'active') && standing.daysLeft != null && standing.daysLeft <= 7;
 
   const hasChanges =
     status !== (company.status || 'trial') ||
     trialEndsAt !== savedTrial ||
-    subscriptionEndsAt !== savedSub;
+    subscriptionEndsAt !== savedSub ||
+    tier !== savedTier;
 
   return (
     <TableRow>
@@ -352,6 +359,15 @@ function CompanyRow({
         </Select>
       </TableCell>
       <TableCell>
+        <Select value={tier} onValueChange={setTier}>
+          <SelectTrigger className="w-[150px]" aria-label="Plano"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="atual">Completo (antigo)</SelectItem>
+            {TIERS.map((t) => <SelectItem key={t.id} value={t.id}>{t.label} · {tierAmount(t.id, 'mensal')} MT</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell>
         <Input 
           type="date" 
           value={trialEndsAt} 
@@ -371,7 +387,7 @@ function CompanyRow({
         <Button 
           size="sm" 
           disabled={!hasChanges || isUpdating}
-          onClick={() => onSave(status, trialEndsAt, subscriptionEndsAt)}
+          onClick={() => onSave(status, trialEndsAt, subscriptionEndsAt, tier)}
         >
           {isUpdating ? 'A Guardar...' : 'Guardar'}
         </Button>

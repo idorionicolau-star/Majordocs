@@ -7,7 +7,7 @@ import { useContext } from "react";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { useNavGroups } from "./use-nav-groups";
-import { HelpCircle, LifeBuoy, LogOut, Settings, User as UserIcon, ShieldCheck } from "lucide-react";
+import { HelpCircle, LifeBuoy, Lock, LogOut, Settings, User as UserIcon, ShieldCheck } from "lucide-react";
 import { openTour } from "@/components/onboarding/app-tour";
 import { MenuModeToggle } from "./menu-mode-toggle";
 import { isSuperAdminEmail } from "@/lib/super-admin";
@@ -78,6 +78,7 @@ export function MobileNav({ onLinkClick }: MobileNavProps) {
                                 >
                                     {!item.isSubItem && <item.icon className={cn("h-6 w-6", active ? "text-primary" : "text-slate-400")} />}
                                     <span className="flex-1">{item.title}</span>
+                                    {item.locked && <Lock className="h-4 w-4 text-slate-400" aria-label="Não incluído no seu plano" />}
                                     {active && <div className="h-2 w-2 rounded-full bg-primary shadow-neon-emerald" />}
                                 </Link>
                             );
