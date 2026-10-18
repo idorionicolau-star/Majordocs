@@ -82,23 +82,24 @@ export function Header({ onSearchClick }: { onSearchClick: () => void }) {
       </div>
 
       {/* Search bar for desktop, hidden on mobile */}
-      <div className="hidden md:flex flex-1 items-center gap-2">
+      {/* min-w-0: a pesquisa encolhe em vez de empurrar os ícones para fora do ecrã (tablet em pé) */}
+      <div className="hidden min-w-0 md:flex flex-1 items-center gap-2">
         <BackButton />
         <Button
           variant="outline"
-          className="relative w-full max-w-sm px-4 py-2 h-11 justify-start items-center text-left font-normal bg-slate-100 text-slate-500 hover:bg-slate-200 border-slate-300/70 dark:bg-slate-800/50 dark:text-slate-400 dark:hover:bg-slate-800/80 dark:border-slate-700"
+          className="relative w-full min-w-0 max-w-sm overflow-hidden px-4 py-2 h-11 justify-start items-center text-left font-normal bg-slate-100 text-slate-500 hover:bg-slate-200 border-slate-300/70 dark:bg-slate-800/50 dark:text-slate-400 dark:hover:bg-slate-800/80 dark:border-slate-700"
           onClick={onSearchClick}
         >
           <Search className="mr-2 h-4 w-4" />
-          <span className="flex-1">Pesquisa Rápida</span>
-          <kbd className="pointer-events-none hidden h-6 select-none items-center gap-1 rounded border bg-slate-200 border-slate-300 px-1.5 font-mono text-[10px] font-medium text-slate-500 dark:bg-slate-700/80 dark:border-slate-600 dark:text-slate-300 sm:flex">
+          <span className="flex-1 truncate">Pesquisa Rápida</span>
+          <kbd className="pointer-events-none hidden h-6 shrink-0 select-none items-center gap-1 rounded border bg-slate-200 border-slate-300 px-1.5 font-mono text-[10px] font-medium text-slate-500 dark:bg-slate-700/80 dark:border-slate-600 dark:text-slate-300 lg:flex">
             Ctrl+K
           </kbd>
         </Button>
       </div>
 
       {/* Right side icons */}
-      <div className="flex items-center gap-1 md:gap-4 ml-auto">
+      <div className="flex shrink-0 items-center gap-1 md:gap-3 lg:gap-4 ml-auto">
         <div className="hidden md:block">
           <ConnectionStatus />
         </div>
