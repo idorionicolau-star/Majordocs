@@ -123,7 +123,7 @@ service cloud.firestore {
       allow create: if isSignedIn(); // Qualquer pessoa autenticada pode registar uma nova empresa.
       allow get: if isEmployeeOf(companyId);
       allow list: if isSuperAdmin();
-      allow update: if isSuperAdmin() || (isAdminOf(companyId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'trialEndsAt', 'subscriptionEndsAt', 'paidUntilMs', 'plan', 'affiliate', 'coupon']))
+      allow update: if isSuperAdmin() || (isAdminOf(companyId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'trialEndsAt', 'subscriptionEndsAt', 'paidUntilMs', 'plan', 'tier', 'affiliate', 'coupon']))
         // Quem vende (não só o Admin) precisa de avançar a numeração dos documentos: só esses dois campos, e o contador nunca recua.
         || (can('sales', 'write') && isCompanySubscriptionActive(companyId)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['saleCounter', 'documentNumbering'])

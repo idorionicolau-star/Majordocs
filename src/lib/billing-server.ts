@@ -4,6 +4,7 @@ import { GRACE_DAYS, planById, type Plan } from '@/lib/plans';
 import { findAnyCode } from '@/lib/affiliates-server';
 import { couponAmount } from '@/lib/coupon-core';
 import { amountLooksRight, parseZumboError } from '@/lib/zumbopay-core';
+import { isTierId, resolvePayTier, tierAmount, type PayTier } from '@/lib/tiers';
 
 const DEFAULT_BASE = 'https://zumbopay.com/api/public/v1';
 
@@ -90,6 +91,7 @@ export async function applyPaidPayment(reference: string, info: { providerId?: s
             ...coupon,
             status: 'active',
             plan: p.planId,
+            ...tierToStore(p.tier),
             subscriptionEndsAt: end.toISOString(),
             // cópia numérica para as regras do Firestore (não sabem ler datas ISO): fim + tolerância
             paidUntilMs: end.getTime() + GRACE_DAYS * 86_400_000,
@@ -108,19 +110,27 @@ export async function companyPayer(companyId: string, decoded: { uid: string; su
 }
 
 /**
- * O preço a cobrar por um plano a esta empresa. Código de convite: preço especial nos primeiros meses do Mensal.
+ * O preço a cobrar por um nível (Básico/Pro/Business, ou o plano antigo) num período a esta empresa.
+ * Código de convite: preço especial nos primeiros meses do Mensal — só no Pro (ou plano antigo), que é o preço para que foi feito.
  * O preço vem da lista do servidor e os meses usados contam-se nos pagamentos (que só o servidor escreve).
+ * `tier` null = nível pedido inválido para esta empresa.
  */
-export async function planAmountFor(companyId: string, plan: Plan): Promise<{ amount: number; coupon: string | null }> {
+export async function planAmountFor(companyId: string, plan: Plan, requestedTier?: unknown): Promise<{ amount: number; coupon: string | null; tier: PayTier | null }> {
     const db = initializeAdmin().firestore();
     const company = await db.doc(`companies/${companyId}`).get();
-    const found = await findAnyCode(company.get('coupon.code') || '');
+    const tier = resolvePayTier(requestedTier, company.data());
+    if (!tier) return { amount: 0, coupon: null, tier: null };
+    const full = tierAmount(tier, plan.id);
+    const found = tier === 'pro' || tier === 'atual' ? await findAnyCode(company.get('coupon.code') || '') : null;
     const coupon = found?.def ? { code: found.code, def: found.def } : null;
-    let amount = plan.amount;
+    let amount = full;
     if (coupon) {
         const used = (await db.collection(`companies/${companyId}/payments`).where('coupon', '==', coupon.code).where('status', '==', 'paid').get()).size;
         const c = couponAmount(coupon.def, used, plan.id);
         if (c.amount != null) amount = c.amount;
     }
-    return { amount, coupon: coupon && amount !== plan.amount ? coupon.code : null };
+    return { amount, coupon: coupon && amount !== full ? coupon.code : null, tier };
 }
+
+/** O nível a gravar na empresa quando o pagamento é confirmado ("atual" = fica como está). */
+export const tierToStore = (t: unknown) => (isTierId(t) ? { tier: t } : {});

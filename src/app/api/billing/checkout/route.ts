@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { initializeAdmin, verifyIdToken } from '@/lib/firebase-admin';
 import { companyPayer, planAmountFor, zumbopay } from '@/lib/billing-server';
 import { planById } from '@/lib/plans';
+import { tierAmount, tierLabel } from '@/lib/tiers';
 import { paymentReference } from '@/lib/manual-pay-core';
 
 /**
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
     const companyId: string | undefined = decoded.companyId;
     if (!companyId) return NextResponse.json({ error: 'Empresa não encontrada.' }, { status: 400 });
 
-    const { planId } = await req.json().catch(() => ({}));
+    const { planId, tier: tierId } = await req.json().catch(() => ({}));
     const plan = planById(planId);
     if (!plan) return NextResponse.json({ error: 'Plano inválido.' }, { status: 400 });
 
@@ -31,14 +32,15 @@ export async function POST(req: Request) {
     const now = new Date();
     const reference = paymentReference(companyId, now);
     const company = await db.doc(`companies/${companyId}`).get();
-    const { amount, coupon: withCoupon } = await planAmountFor(companyId, plan);
+    const { amount, coupon: withCoupon, tier } = await planAmountFor(companyId, plan, tierId);
+    if (!tier) return NextResponse.json({ error: 'Plano inválido.' }, { status: 400 });
 
     // Índice referência → empresa, para o webhook encontrar o pagamento sem confiar no que vem no corpo.
     await db.doc(`billingRefs/${reference}`).set({ companyId, reference, createdAt: now.toISOString() });
     const paymentRef = db.doc(`companies/${companyId}/payments/${reference}`);
     await paymentRef.set({
-        reference, provider: 'zumbopay', planId: plan.id, months: plan.months, amount,
-        ...(withCoupon ? { coupon: withCoupon, fullAmount: plan.amount } : {}),
+        reference, provider: 'zumbopay', planId: plan.id, tier, months: plan.months, amount,
+        ...(withCoupon ? { coupon: withCoupon, fullAmount: tierAmount(tier, plan.id) } : {}),
         status: 'pending', createdAt: now.toISOString(), createdBy: payer.username,
     });
 
@@ -47,7 +49,7 @@ export async function POST(req: Request) {
             method: 'POST',
             headers: { 'Idempotency-Key': reference },
             body: JSON.stringify({
-                title: `MajorStockX — ${plan.label}${withCoupon ? ` (código ${withCoupon})` : ''}`.slice(0, 80),
+                title: `MajorStockX ${tierLabel(tier)} — ${plan.label}${withCoupon ? ` (código ${withCoupon})` : ''}`.slice(0, 80),
                 // a nossa referência vai aqui: se o webhook devolver a descrição, é por ela que se encontra o pagamento
                 description: `${reference} · ${company.get('name') || companyId}`.slice(0, 200),
                 amount,

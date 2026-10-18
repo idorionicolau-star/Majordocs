@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Layers, Plus, X } from "lucide-react";
+import { useContext, useState } from "react";
+import Link from "next/link";
+import { Layers, Lock, Plus, X } from "lucide-react";
+import { InventoryContext } from "@/context/inventory-context";
+import { companyHas, tierFor } from "@/lib/tiers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,6 +88,16 @@ export function VariantsEditor({ state, onChange, baseName, basePrice, existingN
     const cleaned = cleanOptions(state.options);
     const total = countCombinations(cleaned);
     const plan = planVariants(baseName || "Produto", cleaned, existingNames);
+    // variações novas: plano Pro (a quem já tem famílias, "Nova variação de…" continua a funcionar)
+    const companyData = useContext(InventoryContext)?.companyData;
+    if (!hideSwitch && !state.enabled && !companyHas(companyData, "variants")) {
+        return (
+            <p className="flex flex-wrap items-center gap-1.5 rounded-xl border p-3 text-xs text-muted-foreground" data-testid="variants-locked">
+                <Lock className="h-3.5 w-3.5" /> Variações (cores, tamanhos…) estão no plano <b>{tierFor("variants").label}</b>.
+                <Link href="/billing" className="font-semibold text-primary underline">Mudar de plano</Link>
+            </p>
+        );
+    }
 
     return (
         <section className="rounded-xl border p-3" aria-label="Variações">

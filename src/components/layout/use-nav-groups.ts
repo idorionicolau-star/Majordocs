@@ -6,6 +6,7 @@ import { mainNavItems, NAV_GROUPS } from "@/lib/data";
 import { InventoryContext } from "@/context/inventory-context";
 import type { ModulePermission, NavItem } from "@/lib/types";
 import { ADVANCED_HREFS, menuMode } from "@/lib/onboarding";
+import { companyHas, featureForPath } from "@/lib/tiers";
 
 // Só quem fabrica usa produção, encomendas e matéria-prima.
 const MANUFACTURING_ONLY = new Set(["production", "orders", "raw-materials"]);
@@ -33,14 +34,24 @@ export function useNavGroups() {
         try { localStorage.setItem(storageKey, v); } catch { /* ignore */ }
     }, [storageKey]);
 
-    const allowed = useMemo(() => mainNavItems.flatMap((item) => {
+    const tier = companyData?.tier;
+    const status = companyData?.status;
+    const allowed = useMemo(() => mainNavItems.flatMap((item): NavItem[] => {
+        // fora do plano: fica no menu com cadeado (é assim que se descobre o que o plano seguinte dá)
+        const open = (href: string) => { const f = featureForPath(href); return !f || companyHas({ tier, status }, f); };
+        const withLock = (i: NavItem): NavItem => {
+            if (open(i.href)) return i;
+            // a página principal não está no plano mas outra aba da secção está (Relatórios → Financeiro): abre essa
+            const other = i.also?.find((h) => open(h) && (!i.fallback || h !== i.fallback.href || canView(i.fallback.id)));
+            return other ? { ...i, href: other } : { ...i, locked: true };
+        };
         if (reseller && MANUFACTURING_ONLY.has(item.id)) return [];
         if (item.adminOnly && !isManager) return [];
-        if (canView(item.id as ModulePermission)) return [item];
+        if (canView(item.id as ModulePermission)) return [withLock(item)];
         // sem acesso à página principal da secção mas com acesso a outra aba (ex.: só Financeiro): abre essa
-        if (item.fallback && canView(item.fallback.id)) return [{ ...item, href: item.fallback.href }];
+        if (item.fallback && canView(item.fallback.id)) return [withLock({ ...item, href: item.fallback.href })];
         return [];
-    }), [canView, reseller, isManager]);
+    }), [canView, reseller, isManager, tier, status]);
     const hiddenCount = allowed.filter((i) => ADVANCED_HREFS.has(i.href)).length;
 
     const groups = useMemo(() => {

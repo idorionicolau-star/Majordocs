@@ -36,6 +36,8 @@ import { differenceInDays } from 'date-fns';
 
 import { useSearchParams } from 'next/navigation';
 import { TrialBanner, RenewBanner, EscalepayPendingBanner } from './trial-banner';
+import { PlanGate } from '@/components/billing/plan-gate';
+import { companyHas, featureForPath } from '@/lib/tiers';
 
 function NavigationObserver({ onNavigate }: { onNavigate: () => void }) {
   const pathname = usePathname();
@@ -53,6 +55,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const authContext = React.useContext(InventoryContext);
   const isManager = authContext?.user?.role === 'Admin' || authContext?.user?.role === 'Dono';
+  // página fora do plano da empresa: mostra o que o plano seguinte dá (ver lib/tiers.ts)
+  const gatedFeature = featureForPath(pathname);
+  const planLocked = !!gatedFeature && !companyHas(authContext?.companyData, gatedFeature);
   const isAuthPage = pathname === '/login' || pathname === '/register';
   // páginas que qualquer pessoa pode ler, com ou sem conta (termos, privacidade)
   const isPublicPage = pathname === '/termos' || pathname === '/privacidade';
@@ -203,7 +208,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
                   </div>
                 }>
-                  {children}
+                  {planLocked && gatedFeature ? <PlanGate feature={gatedFeature} isManager={isManager} /> : children}
                 </Suspense>
               </SwipeNav>
             </main>

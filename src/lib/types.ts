@@ -99,6 +99,8 @@ export type Company = {
   /** Numeric copy (end + grace) used by Firestore rules */
   paidUntilMs?: number;
   plan?: string;
+  /** Nível da subscrição (Básico/Pro/Business). Sem nível = plano antigo, tudo incluído. Só o servidor/super-admin grava. Ver lib/tiers.ts */
+  tier?: string;
   /** De onde veio a empresa: "escalepay" = registou-se pelo link dos afiliados (ver lib/escalepay-core.ts). */
   source?: string;
   /** Arranque oficial: quando se apagaram os registos anteriores (só uma vez). */
@@ -338,6 +340,8 @@ export type NavItem = {
   also?: string[];
   /** Sem permissão para a página principal, mas com esta: a entrada abre a outra aba (ex.: só Financeiro). */
   fallback?: { id: ModulePermission; href: string };
+  /** Não está no plano da empresa: aparece com cadeado e a página convida a mudar de plano. */
+  locked?: boolean;
 };
 
 export type NavGroup = 'inicio' | 'vender' | 'stock' | 'pessoas' | 'dinheiro' | 'ajustes';

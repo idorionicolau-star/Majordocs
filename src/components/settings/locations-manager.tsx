@@ -9,7 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Loader2, MapPin } from 'lucide-react';
+import { PlusCircle, Edit, Loader2, Lock, MapPin } from 'lucide-react';
+import Link from 'next/link';
+import { companyHas, tierFor } from '@/lib/tiers';
 import { useToast } from '@/hooks/use-toast';
 import { InventoryContext } from '@/context/inventory-context';
 import type { Location } from '@/lib/types';
@@ -33,6 +35,8 @@ export function LocationsManager() {
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [newLocationName, setNewLocationName] = useState('');
   const isMultiLocation = companyData?.isMultiLocation || false;
+  // várias localizações: plano Business (quem já as tem não as perde — só não se liga de novo)
+  const canMulti = isMultiLocation || companyHas(companyData, 'locations');
   const locations = useMemo(() => companyData?.locations || [], [companyData?.locations]);
 
   const handleAddLocation = async () => {
@@ -137,9 +141,16 @@ export function LocationsManager() {
           id="multi-location-switch"
           checked={isMultiLocation}
           onCheckedChange={handleToggleMultiLocation}
+          disabled={!canMulti}
         />
         <Label htmlFor="multi-location-switch">Ativar modo Multi-Localização</Label>
       </div>
+      {!canMulti && (
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground" data-testid="locations-locked">
+          <Lock className="h-3.5 w-3.5" /> Várias localizações estão no plano <b>{tierFor('locations').label}</b>.
+          <Link href="/billing" className="font-semibold text-primary underline">Mudar de plano</Link>
+        </p>
+      )}
 
       {isMultiLocation && (
         <div className="space-y-4 pt-4 border-t">
