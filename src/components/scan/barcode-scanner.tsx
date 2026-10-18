@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, Check, Flashlight, Plus, X, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { createScanGate, isGoodRead } from "@/lib/scan-gate";
+import { createScanGate, isGoodRead, UNKNOWN_CODE } from "@/lib/scan-gate";
 
-type Detector = { detect: (src: HTMLVideoElement | HTMLCanvasElement) => Promise<{ rawValue: string }[]> };
+type Detector = { detect: (src: HTMLVideoElement) => Promise<{ rawValue: string }[]> };
 type DetectorCtor = { new (opts?: { formats?: string[] }): Detector; getSupportedFormats?: () => Promise<string[]> };
 
 export const cameraScanSupported = () =>
@@ -32,13 +32,17 @@ function beep() {
 /**
  * Leitor de código de barras com a câmara. Usa o leitor do próprio telemóvel (Chrome/Android):
  * grátis, sem internet, sem IA. Fica aberto para ler vários artigos seguidos.
- * `onScan` devolve o texto a mostrar ("✓ Cimento × 2" = leitura boa, "✗ …" = recusada) ou `undefined`.
+ * `onScan` devolve o texto a mostrar ("✓ Cimento × 2" = leitura boa, "✗ …" = recusada), `UNKNOWN_CODE` (código que não
+ * conhece: o leitor fica aberto e pede para tentar de novo; `onUnknown` deixa associá-lo a um produto) ou `undefined`.
  * O mesmo artigo mantido à frente da câmara conta uma só vez; "Ler outra vez" junta mais um igual.
  */
-export function BarcodeScanner({ open, onClose, onScan, title = "Aponte ao código de barras" }: {
+export function BarcodeScanner({ open, onClose, onScan, onUnknown, unknownLabel = "Associar a um produto", title = "Aponte ao código de barras" }: {
     open: boolean;
     onClose: () => void;
     onScan: (code: string) => string | void | Promise<string | void>;
+    /** Código que não conhece: o que fazer quando a pessoa toca no botão (ex.: associar a um produto). */
+    onUnknown?: (code: string) => void;
+    unknownLabel?: string;
     title?: string;
 }) {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -47,13 +51,20 @@ export function BarcodeScanner({ open, onClose, onScan, title = "Aponte ao códi
     const [flash, setFlash] = useState<string | null>(null);
     const [reads, setReads] = useState<string[]>([]); // leituras boas desta vez (a mais recente primeiro)
     const [lastCode, setLastCode] = useState<string | null>(null); // código da última leitura boa
-    const [torch, setTorch] = useState<boolean | null>(null); // null = o telemóvel não tem lanterna controlável
+    const [torch, setTorch] = useState<boolean | null>(null);
+    const [unknown, setUnknown] = useState<string | null>(null); // último código que não conhece // null = o telemóvel não tem lanterna controlável
     const onScanRef = useRef(onScan);
     useEffect(() => { onScanRef.current = onScan; }, [onScan]);
 
     const handle = useCallback(async (code: string) => {
         beep();
         const msg = await onScanRef.current(code);
+        if (msg === UNKNOWN_CODE) {
+            setUnknown(code);
+            setFlash(null);
+            return;
+        }
+        setUnknown(null);
         if (msg) setFlash(msg);
         if (isGoodRead(msg)) {
             setReads((r) => [msg, ...r]);
@@ -71,6 +82,7 @@ export function BarcodeScanner({ open, onClose, onScan, title = "Aponte ao códi
         setReads([]);
         setLastCode(null);
         setTorch(null);
+        setUnknown(null);
 
         (async () => {
             if (!cameraScanSupported()) {
@@ -78,16 +90,12 @@ export function BarcodeScanner({ open, onClose, onScan, title = "Aponte ao códi
                 return;
             }
             try {
-                // mais resolução = códigos pequenos ou longe lidos melhor
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-                    audio: false,
-                });
+                // resolução por defeito da câmara: imagens maiores tornavam cada leitura bem mais lenta
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
                 if (stop) { stream.getTracks().forEach((t) => t.stop()); return; }
                 const track = stream.getVideoTracks()[0];
                 trackRef.current = track ?? null;
-                const caps = (track?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { torch?: boolean; focusMode?: string[] };
-                if (caps.focusMode?.includes("continuous")) track.applyConstraints({ advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet] }).catch(() => {});
+                const caps = (track?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { torch?: boolean };
                 if (caps.torch) setTorch(false);
                 const v = videoRef.current;
                 if (!v) return;
@@ -96,33 +104,15 @@ export function BarcodeScanner({ open, onClose, onScan, title = "Aponte ao códi
                 const Ctor = (window as unknown as { BarcodeDetector: DetectorCtor }).BarcodeDetector;
                 const detector = new Ctor({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "itf", "qr_code"] });
                 const gate = createScanGate();
-                // código na vertical ou de lado: quando a imagem normal não dá nada, tenta-se também rodada 90°
-                const canvas = document.createElement("canvas");
-                let turn = false;
-                const rotated = () => {
-                    const w = v.videoWidth, h = v.videoHeight;
-                    const ctx = canvas.getContext("2d");
-                    if (!w || !h || !ctx) return null;
-                    canvas.width = h;
-                    canvas.height = w;
-                    ctx.setTransform(1, 0, 0, 1, 0, 0);
-                    ctx.translate(h / 2, w / 2);
-                    ctx.rotate(Math.PI / 2);
-                    ctx.drawImage(v, -w / 2, -h / 2);
-                    return canvas;
-                };
                 const tick = async () => {
                     if (stop) return;
                     try {
-                        let found = await detector.detect(v);
-                        if (!found.length && (turn = !turn)) {
-                            const c = rotated();
-                            if (c) found = await detector.detect(c);
-                        }
+                        // o leitor do telemóvel já lê o código em qualquer posição (vertical, de lado)
+                        const found = await detector.detect(v);
                         const code = found[0]?.rawValue;
                         if (code && gate.seen(code, Date.now())) await handle(code);
                     } catch { /* frame sem código */ }
-                    timer = setTimeout(tick, 120);
+                    timer = setTimeout(tick, 80);
                 };
                 tick();
             } catch (e) {
@@ -166,7 +156,9 @@ export function BarcodeScanner({ open, onClose, onScan, title = "Aponte ao códi
             {/* em baixo, ao alcance do polegar */}
             <div className="space-y-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                 <div className="min-h-7 text-center" aria-live="polite">
-                    {flash
+                    {unknown
+                        ? <p className="text-base font-bold text-amber-300">Não reconheci este código. Posicione bem e tente de novo.</p>
+                        : flash
                         ? <p className={cn("flex items-center justify-center gap-2 text-lg font-bold", flash.startsWith("✗") ? "text-red-300" : "text-emerald-300")}><Zap className="h-5 w-5" /> {flash}</p>
                         : <p className="text-sm text-white/70">Leia vários artigos seguidos. Cada artigo conta uma vez.</p>}
                 </div>
@@ -174,6 +166,11 @@ export function BarcodeScanner({ open, onClose, onScan, title = "Aponte ao códi
                     <ul className="max-h-20 space-y-0.5 overflow-y-auto text-center text-xs text-white/60">
                         {reads.slice(1, 6).map((r, i) => <li key={i}>{r}</li>)}
                     </ul>
+                )}
+                {unknown && onUnknown && (
+                    <Button type="button" variant="secondary" onClick={() => onUnknown(unknown)} className="h-10 w-full rounded-xl">
+                        {unknownLabel} <span className="ml-1 font-mono text-xs opacity-70">{unknown}</span>
+                    </Button>
                 )}
                 <div className="flex gap-2">
                     {lastCode && (

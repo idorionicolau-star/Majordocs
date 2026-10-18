@@ -20,6 +20,7 @@ import { variantChoice, variantLabel } from "@/lib/variants";
 import { VariantChooser, chooserKey } from "@/components/catalog/variant-chooser";
 import { Check, ChevronDown, ChevronUp, GraduationCap, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, Truck, X } from "lucide-react";
 import { BarcodeScanner } from "@/components/scan/barcode-scanner";
+import { UNKNOWN_CODE } from "@/lib/scan-gate";
 import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { VoiceButton } from "@/components/scan/voice-button";
 import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode";
@@ -251,12 +252,18 @@ export function FastSale() {
             toast({ variant: "destructive", title: "Sem stock", description: `${inCatalog.name} está no catálogo mas ainda não tem stock para vender.` });
             return `✗ ${inCatalog.name} — sem stock`;
         }
+        // com a câmara: pode ter sido mal lido — o leitor fica aberto a pedir para tentar de novo
+        if (fromCamera) return UNKNOWN_CODE;
+        linkCode(code);
+        return undefined;
+    };
+
+    const linkCode = (code: string) => {
         setPendingCode(code);
         setText("");
-        if (fromCamera) setScanOpen(false);
+        setScanOpen(false);
         toast({ title: "Código novo", description: canLink ? "Ainda não está ligado a nenhum produto. Toque no produto certo para o associar." : "Ainda não está ligado a nenhum produto. Peça a quem gere o inventário para o associar." });
         focusSearch();
-        return undefined;
     };
 
     const handleVoice = (transcript: string) => {
@@ -422,7 +429,7 @@ export function FastSale() {
 
     return (
         <div className="mx-auto w-full max-w-3xl pb-44">
-            <BarcodeScanner open={scanOpen} onClose={() => { setScanOpen(false); focusSearch(); }} onScan={(c) => handleCode(c, true)} />
+            <BarcodeScanner open={scanOpen} onClose={() => { setScanOpen(false); focusSearch(); }} onScan={(c) => handleCode(c, true)} onUnknown={canLink ? linkCode : undefined} />
             <div className="flex items-center justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Venda Rápida</h1>
