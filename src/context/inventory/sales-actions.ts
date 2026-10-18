@@ -1,5 +1,6 @@
 'use client';
 
+import { itemsSummary, saleLines } from '@/lib/sale-summary';
 import { useCallback } from 'react';
 import type { Product, Sale, StockMovement, CartItem } from '@/lib/types';
 import { collection, doc, writeBatch, getDocs, query, where, runTransaction, getDoc, serverTimestamp, DocumentReference, limit } from 'firebase/firestore';
@@ -403,7 +404,10 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
 
       await triggerEmailAlert({
         type: 'SALE',
-        ...createdSalesForOuterScope[0], // Use first for email alert properties like status/clientName
+        ...createdSalesForOuterScope[0], // cliente, vendedor, estado…
+        // todos os produtos da venda (antes o email levava só o primeiro)
+        productName: itemsSummary(createdSalesForOuterScope.map((s) => s.productName)),
+        items: saleLines(createdSalesForOuterScope),
         totalValue: cartTotal, // overriding total for single sum
         guideNumber: guideNumberForOuterScope,
         location: locations.find(l => l.id === createdSalesForOuterScope[0].location)?.name || 'Principal',
