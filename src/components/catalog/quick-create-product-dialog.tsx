@@ -1,5 +1,6 @@
 "use client";
 
+import { requireEmailConfirmed } from "@/components/billing/email-confirm";
 import { useState, useContext, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
@@ -111,6 +112,7 @@ export function QuickCreateProductDialog({ open, onOpenChange, defaultName, onSu
     };
 
     const onSubmit = async (values: FormValues) => {
+        if (!(await requireEmailConfirmed())) return; // conta nova: confirma o email antes do primeiro produto
         // 0. Ensure Category Exists
         if (isCreatingCategory && values.category.trim() !== "") {
             try {

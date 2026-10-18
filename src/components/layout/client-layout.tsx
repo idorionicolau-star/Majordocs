@@ -37,7 +37,7 @@ import { differenceInDays } from 'date-fns';
 import { useSearchParams } from 'next/navigation';
 import { TrialBanner, RenewBanner, EscalepayPendingBanner } from './trial-banner';
 import { PlanGate } from '@/components/billing/plan-gate';
-import { EmailVerifiedSync } from '@/components/billing/email-confirm';
+import { EmailConfirmHost } from '@/components/billing/email-confirm';
 import { companyHas, featureForPath } from '@/lib/tiers';
 
 function NavigationObserver({ onNavigate }: { onNavigate: () => void }) {
@@ -199,6 +199,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             <Header onSearchClick={() => setOpenCommandMenu(true)} />
             <main className="flex-1 relative overflow-x-clip">
               <SwipeNav>
+                <EmailConfirmHost />
                 <OfflineBanner />
                 <UpdateNotice />
                 <InstallPrompt />
@@ -224,7 +225,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <GuideHost />
           <SaleSheetHost />
           <KeyboardDismiss />
-          <EmailVerifiedSync />
           <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
         </div>
         <SheetContent side="left" className="p-0 glass-panel border-r border-white/10">

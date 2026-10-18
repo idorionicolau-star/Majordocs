@@ -1,5 +1,6 @@
 "use client";
 
+import { requireEmailConfirmed } from "@/components/billing/email-confirm";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { collection, doc, writeBatch } from "firebase/firestore";
@@ -134,7 +135,9 @@ export function CatalogManager() {
         const inStock = initialStock && initialStock.quantity > 0 ? ` e ${initialStock.quantity} ${data.unit || "un"} em stock` : "";
         toast({ title: "Produto adicionado", description: `«${data.name}» está no catálogo${inStock}.${offline() ? " Fica guardado neste aparelho até haver internet." : ""}` });
     };
-    const handleAdd = (data: Omit<CatalogProduct, "id">, initialStock?: InitialStock) => {
+    const handleAdd = async (data: Omit<CatalogProduct, "id">, initialStock?: InitialStock) => {
+        // conta nova: o primeiro produto pede a confirmação do email (o rascunho fica guardado se desistir)
+        if (!(await requireEmailConfirmed())) return;
         if (data.barcode) {
             const clash = findBarcodeClash(catalog, data.barcode);
             if (clash) { toast({ variant: "destructive", title: "Esse código de barras já existe", description: `Pertence a «${clash.name}». Cada produto tem o seu código.` }); return; }
@@ -144,8 +147,9 @@ export function CatalogManager() {
         commitAdd(data, initialStock);
     };
     /** Produto com variações: uma entrada no catálogo por variação, todas com o mesmo `variantGroup`. */
-    const handleAddVariants = (base: Omit<CatalogProduct, "id">, variants: { name: string; values: Record<string, string>; price: number }[], existing: string[]) => {
+    const handleAddVariants = async (base: Omit<CatalogProduct, "id">, variants: { name: string; values: Record<string, string>; price: number }[], existing: string[]) => {
         if (readOnly) return;
+        if (!(await requireEmailConfirmed())) return;
         clearDraft(draftKey);
         ensureCategory(base.category);
         const group = base.name.trim();

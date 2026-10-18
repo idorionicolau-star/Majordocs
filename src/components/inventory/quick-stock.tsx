@@ -1,5 +1,6 @@
 "use client";
 
+import { requireEmailConfirmed } from "@/components/billing/email-confirm";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useInventory } from "@/context/inventory-context";
@@ -637,6 +638,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             return;
         }
         if (!firestore || !companyId || !user || lineList.length === 0 || problems.length) return;
+        if (!(await requireEmailConfirmed())) return; // conta nova: confirma o email antes do primeiro produto
         setSaving(true);
         try {
             const confirmed = await commitQuickStock({

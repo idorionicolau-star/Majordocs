@@ -1,5 +1,6 @@
 "use client";
 
+import { requireEmailConfirmed } from "@/components/billing/email-confirm";
 import { useMemo, useState } from "react";
 import Papa from "papaparse";
 import { Check, ClipboardCopy, FileSpreadsheet, Loader2, Sparkles, Wand2 } from "lucide-react";
@@ -107,6 +108,7 @@ export function CatalogImporter({ existing, categories, onImport }: Props) {
 
     const run = async () => {
         if (!plan) return;
+        if (!(await requireEmailConfirmed())) return; // conta nova: confirma o email antes do primeiro produto
         setSaving(true);
         try {
             await onImport({
