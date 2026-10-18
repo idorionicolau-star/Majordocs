@@ -1,5 +1,6 @@
 "use client";
 
+import { requireEmailConfirmed } from "@/components/billing/email-confirm";
 import { habitualLocation, recordLocation } from "@/lib/habitual-location";
 import { useState, useEffect, useContext } from 'react';
 import { useInventoryBackHref } from "@/hooks/use-inventory-back";
@@ -152,6 +153,7 @@ export default function NewInventoryProductPage() {
     };
 
     async function onSubmit(values: AddProductFormValues) {
+        if (!(await requireEmailConfirmed())) return; // conta nova: confirma o email antes do primeiro produto
         if (isMultiLocation && !values.location) {
             form.setError("location", { type: "manual", message: "Por favor, selecione uma localização." });
             return;

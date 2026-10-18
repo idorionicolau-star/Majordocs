@@ -1,5 +1,6 @@
 "use client";
 
+import { requireEmailConfirmed } from "@/components/billing/email-confirm";
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { DataGrid, renderTextEditor as textEditor, Column, RenderEditCellProps } from 'react-data-grid';
@@ -366,6 +367,7 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
     };
 
     const handleSave = async () => {
+        if (!(await requireEmailConfirmed())) return; // conta nova: confirma o email antes do primeiro produto
         const validRows = rows.filter(row =>
             row.name.trim() !== '' &&
             row.category.trim() !== '' &&
