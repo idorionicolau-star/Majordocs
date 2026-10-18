@@ -6,6 +6,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { hideKeyboard, isTouchDevice, keyboardIsOpenFor, keyboardWasOpenOnPress } from "@/lib/keyboard"
 
 const Dialog = DialogPrimitive.Root
 
@@ -33,12 +34,21 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => {
+>(({ className, children, onPointerDownOutside, ...props }, ref) => {
   // Prevent dialog from closing when focus moves outside (e.g., toast notifications
   // appearing or disappearing cause focus shifts that Radix interprets as "leave dialog").
   // Dialogs should only close via: X button, overlay click, or Escape key.
   const preventFocusOutside = React.useCallback((e: Event) => {
     e.preventDefault();
+  }, []);
+
+  // Com o teclado aberto, o primeiro toque fora só fecha o teclado (como nas apps nativas): sem isto, tocar
+  // ao lado para "esconder o teclado" fechava a janela e perdia-se o que estava escrito.
+  const keyboardFirst = React.useCallback((e: Event) => {
+    if (isTouchDevice() && (keyboardIsOpenFor() || keyboardWasOpenOnPress())) {
+      e.preventDefault();
+      hideKeyboard();
+    }
   }, []);
 
   const preventInteractOutside = React.useCallback((e: Event) => {
@@ -59,6 +69,7 @@ const DialogContent = React.forwardRef<
           className
         )}
         onFocusOutside={preventFocusOutside}
+        onPointerDownOutside={(e) => { onPointerDownOutside?.(e); if (!e.defaultPrevented) keyboardFirst(e) }}
         onInteractOutside={preventInteractOutside}
         {...props}
       >

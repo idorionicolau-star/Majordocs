@@ -30,6 +30,7 @@ import { siblingsOf } from "@/lib/variants";
 import { formatCurrency } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 import { RenameProductDialog } from "@/components/inventory/rename-product-dialog";
+import { clearDraft } from "@/lib/form-draft";
 
 type CatalogProduct = Omit<Product, "stock" | "instanceId" | "reservedStock" | "location" | "lastUpdated"> & { id: string };
 const offline = () => typeof navigator !== "undefined" && !navigator.onLine;
@@ -51,6 +52,8 @@ export function CatalogManager() {
     const readOnly = !!ctx?.isReadOnly;
     const loading = !ctx || !!ctx.loading;
 
+    // o que se escreveu em "Novo produto" volta se a janela fechar sem querer (ver form-draft)
+    const draftKey = `majorstockx-draft-catalog-new:${companyId || "x"}`;
     const [tab, setTab] = useState("products");
     const [term, setTerm] = useState("");
     const [category, setCategory] = useState("all");
@@ -119,6 +122,7 @@ export function CatalogManager() {
         if (n && !categories.some((c) => nameKey(c.name) === nameKey(n))) ctx.addCatalogCategory(n);
     };
     const commitAdd = (data: Omit<CatalogProduct, "id">, initialStock?: InitialStock) => {
+        clearDraft(draftKey); // o produto já foi criado: o rascunho acabou
         ensureCategory(data.category);
         ctx.addCatalogProduct(data);
         // o que já tem entra no stock (fica registado no histórico como "Criação de novo produto")
@@ -142,6 +146,7 @@ export function CatalogManager() {
     /** Produto com variações: uma entrada no catálogo por variação, todas com o mesmo `variantGroup`. */
     const handleAddVariants = (base: Omit<CatalogProduct, "id">, variants: { name: string; values: Record<string, string>; price: number }[], existing: string[]) => {
         if (readOnly) return;
+        clearDraft(draftKey);
         ensureCategory(base.category);
         const group = base.name.trim();
         for (const v of variants) {
@@ -407,6 +412,7 @@ export function CatalogManager() {
                 startWithVariants={!!variantSource}
                 onAdd={handleAdd}
                 stockLocations={stockLocations}
+                draftKey={draftKey}
                 onAddVariants={handleAddVariants}
             />
             {editing && (

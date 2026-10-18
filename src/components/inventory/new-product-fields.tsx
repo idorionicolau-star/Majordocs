@@ -24,6 +24,13 @@ type Props = {
     units: string[];
     locName: (id: string) => string;
     onEnter: () => void;
+    /** Código de barras do produto novo (opcional). Sem `onBarcode` o campo não aparece (ex.: produto com variações). */
+    barcode?: string;
+    onBarcode?: (v: string) => void;
+    /** O código vem de uma leitura que ainda não tinha produto */
+    barcodeFromScan?: boolean;
+    /** Nome do produto que já tem este código */
+    barcodeClash?: string;
 };
 
 /** Parte "produto novo" do Stock Rápido: nome, parecidos, categoria e unidade — tudo à vista, sem menus escondidos. */
@@ -149,6 +156,25 @@ export function NewProductFields(p: Props) {
                     ))}
                 </div>
             </div>
+
+            {p.onBarcode && (
+                <div data-tour="qs-new-barcode">
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">Código de barras (opcional)</label>
+                    <Input
+                        value={p.barcode ?? ""}
+                        onChange={(e) => p.onBarcode?.(e.target.value)}
+                        inputMode="text"
+                        autoComplete="off"
+                        spellCheck={false}
+                        placeholder="Escreva ou use o leitor"
+                        className="h-11 rounded-xl tabular-nums"
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); p.onEnter(); } }}
+                    />
+                    {p.barcodeClash
+                        ? <p className="mt-1 text-xs font-medium text-red-600">Este código já é de «{p.barcodeClash}».</p>
+                        : p.barcodeFromScan && p.barcode && <p className="mt-1 text-xs text-muted-foreground">Lido agora: fica ligado a este produto.</p>}
+                </div>
+            )}
         </div>
     );
 }
