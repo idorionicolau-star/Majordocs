@@ -84,6 +84,37 @@ describe('foto de estúdio sem IA: separar o produto do fundo', () => {
         expect(iou(m, truth)).toBeGreaterThan(0.8);
     });
 
+    it('frasco branco num balde escuro: a parte de baixo, na sombra e com letras pequenas, não fica cortada', () => {
+        const inJar = (x: number, y: number) => x >= 45 && x < 115 && y >= 25 && y < 135;
+        const jar = (x: number, y: number): RGB | null => {
+            if (!inJar(x, y)) return null;
+            if (y >= 95 && y < 104) return [120, 85, 55]; // faixa castanha
+            if (y >= 104) return y % 6 < 2 && x % 5 < 3 ? [40, 40, 40] : [85, 85, 88]; // em baixo: sombra com letras
+            return [228, 228, 232];
+        };
+        const { img, truth } = makeImage(() => [30, 30, 34], jar);
+        const m = segmentProduct(img)!;
+        expect(m).not.toBeNull();
+        let bottom = 0, total = 0;
+        for (let y = 104; y < 135; y++) for (let x = 45; x < 115; x++) { total++; if (m[y * W + x] > 0.5) bottom++; }
+        expect(bottom / total).toBeGreaterThan(0.6);
+        expect(iou(m, truth)).toBeGreaterThan(0.88);
+    });
+
+    it('a asa de uma caneca (fina, mas longe da borda) fica', () => {
+        const mug = (x: number, y: number): RGB | null => {
+            if (x >= 50 && x < 105 && y >= 45 && y < 120) return [200, 40, 40];
+            const d = Math.hypot(x - 105, y - 82);
+            return x >= 105 && d >= 14 && d < 20 ? [200, 40, 40] : null; // asa: arco com 6 pontos de grossura
+        };
+        const { img, truth } = makeImage(() => [235, 235, 230], mug);
+        const m = segmentProduct(img)!;
+        expect(m).not.toBeNull();
+        let handle = 0, kept = 0;
+        for (let y = 0; y < H; y++) for (let x = 112; x < W; x++) if (truth[y * W + x]) { handle++; if (m[y * W + x] > 0.5) kept++; }
+        expect(kept / handle).toBeGreaterThan(0.8);
+    });
+
     it('foto sem produto (tudo da mesma cor): não inventa', () => {
         const { img } = makeImage(() => [128, 128, 128], () => null);
         expect(segmentProduct(img)).toBeNull();
