@@ -31,6 +31,7 @@ import {
 } from "@/lib/quick-stock";
 import { links } from "@/lib/deep-links";
 import { BarcodeScanner } from "@/components/scan/barcode-scanner";
+import { UNKNOWN_CODE } from "@/lib/scan-gate";
 import { VoiceButton } from "@/components/scan/voice-button";
 import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode";
 import { softFocus } from "@/lib/keyboard";
@@ -456,12 +457,18 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             setText("");
             return `✓ ${fromCatalog.name} × ${fmt(have + 1)} (do catálogo)`;
         }
+        // com a câmara: pode ter sido mal lido — o leitor fica aberto a pedir para tentar de novo
+        if (fromCamera) return UNKNOWN_CODE;
+        linkCode(code);
+        return undefined;
+    };
+
+    const linkCode = (code: string) => {
         setPendingCode(code);
         setText("");
-        if (fromCamera) setScanOpen(false);
+        setScanOpen(false);
         toast({ title: "Código novo", description: canLink ? "Ainda não está ligado a nenhum produto. Escreva o nome e toque no produto certo para o associar." : "Ainda não está ligado a nenhum produto." });
         focusSearch();
-        return undefined;
     };
 
     const handleVoice = (transcript: string) => {
@@ -734,7 +741,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                     }}
                 />
             )}
-            <BarcodeScanner open={scanOpen} onClose={() => { setScanOpen(false); focusSearch(); }} onScan={(c) => handleCode(c, true)} />
+            <BarcodeScanner open={scanOpen} onClose={() => { setScanOpen(false); focusSearch(); }} onScan={(c) => handleCode(c, true)} onUnknown={linkCode} unknownLabel="É um produto novo — registar / associar" />
             {/* Mode switch */}
             <div data-tour="qs-modes" className="grid grid-cols-3 gap-2 rounded-2xl bg-muted p-1.5">
                 {MODES.map((m) => {

@@ -22,3 +22,6 @@ export function createScanGate(goneMs = SCAN_GONE_MS) {
 
 /** As mensagens de leitura bem-sucedida começam por "✓". */
 export const isGoodRead = (msg: string | void | undefined): msg is string => !!msg && msg.startsWith('✓');
+
+/** O que `onScan` devolve quando o código não é de nenhum produto: o leitor fica aberto e pede para tentar de novo. */
+export const UNKNOWN_CODE = '?desconhecido';
