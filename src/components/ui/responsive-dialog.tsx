@@ -60,7 +60,7 @@ export function ResponsiveDialog({
     }
 
     return (
-        <Drawer open={open} onOpenChange={onOpenChange} repositionInputs>
+        <Drawer open={open} onOpenChange={onOpenChange}>
             {trigger && <DrawerTrigger asChild>{trigger}</DrawerTrigger>}
             <DrawerContent className={className}>
                 <DrawerHeader className="text-left">
