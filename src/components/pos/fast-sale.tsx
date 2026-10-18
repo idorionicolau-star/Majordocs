@@ -434,7 +434,7 @@ export function FastSale() {
                         </Button>
                     )}
                     <Button asChild variant="outline" size="sm" data-tour="pos-catalog">
-                        <Link href="/pos/catalogo"><LayoutGrid className="mr-1.5 h-4 w-4" />Catálogo</Link>
+                        <Link href="/pos/catalogo"><LayoutGrid className="mr-1.5 h-4 w-4" />Vender por toque</Link>
                     </Button>
                 </div>
             </div>
