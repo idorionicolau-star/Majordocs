@@ -1,4 +1,5 @@
 "use client";
+import { habitualLocation, recordLocation } from "@/lib/habitual-location";
 import { ProductPhoto } from "@/components/ui/product-photo";
 import { isSameDay } from "date-fns";
 
@@ -131,7 +132,7 @@ export default function POSPage() {
     // Set default location
     useEffect(() => {
         if (isMultiLocation && locations.length > 0 && !selectedLocation) {
-            const saved = localStorage.getItem('majorstockx-last-product-location');
+            const saved = habitualLocation(locations.map(l => l.id));
             setSelectedLocation(saved && locations.some(l => l.id === saved) ? saved : locations[0].id);
         }
     }, [isMultiLocation, locations, selectedLocation]);
