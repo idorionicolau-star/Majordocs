@@ -46,7 +46,9 @@ export const config = {
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
+         * - __/ (páginas de autenticação da Firebase servidas pelo nosso domínio: o iframe delas não pode levar
+         *   o X-Frame-Options DENY nem a CSP daqui — trazem os cabeçalhos da própria Firebase)
          */
-        '/((?!_next/static|_next/image|favicon.ico).*)',
+        '/((?!_next/static|_next/image|favicon.ico|__/).*)',
     ],
 };
