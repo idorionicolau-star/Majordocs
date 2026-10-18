@@ -635,9 +635,12 @@ export default function InventoryPage() {
           </Link>
         )}
         {/* Acções principais — só o que se usa todos os dias fica à vista */}
-        <div className="flex items-center gap-2">
+        {/* Os botões quebram para a linha de baixo quando não cabem (telemóvel pequeno, tablet em pé) e crescem para
+            encher a linha; nunca saem do ecrã nem cortam o texto (min-w-fit). O "Mais" fica sempre à direita. */}
+        <div className="flex items-start gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap gap-2">
           {canEditInventory && (
-            <Button data-tour="inv-quick" variant="default" className="h-12 flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white" asChild>
+            <Button data-tour="inv-quick" variant="default" className="h-12 min-w-fit flex-1 basis-[7.5rem] bg-green-600 px-3 text-white hover:bg-green-700 sm:flex-none sm:px-6" asChild>
               <Link href="/inventory/quick">
                 <LayoutGrid className="mr-2 h-4 w-4" />
                 <span>Stock Rápido</span>
@@ -645,7 +648,7 @@ export default function InventoryPage() {
             </Button>
           )}
           {canEditInventory && (
-            <Button data-tour="inv-count" variant="outline" className="h-12 flex-1 sm:flex-none border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30" asChild>
+            <Button data-tour="inv-count" variant="outline" className="h-12 min-w-fit flex-1 basis-[7.5rem] border-blue-600 px-3 text-blue-600 hover:bg-blue-50 sm:flex-none sm:px-6 dark:hover:bg-blue-950/30" asChild>
               <Link href="/inventory/quick?modo=contagem">
                 <ClipboardList className="mr-2 h-4 w-4" />
                 <span>Contagem</span>
@@ -653,16 +656,17 @@ export default function InventoryPage() {
             </Button>
           )}
           {isMultiLocation && canEditInventory && (
-            <Button data-tour="inv-transfer" variant="outline" className="h-12 flex-1 sm:flex-none" asChild>
+            <Button data-tour="inv-transfer" variant="outline" className="h-12 min-w-fit flex-1 basis-[7.5rem] px-3 sm:flex-none sm:px-6" asChild>
               <Link href="/inventory/transfer">
                 <Truck className="mr-2 h-4 w-4" />
                 <span>Transferir</span>
               </Link>
             </Button>
           )}
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button data-tour="inv-more" variant="outline" className="h-12 px-3 shrink-0 sm:ml-auto" aria-label="Mais opções">
+              <Button data-tour="inv-more" variant="outline" className="h-12 shrink-0 px-3" aria-label="Mais opções">
                 <MoreHorizontal className="h-5 w-5" />
                 <span className="ml-2 hidden sm:inline">Mais</span>
               </Button>

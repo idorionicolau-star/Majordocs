@@ -6,9 +6,50 @@ import { Check, ChevronRight, Circle } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const DropdownMenu = DropdownMenuPrimitive.Root
+// O menu do Radix abre ao TOCAR no ecrã (pointerdown), não ao levantar o dedo: numa lista que desliza (filtros em
+// fila, tabelas), começar a deslizar em cima de um botão abria o menu sem querer. No toque, o menu passa a abrir
+// só no "click" — que o navegador cancela quando o dedo desliza. Com rato e teclado nada muda.
+const DropdownMenuContext = React.createContext<{ open: boolean; setOpen: (open: boolean) => void } | null>(null)
 
-const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
+const DropdownMenu = ({ open: openProp, defaultOpen, onOpenChange, ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) => {
+  const [inner, setInner] = React.useState(!!defaultOpen)
+  const open = openProp ?? inner
+  const setOpen = React.useCallback((next: boolean) => { setInner(next); onOpenChange?.(next) }, [onOpenChange])
+  const value = React.useMemo(() => ({ open, setOpen }), [open, setOpen])
+  return (
+    <DropdownMenuContext.Provider value={value}>
+      <DropdownMenuPrimitive.Root open={open} onOpenChange={setOpen} {...props} />
+    </DropdownMenuContext.Provider>
+  )
+}
+
+const DropdownMenuTrigger = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Trigger>
+>(({ onPointerDown, onPointerCancel, onKeyDown, onClick, ...props }, ref) => {
+  const menu = React.useContext(DropdownMenuContext)
+  // o último toque foi com o dedo/caneta (e ainda não virou clique nem foi cancelado)
+  const touched = React.useRef(false)
+  return (
+    <DropdownMenuPrimitive.Trigger
+      ref={ref}
+      {...props}
+      onPointerDown={(e) => {
+        onPointerDown?.(e)
+        touched.current = e.pointerType !== "mouse"
+        if (touched.current) e.preventDefault() // o Radix não abre; abre-se no clique, abaixo
+      }}
+      onPointerCancel={(e) => { onPointerCancel?.(e); touched.current = false }}
+      onKeyDown={(e) => { onKeyDown?.(e); touched.current = false }}
+      onClick={(e) => {
+        onClick?.(e)
+        if (touched.current && menu && !e.defaultPrevented) menu.setOpen(!menu.open)
+        touched.current = false
+      }}
+    />
+  )
+})
+DropdownMenuTrigger.displayName = DropdownMenuPrimitive.Trigger.displayName
 
 const DropdownMenuGroup = DropdownMenuPrimitive.Group
 
