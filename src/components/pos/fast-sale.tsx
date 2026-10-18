@@ -18,8 +18,9 @@ import { softFocus } from "@/lib/keyboard";
 import { habitualLocation, recordLocation } from "@/lib/habitual-location";
 import { variantChoice, variantLabel } from "@/lib/variants";
 import { VariantChooser, chooserKey } from "@/components/catalog/variant-chooser";
-import { Check, ChevronDown, GraduationCap, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, Truck, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, GraduationCap, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, Truck, X } from "lucide-react";
 import { BarcodeScanner } from "@/components/scan/barcode-scanner";
+import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { VoiceButton } from "@/components/scan/voice-button";
 import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode";
 import { findBarcodeClash } from "@/lib/catalog-view";
@@ -94,6 +95,7 @@ export function FastSale() {
     const [saving, setSaving] = useState(false);
     const [lastSale, setLastSale] = useState<{ total: number; items: number; client: string } | null>(null);
     const [scanOpen, setScanOpen] = useState(false);
+    const [cartOpen, setCartOpen] = useState(false);
     /** código lido que ainda não pertence a nenhum produto: o próximo produto tocado fica com ele */
     const [pendingCode, setPendingCode] = useState<string | null>(null);
     const [listening, setListening] = useState("");
@@ -755,14 +757,51 @@ export function FastSale() {
                 </div>
             )}
 
+            <Drawer open={cartOpen && lines.length > 0} onOpenChange={setCartOpen}>
+                <DrawerContent>
+                    <DrawerHeader className="text-left">
+                        <DrawerTitle className="flex items-center gap-2"><ShoppingCart className="h-5 w-5" /> Carrinho ({lines.length})</DrawerTitle>
+                        <DrawerDescription>Confira o que vai vender. Preço e outras opções mudam-se na página.</DrawerDescription>
+                    </DrawerHeader>
+                    <div className="min-h-0 flex-1 overflow-y-auto px-4" data-testid="cart-sheet">
+                        {lines.map((l) => {
+                            const over = l.qty > liveAvail(l) && !isProforma;
+                            return (
+                                <div key={l.key} className={cn("flex items-center gap-2 border-b py-2.5 last:border-0", over && "text-red-600")}>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-semibold">{l.name}</p>
+                                        <p className="text-xs text-muted-foreground">{l.price > 0 ? `${formatCurrency(l.price)} / ${l.unit}` : <span className="font-semibold text-red-600">sem preço</span>}{over && <span className="font-semibold text-red-600"> · mais do que o stock</span>}</p>
+                                    </div>
+                                    <div className="flex shrink-0 items-center rounded-xl border">
+                                        <button type="button" aria-label="Menos" onClick={() => (l.qty > 1 ? setLine(l.key, { qty: l.qty - 1 }) : remove(l.key))} className="h-9 w-9 text-muted-foreground"><Minus className="mx-auto h-4 w-4" /></button>
+                                        <span className="w-10 text-center text-sm font-bold tabular-nums">{fmtQ(l.qty)}</span>
+                                        <button type="button" aria-label="Mais" onClick={() => setLine(l.key, { qty: l.qty + 1 })} className="h-9 w-9 text-muted-foreground"><Plus className="mx-auto h-4 w-4" /></button>
+                                    </div>
+                                    <span className="w-24 shrink-0 text-right text-sm font-bold tabular-nums">{formatCurrency(l.qty * l.price)}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <DrawerFooter className="border-t">
+                        <div className="flex items-baseline justify-between">
+                            <span className="text-sm text-muted-foreground">Total{discount > 0 ? ` (desconto ${formatCurrency(discount)})` : ""}</span>
+                            <span className="text-xl font-bold tabular-nums">{formatCurrency(total)}</span>
+                        </div>
+                        <Button type="button" onClick={() => setCartOpen(false)} className="h-12 rounded-xl text-base">OK</Button>
+                    </DrawerFooter>
+                </DrawerContent>
+            </Drawer>
+
             {/* Sticky confirm */}
             {lines.length > 0 && (
                 <div className={cn("fixed inset-x-0 z-40 border-t bg-background p-3 md:bottom-0 md:left-64", !keyboardInset && "bottom-16")} style={keyboardInset ? { bottom: keyboardInset } : undefined}>
                     <div className="mx-auto flex max-w-3xl items-center gap-3">
-                        <div className="min-w-0 flex-1" data-tour="pos-total">
+                        {/* tocar no total mostra o carrinho todo (útil com listas grandes); "Confirmar venda" continua a confirmar logo */}
+                        <button type="button" onClick={() => setCartOpen(true)} className="min-w-0 flex-1 rounded-xl text-left active:bg-muted" data-tour="pos-total" aria-label="Ver carrinho">
                             <p className="text-[11px] text-muted-foreground">{plural(lines.length, "produto", "produtos")}{discount > 0 ? ` · desconto ${formatCurrency(discount)}` : ""}{vat > 0 ? ` · IVA ${formatCurrency(vat)}` : ""}</p>
-                            <p className="text-xl font-bold tabular-nums">{formatCurrency(total)}</p>
-                        </div>
+                            <p className="flex items-center gap-1 text-xl font-bold tabular-nums">{formatCurrency(total)} <ChevronUp className="h-4 w-4 text-muted-foreground" /></p>
+                            <p className="text-[11px] font-semibold text-primary">Ver carrinho</p>
+                        </button>
                         <Button type="button" data-tour="pos-confirm" onClick={confirm} disabled={!canConfirm} className="h-12 shrink-0 rounded-xl bg-emerald-600 px-5 text-base text-white hover:bg-emerald-700">
                             {saving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Check className="mr-2 h-5 w-5" />}
                             {isProforma ? "Emitir proforma" : demo ? "Confirmar (demonstração)" : "Confirmar venda"}
