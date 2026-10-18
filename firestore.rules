@@ -14,7 +14,9 @@ service cloud.firestore {
     function isSuperAdmin() {
       // O Super Admin tem acesso total. 
       // Verifica o campo 'superAdmin' na coleção de mapeamento de utilizadores.
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserMapData(request.auth.uid).superAdmin == true;
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && getUserMapData(request.auth.uid).get('superAdmin', false) == true;
     }
 
     // Igual à app (useSubscriptionState): só bloqueia empresas suspensas/inactivas ou trial expirado.
@@ -61,36 +63,56 @@ service cloud.firestore {
     }
 
     function getUserCompanyId(userId) {
-      // Retorna o companyId do mapa de utilizadores.
-      return getUserMapData(userId).companyId;
+      return getUserMapData(userId).get('companyId', '');
     }
-    
-    function getUserEmployeeData(userId) {
-      // Busca os dados detalhados do funcionário a partir da subcoleção da sua empresa.
-      let companyId = getUserCompanyId(userId);
+
+    function getUserEmployeeData(companyId, userId) {
       return get(/databases/$(database)/documents/companies/$(companyId)/employees/$(userId)).data;
     }
 
+    // isSuperAdmin() primeiro: o super-administrador pode não ser funcionário da empresa.
     function isEmployeeOf(companyId) {
-      // O utilizador pertence à empresa se o companyId no seu mapa corresponder ou se for Super Admin.
-      return isSignedIn() && (getUserCompanyId(request.auth.uid) == companyId || isSuperAdmin());
-    }
-    
-    function isAdminOf(companyId) {
-      // É admin da empresa se pertencer a ela e a sua role for 'Admin' ou se for Super Admin.
-      return isEmployeeOf(companyId) && (getUserEmployeeData(request.auth.uid).role == 'Admin' || isSuperAdmin());
-    }
-    
-    // Gestor da empresa (Admin ou Dono) — quem pode corrigir/apagar registos já feitos.
-    function isManagerOf(companyId) {
-      return isEmployeeOf(companyId) && (getUserEmployeeData(request.auth.uid).role in ['Admin', 'Dono'] || isSuperAdmin());
+      return isSignedIn() && (
+        isSuperAdmin() || (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          getUserCompanyId(request.auth.uid) == companyId
+        )
+      );
     }
 
-    function can(module, level) {
-      let hasMap = isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
-      let companyId = hasMap ? getUserCompanyId(request.auth.uid) : '';
-      let hasEmployee = hasMap && exists(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid));
-      let employeeData = hasEmployee ? get(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid)).data : {};
+    function isAdminOf(companyId) {
+      return isSignedIn() && (
+        isSuperAdmin() || (
+          isEmployeeOf(companyId) &&
+          exists(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid)) &&
+          getUserEmployeeData(companyId, request.auth.uid).get('role', '') == 'Admin'
+        )
+      );
+    }
+
+    // Gestor da empresa (Admin ou Dono) — quem pode corrigir/apagar registos já feitos.
+    function isManagerOf(companyId) {
+      return isSignedIn() && (
+        isSuperAdmin() || (
+          isEmployeeOf(companyId) &&
+          exists(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid)) &&
+          getUserEmployeeData(companyId, request.auth.uid).get('role', '') in ['Admin', 'Dono']
+        )
+      );
+    }
+
+    // Permissão num módulo DESTA empresa. Antes não comparava a empresa do caminho com a da pessoa: um funcionário
+    // (ou o Admin de uma conta qualquer) da Empresa A passava nas regras da Empresa B.
+    // Admin: tudo; Dono: vê tudo mas não altera (como na app, canEdit); os outros: as permissões que lhes deram.
+    function can(companyId, module, level) {
+      let isSameCompany = isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && getUserCompanyId(request.auth.uid) == companyId;
+      let hasEmployee = isSameCompany
+        && exists(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid));
+      let employeeData = hasEmployee
+        ? get(/databases/$(database)/documents/companies/$(companyId)/employees/$(request.auth.uid)).data
+        : {};
       let role = employeeData.get('role', '');
       let permissions = employeeData.get('permissions', {});
       let perm = permissions.get(module, '');
@@ -120,7 +142,7 @@ service cloud.firestore {
     // Coleção de mapeamento de utilizadores
     match /users/{userId} {
       // Um utilizador só pode ler o seu próprio mapa. Admins não podem ler mapas de outros.
-      allow read: if request.auth.uid == userId || isSuperAdmin();
+      allow read: if isSignedIn() && (request.auth.uid == userId || isSuperAdmin());
       // A criação (onboarding) só pode ser feita pelo próprio utilizador, só com a empresa, e só a empresa que ele próprio
       // está a criar no mesmo registo (dono). Antes aceitava qualquer campo — incluindo superAdmin — e qualquer empresa.
       // Os funcionários criados pelo Admin passam pelo servidor (/api/employees), que não está sujeito a estas regras.
@@ -129,9 +151,10 @@ service cloud.firestore {
         && request.resource.data.companyId is string
         && getAfter(/databases/$(database)/documents/companies/$(request.resource.data.companyId)).data.get('ownerId', '') == request.auth.uid;
       // Atualização: CRÍTICO - Prevenir mudança de companyId ou superAdmin (privilege escalation)
-      allow update: if request.auth.uid == userId && 
-        request.resource.data.companyId == resource.data.companyId &&
-        (!request.resource.data.keys().hasAny(['superAdmin']) || request.resource.data.superAdmin == resource.data.get('superAdmin', false));
+      // Nunca muda a empresa nem o superAdmin.
+      allow update: if isSignedIn() && request.auth.uid == userId
+        && request.resource.data.companyId == resource.data.companyId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['superAdmin', 'companyId']);
       allow delete: if false; // Nunca permitir eliminação de user maps
     }
 
@@ -150,9 +173,9 @@ service cloud.firestore {
         && isoTime(request.resource.data.trialEndsAt) <= request.time + duration.value(16, 'd');
       allow get: if isEmployeeOf(companyId);
       allow list: if isSuperAdmin();
-      allow update: if isSuperAdmin() || (isAdminOf(companyId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'trialEndsAt', 'subscriptionEndsAt', 'paidUntilMs', 'plan', 'tier', 'affiliate', 'coupon']))
+      allow update: if isSuperAdmin() || (isAdminOf(companyId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['ownerId', 'status', 'trialEndsAt', 'subscriptionEndsAt', 'paidUntilMs', 'plan', 'tier', 'affiliate', 'coupon', 'source']))
         // Quem vende (não só o Admin) precisa de avançar a numeração dos documentos: só esses dois campos, e o contador nunca recua.
-        || (can('sales', 'write') && isCompanySubscriptionActive(companyId)
+        || (can(companyId, 'sales', 'write') && isCompanySubscriptionActive(companyId)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['saleCounter', 'documentNumbering'])
             && request.resource.data.get('saleCounter', 0) >= resource.data.get('saleCounter', 0));
 
@@ -167,47 +190,45 @@ service cloud.firestore {
       // O acesso é sempre verificado pela função can(módulo, nível).
       match /employees/{employeeId} {
         // Um funcionário pode ler os seus próprios dados.
-        allow get: if request.auth.uid == employeeId || can('users', 'read');
-        allow list: if can('users', 'read');
+        allow get: if (isSignedIn() && request.auth.uid == employeeId && isEmployeeOf(companyId)) || can(companyId, 'users', 'read');
+        allow list: if can(companyId, 'users', 'read');
         // A criação é permitida se o utilizador tiver permissão de escrita OU se for o fundador a registar a empresa (onboarding).
         // Pelo cliente: só quem gere a empresa dá o papel de Admin (antes um funcionário com permissão "utilizadores" podia).
-        allow create: if (can('users', 'write') && request.resource.data.get('companyId', '') == companyId
+        allow create: if (can(companyId, 'users', 'write') && request.resource.data.get('companyId', '') == companyId
             && (request.resource.data.get('role', '') != 'Admin' || isManagerOf(companyId))) || (
           request.auth.uid == employeeId && 
           request.resource.data.role == 'Admin' &&
           getAfter(/databases/$(database)/documents/companies/$(companyId)).data.ownerId == request.auth.uid
         );
-        // Atualização: Prevenir auto-promoção (privilege escalation)
-        allow update: if can('users', 'write') && (
-          // Admin pode atualizar, mas não pode mudar role ou companyId de forma arbitrária
-          request.resource.data.role == resource.data.role &&
-          request.resource.data.companyId == resource.data.companyId
-        );
-        allow delete: if can('users', 'write');
+        // A empresa nunca muda; a função só a muda um gestor, e nunca a sua própria (sem auto-promoção).
+        allow update: if can(companyId, 'users', 'write')
+          && request.resource.data.companyId == resource.data.companyId
+          && (request.resource.data.role == resource.data.role || (isManagerOf(companyId) && employeeId != request.auth.uid));
+        allow delete: if can(companyId, 'users', 'write') && employeeId != request.auth.uid;
       }
       
       match /catalogProducts/{productId} {
-          allow get, list: if can('settings', 'read') || can('inventory', 'read') || can('sales', 'read');
+          allow get, list: if can(companyId, 'settings', 'read') || can(companyId, 'inventory', 'read') || can(companyId, 'sales', 'read');
           // Quem cria um produto novo (Stock Rápido, Inventário) acrescenta-o ao catálogo; alterar/apagar fica para as Definições.
-          allow create: if (can('settings', 'write') || can('inventory', 'write')) && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
-          allow update, delete: if can('settings', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+          allow create: if (can(companyId, 'settings', 'write') || can(companyId, 'inventory', 'write')) && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+          allow update, delete: if can(companyId, 'settings', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
       
       match /catalogCategories/{categoryId} {
-          allow get, list: if can('settings', 'read') || can('inventory', 'read') || can('sales', 'read');
+          allow get, list: if can(companyId, 'settings', 'read') || can(companyId, 'inventory', 'read') || can(companyId, 'sales', 'read');
           // Quem cria um produto novo (Stock Rápido, Inventário) acrescenta-o ao catálogo; alterar/apagar fica para as Definições.
-          allow create: if (can('settings', 'write') || can('inventory', 'write')) && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
-          allow update, delete: if can('settings', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+          allow create: if (can(companyId, 'settings', 'write') || can(companyId, 'inventory', 'write')) && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+          allow update, delete: if can(companyId, 'settings', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
       
       match /products/{productId} {
-        allow get, list: if can('inventory', 'read');
-        allow create, update, delete: if can('inventory', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+        allow get, list: if can(companyId, 'inventory', 'read');
+        allow create, update, delete: if can(companyId, 'inventory', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
 
       match /stockMovements/{movementId} {
-        allow get, list: if can('inventory', 'read');
-        allow create: if can('inventory', 'write');
+        allow get, list: if can(companyId, 'inventory', 'read');
+        allow create: if can(companyId, 'inventory', 'write');
         // Nenhum update/delete em movimentos de stock para garantir imutabilidade
         allow update, delete: if false; 
       }
@@ -216,9 +237,9 @@ service cloud.firestore {
       // fluxo normal (marcar como pago, levantar) e mexer em notas/cliente — nunca em produto,
       // quantidade, preço, totais, data, autor ou apagar — e nunca baixar o valor já pago.
       match /sales/{saleId} {
-        allow get, list: if can('sales', 'read');
-        allow create: if can('sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
-        allow update: if can('sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && (
+        allow get, list: if can(companyId, 'sales', 'read');
+        allow create: if can(companyId, 'sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+        allow update: if can(companyId, 'sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && (
           isManagerOf(companyId) || (
             // Venda feita sem internet: ao sincronizar recebe o número oficial (e só isso muda).
             resource.data.get('offlinePending', false) == true
@@ -233,12 +254,12 @@ service cloud.firestore {
             request.resource.data.get('amountPaid', 0) >= resource.data.get('amountPaid', 0)
           )
         );
-        allow delete: if isManagerOf(companyId) && can('sales', 'write');
+        allow delete: if isManagerOf(companyId) && can(companyId, 'sales', 'write');
 
         // Registo de cada correcção (quem, quando, antes e depois). Imutável.
         match /history/{historyId} {
           allow get, list: if isManagerOf(companyId);
-          allow create: if can('sales', 'write') && request.resource.data.userId == request.auth.uid;
+          allow create: if can(companyId, 'sales', 'write') && request.resource.data.userId == request.auth.uid;
           allow update, delete: if false;
         }
       }
@@ -246,11 +267,11 @@ service cloud.firestore {
       // Documentos (cotações, facturas, recibos, guias…). Rascunhos: qualquer pessoa com permissão de vendas edita e apaga.
       // Emitidos: só o gestor corrige (e fica registado em /history), e nunca se apagam — anulam-se.
       match /documents/{docId} {
-        allow get, list: if can('sales', 'read');
-        allow create: if can('sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
-        allow update: if can('sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin())
+        allow get, list: if can(companyId, 'sales', 'read');
+        allow create: if can(companyId, 'sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+        allow update: if can(companyId, 'sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin())
           && (resource.data.status == 'draft' || isManagerOf(companyId));
-        allow delete: if can('sales', 'write') && resource.data.status == 'draft';
+        allow delete: if can(companyId, 'sales', 'write') && resource.data.status == 'draft';
 
         // Registo de cada correcção a um documento emitido (quem, quando, antes e depois). Imutável.
         match /history/{historyId} {
@@ -261,30 +282,30 @@ service cloud.firestore {
       }
 
       match /productions/{productionId} {
-        allow get, list: if can('production', 'read');
-        allow create, update, delete: if can('production', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && planAllows(companyId, 'production');
+        allow get, list: if can(companyId, 'production', 'read');
+        allow create, update, delete: if can(companyId, 'production', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && planAllows(companyId, 'production');
       }
       
       match /rawMaterials/{materialId} {
-        allow get, list: if can('raw-materials', 'read');
-        allow create, update, delete: if can('raw-materials', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && planAllows(companyId, 'production');
+        allow get, list: if can(companyId, 'raw-materials', 'read');
+        allow create, update, delete: if can(companyId, 'raw-materials', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && planAllows(companyId, 'production');
       }
       
       match /recipes/{recipeId} {
-        allow get, list: if can('raw-materials', 'read');
-        allow create, update, delete: if can('raw-materials', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && planAllows(companyId, 'production');
+        allow get, list: if can(companyId, 'raw-materials', 'read');
+        allow create, update, delete: if can(companyId, 'raw-materials', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && planAllows(companyId, 'production');
       }
       
       match /orders/{orderId} {
-        allow get, list: if can('orders', 'read');
-        allow create, update, delete: if can('orders', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && planAllows(companyId, 'orders');
+        allow get, list: if can(companyId, 'orders', 'read');
+        allow create, update, delete: if can(companyId, 'orders', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && planAllows(companyId, 'orders');
       }
       
       // Clientes: usados em Clientes, Vendas, Encomendas e no Dashboard.
       match /customers/{customerId} {
-        allow get, list: if can('customers', 'read') || can('sales', 'read') || can('orders', 'read') || can('dashboard', 'read');
-        allow create, update: if (can('customers', 'write') || can('sales', 'write') || can('orders', 'write')) && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
-        allow delete: if can('customers', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+        allow get, list: if can(companyId, 'customers', 'read') || can(companyId, 'sales', 'read') || can(companyId, 'orders', 'read') || can(companyId, 'dashboard', 'read');
+        allow create, update: if (can(companyId, 'customers', 'write') || can(companyId, 'sales', 'write') || can(companyId, 'orders', 'write')) && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+        allow delete: if can(companyId, 'customers', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
 
       // Aparelhos que recebem notificações push (o ID do documento é o token FCM).
@@ -306,21 +327,21 @@ service cloud.firestore {
       // Preços de venda diferentes do habitual, à espera da decisão do gestor.
       // O vendedor cria-os ao vender; só o gestor (Admin) lê e decide.
       match /priceReviews/{reviewId} {
-        allow create: if can('sales', 'write');
+        allow create: if can(companyId, 'sales', 'write');
         allow get, list, update: if isAdminOf(companyId);
         allow delete: if false;
       }
 
       // Despesas (módulo Financeiro).
       match /expenses/{expenseId} {
-        allow get, list: if can('finance', 'read');
-        allow create, update, delete: if can('finance', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+        allow get, list: if can(companyId, 'finance', 'read');
+        allow create, update, delete: if can(companyId, 'finance', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
 
       match /reports/{reportId} {
         // Relatórios são tipicamente apenas de leitura para a maioria dos papéis.
-        allow get, list: if can('reports', 'read');
-        allow create, update, delete: if can('reports', 'write');
+        allow get, list: if can(companyId, 'reports', 'read');
+        allow create, update, delete: if can(companyId, 'reports', 'write');
       }
     }
   }
