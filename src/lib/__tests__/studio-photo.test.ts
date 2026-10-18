@@ -66,6 +66,24 @@ describe('foto de estúdio sem IA: separar o produto do fundo', () => {
         expect(iou(m, truth)).toBeGreaterThan(0.85);
     });
 
+    it('como uma foto real: frasco branco com faixa castanha, seguro por uma mão, com desenhos brancos na parede', () => {
+        const wall = (x: number, y: number): RGB => {
+            if (y < 14 && x % 40 < 18) return [245, 245, 240]; // desenhos brancos na parede, junto à borda de cima
+            return y < 90 ? [225, 110, 70] : [25, 25, 30];     // parede laranja em cima, preto em baixo
+        };
+        const jar = (x: number, y: number): RGB | null => {
+            if (x >= 40 && x < 120 && y >= 18 && y < 128) return y >= 100 && y < 112 ? [120, 85, 55] : [228, 228, 232]; // faixa castanha
+            if (x >= 55 && x < 105 && y >= 128) return [110, 75, 50]; // a mão (da cor da faixa), até à borda de baixo
+            return null;
+        };
+        const { img } = makeImage(wall, jar);
+        const truth = new Uint8Array(W * H);
+        for (let y = 18; y < 128; y++) for (let x = 40; x < 120; x++) truth[y * W + x] = 1; // o produto é só o frasco
+        const m = segmentProduct(img)!;
+        expect(m).not.toBeNull();
+        expect(iou(m, truth)).toBeGreaterThan(0.8);
+    });
+
     it('foto sem produto (tudo da mesma cor): não inventa', () => {
         const { img } = makeImage(() => [128, 128, 128], () => null);
         expect(segmentProduct(img)).toBeNull();
