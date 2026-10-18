@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -44,6 +44,7 @@ import type { Product } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { ScrollArea } from '../ui/scroll-area';
 import { useDynamicPlaceholder } from '@/hooks/use-dynamic-placeholder';
+import { catalogDraftHasContent, clearDraft, readDraft, writeDraft } from '@/lib/form-draft';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -93,6 +94,8 @@ interface AddCatalogProductDialogProps {
   onAdd: (product: Omit<CatalogProduct, 'id'>, initialStock?: InitialStock) => void;
   /** Locais onde pode entrar o stock inicial; sem isto (ex.: sem permissão de stock), o campo não aparece. */
   stockLocations?: { id: string; name: string }[];
+  /** Onde guardar o rascunho (o que se escreveu volta se a janela fechar sem querer). Quem cria o produto apaga-o. */
+  draftKey?: string;
   /** Produto com variações: cria uma entrada por variação (cada uma com o seu stock e preço). */
   onAddVariants?: (base: Omit<CatalogProduct, 'id'>, variants: { name: string; values: Record<string, string>; price: number }[], existing: string[]) => void;
   /** Produtos já no catálogo (para avisar de códigos de barras repetidos). */
@@ -112,7 +115,9 @@ function AddCatalogProductForm({
   variants,
   setVariants,
   stockLocations,
-}: AddCatalogProductDialogProps & { setOpen: (open: boolean) => void; form: any; namePlaceholder: string; pricePlaceholder: string; variants: VariantsState; setVariants: (v: VariantsState) => void }) {
+  restored,
+  onDiscardDraft,
+}: AddCatalogProductDialogProps & { setOpen: (open: boolean) => void; form: any; namePlaceholder: string; pricePlaceholder: string; variants: VariantsState; setVariants: (v: VariantsState) => void; restored?: boolean; onDiscardDraft?: () => void }) {
   const { toast } = useToast();
   const [typingCategory, setTypingCategory] = useState(false);
   const categoryOptions = Array.from(new Set(["Geral", ...categories]));
@@ -149,6 +154,12 @@ function AddCatalogProductForm({
   return (
     <Form {...form}>
       <form data-tour="catalog-form" onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4 pr-2">
+        {restored && (
+          <div data-tour="catalog-draft" className="flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+            <span>Recuperámos o que estava a escrever.</span>
+            <button type="button" onClick={onDiscardDraft} className="shrink-0 font-semibold text-primary underline-offset-2 hover:underline">Começar de novo</button>
+          </div>
+        )}
         <FormField
           control={form.control}
           name="category"
@@ -314,7 +325,7 @@ function AddCatalogProductForm({
   );
 }
 
-export function AddCatalogProductDialog({ categories, units, onAdd, onAddVariants, catalog, stockLocations, open: openProp, onOpenChange, hideTrigger, defaultCategory, defaultName, initial, startWithVariants }: AddCatalogProductDialogProps & {
+export function AddCatalogProductDialog({ categories, units, onAdd, onAddVariants, catalog, stockLocations, draftKey, open: openProp, onOpenChange, hideTrigger, defaultCategory, defaultName, initial, startWithVariants }: AddCatalogProductDialogProps & {
   /** Modo controlado: a página decide quando abre (ex.: botão + no telemóvel). */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -330,6 +341,9 @@ export function AddCatalogProductDialog({ categories, units, onAdd, onAddVariant
 }) {
   const [innerOpen, setInnerOpen] = useState(false);
   const [variants, setVariants] = useState<VariantsState>(EMPTY_VARIANTS);
+  const [restored, setRestored] = useState(false);
+  const variantsRef = useRef(variants);
+  variantsRef.current = variants;
   const open = openProp ?? innerOpen;
   const setOpen = (o: boolean) => { setInnerOpen(o); onOpenChange?.(o); };
 
@@ -355,10 +369,40 @@ export function AddCatalogProductDialog({ categories, units, onAdd, onAddVariant
 
   // sempre que abre, o formulário começa limpo (antes ficava com o produto anterior)
   useEffect(() => {
-    if (open) setVariants({ ...EMPTY_VARIANTS, enabled: !!startWithVariants });
-    if (open) form.reset({ name: defaultName || '', category: defaultCategory || categories[0] || 'Geral', price: 0, unit: 'un', imageUrl: '', cost: 0, barcode: '', lowStockThreshold: 10, criticalStockThreshold: 5, stock: 0, stockLocation: '', ...(initial || {}) });
+    if (!open) return;
+    const base = { name: defaultName || '', category: defaultCategory || categories[0] || 'Geral', price: 0, unit: 'un', imageUrl: '', cost: 0, barcode: '', lowStockThreshold: 10, criticalStockThreshold: 5, stock: 0, stockLocation: '', ...(initial || {}) };
+    // Abriu em branco (não a partir de um nome procurado, de um duplicado ou de variações): volta o rascunho, se houver
+    const prefilled = !!(defaultName || initial || startWithVariants);
+    const draft = draftKey && !prefilled ? readDraft<{ form?: Partial<FormValues>; variants?: VariantsState }>(draftKey) : null;
+    if (draft?.form && catalogDraftHasContent(draft.form as any)) {
+      setVariants(draft.variants ? { ...EMPTY_VARIANTS, ...draft.variants } : EMPTY_VARIANTS);
+      form.reset({ ...base, ...draft.form } as FormValues);
+      setRestored(true);
+    } else {
+      setVariants({ ...EMPTY_VARIANTS, enabled: !!startWithVariants });
+      form.reset(base);
+      setRestored(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Guarda o que se vai escrevendo. Quem cria o produto (catalog-manager) apaga o rascunho; fechar sem criar mantém-no.
+  const saveDraft = () => {
+    if (!draftKey) return;
+    const values = form.getValues();
+    if (catalogDraftHasContent(values as any)) writeDraft(draftKey, { form: values, variants: variantsRef.current });
+  };
+  useEffect(() => {
+    if (!open || !draftKey) return;
+    const sub = form.watch((values: any, info: { type?: string }) => {
+      if (catalogDraftHasContent(values)) writeDraft(draftKey, { form: values, variants: variantsRef.current });
+      else if (info?.type === 'change') clearDraft(draftKey); // a pessoa apagou tudo de propósito
+    });
+    return () => sub.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, draftKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (open) saveDraft(); }, [variants]);
 
   const trigger = (
     <Button size="icon" className="rounded-full h-9 w-9" title="Adicionar Produto ao Catálogo">
@@ -389,6 +433,13 @@ export function AddCatalogProductDialog({ categories, units, onAdd, onAddVariant
           form={form}
           namePlaceholder={namePlaceholder}
           pricePlaceholder={pricePlaceholder}
+          restored={restored}
+          onDiscardDraft={() => {
+            if (draftKey) clearDraft(draftKey);
+            setRestored(false);
+            setVariants({ ...EMPTY_VARIANTS, enabled: !!startWithVariants });
+            form.reset({ name: '', category: defaultCategory || categories[0] || 'Geral', price: 0, unit: 'un', imageUrl: '', cost: 0, barcode: '', lowStockThreshold: 10, criticalStockThreshold: 5, stock: 0, stockLocation: '' });
+          }}
         />
       </div>
     </ResponsiveDialog>

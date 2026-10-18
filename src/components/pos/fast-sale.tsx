@@ -14,6 +14,7 @@ import { cn, formatCurrency, normalizeString, plural } from "@/lib/utils";
 import type { CartItem, Product, Sale } from "@/lib/types";
 import { parseQuickInput, searchProducts, toNumber } from "@/lib/quick-stock";
 import { posTotals } from "@/lib/pos-totals";
+import { softFocus } from "@/lib/keyboard";
 import { variantChoice, variantLabel } from "@/lib/variants";
 import { VariantChooser, chooserKey } from "@/components/catalog/variant-chooser";
 import { Check, ChevronDown, GraduationCap, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, Truck, X } from "lucide-react";
@@ -174,9 +175,12 @@ export function FastSale() {
                 el.select();
             }
         });
-    const focusSearch = () => requestAnimationFrame(() => searchRef.current?.focus());
+    // No telemóvel o teclado só abre quando a pessoa toca no campo (ver lib/keyboard); no computador volta à pesquisa.
+    const focusSearch = () => requestAnimationFrame(() => softFocus(searchRef.current));
     /** o nome continua escrito mas seleccionado: tocar noutra variação, ou escrever por cima outro produto */
-    const selectSearch = () => requestAnimationFrame(() => { searchRef.current?.focus(); searchRef.current?.select(); });
+    const selectSearch = () => requestAnimationFrame(() => softFocus(searchRef.current, true));
+    // Ao entrar: computador → cursor na pesquisa (leitor de código de barras, escrever logo); telemóvel → sem teclado.
+    useEffect(() => { softFocus(searchRef.current); }, []);
 
     const add = (p: Product, qty?: number | null, quiet = false) => {
         const a = avail(p);
@@ -486,7 +490,6 @@ export function FastSale() {
                     <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         ref={searchRef}
-                        autoFocus
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                         onKeyDown={onSearchKey}

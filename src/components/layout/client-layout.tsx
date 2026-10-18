@@ -21,6 +21,7 @@ import { InstallPrompt } from '@/components/install-prompt';
 import { TourHost } from '@/components/onboarding/app-tour';
 import { GuideHost } from '@/components/guide/guide-host';
 import { SaleSheetHost } from '@/components/sales/sale-sheet';
+import { KeyboardDismiss } from '@/components/layout/keyboard-dismiss';
 import { SeenSync } from '@/components/guide/seen-sync';
 import { SupportDialog } from '@/components/support/support-dialog';
 import { PendingCoupon } from '@/components/billing/pending-coupon';
@@ -216,6 +217,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <ActivityPing />
           <GuideHost />
           <SaleSheetHost />
+          <KeyboardDismiss />
           <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
         </div>
         <SheetContent side="left" className="p-0 glass-panel border-r border-white/10">

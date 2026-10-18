@@ -33,6 +33,7 @@ import { links } from "@/lib/deep-links";
 import { BarcodeScanner } from "@/components/scan/barcode-scanner";
 import { VoiceButton } from "@/components/scan/voice-button";
 import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode";
+import { softFocus } from "@/lib/keyboard";
 import { findBarcodeClash, nameKey } from "@/lib/catalog-view";
 import { parseVoice } from "@/lib/voice-parse";
 import { resolveVoice } from "@/lib/voice-approx";
@@ -135,6 +136,8 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const [familyHints, setFamilyHints] = useState<Record<string, string[]> | null>(null);
     const [scanOpen, setScanOpen] = useState(false);
     const [pendingCode, setPendingCode] = useState<string | null>(null);
+    /** Código de barras do produto novo em criação (vem do último código lido sem produto, ou escreve-se) */
+    const [newBarcode, setNewBarcode] = useState("");
     const [listening, setListening] = useState("");
     const [voiceAsks, setVoiceAsks] = useState<VoiceAsk[]>([]);
     const { link: linkBarcode, canLink } = useBarcodeLink();
@@ -143,6 +146,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const reopenNewLine = (l: QuickLine) => {
         removeLine(l.key);
         openNewProduct(l.name);
+        if (l.barcode) setNewBarcode(l.barcode);
         if (l.category) { setNewCategory(l.category); setCategoryTouched(true); }
         if (l.unit) { setNewUnit(l.unit); setUnitTouched(true); }
         setAckDuplicate(true);
@@ -258,6 +262,12 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
         [creating, newName, liveProducts, catalogProducts]
     );
     const suggestion = useMemo(() => suggestCategory(newName, categoryNames, liveProducts), [newName, categoryNames, liveProducts]);
+    /** O código escrito já pertence a outro produto (stock ou catálogo)? */
+    const barcodeClash = useMemo(() => {
+        const code = normalizeBarcode(newBarcode);
+        if (!creating || !code) return undefined;
+        return findByBarcode(liveProducts, code)?.name ?? findBarcodeClash((catalogProducts || []).filter((c) => !c.deletedAt), code)?.name;
+    }, [creating, newBarcode, liveProducts, catalogProducts]);
 
     // Enquanto a pessoa não mexer, a categoria e a unidade seguem o nome que vai escrevendo.
     useEffect(() => { if (creating && !categoryTouched) setNewCategory(suggestion.category); }, [creating, categoryTouched, suggestion.category]);
@@ -265,6 +275,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
 
     const openNewProduct = (name: string) => {
         setNewName(cleanProductName(name));
+        setNewBarcode(pendingCode || ""); // um código lido sem produto liga-se ao produto que se vai criar
         setCategoryTouched(false);
         setUnitTouched(false);
         setAckDuplicate(false);
@@ -307,7 +318,10 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
     const lineList = useMemo(() => Object.values(lines), [lines]);
     const problems = lineList.filter((l) => mode === "out" && resultingStock(mode, l) < 0);
 
-    const focusSearch = () => requestAnimationFrame(() => searchRef.current?.focus());
+    // No telemóvel o teclado só abre quando a pessoa toca no campo (ver lib/keyboard); no computador volta à pesquisa.
+    const focusSearch = () => requestAnimationFrame(() => softFocus(searchRef.current));
+    // Ao entrar: computador → cursor na pesquisa; telemóvel → sem teclado até tocar no campo.
+    useEffect(() => { softFocus(searchRef.current); }, []);
     /**
      * Depois de juntar um artigo: a pesquisa limpa-se — excepto quando a lista tem variações da mesma família
      * ("pavê borbulha"): aí o nome fica escrito (seleccionado) para tocar na próxima variação sem o escrever de novo.
@@ -317,7 +331,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
         const keep = !!group && !!parsed.term && [...results, ...elsewhere].some((x) => x.name !== added!.name && x.variantGroup && nameKey(x.variantGroup) === group);
         if (keep) {
             setText(parsed.term);
-            requestAnimationFrame(() => { searchRef.current?.focus(); searchRef.current?.select(); });
+            requestAnimationFrame(() => softFocus(searchRef.current, true));
         } else {
             setText("");
             focusSearch();
@@ -363,7 +377,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
         requestAnimationFrame(() => qtyRef.current?.focus());
     };
 
-    const newLine = (name: string, qty: number, price?: number, from?: Product, extra?: { category?: string; unit?: string; variantGroup?: string; variantValues?: Record<string, string> }): QuickLine => {
+    const newLine = (name: string, qty: number, price?: number, from?: Product, extra?: { category?: string; unit?: string; variantGroup?: string; variantValues?: Record<string, string>; barcode?: string }): QuickLine => {
         const finalName = from ? from.name : cleanProductName(name);
         const category = from?.category || extra?.category || "Geral";
         const plan = planCatalogWrites({ name: finalName, category, catalogProducts: catalogProducts || [], catalogCategories: (catalogCategories || []).map((c) => c.name) });
@@ -381,6 +395,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
             category: plan.category,
             addToCatalog: plan.addProduct,
             addCategory: plan.addCategory,
+            ...(extra?.barcode ? { barcode: extra.barcode } : {}),
             ...((extra?.variantGroup || from?.variantGroup) ? { variantGroup: extra?.variantGroup || from?.variantGroup, variantValues: extra?.variantValues || from?.variantValues || {} } : {}),
             ...(from ? { template: { category: from.category, price: from.price, cost: from.cost, unit: from.unit, lowStockThreshold: from.lowStockThreshold, criticalStockThreshold: from.criticalStockThreshold, imageUrl: from.imageUrl, barcode: from.barcode } } : {}),
         };
@@ -540,7 +555,13 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                     toast({ variant: "destructive", title: "Este produto já existe", description: "Escolha “É este” ou confirme que é diferente." });
                     return;
                 }
-                addLine(newLine(clean, q, toNumber(newPrice) || undefined, undefined, { category: newCategory.trim() || "Geral", unit: newUnit }));
+                const code = normalizeBarcode(newBarcode);
+                if (code && barcodeClash) {
+                    toast({ variant: "destructive", title: "Esse código já existe", description: `Pertence a «${barcodeClash}». Cada produto tem o seu código.` });
+                    return;
+                }
+                addLine(newLine(clean, q, toNumber(newPrice) || undefined, undefined, { category: newCategory.trim() || "Geral", unit: newUnit, ...(code ? { barcode: code } : {}) }));
+                if (pendingCode) setPendingCode(null); // o código lido já ficou com o produto novo
             } else {
                 addLine(newLine(picked.newName, q, toNumber(newPrice) || undefined, picked.from));
             }
@@ -759,7 +780,6 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                     <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         ref={searchRef}
-                        autoFocus
                         value={text}
                         onChange={(e) => { setText(e.target.value); setPicked(null); }}
                         onKeyDown={onSearchKey}
@@ -803,7 +823,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                 />
                 {pendingCode && (
                     <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-sm">
-                        <span>Código <b className="tabular-nums">{pendingCode}</b> ainda sem produto — {canLink ? "escreva o nome e toque no produto certo para o associar." : "peça a quem gere o inventário para o associar."}</span>
+                        <span>Código <b className="tabular-nums">{pendingCode}</b> ainda sem produto — {canLink ? "escreva o nome e toque no produto certo para o associar, ou crie um produto novo." : "peça a quem gere o inventário para o associar."}</span>
                         <button type="button" aria-label="Cancelar" onClick={() => setPendingCode(null)} className="shrink-0 text-muted-foreground"><X className="h-4 w-4" /></button>
                     </div>
                 )}
@@ -880,6 +900,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                             units={unitNames}
                             locName={locName}
                             onEnter={() => qtyRef.current?.focus()}
+                            {...(variants.enabled ? {} : { barcode: newBarcode, onBarcode: setNewBarcode, barcodeFromScan: !!pendingCode && normalizeBarcode(newBarcode) === normalizeBarcode(pendingCode), barcodeClash })}
                         />
                     )}
 

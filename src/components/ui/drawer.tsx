@@ -4,6 +4,7 @@ import * as React from "react"
 import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
+import { hideKeyboard, isTouchDevice, keyboardIsOpenFor, keyboardWasOpenOnPress } from "@/lib/keyboard"
 
 const Drawer = ({
     shouldScaleBackground = false,
@@ -37,11 +38,20 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 const DrawerContent = React.forwardRef<
     React.ElementRef<typeof DrawerPrimitive.Content>,
     React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, ...props }, ref) => {
+>(({ className, children, onPointerDownOutside, ...props }, ref) => {
     // Prevent drawer from closing when focus moves outside (e.g., toast notifications
     // appearing or disappearing cause focus shifts that are misinterpreted as dismissal).
     const preventFocusOutside = React.useCallback((e: Event) => {
         e.preventDefault();
+    }, []);
+
+    // Com o teclado aberto, o primeiro toque fora só fecha o teclado (como nas apps nativas): sem isto, tocar
+    // ao lado para "esconder o teclado" fechava a janela e perdia-se o que estava escrito.
+    const keyboardFirst = React.useCallback((e: Event) => {
+      if (isTouchDevice() && (keyboardIsOpenFor() || keyboardWasOpenOnPress())) {
+        e.preventDefault();
+        hideKeyboard();
+      }
     }, []);
 
     const preventInteractOutside = React.useCallback((e: Event) => {
@@ -62,6 +72,7 @@ const DrawerContent = React.forwardRef<
                     className
                 )}
                 onFocusOutside={preventFocusOutside}
+                onPointerDownOutside={(e) => { onPointerDownOutside?.(e); if (!e.defaultPrevented) keyboardFirst(e) }}
                 onInteractOutside={preventInteractOutside}
                 {...props}
             >

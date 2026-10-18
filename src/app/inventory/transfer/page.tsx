@@ -9,6 +9,7 @@ import { useInventory } from "@/context/inventory-context";
 import { useToast } from "@/hooks/use-toast";
 import { clampQty, filterCandidates, transferCandidates, type TransferRow } from "@/lib/transfer-core";
 import { cn } from "@/lib/utils";
+import { softFocus } from "@/lib/keyboard";
 
 const fmt = (n: number) => (Number.isInteger(n) ? n : Number(n.toFixed(3))).toLocaleString("pt-PT");
 
@@ -73,7 +74,7 @@ export default function TransferStockPage() {
             title: done ? `${done} ${done === 1 ? "produto transferido" : "produtos transferidos"}` : "Nada foi transferido",
             description: [done ? `De ${locName(from)} para ${locName(to)}.` : "", failed.length ? `Falharam: ${failed.join(" · ")}` : ""].filter(Boolean).join(" "),
         });
-        searchRef.current?.focus();
+        softFocus(searchRef.current);
     };
 
     if (!canEdit("inventory")) return <div className="p-8 text-center text-muted-foreground">Sem permissão para mexer no stock.</div>;
