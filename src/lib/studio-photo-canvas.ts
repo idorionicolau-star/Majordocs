@@ -15,15 +15,34 @@ function canvas(w: number, h: number) {
     return c;
 }
 
+/**
+ * Reduz a foto em passos de metade (cada passo faz a média de 2×2 pontos) e só no fim ao tamanho pedido. Um salto
+ * grande de uma vez (ex.: 4000 → 360) salta pontos e deixa "grão", que o recorte confunde com contornos.
+ */
+function shrink(src: CanvasImageSource, sw: number, sh: number, w: number, h: number, read = false): HTMLCanvasElement {
+    let cur = src, cw = sw, ch = sh;
+    while (cw / 2 >= w && ch / 2 >= h) {
+        const nw = Math.round(cw / 2), nh = Math.round(ch / 2);
+        const c = canvas(nw, nh);
+        const ctx = c.getContext("2d")!;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(cur, 0, 0, nw, nh);
+        cur = c; cw = nw; ch = nh;
+    }
+    const out = canvas(w, h);
+    const ctx = out.getContext("2d", { willReadFrequently: read })!;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(cur, 0, 0, w, h);
+    return out;
+}
+
 export async function makeStudioPhoto(file: Blob): Promise<Blob | null> {
     const bmp = await createImageBitmap(file);
     try {
         // 1. Recorte numa cópia pequena
         const s = Math.min(1, WORK / Math.max(bmp.width, bmp.height));
         const w = Math.max(16, Math.round(bmp.width * s)), h = Math.max(16, Math.round(bmp.height * s));
-        const small = canvas(w, h);
-        const sctx = small.getContext("2d", { willReadFrequently: true })!;
-        sctx.drawImage(bmp, 0, 0, w, h);
+        const sctx = shrink(bmp, bmp.width, bmp.height, w, h, true).getContext("2d", { willReadFrequently: true })!;
         const mask = segmentProduct(sctx.getImageData(0, 0, w, h));
         if (!mask) return null;
         const box = maskBox(mask, w, h);
@@ -38,9 +57,8 @@ export async function makeStudioPhoto(file: Blob): Promise<Blob | null> {
         for (let i = 0; i < w * h; i++) { md.data[i * 4 + 3] = Math.round(Math.min(1, Math.max(0, (mask[i] - 0.15) / 0.7)) * 255); }
         mctx.putImageData(md, 0, 0);
 
-        const cut = canvas(W, H);
+        const cut = shrink(bmp, bmp.width, bmp.height, W, H);
         const cctx = cut.getContext("2d")!;
-        cctx.drawImage(bmp, 0, 0, W, H);
         cctx.globalCompositeOperation = "destination-in";
         cctx.imageSmoothingEnabled = true;
         cctx.imageSmoothingQuality = "high";

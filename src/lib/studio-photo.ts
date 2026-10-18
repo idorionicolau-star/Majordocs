@@ -7,8 +7,10 @@
 //     conforme está mais perto dos grupos do produto ou dos do fundo, mais um pouco por estar perto do centro.
 //  3. Essa probabilidade espalha-se pelos vizinhos MAS pára nos contornos (onde a cor muda de repente): assim um fundo
 //     com várias cores, sombras ou objetos fica de fora, e o produto inteiro fica dentro.
-//  4. Repete-se com as cores aprendidas da primeira volta (fica mais certo), limpa-se o resultado (buracos, migalhas,
-//     só o objeto principal) e suavizam-se os contornos.
+//  4. Repete-se com as cores aprendidas da primeira volta (fica mais certo). Nessa volta, uma zona fechada por contornos
+//     que já é quase toda produto passa a ser produto inteira (ex.: o fundo do frasco, mais escuro, na sombra).
+//  5. Limpa-se o resultado (buracos, migalhas, só o objeto principal), tiram-se os "apêndices" finos que vão dar à borda
+//     da foto (os dedos da mão que segura o produto) e alisam-se os contornos.
 
 export type Pixels = { width: number; height: number; data: Uint8ClampedArray | number[] };
 
@@ -203,6 +205,8 @@ export function segmentProduct(img: Pixels): Float32Array | null {
     }
 
     let p = new Float32Array(N);
+    // o que se alcança a partir da borda sem atravessar um contorno (preenchido na 2.ª volta)
+    let outside: Uint8Array | null = null;
     const weights = (i: number, j: number) => Math.exp(-14 * Math.max(grad[i], grad[j]));
     const solve = () => {
         // probabilidade "pelos dados" (cores + centro)
@@ -242,6 +246,76 @@ export function segmentProduct(img: Pixels): Float32Array | null {
     const notCore = (i: number) => !core[i] && !fixedBg(i);
     if (fgS.length >= 30 && sample(lab, notCore, N, 100).length >= 30) {
         fgC = kmeans(fgS, 3, 8);
+        // zonas fechadas por contornos (da borda não se chega lá sem atravessar um) que já são quase todas produto passam
+        // a ser produto inteiras: ex.: a parte de baixo do frasco, mais escura, na sombra de um balde escuro
+        {
+            // contornos um ponto mais grossos: fecha as falhas pequenas no contorno do produto
+            const wall = grow(Uint8Array.from(grad, (g) => (g > 0.35 ? 1 : 0)), W, H, 1);
+            const out = new Uint8Array(N);
+            const stack: number[] = [];
+            for (let i = 0; i < N; i++) if (fixedBg(i)) { out[i] = 1; stack.push(i); }
+            while (stack.length) {
+                const i = stack.pop()!;
+                const x = i % W, y = (i / W) | 0;
+                const nb = [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, y > 0 ? i - W : -1, y < H - 1 ? i + W : -1];
+                for (const j of nb) if (j >= 0 && !out[j] && !wall[j]) { out[j] = 1; stack.push(j); }
+            }
+            outside = out;
+            const seen = new Uint8Array(N);
+            for (let s0 = 0; s0 < N; s0++) {
+                if (out[s0] || wall[s0] || seen[s0]) continue;
+                const comp: number[] = [];
+                let inCore = 0;
+                seen[s0] = 1; stack.push(s0);
+                while (stack.length) {
+                    const i = stack.pop()!;
+                    comp.push(i);
+                    if (core[i]) inCore++;
+                    const x = i % W, y = (i / W) | 0;
+                    const nb = [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, y > 0 ? i - W : -1, y < H - 1 ? i + W : -1];
+                    for (const j of nb) if (j >= 0 && !out[j] && !wall[j] && !seen[j]) { seen[j] = 1; stack.push(j); }
+                }
+                if (inCore >= comp.length * 0.5) for (const i of comp) enclosed[i] = 1;
+            }
+            // silhueta: tudo o que fica dentro do contorno fechado à volta do produto (contornos incluídos). Se é só um
+            // pouco maior do que o produto achado, confia-se nela: o que faltava (ex.: um canto em baixo, na sombra)
+            // entra, sem a faixa do contorno do lado de fora e sem sair da caixa do produto.
+            // As fugas finas para dentro do produto (letras miúdas junto à borda) não contam como "fora": abre-se o
+            // "fora" com um disco pequeno e fica só o que continua ligado à borda da foto.
+            const inv = (a: Uint8Array) => a.map((v) => (v ? 0 : 1));
+            const opened = grow(inv(grow(inv(out), W, H, 2)), W, H, 2);
+            const wide = new Uint8Array(N);
+            for (let i = 0; i < N; i++) if (fixedBg(i) && opened[i]) { wide[i] = 1; stack.push(i); }
+            while (stack.length) {
+                const i = stack.pop()!;
+                const x = i % W, y = (i / W) | 0;
+                const nb = [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, y > 0 ? i - W : -1, y < H - 1 ? i + W : -1];
+                for (const j of nb) if (j >= 0 && opened[j] && !wide[j]) { wide[j] = 1; stack.push(j); }
+            }
+            const sil = new Uint8Array(N);
+            let coreN = 0, silN = 0, both = 0;
+            let bx0 = W, by0 = H, bx1 = -1, by1 = -1;
+            for (let i = 0; i < N; i++) if (core[i]) {
+                coreN++;
+                const x = i % W, y = (i / W) | 0;
+                if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y;
+                if (!wide[i]) { sil[i] = 1; stack.push(i); }
+            }
+            while (stack.length) {
+                const i = stack.pop()!;
+                silN++; if (core[i]) both++;
+                const x = i % W, y = (i / W) | 0;
+                const nb = [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, y > 0 ? i - W : -1, y < H - 1 ? i + W : -1];
+                for (const j of nb) if (j >= 0 && !wide[j] && !sil[j]) { sil[j] = 1; stack.push(j); }
+            }
+            if (coreN && both >= coreN * 0.8 && silN <= coreN * 1.3) {
+                const rim = grow(wide, W, H, 3);
+                for (let i = 0; i < N; i++) {
+                    const x = i % W, y = (i / W) | 0;
+                    if (sil[i] && !rim[i] && x >= bx0 && x <= bx1 && y >= by0 && y <= by1) enclosed[i] = 1;
+                }
+            }
+        }
         // o fundo de cada lado passa a ser tudo o que não é o produto nessa metade da foto
         const half = Math.round(Math.min(W, H) / 2);
         const fresh = sideModels(notCore, half);
@@ -260,6 +334,15 @@ export function segmentProduct(img: Pixels): Float32Array | null {
     mask = bridgeGaps(mask, W, H, Math.round(H * 0.14), Math.round(W * 0.06), (i) => p[i] >= 0.18);
     mask = keepMain(mask, W, H);
     mask = fillHoles(mask, W, H);
+    // os dedos da mão que segura o produto (finos e a ir dar à borda da foto) saem
+    mask = dropAppendages(mask, W, H, Math.max(3, Math.round(Math.min(W, H) * 0.04)), isBorder);
+    // falhas dentro do contorno fechado do produto (ex.: o fundo do frasco, entre duas partes que ficaram) voltam a ser
+    // produto, por maiores que sejam; o fundo aberto (a parede entre o gargalo e os livros) nunca
+    const out = outside;
+    if (out) mask = bridgeGaps(mask, W, H, H, W, (i) => !out[i] && !fixedBg(i));
+    mask = smoothEdge(mask, W, H, Math.max(2, Math.round(Math.min(W, H) * 0.012)));
+    mask = keepMain(mask, W, H);
+    mask = fillHoles(mask, W, H);
 
     let area = 0, diff = 0;
     for (let i = 0; i < N; i++) if (mask[i]) { area++; diff += sideDist(borderSides, i); }
@@ -272,6 +355,68 @@ export function segmentProduct(img: Pixels): Float32Array | null {
     const soft = new Float32Array(N);
     for (let i = 0; i < N; i++) soft[i] = mask[i];
     return blur(blur(soft, W, H), W, H);
+}
+
+/** Alarga a máscara `steps` pontos (alternando cruz e quadrado: fica quase um disco). */
+function grow(m: Uint8Array, W: number, H: number, steps: number): Uint8Array {
+    let cur = m;
+    for (let k = 0; k < steps; k++) {
+        const out = cur.slice();
+        const diag = k % 2 === 1;
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+            const i = y * W + x;
+            if (cur[i]) continue;
+            const l = x > 0, r = x < W - 1, u = y > 0, d = y < H - 1;
+            if ((l && cur[i - 1]) || (r && cur[i + 1]) || (u && cur[i - W]) || (d && cur[i + W]) ||
+                (diag && ((l && u && cur[i - W - 1]) || (r && u && cur[i - W + 1]) || (l && d && cur[i + W - 1]) || (r && d && cur[i + W + 1])))) out[i] = 1;
+        }
+        cur = out;
+    }
+    return cur;
+}
+
+/**
+ * Tira os "apêndices" finos que vão dar à borda da foto (ex.: os dedos da mão que segura o produto): uma abertura com
+ * um disco de raio r deixa só o corpo (o que é mais fino que 2r desaparece); de tudo o que ficou de fora, sai só o que
+ * toca a borda — a asa de uma caneca ou o gargalo de uma garrafa ficam.
+ */
+function dropAppendages(m: Uint8Array, W: number, H: number, r: number, isBorder: (i: number) => boolean): Uint8Array {
+    const inv = (a: Uint8Array) => a.map((v) => (v ? 0 : 1));
+    const body = keepMain(grow(inv(grow(inv(m), W, H, r)), W, H, r), W, H, true);
+    if (!body.some((v) => v)) return m;
+    const out = m.slice();
+    const seen = new Uint8Array(m.length);
+    const stack: number[] = [];
+    for (let s = 0; s < m.length; s++) {
+        if (!m[s] || body[s] || seen[s]) continue;
+        const comp: number[] = [];
+        let touches = false;
+        seen[s] = 1; stack.push(s);
+        while (stack.length) {
+            const i = stack.pop()!;
+            comp.push(i);
+            if (isBorder(i)) touches = true;
+            const x = i % W, y = (i / W) | 0;
+            const nb = [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, y > 0 ? i - W : -1, y < H - 1 ? i + W : -1];
+            for (const j of nb) if (j >= 0 && m[j] && !body[j] && !seen[j]) { seen[j] = 1; stack.push(j); }
+        }
+        if (touches) for (const i of comp) out[i] = 0;
+    }
+    return keepMain(out, W, H);
+}
+
+/** Alisa o contorno: média num quadrado de lado 2r+1 e volta a cortar a meio (tira dentes e mossas pequenas). */
+function smoothEdge(m: Uint8Array, W: number, H: number, r: number): Uint8Array {
+    // somas acumuladas: o custo não depende de r
+    const S = new Float64Array((W + 1) * (H + 1));
+    for (let y = 0; y < H; y++) { let row = 0; for (let x = 0; x < W; x++) { row += m[y * W + x]; S[(y + 1) * (W + 1) + x + 1] = S[y * (W + 1) + x + 1] + row; } }
+    const out = new Uint8Array(m.length);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const x0 = Math.max(0, x - r), y0 = Math.max(0, y - r), x1 = Math.min(W, x + r + 1), y1 = Math.min(H, y + r + 1);
+        const t = S[y1 * (W + 1) + x1] - S[y0 * (W + 1) + x1] - S[y1 * (W + 1) + x0] + S[y0 * (W + 1) + x0];
+        out[y * W + x] = t / ((x1 - x0) * (y1 - y0)) > 0.5 ? 1 : 0;
+    }
+    return out;
 }
 
 function morph(m: Uint8Array, W: number, H: number, op: 'open' | 'close'): Uint8Array {
