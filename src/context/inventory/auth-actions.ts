@@ -1,7 +1,8 @@
 'use client';
 
 import type { ModulePermission, PermissionLevel } from '@/lib/types';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider, GoogleAuthProvider, signInWithPopup, sendEmailVerification } from 'firebase/auth';
+import { shouldHintPassword, signInMethods } from '@/lib/sign-in-methods';
 import { collection, doc, writeBatch, getDoc } from 'firebase/firestore';
 import { allPermissions } from '@/lib/data';
 import type { InventoryCore } from './core';
@@ -56,6 +57,14 @@ export function useAuthActions(core: InventoryCore) {
           await auth.signOut();
           return { noCompany: result.user.email || '' };
         }
+      }
+
+      // conta sem senha (só Google, ou a senha foi substituída pelo Google): diz uma vez onde criar uma
+      const methods = signInMethods(result.user.providerData.map((p) => p.providerId));
+      let store: Storage | null = null;
+      try { store = window.localStorage; } catch { /* modo privado */ }
+      if (shouldHintPassword(result.user.uid, methods, store)) {
+        toast({ title: 'Quer entrar também com email e senha?', description: 'Crie uma senha em Configurações → Perfil → Formas de entrar.', duration: 12000 });
       }
 
       return true;
@@ -155,7 +164,11 @@ export function useAuthActions(core: InventoryCore) {
 
       let newUserId: string;
       try {
-        newUserId = (await createUserWithEmailAndPassword(auth, adminEmail, adminPass)).user.uid;
+        const created = await createUserWithEmailAndPassword(auth, adminEmail, adminPass);
+        newUserId = created.user.uid;
+        // Email confirmado = a senha fica mesmo que um dia entre com o Google (sem isso a Firebase troca-a pelo Google)
+        auth.languageCode = 'pt';
+        sendEmailVerification(created.user, { url: window.location.origin + '/dashboard' }).catch((e) => console.warn('Falha ao enviar a confirmação do email:', e));
       } catch (e: any) {
         if (e?.code !== 'auth/email-already-in-use') throw e;
         // A conta pode ter ficado criada numa tentativa anterior que não chegou ao fim (sem rede a meio):

@@ -25,6 +25,7 @@ import { RecycleBin } from "@/components/settings/recycle-bin";
 import { UnitsCategoriesManager } from "@/components/settings/units-categories-manager";
 import { CategoryMergeTool } from "@/components/settings/category-merge-tool";
 import { BulkEditCosts } from "@/components/settings/bulk-edit-costs";
+import { SignInMethodsCard } from "@/components/settings/sign-in-methods";
 import { Button } from "@/components/ui/button";
 import { InventoryContext } from "@/context/inventory-context";
 import { useToast } from "@/hooks/use-toast";
@@ -88,6 +89,8 @@ function ProfileTab() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  // conta só com Google: não há senha para alterar ("Formas de entrar" → Criar senha)
+  const hasPassword = !!getAuth().currentUser?.providerData.some((p) => p.providerId === 'password');
 
   const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -175,7 +178,7 @@ function ProfileTab() {
             <p className="font-semibold">{user?.role}</p>
           </div>
 
-          {(user?.role === 'Admin' || user?.role === 'Dono') && (
+          {(user?.role === 'Admin' || user?.role === 'Dono') && hasPassword && (
             <div className="pt-4">
               <Button variant="outline" onClick={() => setIsPasswordDialogOpen(true)}>
                 Alterar Senha
@@ -525,6 +528,7 @@ export default function SettingsPage() {
           <TabsContent value="profile" className="space-y-4">
             <PushSettingsCard />
             <ProfileTab />
+            <SignInMethodsCard />
           </TabsContent>
 
           <TabsContent value="appearance">
