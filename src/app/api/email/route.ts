@@ -4,7 +4,8 @@ export const dynamic = 'force-dynamic';
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import { formatCurrency } from '@/lib/utils';
-import { verifyIdToken } from '@/lib/firebase-admin';
+import { initializeAdmin, verifyIdToken } from '@/lib/firebase-admin';
+import { cleanSubject, EMAIL_DAILY_LIMIT, escapeAll, escapeHtml, normEmail, notAllowed, parseRecipients, safeImageUrl } from '@/lib/email-guard';
 
 export async function POST(req: Request) {
   // 1. Verificação de Segurança
@@ -17,13 +18,58 @@ export async function POST(req: Request) {
 
   const resend = new Resend(apiKey);
 
-  const body = await req.json();
-  const { to, subject, type, companyId, logoUrl, companyName } = body;
+  const raw = await req.json().catch(() => ({}));
+  const { to, type, companyId } = raw;
 
   // 1.5 Tenant Isolation Check
-  if (!decodedToken.superAdmin && (!companyId || companyId !== (decodedToken as any).companyId)) {
+  if (!decodedToken.superAdmin && (!companyId || typeof companyId !== 'string' || companyId !== (decodedToken as any).companyId)) {
     return NextResponse.json({ error: "Acesso negado. Tentativa de envio de e-mail por outra empresa." }, { status: 403 });
   }
+
+  // 1.6 Só para endereços da empresa (avisos, equipa, quem está a enviar) ou, num recibo, para um cliente dela.
+  // Antes qualquer conta podia enviar, em nome da MajorStockX, para qualquer endereço.
+  const recipients = parseRecipients(to);
+  if (recipients.length === 0) {
+    return NextResponse.json({ error: 'Nenhum destinatário válido fornecido.' }, { status: 400 });
+  }
+  const db = initializeAdmin().firestore();
+  if (!decodedToken.superAdmin) {
+    const company = (await db.doc(`companies/${companyId}`).get()).data() || {};
+    const employees = await db.collection(`companies/${companyId}/employees`).select('email').get();
+    const allowed = new Set<string>([
+      ...(company.email ? [company.email] : []),
+      ...((company.notificationSettings?.emails || []) as { email?: string }[]).map((e) => e?.email || '').filter(Boolean),
+      ...(company.notificationSettings?.email ? [company.notificationSettings.email] : []),
+      ...employees.docs.map((d) => String(d.get('email') || '')).filter(Boolean),
+      ...(decodedToken.email ? [decodedToken.email] : []),
+    ].map(normEmail));
+    if (type === 'RECEIPT') {
+      for (const r of recipients.slice(0, 10)) {
+        const c = await db.collection(`companies/${companyId}/customers`).where('email', '==', r).limit(1).get();
+        if (!c.empty) allowed.add(r);
+      }
+    }
+    const refused = notAllowed(recipients, allowed);
+    if (refused.length) {
+      return NextResponse.json({ error: 'Só é possível enviar para os emails da empresa ou dos seus clientes.' }, { status: 403 });
+    }
+
+    // 1.7 Limite diário por empresa
+    const quotaRef = db.doc(`emailQuota/${companyId}_${new Date().toISOString().slice(0, 10)}`);
+    const okQuota = await db.runTransaction(async (tx) => {
+      const used = Number((await tx.get(quotaRef)).get('count')) || 0;
+      if (used + recipients.length > EMAIL_DAILY_LIMIT) return false;
+      tx.set(quotaRef, { companyId, count: used + recipients.length, updatedAt: new Date().toISOString() }, { merge: true });
+      return true;
+    });
+    if (!okQuota) return NextResponse.json({ error: 'Limite diário de emails atingido. Tente amanhã.' }, { status: 429 });
+  }
+
+  // 1.8 Tudo o que vem do navegador é texto (nunca HTML); o logótipo só por https
+  const body = escapeAll(raw);
+  const subject = cleanSubject(raw.subject, 'MajorStockX');
+  const logoUrl = escapeHtml(safeImageUrl(raw.logoUrl));
+  const { companyName } = body;
 
   try {
     let htmlContent = '';
@@ -185,16 +231,7 @@ export async function POST(req: Request) {
       </div>
     `;
 
-    let finalTo: string[] = [];
-    if (Array.isArray(to)) {
-      finalTo = to.flatMap(e => (typeof e === 'string' ? e.split(',') : [])).map(e => e.trim()).filter(Boolean);
-    } else if (typeof to === 'string') {
-      finalTo = to.split(',').map(e => e.trim()).filter(Boolean);
-    }
-
-    if (finalTo.length === 0) {
-      return NextResponse.json({ error: 'Nenhum destinatário válido fornecido.' }, { status: 400 });
-    }
+    const finalTo = recipients;
 
     const { data, error } = await resend.emails.send({
       from: 'Major Assistant <assistant@majorgroup.app>',

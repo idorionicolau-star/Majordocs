@@ -2,6 +2,7 @@
 
 import { useContext, useEffect, useRef, useState } from "react";
 import { InventoryContext } from "@/context/inventory-context";
+import { sendEmailVerification } from "firebase/auth";
 import { useAuth } from "@/firebase/provider";
 import { useToast } from "@/hooks/use-toast";
 import { ESCALEPAY_SOURCE } from "@/lib/escalepay-core";
@@ -53,6 +54,12 @@ export function EscalepayClaim() {
                 });
                 if (!r.ok) { tried.current = false; return; }
                 const j = await r.json().catch(() => ({}));
+                if (j.needsVerification) {
+                    // há uma compra para este email, mas o email ainda não foi confirmado: envia o link e tenta na próxima visita
+                    if (auth.currentUser) sendEmailVerification(auth.currentUser, { url: window.location.origin + "/dashboard" }).catch(() => {});
+                    toast({ title: "Confirme o seu email", description: "Enviámos um link para o seu email. Depois de o abrir, a compra da EscalePay fica activa.", duration: 12000 });
+                    return;
+                }
                 try { sessionStorage.setItem(key, "1"); localStorage.removeItem(ORIGIN_KEY); } catch { /* ignore */ }
                 if (j.applied > 0) {
                     const until = j.until ? new Date(j.until).toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric" }) : "";

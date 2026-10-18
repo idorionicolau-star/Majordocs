@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 import { NextResponse } from 'next/server';
+import { isCronRequest } from '@/lib/cron-auth';
 import { initializeAdmin } from '@/lib/firebase-admin';
 import { Resend } from 'resend';
 import { formatCurrency } from '@/lib/utils';
@@ -13,8 +14,7 @@ const APP_URL = 'https://stock.majorgroup.app';
 const CRITICAL_SHOWN = 10;
 
 export async function GET(req: Request) {
-    const authHeader = req.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isCronRequest(req)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

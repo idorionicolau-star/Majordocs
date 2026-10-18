@@ -41,6 +41,20 @@ service cloud.firestore {
       );
     }
     
+    // Texto ISO ("2026-10-17T07:50:12.123Z") → timestamp (UTC). Só os primeiros 19 caracteres contam.
+    function isoTime(s) {
+      return timestamp.date(int(s[0:4]), int(s[5:7]), int(s[8:10])) + duration.time(int(s[11:13]), int(s[14:16]), int(s[17:19]), 0);
+    }
+
+    // Plano da empresa (ver lib/tiers.ts): em teste, ou sem nível (plano antigo), tudo é permitido.
+    // 'production' = Business; 'orders' = Pro ou Business.
+    function planAllows(companyId, feature) {
+      let c = get(/databases/$(database)/documents/companies/$(companyId)).data;
+      let tier = c.get('tier', '');
+      return isSuperAdmin() || c.get('status', '') == 'trial' || !(tier in ['basico', 'pro', 'business']) || tier == 'business'
+        || (tier == 'pro' && feature == 'orders');
+    }
+
     function getUserMapData(userId) {
       // Busca o mapeamento do utilizador na coleção de topo.
       return get(/databases/$(database)/documents/users/$(userId)).data;
@@ -107,8 +121,13 @@ service cloud.firestore {
     match /users/{userId} {
       // Um utilizador só pode ler o seu próprio mapa. Admins não podem ler mapas de outros.
       allow read: if request.auth.uid == userId || isSuperAdmin();
-      // A criação (onboarding) só pode ser feita pelo próprio utilizador.
-      allow create: if request.auth.uid == userId;
+      // A criação (onboarding) só pode ser feita pelo próprio utilizador, só com a empresa, e só a empresa que ele próprio
+      // está a criar no mesmo registo (dono). Antes aceitava qualquer campo — incluindo superAdmin — e qualquer empresa.
+      // Os funcionários criados pelo Admin passam pelo servidor (/api/employees), que não está sujeito a estas regras.
+      allow create: if request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['companyId'])
+        && request.resource.data.companyId is string
+        && getAfter(/databases/$(database)/documents/companies/$(request.resource.data.companyId)).data.get('ownerId', '') == request.auth.uid;
       // Atualização: CRÍTICO - Prevenir mudança de companyId ou superAdmin (privilege escalation)
       allow update: if request.auth.uid == userId && 
         request.resource.data.companyId == resource.data.companyId &&
@@ -120,7 +139,15 @@ service cloud.firestore {
     // A coleção 'companies' só pode ser listada pelo Super Admin.
     // Admins de empresa podem ler os dados da sua própria empresa.
     match /companies/{companyId} {
-      allow create: if isSignedIn(); // Qualquer pessoa autenticada pode registar uma nova empresa.
+      // Registar uma empresa nova: a própria pessoa é a dona, começa em teste (no máximo 16 dias) e sem nada de pagamento,
+      // plano, código ou afiliado (isso é só o servidor que grava). Antes podia nascer já "activa" e paga.
+      allow create: if isSignedIn()
+        && request.resource.data.get('ownerId', '') == request.auth.uid
+        && request.resource.data.get('status', '') == 'trial'
+        && !request.resource.data.keys().hasAny(['paidUntilMs', 'subscriptionEndsAt', 'plan', 'tier', 'coupon', 'affiliate', 'source', 'superAdmin'])
+        && request.resource.data.get('trialEndsAt', null) is string
+        && request.resource.data.trialEndsAt.size() >= 19
+        && isoTime(request.resource.data.trialEndsAt) <= request.time + duration.value(16, 'd');
       allow get: if isEmployeeOf(companyId);
       allow list: if isSuperAdmin();
       allow update: if isSuperAdmin() || (isAdminOf(companyId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'trialEndsAt', 'subscriptionEndsAt', 'paidUntilMs', 'plan', 'tier', 'affiliate', 'coupon']))
@@ -143,7 +170,9 @@ service cloud.firestore {
         allow get: if request.auth.uid == employeeId || can('users', 'read');
         allow list: if can('users', 'read');
         // A criação é permitida se o utilizador tiver permissão de escrita OU se for o fundador a registar a empresa (onboarding).
-        allow create: if can('users', 'write') || (
+        // Pelo cliente: só quem gere a empresa dá o papel de Admin (antes um funcionário com permissão "utilizadores" podia).
+        allow create: if (can('users', 'write') && request.resource.data.get('companyId', '') == companyId
+            && (request.resource.data.get('role', '') != 'Admin' || isManagerOf(companyId))) || (
           request.auth.uid == employeeId && 
           request.resource.data.role == 'Admin' &&
           getAfter(/databases/$(database)/documents/companies/$(companyId)).data.ownerId == request.auth.uid
@@ -233,22 +262,22 @@ service cloud.firestore {
 
       match /productions/{productionId} {
         allow get, list: if can('production', 'read');
-        allow create, update, delete: if can('production', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+        allow create, update, delete: if can('production', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && planAllows(companyId, 'production');
       }
       
       match /rawMaterials/{materialId} {
         allow get, list: if can('raw-materials', 'read');
-        allow create, update, delete: if can('raw-materials', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+        allow create, update, delete: if can('raw-materials', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && planAllows(companyId, 'production');
       }
       
       match /recipes/{recipeId} {
         allow get, list: if can('raw-materials', 'read');
-        allow create, update, delete: if can('raw-materials', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+        allow create, update, delete: if can('raw-materials', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && planAllows(companyId, 'production');
       }
       
       match /orders/{orderId} {
         allow get, list: if can('orders', 'read');
-        allow create, update, delete: if can('orders', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+        allow create, update, delete: if can('orders', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin()) && planAllows(companyId, 'orders');
       }
       
       // Clientes: usados em Clientes, Vendas, Encomendas e no Dashboard.

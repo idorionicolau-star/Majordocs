@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 import { NextResponse } from 'next/server';
+import { isCronRequest } from '@/lib/cron-auth';
 import { Resend } from 'resend';
 import { initializeAdmin } from '@/lib/firebase-admin';
 import { buildErrorDigest, type BillingFailLite, type ErrorLogLite, type NewCompanyLite } from '@/lib/error-digest';
@@ -12,7 +13,7 @@ import { SUPPORT } from '@/lib/support';
  * apanharam nas últimas 24 h, pagamentos que falharam e as empresas que começaram o teste. ?dry=1 mostra sem enviar.
  */
 export async function GET(req: Request) {
-    if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isCronRequest(req)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const dry = new URL(req.url).searchParams.get('dry') === '1';

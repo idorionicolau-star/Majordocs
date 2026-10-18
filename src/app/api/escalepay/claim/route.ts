@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { initializeAdmin, verifyIdToken } from '@/lib/firebase-admin';
 import { claimSales } from '@/lib/escalepay-server';
-import { ESCALEPAY_SOURCE } from '@/lib/escalepay-core';
+import { ESCALEPAY_SOURCE, normEmail } from '@/lib/escalepay-core';
 
 /**
  * O administrador da empresa abre a app: se houver compras da EscalePay feitas com o email dele ainda por usar,
@@ -19,6 +19,12 @@ export async function POST(req: Request) {
     if (body.source === ESCALEPAY_SOURCE) {
         const ref = db.doc(`companies/${decoded.companyId}`);
         if (!(await ref.get()).get('source')) await ref.set({ source: ESCALEPAY_SOURCE }, { merge: true });
+    }
+    // a compra é de quem prova que o email é seu: email confirmado (o Google já vem confirmado). Antes bastava uma conta
+    // com o mesmo email, mesmo por confirmar, para ficar com a compra de outra pessoa.
+    if (!decoded.email_verified) {
+        const waiting = await db.collection('escalepaySales').where('email', '==', normEmail(decoded.email)).where('claimedBy', '==', null).limit(1).get();
+        return NextResponse.json({ applied: 0, ...(waiting.empty ? {} : { needsVerification: true }) });
     }
     return NextResponse.json(await claimSales(decoded.companyId, decoded.email));
 }
