@@ -101,6 +101,8 @@ export type Company = {
   plan?: string;
   /** Nível da subscrição (Básico/Pro/Business). Sem nível = plano antigo, tudo incluído. Só o servidor/super-admin grava. Ver lib/tiers.ts */
   tier?: string;
+  /** Quando o responsável confirmou o email (pedido antes da primeira venda real; ver lib/email-confirm.ts). */
+  emailVerifiedAt?: string;
   /** De onde veio a empresa: "escalepay" = registou-se pelo link dos afiliados (ver lib/escalepay-core.ts). */
   source?: string;
   /** Arranque oficial: quando se apagaram os registos anteriores (só uma vez). */
