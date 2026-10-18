@@ -137,19 +137,21 @@ const BusinessSummaryInner = ({ context }: { context: NonNullable<React.ContextT
                 </div>
             )}
 
-            {/* 3. Atenção — o que precisa de ser resolvido, com link directo */}
+            {/* 3. Atenção — o que precisa de ser resolvido, com link directo (sem nada a resolver: "Tudo em ordem") */}
             <div className="mt-4" data-tour="dash-attention">
                 <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Atenção</h3>
+                    {attention.length === 0
+                        ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        : <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />}
+                    <h3 className={cn("text-xs font-bold uppercase tracking-wider", attention.length === 0 ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+                        {attention.length === 0 ? "Tudo em ordem" : "Atenção"}
+                    </h3>
                     <Link href="/diagnostico" className="ml-auto flex items-center gap-1 text-xs font-medium text-primary hover:underline">
                         Diagnóstico completo <ChevronRight className="h-3 w-3" />
                     </Link>
                 </div>
                 {attention.length === 0 ? (
-                    <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 text-sm text-emerald-700 dark:text-emerald-400">
-                        <CheckCircle2 className="h-4 w-4 shrink-0" /> Nada urgente. Continue a registar as vendas do dia.
-                    </div>
+                    <p className="text-sm text-muted-foreground">Continue a registar as vendas do dia.</p>
                 ) : (
                     <ul className="space-y-1.5">
                         {attention.map(al => {
