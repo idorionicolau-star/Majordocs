@@ -27,7 +27,7 @@ Gestão de stock, vendas e produção para pequenas e médias empresas em Moçam
 - **Produtos** (abas Stock | Catálogo | Movimentos | Perdas).
 - **Catálogo:**
   - variações (cor, tamanho…), cada uma com stock, preço e código de barras próprios;
-  - fotos e categorias;
+  - fotos e categorias; **foto de estúdio** (fundo branco feito no telemóvel, sem IA nem internet — escolhe-se a original ou a de fundo branco);
   - importação de listas;
   - "Quanto tem agora?" ao criar um produto.
 - **Stock Rápido:**
@@ -36,6 +36,7 @@ Gestão de stock, vendas e produção para pequenas e médias empresas em Moçam
   - localização habitual;
   - folha de entrada.
 - **Várias localizações**, transferências, contagens e perdas.
+- **Pesquisa do Inventário** pelo código de barras (ícone do leitor).
 
 ### Produção (fábricas)
 - Produção com consumo de matéria-prima, receitas, custos, aviso de desperdício e de matéria-prima em falta, e cura do betão.
