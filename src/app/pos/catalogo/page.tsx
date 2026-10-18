@@ -391,7 +391,7 @@ export default function POSPage() {
             <div>
                 <h1 className="text-2xl md:text-3xl font-headline font-bold flex items-center gap-3">
                     <ShoppingCart className="h-7 w-7 text-primary" />
-                    Ponto de Venda
+                    Vender por toque
                 </h1>
                 <p className="text-muted-foreground">
                     Adicione produtos ao carrinho e finalize a venda de uma só vez.
