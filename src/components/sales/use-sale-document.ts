@@ -54,8 +54,9 @@ export function useSaleDocument(sale: Sale) {
                     logoUrl: companyData?.logoUrl,
                     customerName: customer.name,
                     guideNumber: sale.guideNumber,
-                    items: [{ productName: sale.productName, quantity: sale.quantity, subtotal: sale.totalValue }],
-                    totalValue: sale.totalValue,
+                    // todos os produtos com o mesmo número (antes o recibo levava só este)
+                    items: documentLines().map((s) => ({ productName: s.productName, quantity: s.quantity, subtotal: s.totalValue })),
+                    totalValue: documentLines().reduce((t, s) => t + (Number(s.totalValue) || 0), 0),
                     date: sale.date,
                     companyName: companyData?.name || 'Major Group'
                 })

@@ -113,8 +113,19 @@ export async function POST(req: Request) {
             ${footerHtml}
         `;
     } else if (type === 'SALE') {
-      const { productName, quantity, location, guideNumber, totalValue, soldBy } = body;
+      const { productName, quantity, location, guideNumber, totalValue, soldBy, items } = body;
       const color = '#3b82f6';
+      // venda com vários produtos: a lista toda (antes só o primeiro)
+      const lines: any[] = Array.isArray(items) ? items : [];
+      const productsHtml = lines.length > 1
+        ? `<p style="margin: 4px 0; font-size: 16px;"><strong>Produtos (${lines.length}):</strong></p>
+           <table style="width: 100%; border-collapse: collapse; margin: 4px 0 8px;">${lines.map((l) => `
+             <tr><td style="padding: 4px 0; border-bottom: 1px solid #dbeafe;">${l.productName}</td>
+             <td style="padding: 4px 0; border-bottom: 1px solid #dbeafe; text-align: right; white-space: nowrap;">${l.quantity}${l.unit ? ` ${l.unit}` : ''}</td>
+             <td style="padding: 4px 0 4px 12px; border-bottom: 1px solid #dbeafe; text-align: right; white-space: nowrap;">${formatCurrency(Number(l.subtotal) || 0)}</td></tr>`).join('')}
+           </table>`
+        : `<p style="margin: 4px 0; font-size: 16px;"><strong>Produto:</strong> ${productName}</p>
+           <p style="margin: 4px 0; font-size: 16px;"><strong>Quantidade:</strong> ${quantity}</p>`;
       const accentColor = '#eff6ff';
       htmlContent = `
             ${headerHtml}
@@ -125,9 +136,8 @@ export async function POST(req: Request) {
               <p>Olá,</p>
               <p>Uma nova venda foi registada com sucesso no sistema:</p>
               <div style="background-color: ${accentColor}; border: 1px solid ${color}; padding: 16px; border-radius: 8px; margin: 20px 0;">
-                <p style="margin: 4px 0; font-size: 16px;"><strong>Produto:</strong> ${productName}</p>
                 <p style="margin: 4px 0; font-size: 16px;"><strong>Guia N.º:</strong> ${guideNumber}</p>
-                <p style="margin: 4px 0; font-size: 16px;"><strong>Quantidade:</strong> ${quantity}</p>
+                ${productsHtml}
                 <p style="margin: 4px 0; font-size: 16px;"><strong>Valor Total:</strong> <span style="font-weight: bold;">${formatCurrency(totalValue)}</span></p>
                 <p style="margin: 4px 0; font-size: 16px;"><strong>Localização:</strong> ${location}</p>
                 <p style="margin: 4px 0; font-size: 16px;"><strong>Vendedor:</strong> ${soldBy}</p>
