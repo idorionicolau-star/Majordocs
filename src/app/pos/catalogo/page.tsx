@@ -53,6 +53,7 @@ import {
 } from 'lucide-react';
 
 import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
+import { useEmailConfirmGate } from '@/components/billing/email-confirm';
 import { PosCart } from '@/components/pos/pos-cart';
 import { AiSuggestions } from '@/components/pos/ai-suggestions';
 
@@ -290,7 +291,14 @@ export default function POSPage() {
     }, [companyId]);
 
     // Checkout
-    const handleCheckout = async () => {
+    // conta nova: antes da primeira venda real o responsável confirma o email (só uma vez)
+    const emailGate = useEmailConfirmGate({ proforma: checkoutDocType === 'Factura Proforma' });
+    const handleCheckout = () => {
+        if (!addBulkSale || !user || cart.length === 0) return;
+        emailGate.check(() => { void recordCheckout(); });
+    };
+
+    const recordCheckout = async () => {
         if (!addBulkSale || !user || cart.length === 0) return;
         setIsSubmitting(true);
 
@@ -388,6 +396,7 @@ export default function POSPage() {
 
     return (
         <div className="flex flex-col gap-6 pb-32 animate-in fade-in duration-500">
+            {emailGate.dialog}
             {/* Header */}
             <div>
                 <h1 className="text-2xl md:text-3xl font-headline font-bold flex items-center gap-3">

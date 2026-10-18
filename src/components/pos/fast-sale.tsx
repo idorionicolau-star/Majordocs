@@ -21,6 +21,7 @@ import { VariantChooser, chooserKey } from "@/components/catalog/variant-chooser
 import { Check, ChevronDown, ChevronUp, GraduationCap, LayoutGrid, Loader2, MapPin, Minus, Plus, ScanBarcode, Search, ShoppingCart, Trash2, Truck, X } from "lucide-react";
 import { BarcodeScanner } from "@/components/scan/barcode-scanner";
 import { UNKNOWN_CODE } from "@/lib/scan-gate";
+import { useEmailConfirmGate } from "@/components/billing/email-confirm";
 import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { VoiceButton } from "@/components/scan/voice-button";
 import { findByBarcode, looksLikeBarcode, normalizeBarcode } from "@/lib/barcode";
@@ -341,6 +342,7 @@ export function FastSale() {
 
     const customerNames = useMemo(() => Array.from(new Set(customers.map((c) => c.name))).sort((a, b) => a.localeCompare(b, "pt")), [customers]);
 
+    const emailGate = useEmailConfirmGate({ proforma: isProforma, demo });
     const confirm = async () => {
         if (demo) {
             if (!canConfirm) return;
@@ -355,6 +357,12 @@ export function FastSale() {
             return;
         }
         if (!canConfirm || !addBulkSale || !user) return;
+        // conta nova: antes da primeira venda real o responsável confirma o email (só uma vez)
+        emailGate.check(() => { void record(); });
+    };
+
+    const record = async () => {
+        if (!addBulkSale || !user) return;
         setSaving(true);
         try {
             let customerId: string | undefined;
@@ -429,6 +437,7 @@ export function FastSale() {
 
     return (
         <div className="mx-auto w-full max-w-3xl pb-44">
+            {emailGate.dialog}
             <BarcodeScanner open={scanOpen} onClose={() => { setScanOpen(false); focusSearch(); }} onScan={(c) => handleCode(c, true)} onUnknown={canLink ? linkCode : undefined} />
             <div className="flex items-center justify-between gap-3">
                 <div>
