@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 
 const ALLOWED_EMAILS = ["digitalwarriorguru@gmail.com", "idorionicolau@gmail.com"];
 
-type Item = { id: string; message: string; stack?: string; source?: string; url?: string; email?: string | null; companyId?: string | null; userAgent?: string; createdAt: number | null };
+type Item = { id: string; message: string; stack?: string; context?: string; version?: string; source?: string; url?: string; email?: string | null; companyId?: string | null; userAgent?: string; createdAt: number | null };
 
 export default function ErrorLogsPage() {
     const ctx = useContext(InventoryContext);
@@ -50,13 +50,15 @@ export default function ErrorLogsPage() {
                     <CardHeader className="pb-2">
                         <CardTitle className="text-base break-words">{i.message}</CardTitle>
                         <CardDescription>
-                            {i.createdAt ? new Date(i.createdAt).toLocaleString("pt-PT") : "—"} · {i.source} · {i.url} · {i.email || "sem sessão"}
+                            {i.createdAt ? new Date(i.createdAt).toLocaleString("pt-PT") : "—"} · {i.source} · {i.url} · {i.email || "sem sessão"}{i.version ? ` · versão ${i.version}` : ""}
                         </CardDescription>
                     </CardHeader>
                     {i.stack && (
                         <CardContent>
                             <details><summary className="cursor-pointer text-xs">Detalhes</summary>
                                 <pre className="mt-2 max-h-60 overflow-auto text-xs">{i.stack}</pre>
+                                {/* o código à volta do erro (⟦ = o sítio exato): os textos dizem de que componente vem */}
+                                {i.context && <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-all rounded bg-muted p-2 text-xs">{i.context}</pre>}
                             </details>
                         </CardContent>
                     )}

@@ -33,6 +33,8 @@ export async function POST(req: Request) {
             stack: clip(b.stack, 3000),
             source: clip(b.source, 40),
             url: clip(b.url, 300),
+            context: clip(b.context, 4000),
+            version: clip(b.version, 12),
             userAgent: clip(req.headers.get('user-agent'), 200),
             uid: decoded?.uid || null,
             email: decoded?.email || null,
