@@ -24,7 +24,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Lock, ShieldAlert, CheckCircle, Clock, AlertOctagon } from 'lucide-react';
+import { Lock, ShieldAlert, CheckCircle, Clock, AlertOctagon, Bug } from 'lucide-react';
+import Link from 'next/link';
 import { Company } from '@/lib/types';
 import { ZumboPayCheck } from '@/components/admin/zumbopay-check';
 import { EscalepayPanel } from '@/components/admin/escalepay-panel';
@@ -180,13 +181,19 @@ export default function SubscriptionsAdminPage() {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
-      <div className="flex flex-col gap-1.5">
-        <h1 className="text-2xl md:text-3xl font-headline font-[900] text-slate-900 dark:text-white tracking-tighter">
-          Gestão de Subscrições (Admin)
-        </h1>
-        <p className="text-muted-foreground">
-          Ative, suspenda ou configure os períodos de teste (Trial) de todas as empresas no sistema.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-2xl md:text-3xl font-headline font-[900] text-slate-900 dark:text-white tracking-tighter">
+            Gestão de Subscrições (Admin)
+          </h1>
+          <p className="text-muted-foreground">
+            Ative, suspenda ou configure os períodos de teste (Trial) de todas as empresas no sistema.
+          </p>
+        </div>
+        {/* os erros que os clientes apanharam no ecrã (o mesmo que o resumo diário por email) */}
+        <Button asChild variant="outline">
+          <Link href="/admin/errors"><Bug className="mr-2 h-4 w-4" /> Erros</Link>
+        </Button>
       </div>
 
       <ManualPaymentsPanel />
