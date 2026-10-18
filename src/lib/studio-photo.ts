@@ -150,10 +150,29 @@ export function segmentProduct(img: Pixels): Float32Array | null {
     const ring = Math.max(1, Math.round(band / 3));
     const fixedBg = (i: number) => { const x = i % W, y = (i / W) | 0; return x < ring || y < ring || x >= W - ring || y >= H - ring; };
 
-    let bgC = kmeans(sample(lab, isBorder, N), 3, 6);
-    const borderC = bgC; // as cores das bordas, para a verificação de confiança no fim
+    // Fundo POR LADO (cima, baixo, esquerda, direita): cada ponto compara-se com o fundo dos dois lados mais perto dele.
+    // Assim um desenho branco na parede de cima não faz o branco do produto, lá em baixo, parecer fundo.
+    type Side = 0 | 1 | 2 | 3;
+    const sideOf = (i: number, s: Side, band: number) => { const x = i % W, y = (i / W) | 0; return s === 0 ? y < band : s === 1 ? y >= H - band : s === 2 ? x < band : x >= W - band; };
+    const sideModels = (pick: (i: number) => boolean, depth: number): (Float32Array | null)[] =>
+        ([0, 1, 2, 3] as Side[]).map((s) => { const smp = sample(lab, (i) => pick(i) && sideOf(i, s, depth), N, 2500); return smp.length >= 30 ? kmeans(smp, 3, 4) : null; });
+    const nearSides = (i: number): [Side, Side] => {
+        const x = i % W, y = (i / W) | 0;
+        const d: [number, Side][] = [[y, 0], [H - 1 - y, 1], [x, 2], [W - 1 - x, 3]];
+        d.sort((a, b) => a[0] - b[0]);
+        return [d[0][1], d[1][1]];
+    };
+    const sideDist = (models: (Float32Array | null)[], i: number) => {
+        const L = lab[i * 3], A = lab[i * 3 + 1], B = lab[i * 3 + 2];
+        let best = Infinity;
+        for (const s of nearSides(i)) { const m = models[s]; if (m) best = Math.min(best, nearestBg(m, L, A, B)); }
+        if (best === Infinity) for (const m of models) if (m) best = Math.min(best, nearestBg(m, L, A, B));
+        return best;
+    };
+    let bgSides = sideModels(isBorder, band);
+    const borderSides = bgSides; // as cores das bordas, para a verificação de confiança no fim
     // produto: o centro sem as cores que já são do fundo
-    const bgDist = (i: number) => nearestBg(bgC, lab[i * 3], lab[i * 3 + 1], lab[i * 3 + 2]);
+    const bgDist = (i: number) => sideDist(bgSides, i);
     let fgSample = sample(lab, (i) => inCenter(i, 0.2) && bgDist(i) > 12, N);
     if (fgSample.length < 30) fgSample = sample(lab, (i) => inCenter(i, 0.15), N);
     let fgC = kmeans(fgSample, 3, 6);
@@ -190,7 +209,7 @@ export function segmentProduct(img: Pixels): Float32Array | null {
         const p0 = new Float32Array(N);
         for (let i = 0; i < N; i++) {
             const L = lab[i * 3], A = lab[i * 3 + 1], B = lab[i * 3 + 2];
-            const db = nearestBg(bgC, L, A, B), df = nearest(fgC, L, A, B);
+            const db = sideDist(bgSides, i), df = nearest(fgC, L, A, B);
             const pc = db / (db + df + EPS);
             p0[i] = fixedBg(i) ? 0 : enclosed[i] ? Math.max(0.75, 0.7 * pc + 0.3 * prior[i]) : 0.7 * pc + 0.3 * prior[i];
         }
@@ -219,10 +238,14 @@ export function segmentProduct(img: Pixels): Float32Array | null {
     const first = new Uint8Array(N);
     for (let i = 0; i < N; i++) first[i] = p[i] > 0.5 ? 1 : 0;
     const core = keepMain(first, W, H, true);
-    const fgS = sample(lab, (i) => core[i] === 1 && p[i] > 0.6, N), bgS = sample(lab, (i) => !core[i] && !fixedBg(i), N);
-    if (fgS.length >= 30 && bgS.length >= 30) {
+    const fgS = sample(lab, (i) => core[i] === 1 && p[i] > 0.6, N);
+    const notCore = (i: number) => !core[i] && !fixedBg(i);
+    if (fgS.length >= 30 && sample(lab, notCore, N, 100).length >= 30) {
         fgC = kmeans(fgS, 3, 8);
-        bgC = kmeans(bgS, 3, 8);
+        // o fundo de cada lado passa a ser tudo o que não é o produto nessa metade da foto
+        const half = Math.round(Math.min(W, H) / 2);
+        const fresh = sideModels(notCore, half);
+        bgSides = fresh.map((m, k) => m || bgSides[k]);
         solve();
     }
 
@@ -231,11 +254,15 @@ export function segmentProduct(img: Pixels): Float32Array | null {
     for (let i = 0; i < N; i++) mask[i] = p[i] > 0.5 ? 1 : 0;
     mask = morph(mask, W, H, 'close');
     mask = morph(mask, W, H, 'open');
+    // um produto não "acaba e recomeça": uma faixa estreita que ficou de fora entre duas partes (ex.: a faixa castanha
+    // de um rótulo, da cor da mão que segura o frasco) volta a ser produto
+    // (só por cima de zonas que não são claramente fundo: a prateleira entre uma garrafa e as caixas não se preenche)
+    mask = bridgeGaps(mask, W, H, Math.round(H * 0.14), Math.round(W * 0.06), (i) => p[i] >= 0.18);
     mask = keepMain(mask, W, H);
     mask = fillHoles(mask, W, H);
 
     let area = 0, diff = 0;
-    for (let i = 0; i < N; i++) if (mask[i]) { area++; diff += nearestBg(borderC, lab[i * 3], lab[i * 3 + 1], lab[i * 3 + 2]); }
+    for (let i = 0; i < N; i++) if (mask[i]) { area++; diff += sideDist(borderSides, i); }
     const frac = area / N;
     if (frac < 0.02 || frac > 0.95) return null;
     // confiança: o que ficou como produto tem de ser, em média, bem diferente do fundo (senão é só fundo "inventado")
@@ -262,6 +289,29 @@ function morph(m: Uint8Array, W: number, H: number, op: 'open' | 'close'): Uint8
         return out;
     };
     return op === 'close' ? pass(pass(m, true), false) : pass(pass(m, false), true);
+}
+
+/** Preenche espaços curtos (≤ gy na vertical, ≤ gx na horizontal) entre duas partes da máscara. */
+function bridgeGaps(m: Uint8Array, W: number, H: number, gy: number, gx: number, fillable: (i: number) => boolean): Uint8Array {
+    const out = m.slice();
+    const can = (from: number, to: number, idx: (k: number) => number) => { for (let k = from; k < to; k++) if (!fillable(idx(k))) return false; return true; };
+    for (let x = 0; x < W; x++) {
+        let last = -1;
+        for (let y = 0; y < H; y++) if (m[y * W + x]) {
+            const gap = y - last - 1;
+            if (last >= 0 && gap > 0 && gap <= gy && can(last + 1, y, (k) => k * W + x)) for (let k = last + 1; k < y; k++) out[k * W + x] = 1;
+            last = y;
+        }
+    }
+    for (let y = 0; y < H; y++) {
+        let last = -1;
+        for (let x = 0; x < W; x++) if (out[y * W + x]) {
+            const gap = x - last - 1;
+            if (last >= 0 && gap > 0 && gap <= gx && can(last + 1, x, (k) => y * W + k)) for (let k = last + 1; k < x; k++) out[y * W + k] = 1;
+            last = x;
+        }
+    }
+    return out;
 }
 
 /** Fica só com o objeto principal (e com pedaços grandes que façam parte dele, ex.: uma asa separada). */
