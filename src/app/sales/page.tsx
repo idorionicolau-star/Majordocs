@@ -1,5 +1,6 @@
 "use client";
 
+import { locationLabel, matchesLocationFilter, siteFilter, sitesOf } from '@/lib/sites';
 import { useState, useEffect, useMemo, useContext } from "react";
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { Sale } from "@/lib/types";
@@ -80,7 +81,7 @@ export default function SalesPage() {
 
     // 2. Location Filter
     if (isMultiLocation && locationFilter !== 'all') {
-      result = result.filter(s => s.location === locationFilter);
+      result = result.filter(s => matchesLocationFilter(locationFilter, s.location, locations));
     }
 
     // 3. Date Filter
@@ -102,7 +103,7 @@ export default function SalesPage() {
     result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return result;
-  }, [contextSales, statusFilter, locationFilter, dateFilter, isMultiLocation]);
+  }, [contextSales, statusFilter, locationFilter, dateFilter, isMultiLocation, locations]);
 
   const filteredSales = useFuse(preFilteredSales, nameFilter, { keys: ['productName', 'clientName', 'guideNumber'] });
 
@@ -250,8 +251,11 @@ export default function SalesPage() {
                       <DropdownMenuSeparator />
                       <DropdownMenuRadioGroup value={locationFilter} onValueChange={setLocationFilter}>
                         <DropdownMenuRadioItem value="all">Todas</DropdownMenuRadioItem>
+                        {sitesOf(locations).length > 1 && sitesOf(locations).map(site => (
+                          <DropdownMenuRadioItem key={site} value={siteFilter(site)}>Ponto {site} (tudo)</DropdownMenuRadioItem>
+                        ))}
                         {locations.map(loc => (
-                          <DropdownMenuRadioItem key={loc.id} value={loc.id}>{loc.name}</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem key={loc.id} value={loc.id}>{locationLabel(loc)}</DropdownMenuRadioItem>
                         ))}
                       </DropdownMenuRadioGroup>
                     </DropdownMenuContent>

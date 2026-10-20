@@ -1,5 +1,6 @@
 "use client";
 
+import { LocationSelectItems } from '@/components/ui/location-select-items';
 import { requireEmailConfirmed } from "@/components/billing/email-confirm";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -774,9 +775,7 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
                             <SelectValue placeholder="Localização" />
                         </SelectTrigger>
                         <SelectContent>
-                            {locations.map((l) => (
-                                <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                            ))}
+                            <LocationSelectItems locations={locations} />
                         </SelectContent>
                     </Select>
                 </div>

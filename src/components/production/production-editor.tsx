@@ -1,5 +1,6 @@
 "use client";
 
+import { locationLabel } from '@/lib/sites';
 import { useMemo, useState } from "react";
 import { Edit, Loader2, Search } from "lucide-react";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
@@ -141,7 +142,7 @@ function EditorBody({ production, onDone }: { production: Production; onDone: ()
                 <div>
                     <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Onde foi produzido</p>
                     <div className="flex flex-wrap gap-1.5">
-                        {locations.map((l) => fromOrder && l.id !== location ? null : <Chip key={l.id} active={location === l.id} onClick={() => !fromOrder && setLocation(l.id)}>{l.name}</Chip>)}
+                        {locations.map((l) => fromOrder && l.id !== location ? null : <Chip key={l.id} active={location === l.id} onClick={() => !fromOrder && setLocation(l.id)}>{locationLabel(l)}</Chip>)}
                     </div>
                 </div>
             )}

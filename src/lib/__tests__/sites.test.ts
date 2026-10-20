@@ -53,3 +53,14 @@ describe('totais por ponto', () => {
         ]);
     });
 });
+
+import { matchesLocationFilter } from '../sites';
+describe('filtro por ponto', () => {
+    it('um ponto inteiro, um local, ou tudo', () => {
+        expect(matchesLocationFilter('site:Matola', 'l2', locs)).toBe(true);
+        expect(matchesLocationFilter('site:Matola', 'l3', locs)).toBe(false);
+        expect(matchesLocationFilter('site:Matola', '', locs)).toBe(true); // sem local = a primeira (Matola)
+        expect(matchesLocationFilter('l3', 'l3', locs)).toBe(true);
+        expect(matchesLocationFilter('all', 'l9', locs)).toBe(true);
+    });
+});

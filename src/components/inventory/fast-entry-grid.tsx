@@ -1,5 +1,6 @@
 "use client";
 
+import { locationLabel, sortBySite } from '@/lib/sites';
 import { requireEmailConfirmed } from "@/components/billing/email-confirm";
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -168,8 +169,8 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
             onBlur={() => onClose(true)}
         >
             <option value="" disabled>Selecione um local...</option>
-            {companyData?.locations?.map(loc => (
-                <option key={loc.id} value={loc.id}>{loc.name}</option>
+            {sortBySite(companyData?.locations || []).map(loc => (
+                <option key={loc.id} value={loc.id}>{locationLabel(loc)}</option>
             ))}
         </select>
     );

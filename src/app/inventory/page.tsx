@@ -1,6 +1,7 @@
 
 "use client";
 
+import { locationLabel, matchesLocationFilter, siteFilter, sitesOf } from '@/lib/sites';
 import { BarcodeScanner } from "@/components/scan/barcode-scanner";
 import { findByBarcode } from "@/lib/barcode";
 import { UNKNOWN_CODE } from "@/lib/scan-gate";
@@ -340,7 +341,7 @@ export default function InventoryPage() {
       // the location exists but has 0 products attached to it.
       // In this case, we still want to list all known products with 0 stock so the user can count them.
       let listToPrint = filteredProducts;
-      if (listToPrint.length === 0 && selectedLocation !== 'all' && locations.length > 0) {
+      if (listToPrint.length === 0 && selectedLocation !== 'all' && !selectedLocation.startsWith('site:') && locations.length > 0) {
         // Create a list of all unique products with 0 stock for this empty location
         const uniqueNames = new Set();
         listToPrint = products.reduce((acc: Product[], p) => {
@@ -408,7 +409,7 @@ export default function InventoryPage() {
     let result = hasInventoryFocus(focus) ? applyInventoryFocus(products, focus) : [...products];
 
     if (selectedLocation !== 'all') {
-      result = result.filter(p => p.location === selectedLocation);
+      result = result.filter(p => matchesLocationFilter(selectedLocation, p.location, locations));
     }
 
     if (categoryFilter.length > 0) {
@@ -420,7 +421,7 @@ export default function InventoryPage() {
     }
 
     return result;
-  }, [products, focus, selectedLocation, categoryFilter, dateFilter]);
+  }, [products, focus, selectedLocation, categoryFilter, dateFilter, locations]);
 
   // Apply fuzzy search on the pre-filtered list
   const searchedProducts = useFuse(preFilteredProducts, nameFilter, { keys: ['name', 'barcode', 'sku'] });
@@ -495,7 +496,8 @@ export default function InventoryPage() {
     if (selectedLocation === 'all' || !isMultiLocation) {
       return "Relatório de Inventário Geral";
     }
-    const locationName = locations.find(l => l.id === selectedLocation)?.name;
+    const loc = locations.find(l => l.id === selectedLocation);
+    const locationName = selectedLocation.startsWith('site:') ? `ponto ${selectedLocation.slice(5)}` : loc && locationLabel(loc);
     return `Relatório de Inventário: ${locationName || 'Desconhecida'}`;
   }, [selectedLocation, isMultiLocation, locations]);
 
@@ -783,13 +785,19 @@ export default function InventoryPage() {
                     <DropdownMenuCheckboxItem checked={selectedLocation === 'all'} onCheckedChange={() => setSelectedLocation('all')}>
                       Todas as localizações
                     </DropdownMenuCheckboxItem>
+                    {/* com pontos: o ponto inteiro, e cada local com o ponto à frente */}
+                    {sitesOf(locations).length > 1 && sitesOf(locations).map(site => (
+                      <DropdownMenuCheckboxItem key={site} checked={selectedLocation === siteFilter(site)} onCheckedChange={() => setSelectedLocation(siteFilter(site))}>
+                        Ponto {site} (tudo)
+                      </DropdownMenuCheckboxItem>
+                    ))}
                     {locations.map(location => (
                       <DropdownMenuCheckboxItem
                         key={location.id}
                         checked={selectedLocation === location.id}
                         onCheckedChange={() => setSelectedLocation(location.id)}
                       >
-                        {location.name}
+                        {locationLabel(location)}
                       </DropdownMenuCheckboxItem>
                     ))}
                   </ScrollArea>

@@ -1,4 +1,5 @@
 "use client";
+import { LocationSelectItems } from '@/components/ui/location-select-items';
 import { habitualLocation, recordLocation } from "@/lib/habitual-location";
 import { ProductPhoto } from "@/components/ui/product-photo";
 import { isSameDay } from "date-fns";
@@ -469,9 +470,7 @@ export default function POSPage() {
                                         <SelectValue placeholder="Localização" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {locations.map(loc => (
-                                            <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
-                                        ))}
+                                        <LocationSelectItems locations={locations} />
                                     </SelectContent>
                                 </Select>
                             )}

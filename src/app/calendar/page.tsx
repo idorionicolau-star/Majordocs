@@ -1,5 +1,6 @@
 "use client";
 
+import { LocationSelectItems } from '@/components/ui/location-select-items';
 import { useState, useContext } from 'react';
 import { CustomCalendar } from '@/components/calendar/page';
 import { InventoryContext } from '@/context/inventory-context';
@@ -44,9 +45,7 @@ export default function CalendarPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as Localizações</SelectItem>
-                  {locations.map((loc: Location) => (
-                      <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
-                  ))}
+                  <LocationSelectItems locations={locations} />
                 </SelectContent>
               </Select>
             )}

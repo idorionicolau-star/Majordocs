@@ -1,5 +1,6 @@
 "use client";
 
+import { LocationSelectItems } from '@/components/ui/location-select-items';
 import { useState, useEffect } from 'react';
 import { useInventoryBackHref } from "@/hooks/use-inventory-back";
 import { useParams, useRouter } from 'next/navigation';
@@ -370,11 +371,7 @@ export default function EditInventoryProductPage() {
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {locations.map((location: Location) => (
-                                                    <SelectItem key={location.id} value={location.id}>
-                                                        {location.name}
-                                                    </SelectItem>
-                                                ))}
+                                                <LocationSelectItems locations={locations} />
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />

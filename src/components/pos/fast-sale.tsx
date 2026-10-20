@@ -1,5 +1,6 @@
 "use client";
 
+import { LocationSelectItems } from '@/components/ui/location-select-items';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -451,7 +452,7 @@ export function FastSale() {
             {isMultiLocation && locations.length > 0 && (
                 <Select value={location} onValueChange={setLocation}>
                     <SelectTrigger className="mt-3 h-11"><MapPin className="mr-2 h-4 w-4 text-muted-foreground" /><SelectValue placeholder="Localização" /></SelectTrigger>
-                    <SelectContent>{locations.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
+                    <SelectContent><LocationSelectItems locations={locations} /></SelectContent>
                 </Select>
             )}
 

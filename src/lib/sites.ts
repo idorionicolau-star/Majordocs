@@ -68,3 +68,15 @@ export function siteTotals(
     for (const s of monthSales) get(of(s.location)).monthSales += income(s);
     return [...out.values()].sort((a, b) => (a.site === 'Sem ponto' ? 1 : b.site === 'Sem ponto' ? -1 : a.site.localeCompare(b.site, 'pt')));
 }
+
+/** Filtro de localização das listas: "all", um local (id) ou um ponto inteiro ("site:Matola"). */
+export const siteFilter = (site: string) => `site:${site}`;
+export function matchesLocationFilter(filter: string, location: string | null | undefined, locations: LocLike[]): boolean {
+    if (!filter || filter === 'all') return true;
+    const id = !location || location === 'Principal' ? locations[0]?.id : location;
+    if (filter.startsWith('site:')) {
+        const l = locations.find((x) => x.id === id);
+        return !!l && siteOf(l) === filter.slice(5);
+    }
+    return id === filter || location === filter;
+}
