@@ -11,6 +11,9 @@ import { useToast } from "@/hooks/use-toast";
 import { clampQty, filterCandidates, transferCandidates, type TransferRow } from "@/lib/transfer-core";
 import { cn } from "@/lib/utils";
 import { softFocus } from "@/lib/keyboard";
+import { useShipments } from "@/hooks/use-shipments";
+import { pendingFor } from "@/lib/shipments";
+import { ShipmentsHistory, ShipmentsInbox } from "@/components/inventory/shipments-panel";
 
 const fmt = (n: number) => (Number.isInteger(n) ? n : Number(n.toFixed(3))).toLocaleString("pt-PT");
 
@@ -31,6 +34,14 @@ export default function TransferStockPage() {
     const [basket, setBasket] = useState<Record<string, string>>({}); // nome → quantidade (texto, como escrito)
     const [busy, setBusy] = useState(false);
     const searchRef = useRef<HTMLInputElement>(null);
+    // envios com confirmação (se a empresa o ligou): enviar fica em trânsito até o destino confirmar
+    const sh = useShipments();
+    const [tab, setTab] = useState<"enviar" | "receber" | "historico">("enviar");
+    useEffect(() => {
+        const t = new URLSearchParams(window.location.search).get("tab");
+        if (t === "receber" || t === "historico") setTab(t);
+    }, []);
+    const pendingHere = pendingFor(sh.shipments, sh.mine).length;
 
     // por defeito: da primeira localização para a segunda
     useEffect(() => {
@@ -61,6 +72,16 @@ export default function TransferStockPage() {
     const submit = async () => {
         if (!valid.length || busy || !from || !to || from === to) return;
         setBusy(true);
+        if (sh.enabled) {
+            try {
+                const code = await sh.send(from, to, valid.map(({ row, qty }) => ({ name: row.name, unit: row.unit, qty })));
+                setBasket({});
+                toast({ title: `Envio ${code} em trânsito`, description: `Saiu de ${locName(from)}. Entra em ${locName(to)} quando lá confirmarem a receção.` });
+            } catch (e) {
+                toast({ variant: "destructive", title: "O envio não foi feito", description: e instanceof Error ? e.message : "Erro" });
+            } finally { setBusy(false); }
+            return;
+        }
         const failed: string[] = [];
         let done = 0;
         for (const { row, qty } of valid) {
@@ -111,10 +132,24 @@ export default function TransferStockPage() {
             <div className="flex items-center gap-3">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Transferir stock</h1>
-                    <p className="text-sm text-muted-foreground">Escolha de onde e para onde, procure os produtos e junte-os à lista.</p>
+                    <p className="text-sm text-muted-foreground">{sh.enabled ? "Envie para outro local; entra lá quando o destino confirmar o que recebeu." : "Escolha de onde e para onde, procure os produtos e junte-os à lista."}</p>
                 </div>
             </div>
 
+            {sh.enabled && (
+                <div className="flex gap-1 rounded-2xl bg-muted p-1" role="tablist">
+                    {([["enviar", "Enviar"], ["receber", `Por receber${pendingHere ? ` (${pendingHere})` : ""}`], ["historico", "Histórico"]] as const).map(([k, label]) => (
+                        <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} data-testid={`tab-${k}`}
+                            className={cn("flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition", tab === k ? "bg-background shadow" : "text-muted-foreground",
+                                k === "receber" && pendingHere > 0 && tab !== k && "text-amber-600")}>
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            )}
+            {sh.enabled && tab === "receber" && <ShipmentsInbox sh={sh} />}
+            {sh.enabled && tab === "historico" && <ShipmentsHistory sh={sh} />}
+            {(!sh.enabled || tab === "enviar") && <>
             <div data-tour="tr-locations" className="flex items-end gap-2 rounded-2xl border bg-card p-3">
                 <LocPick label="De" value={from} onPick={changeFrom} other={to} list={destinations.filter((l) => mine.has(l.id))} />
                 <Button type="button" variant="outline" size="icon" onClick={swap} disabled={!mine.has(to)} aria-label="Trocar origem e destino" className="mb-0.5 shrink-0 rounded-full">
@@ -193,9 +228,10 @@ export default function TransferStockPage() {
                 <Button type="button" onClick={submit} disabled={!valid.length || busy || isReadOnly || !from || !to || from === to}
                     className="h-14 w-full rounded-2xl text-base shadow-xl" data-tour="tr-submit">
                     {busy ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Truck className="mr-2 h-5 w-5" />}
-                    {busy ? "A transferir…" : valid.length ? `Transferir ${valid.length} ${valid.length === 1 ? "produto" : "produtos"} para ${locName(to)}` : "Escolha os produtos"}
+                    {busy ? (sh.enabled ? "A enviar…" : "A transferir…") : valid.length ? `${sh.enabled ? "Enviar" : "Transferir"} ${valid.length} ${valid.length === 1 ? "produto" : "produtos"} para ${locName(to)}` : "Escolha os produtos"}
                 </Button>
             </div>
+            </>}
         </div>
     );
 }
