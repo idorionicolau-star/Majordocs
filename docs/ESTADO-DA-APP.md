@@ -70,8 +70,8 @@ Gestão de stock, vendas e produção para pequenas e médias empresas em Moçam
 |---|---|---|---|
 | Preço/mês | 300 MT | 1000 MT | 2000 MT |
 | Utilizadores | 1 | até 5 | sem limite |
-| Venda Rápida, leitor, voz, stock, clientes e dívidas, despesas | ✓ | ✓ | ✓ |
-| Vender por toque, variações, documentos, encomendas, relatórios completos | — | ✓ | ✓ |
+| Venda Rápida, Vender por toque, leitor, voz, stock, clientes e dívidas, despesas | ✓ | ✓ | ✓ |
+| Variações, documentos, encomendas, relatórios completos | — | ✓ | ✓ |
 | Produção e matérias-primas, várias localizações | — | — | ✓ |
 
 - **Trimestral:** -10%. **Anual:** -15%. O Pro mantém os preços de sempre: 1000, 2700 e 10200 MT.

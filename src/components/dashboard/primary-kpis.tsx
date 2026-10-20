@@ -130,8 +130,14 @@ export const PrimaryKPIs = () => {
             ? ((currentSalesValue - previousSalesValue) / previousSalesValue) * 100
             : (currentSalesValue > 0 ? 100 : 0);
 
-        const currentAvgTicket = currentPeriodSales.length > 0 ? currentSalesValue / currentPeriodSales.length : 0;
-        const previousAvgTicket = previousPeriodSales.length > 0 ? previousSalesValue / previousPeriodSales.length : 0;
+        // uma venda com vários produtos são várias linhas: o ticket conta vendas (nº do documento), não linhas
+        const tickets = (list: typeof sales) => new Set(list.map(s => s.guideNumber || s.id)).size;
+        const currentTickets = tickets(currentPeriodSales), previousTickets = tickets(previousPeriodSales);
+        const currentAvgTicket = currentTickets > 0 ? currentSalesValue / currentTickets : 0;
+        const previousAvgTicket = previousTickets > 0 ? previousSalesValue / previousTickets : 0;
+        // produtos vendidos sem custo: o lucro sai a mais (sem custo = lucro de 100%)
+        const noCost = new Set(currentPeriodSales.filter(s => !(s.unitCost && s.unitCost > 0)).map(s => s.productName)).size;
+        const allNoCost = currentPeriodSales.length > 0 && currentPeriodSales.every(s => !(s.unitCost && s.unitCost > 0));
 
         const ticketGrowth = previousAvgTicket > 0
             ? ((currentAvgTicket - previousAvgTicket) / previousAvgTicket) * 100
@@ -176,6 +182,8 @@ export const PrimaryKPIs = () => {
             currentAvgTicket,
             currentProfit,
             profitGrowth,
+            noCost,
+            allNoCost,
             trendLabel
         };
     }, [sales, dashboardStats, products, stockMovements, expenses, loading, period]);
@@ -227,9 +235,13 @@ export const PrimaryKPIs = () => {
         {
             title: `LUCRO LÍQUIDO (${periodLabels[period].toUpperCase()})`,
             value: kpiData.currentProfit,
-            href: "/finance",
-            trend: kpiData.hasBase ? kpiData.profitGrowth : null,
-            trendLabel: kpiData.hasBase ? kpiData.trendLabel : "poucos dados para comparar",
+            // sem custo nos produtos vendidos o "lucro" seria igual ao faturamento: não mostramos um número enganador
+            display: kpiData.allNoCost ? "Faltam custos" : undefined,
+            href: kpiData.noCost ? "/inventory" : "/finance",
+            trend: kpiData.hasBase && !kpiData.noCost ? kpiData.profitGrowth : null,
+            trendLabel: kpiData.allNoCost ? "registe o custo dos produtos"
+                : kpiData.noCost ? `${kpiData.noCost} produto${kpiData.noCost > 1 ? 's' : ''} sem custo: lucro a mais`
+                : kpiData.hasBase ? kpiData.trendLabel : "poucos dados para comparar",
             colorClass: "kpi-card--orange", // Define orange class in CSS or just use utility if configured
         },
     ];
@@ -267,7 +279,7 @@ export const PrimaryKPIs = () => {
                                 <div className="relative z-10 flex flex-col h-full items-center justify-center text-center">
                                     <p className="text-slate-400 text-[10px] font-bold tracking-wider uppercase">{card.title}</p>
                                     <h2 className="text-2xl font-bold" style={{ color: `var(--card-color)` }}>
-                                        {formatCurrency(card.value, { compact: true })}
+                                        {card.display ?? formatCurrency(card.value, { compact: true })}
                                     </h2>
                                     <div className="flex items-center gap-1 mt-1">
                                         <span className={cn("flex items-center text-xs font-bold gap-0.5", trendColor)}>
