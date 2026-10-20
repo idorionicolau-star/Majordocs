@@ -1,4 +1,5 @@
 "use client";
+import { locationLabel, sortBySite } from "@/lib/sites";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -19,7 +20,10 @@ const fmt = (n: number) => (Number.isInteger(n) ? n : Number(n.toFixed(3))).toLo
  * lista sem pesquisa.
  */
 export default function TransferStockPage() {
-    const { products, locations, isMultiLocation, transferStock, canEdit, isReadOnly } = useInventory();
+    const { products, locations, allLocations, isMultiLocation, transferStock, canEdit, isReadOnly } = useInventory();
+    // de: só os locais de quem transfere (o ponto dele); para: qualquer local da empresa (mandar para outro ponto)
+    const destinations = useMemo(() => sortBySite(allLocations?.length ? allLocations : locations || []), [allLocations, locations]);
+    const mine = useMemo(() => new Set((locations || []).map((l) => l.id)), [locations]);
     const { toast } = useToast();
     const [from, setFrom] = useState("");
     const [to, setTo] = useState("");
@@ -32,15 +36,15 @@ export default function TransferStockPage() {
     useEffect(() => {
         if (!locations?.length) return;
         setFrom((f) => f || locations[0].id);
-        setTo((t) => t || locations[1]?.id || "");
-    }, [locations]);
+        setTo((t) => t || destinations.find((l) => l.id !== locations[0].id)?.id || "");
+    }, [locations, destinations]);
 
     const rows = useMemo(() => transferCandidates(products || [], from, to), [products, from, to]);
     const byName = useMemo(() => new Map(rows.map((r) => [r.name, r])), [rows]);
     const shown = useMemo(() => filterCandidates(rows, text), [rows, text]);
     const items = Object.entries(basket).filter(([n]) => byName.has(n));
     const valid = items.map(([n, q]) => ({ row: byName.get(n)!, qty: clampQty(q, byName.get(n)!.available) })).filter((x) => x.qty > 0);
-    const locName = (id: string) => locations?.find((l) => l.id === id)?.name || id;
+    const locName = (id: string) => { const l = destinations.find((x) => x.id === id); return l ? locationLabel(l) : id; };
 
     const add = (r: TransferRow) => {
         setBasket((b) => ({ ...b, [r.name]: b[r.name] || "1" }));
@@ -78,7 +82,7 @@ export default function TransferStockPage() {
     };
 
     if (!canEdit("inventory")) return <div className="p-8 text-center text-muted-foreground">Sem permissão para mexer no stock.</div>;
-    if (!isMultiLocation || (locations?.length || 0) < 2) {
+    if (!isMultiLocation || destinations.length < 2) {
         return (
             <div className="mx-auto max-w-lg p-8 text-center">
                 <p className="text-muted-foreground">Para transferir stock precisa de pelo menos duas localizações.</p>
@@ -87,15 +91,15 @@ export default function TransferStockPage() {
         );
     }
 
-    const LocPick = ({ label, value, onPick, other }: { label: string; value: string; onPick: (id: string) => void; other: string }) => (
+    const LocPick = ({ label, value, onPick, other, list }: { label: string; value: string; onPick: (id: string) => void; other: string; list: typeof destinations }) => (
         <div className="min-w-0 flex-1">
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
             <div className="flex flex-wrap gap-1.5">
-                {locations.map((l) => (
+                {list.map((l) => (
                     <button key={l.id} type="button" onClick={() => onPick(l.id)} aria-pressed={value === l.id}
                         className={cn("rounded-full border px-3 py-1.5 text-sm font-medium transition",
                             value === l.id ? "border-primary bg-primary text-primary-foreground" : l.id === other ? "opacity-50" : "hover:border-primary/60")}>
-                        {l.name}
+                        {locationLabel(l)}
                     </button>
                 ))}
             </div>
@@ -112,11 +116,11 @@ export default function TransferStockPage() {
             </div>
 
             <div data-tour="tr-locations" className="flex items-end gap-2 rounded-2xl border bg-card p-3">
-                <LocPick label="De" value={from} onPick={changeFrom} other={to} />
-                <Button type="button" variant="outline" size="icon" onClick={swap} aria-label="Trocar origem e destino" className="mb-0.5 shrink-0 rounded-full">
+                <LocPick label="De" value={from} onPick={changeFrom} other={to} list={destinations.filter((l) => mine.has(l.id))} />
+                <Button type="button" variant="outline" size="icon" onClick={swap} disabled={!mine.has(to)} aria-label="Trocar origem e destino" className="mb-0.5 shrink-0 rounded-full">
                     <ArrowLeftRight className="h-4 w-4" />
                 </Button>
-                <LocPick label="Para" value={to} onPick={changeTo} other={from} />
+                <LocPick label="Para" value={to} onPick={changeTo} other={from} list={destinations} />
             </div>
 
             <div className="relative" data-tour="tr-search">
@@ -173,7 +177,7 @@ export default function TransferStockPage() {
                                         <div className="min-w-0 flex-1">
                                             <p className="truncate font-medium">{r.name}</p>
                                             <p className="text-xs text-muted-foreground">
-                                                {fmt(r.available)} {r.unit} em {locName(from)} · {fmt(r.atDestination)} em {locName(to)}
+                                                {fmt(r.available)} {r.unit} em {locName(from)} {mine.has(to) ? ` · ${fmt(r.atDestination)} em ${locName(to)}` : ""}
                                             </p>
                                         </div>
                                         {inBasket ? <Check className="h-5 w-5 shrink-0 text-primary" /> : <Plus className="h-5 w-5 shrink-0 text-muted-foreground" />}

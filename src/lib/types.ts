@@ -30,6 +30,8 @@ export type Employee = {
   companyId: string;
   permissions: Partial<Record<ModulePermission, PermissionLevel>>;
   profilePictureUrl?: string; // URL for the profile picture
+  /** Ponto onde trabalha: só vê e vende o stock das localizações desse ponto (vazio = vê tudo). */
+  site?: string;
 };
 
 export type NotificationEmail = {
@@ -112,6 +114,8 @@ export type Company = {
 export type Location = {
   id: string;
   name: string;
+  /** Ponto (loja/sítio) a que pertence, ex.: "Matola". Agrupa as localizações e limita o que cada vendedor vê. */
+  site?: string;
 };
 
 export type Product = {
@@ -419,6 +423,8 @@ export interface InventoryContextType {
   locations: Location[];
   isMultiLocation: boolean;
   companyData: Company | null;
+  /** Todas as localizações (as `locations` são só as do ponto de quem está a usar, se tiver um). */
+  allLocations: Location[];
   businessStartDate: Date | null;
   notifications: AppNotification[];
   monthlySalesChartData: { name: string; vendas: number }[];

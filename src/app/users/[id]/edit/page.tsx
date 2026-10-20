@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useContext, useEffect, useRef } from 'react';
+import { useMemo, useState, useContext, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
     Form,
@@ -38,11 +38,13 @@ import { useFirestore, useMemoFirebase } from '@/firebase/provider';
 import { authedFetch } from "@/lib/api-client";
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection } from 'firebase/firestore';
+import { sitesOf } from '@/lib/sites';
 
 const formSchema = z.object({
     username: z.string().min(3, { message: "O nome de utilizador deve ter pelo menos 3 caracteres." }),
     role: z.enum(['Admin', 'Employee', 'Dono'], { required_error: "A função é obrigatória." }),
     permissions: z.record(z.string(), z.enum(['none', 'read', 'write'])),
+    site: z.string().optional(),
 });
 
 type EditEmployeeFormValues = z.infer<typeof formSchema>;
@@ -66,6 +68,7 @@ export default function EditUserPage() {
     const { data: employees, isLoading } = useCollection<Employee>(employeesColRef);
 
     const employeeToEdit = employees?.find(e => e.id === userId);
+    const sites = useMemo(() => (companyData?.isMultiLocation ? sitesOf(companyData?.locations || []) : []), [companyData]);
 
     const form = useForm<EditEmployeeFormValues>({
         resolver: zodResolver(formSchema),
@@ -73,6 +76,7 @@ export default function EditUserPage() {
             username: "",
             role: "Employee",
             permissions: {},
+            site: "",
         },
     });
 
@@ -85,6 +89,7 @@ export default function EditUserPage() {
                 username: employeeToEdit.username,
                 role: employeeToEdit.role,
                 permissions: employeeToEdit.permissions || {},
+                site: employeeToEdit.site || "",
             });
         }
     }, [employeeToEdit, form]);
@@ -132,6 +137,8 @@ export default function EditUserPage() {
                 username: values.username,
                 role: values.role,
                 permissions: finalPermissions,
+                // ponto: só para funcionários (Admin e Dono veem sempre tudo)
+                site: values.role === 'Employee' ? (values.site || '') : '',
             });
 
             toast({
@@ -232,6 +239,23 @@ export default function EditUserPage() {
                             </div>
 
                             <div className="space-y-4">
+                                {role === 'Employee' && sites.length > 0 && (
+                                    <FormField
+                                        control={form.control}
+                                        name="site"
+                                        render={({ field }) => (
+                                            <FormItem className="rounded-lg border p-4">
+                                                <FormLabel className="text-base">Ponto onde trabalha</FormLabel>
+                                                <select value={field.value || ''} onChange={(e) => field.onChange(e.target.value)} data-testid="employee-site"
+                                                    className="mt-2 h-11 w-full rounded-md border bg-background px-3 text-sm">
+                                                    <option value="">Todos os pontos (vê tudo)</option>
+                                                    {sites.map((st) => <option key={st} value={st}>{st}</option>)}
+                                                </select>
+                                                <p className="text-xs text-muted-foreground">Com um ponto, só vê e vende o stock desse ponto. Pode transferir para outros pontos.</p>
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
                                 {role === 'Employee' && (
                                     <div className="rounded-lg border p-4 bg-background/50 h-full">
                                         <div className="mb-4">

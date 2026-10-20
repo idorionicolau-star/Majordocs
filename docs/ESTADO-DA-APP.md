@@ -35,7 +35,8 @@ Gestão de stock, vendas e produção para pequenas e médias empresas em Moçam
   - um código desconhecido pode criar um produto novo ou ser associado a um existente;
   - localização habitual;
   - folha de entrada.
-- **Várias localizações**, transferências, contagens e perdas.
+- **Várias localizações**, transferências (de vários produtos de uma vez), contagens e perdas. As localizações podem ser zonas do mesmo sítio (fábrica, pátio, mostruário) ou lojas noutros pontos.
+- **Pontos:** cada localização pode pertencer a um ponto (ex.: Matola, Boane). O Painel mostra quanto vende e quanto tem cada ponto; um funcionário com ponto só vê e vende o stock desse ponto, e pode transferir para os outros. (Limite: é feito na app, não nas regras do Firestore.)
 - **Pesquisa do Inventário** pelo código de barras (ícone do leitor).
 
 ### Produção (fábricas)

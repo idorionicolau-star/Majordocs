@@ -71,6 +71,7 @@ export default function InventoryPage() {
   const {
     products,
     locations,
+    allLocations,
     isMultiLocation,
     addProduct,
     updateProduct,
@@ -632,7 +633,7 @@ export default function InventoryPage() {
             className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-3 py-2.5 text-sm hover:bg-primary/10"
           >
             <span className="min-w-0">
-              <b>{plural(withoutStock.length, 'produto do catálogo', 'produtos do catálogo')}</b> ainda sem stock
+              <b>{plural(withoutStock.length, 'produto do catálogo', 'produtos do catálogo')}</b> ainda sem stock{allLocations.length > locations.length ? ' neste ponto' : ''}
               <span className="block truncate text-xs text-muted-foreground">{withoutStock.slice(0, 3).map((c) => c.name).join(', ')}{withoutStock.length > 3 ? '…' : ''}</span>
             </span>
             <span className="shrink-0 font-semibold text-primary">Dar entrada ›</span>
