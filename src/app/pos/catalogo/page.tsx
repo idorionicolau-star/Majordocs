@@ -54,11 +54,17 @@ import {
 
 import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 import { PosCart } from '@/components/pos/pos-cart';
+import Link from 'next/link';
+import { setSellMode } from '@/lib/sell-mode';
+import { holdCart, resumeCart, parseHeld, type HeldCart } from '@/lib/held-carts';
+import { receiptText, waShareLink } from '@/lib/sale-share';
+import { CheckCircle2, Clock, MessageCircle, Keyboard } from 'lucide-react';
 import { AiSuggestions } from '@/components/pos/ai-suggestions';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
 
 const CART_STORAGE_PREFIX = 'majorstockx-pos-cart-';
+const HELD_STORAGE_PREFIX = 'majorstockx-pos-held-';
 
 function loadCartFromStorage(companyId: string | null): CartItem[] {
     if (typeof window === 'undefined' || !companyId) return [];
@@ -89,10 +95,11 @@ export default function POSPage() {
         addBulkSale,
         canView,
         canEdit,
+        companyData,
     } = inventoryContext || {
         products: [], catalogProducts: [], catalogCategories: [], loading: true,
         user: null, companyId: null, locations: [], isMultiLocation: false,
-        addBulkSale: async () => { }, canView: () => false, canEdit: () => false,
+        addBulkSale: async () => { }, canView: () => false, canEdit: () => false, companyData: null,
     };
     const { customers, addCustomer } = useCRM();
     const { toast } = useToast();
@@ -117,6 +124,23 @@ export default function POSPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [cartCompanyId, setCartCompanyId] = useState<string | null>(null);
+    // carrinhos retidos (o cliente foi buscar dinheiro) e o resumo da última venda (para enviar o recibo)
+    const [held, setHeld] = useState<HeldCart[]>([]);
+    const [heldOpen, setHeldOpen] = useState(false);
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [done, setDone] = useState<{ items: CartItem[]; total: number; client: string; phone?: string } | null>(null);
+
+    // quem vende por toque passa a abrir aqui ao tocar em "Venda Rápida"
+    useEffect(() => { setSellMode('toque'); }, []);
+
+    useEffect(() => {
+        if (!companyId) { setHeld([]); return; }
+        try { setHeld(parseHeld(localStorage.getItem(`${HELD_STORAGE_PREFIX}${companyId}`))); } catch { setHeld([]); }
+    }, [companyId]);
+    const saveHeld = useCallback((list: HeldCart[]) => {
+        setHeld(list);
+        if (companyId) try { localStorage.setItem(`${HELD_STORAGE_PREFIX}${companyId}`, JSON.stringify(list)); } catch { /* ignore */ }
+    }, [companyId]);
 
     // Load cart from localStorage when companyId changes safely
     useEffect(() => {
@@ -324,10 +348,8 @@ export default function POSPage() {
                 date: isSameDay(checkoutDate, new Date()) ? new Date().toISOString() : new Date(checkoutDate.getFullYear(), checkoutDate.getMonth(), checkoutDate.getDate(), 12).toISOString(),
             });
 
-            toast({
-                title: '🎉 Venda Concluída!',
-                description: `${cart.length} item${cart.length > 1 ? 's' : ''} vendido${cart.length > 1 ? 's' : ''} por ${formatCurrency(cartTotal)}.`,
-            });
+            // em vez de um aviso que some: o que fazer a seguir (enviar o recibo, ver a venda, vender outra vez)
+            setDone({ items: cart, total: cartTotal, client: checkoutClientName.trim(), phone: customers.find(c => c.id === finalCustomerId)?.phone });
 
             clearCart();
             setIsCheckoutOpen(false);
@@ -341,6 +363,22 @@ export default function POSPage() {
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    // Reter: guarda o carrinho e deixa o balcão livre; retomar troca com o que estiver a meio
+    const holdCurrent = () => {
+        if (!cart.length) return;
+        saveHeld(holdCart(held, cart, new Date()));
+        clearCart();
+        setDrawerOpen(false);
+        toast({ title: 'Carrinho retido', description: 'Retome-o em "Retidos" quando o cliente voltar.' });
+    };
+    const resumeHeld = (id: string) => {
+        const r = resumeCart(held, id, cart, new Date());
+        if (!r) return;
+        saveHeld(r.list);
+        setCart(r.cart);
+        setHeldOpen(false);
     };
 
     const resetCheckoutForm = () => {
@@ -389,14 +427,26 @@ export default function POSPage() {
     return (
         <div className="flex flex-col gap-6 pb-32 animate-in fade-in duration-500">
             {/* Header */}
-            <div>
-                <h1 className="text-2xl md:text-3xl font-headline font-bold flex items-center gap-3">
-                    <ShoppingCart className="h-7 w-7 text-primary" />
-                    Vender por toque
-                </h1>
-                <p className="text-muted-foreground">
-                    Adicione produtos ao carrinho e finalize a venda de uma só vez.
-                </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-headline font-bold flex items-center gap-3">
+                        <ShoppingCart className="h-7 w-7 text-primary" />
+                        Vender por toque
+                    </h1>
+                    <p className="text-muted-foreground">
+                        Toque nos produtos e finalize a venda de uma só vez.
+                    </p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                    {held.length > 0 && (
+                        <Button variant="outline" size="sm" onClick={() => setHeldOpen(true)} data-testid="held-open">
+                            <Clock className="mr-1.5 h-4 w-4" />Retidos ({held.length})
+                        </Button>
+                    )}
+                    <Button asChild variant="outline" size="sm">
+                        <Link href="/pos?modo=rapida"><Keyboard className="mr-1.5 h-4 w-4" />Escrever ou ler código</Link>
+                    </Button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -515,13 +565,14 @@ export default function POSPage() {
                         onRemoveItem={removeFromCart}
                         onClearCart={clearCart}
                         onCheckout={() => setIsCheckoutOpen(true)}
+                        onHold={holdCurrent}
                     />
                 </div>
             </div>
 
             {/* MOBILE CART: Sticky Bottom Bar + Drawer */}
             <div className="lg:hidden">
-                <Drawer>
+                <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
                     <DrawerTrigger asChild>
                         <div className="fixed bottom-16 md:bottom-0 left-0 w-full bg-background border-t p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 flex items-center justify-between cursor-pointer active:bg-[rgba(0,0,0,0.05)] transition-colors touch-none select-none touch-manipulation pb-safe">
                             <div className="flex items-center gap-3">
@@ -563,6 +614,7 @@ export default function POSPage() {
                                 onRemoveItem={removeFromCart}
                                 onClearCart={clearCart}
                                 onCheckout={() => setIsCheckoutOpen(true)}
+                                onHold={holdCurrent}
                                 className="h-full border-none shadow-none"
                             />
                         </div>
@@ -758,6 +810,52 @@ export default function POSPage() {
                             {isSubmitting ? 'A processar...' : `Confirmar ${formatCurrency(cartTotal)}`}
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Venda concluída: enviar o recibo, ver a venda ou vender outra vez */}
+            <Dialog open={!!done} onOpenChange={(o) => { if (!o) setDone(null); }}>
+                <DialogContent className="sm:max-w-sm" data-testid="sale-done">
+                    <DialogHeader className="items-center text-center">
+                        <CheckCircle2 className="h-12 w-12 text-emerald-500" />
+                        <DialogTitle>Venda registada</DialogTitle>
+                        <DialogDescription className="text-2xl font-bold text-foreground">{done && formatCurrency(done.total)}</DialogDescription>
+                    </DialogHeader>
+                    {done && (
+                        <div className="flex flex-col gap-2">
+                            <Button asChild className="h-12 bg-emerald-600 hover:bg-emerald-700">
+                                <a href={waShareLink(receiptText({ company: companyData?.name, client: done.client, items: done.items, total: done.total, date: new Date(), money: (n) => formatCurrency(n) }), done.phone)} target="_blank" rel="noopener noreferrer">
+                                    <MessageCircle className="mr-2 h-5 w-5" />Enviar recibo por WhatsApp
+                                </a>
+                            </Button>
+                            <Button asChild variant="outline" className="h-12">
+                                <Link href="/sales">Ver a venda e o documento (PDF)</Link>
+                            </Button>
+                            <Button variant="secondary" className="h-12" onClick={() => setDone(null)}>Nova venda</Button>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Carrinhos retidos */}
+            <Dialog open={heldOpen} onOpenChange={setHeldOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2"><Clock className="h-5 w-5 text-primary" />Carrinhos retidos</DialogTitle>
+                        <DialogDescription>{cart.length ? 'O carrinho atual fica retido no lugar do que retomar.' : 'Toque para continuar a venda.'}</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2">
+                        {held.map(h => (
+                            <div key={h.id} className="flex items-center gap-2 rounded-xl border p-3">
+                                <button type="button" className="min-w-0 flex-1 text-left" onClick={() => resumeHeld(h.id)}>
+                                    <p className="truncate text-sm font-semibold">{h.items.map(i => `${i.quantity}× ${i.productName}`).join(', ')}</p>
+                                    <p className="text-xs text-muted-foreground">{new Date(h.at).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} · {formatCurrency(h.total)}</p>
+                                </button>
+                                <Button size="sm" onClick={() => resumeHeld(h.id)}>Retomar</Button>
+                                <Button size="icon" variant="ghost" aria-label="Apagar" onClick={() => saveHeld(held.filter(x => x.id !== h.id))}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                        ))}
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>

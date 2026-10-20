@@ -31,16 +31,18 @@ export type Tier = {
     highlights: string[];
 };
 
-const PRO_FEATURES: Feature[] = ['tapSell', 'variants', 'documents', 'orders', 'reports'];
+// Vender por toque está em todos: é o que mais depressa convence uma loja pequena (abrir, tocar, vender)
+const BASIC_FEATURES: Feature[] = ['tapSell'];
+const PRO_FEATURES: Feature[] = [...BASIC_FEATURES, 'variants', 'documents', 'orders', 'reports'];
 
 export const TIERS: Tier[] = [
     {
-        id: 'basico', label: 'Básico', monthly: 300, forWho: 'Banca, loja pequena', maxUsers: 1, features: [],
-        highlights: ['1 utilizador', 'Venda Rápida, leitor de códigos e voz', 'Stock, clientes e dívidas, despesas', 'Resumo do dia'],
+        id: 'basico', label: 'Básico', monthly: 300, forWho: 'Banca, loja pequena', maxUsers: 1, features: BASIC_FEATURES,
+        highlights: ['1 utilizador', 'Vender por toque, leitor de códigos e voz', 'Stock, clientes e dívidas, despesas', 'Resumo do dia'],
     },
     {
         id: 'pro', label: 'Pro', monthly: 1000, forWho: 'Loja, ferragem, mercearia', maxUsers: 5, features: PRO_FEATURES,
-        highlights: ['Até 5 utilizadores', 'Tudo do Básico', 'Catálogo com variações e Vender por toque', 'Proformas e documentos com a sua marca', 'Encomendas e relatórios completos'],
+        highlights: ['Até 5 utilizadores', 'Tudo do Básico', 'Catálogo com variações', 'Proformas e documentos com a sua marca', 'Encomendas e relatórios completos'],
     },
     {
         id: 'business', label: 'Business', monthly: 2000, forWho: 'Fábrica, armazém, várias lojas', maxUsers: null, features: [...PRO_FEATURES, 'production', 'locations'],

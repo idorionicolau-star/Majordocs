@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Trash2, X, Minus, Plus, CreditCard, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, Trash2, X, Minus, Plus, CreditCard, AlertTriangle, PauseCircle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { CartItem } from '@/lib/types';
 import { useState, useEffect } from 'react';
@@ -119,6 +119,8 @@ interface PosCartProps {
     onRemoveItem: (productName: string) => void;
     onClearCart: () => void;
     onCheckout: () => void;
+    /** Reter carrinho: guarda-o e deixa o balcão livre */
+    onHold?: () => void;
     className?: string;
 }
 
@@ -135,6 +137,7 @@ export function PosCart({
     onRemoveItem,
     onClearCart,
     onCheckout,
+    onHold,
     className
 }: PosCartProps) {
     const { isReadOnly } = useInventory();
@@ -304,6 +307,11 @@ export function PosCart({
                             <CreditCard className="mr-2 h-5 w-5" />
                             Finalizar Venda
                         </Button>
+                        {onHold && (
+                            <Button variant="ghost" className="mt-2 w-full" onClick={onHold} data-testid="hold-cart">
+                                <PauseCircle className="mr-2 h-4 w-4" />Reter carrinho (o cliente volta já)
+                            </Button>
+                        )}
                     </div>
                 )}
             </CardContent>

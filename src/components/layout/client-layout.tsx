@@ -188,8 +188,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        {/* quem veio da EscalePay já pagou lá: sem contagem do teste */}
-        {isTrial && isManager && (fromEscalepay ? <EscalepayPendingBanner daysLeft={daysLeft} /> : <TrialBanner companyId={authContext?.companyId} daysLeft={daysLeft} coupon={authContext?.companyData?.coupon} />)}
+        {/* quem veio da EscalePay já pagou lá: sem contagem do teste. Nas páginas de venda não aparece: há um cliente à espera */}
+        {isTrial && isManager && !pathname.startsWith('/pos') && (fromEscalepay ? <EscalepayPendingBanner daysLeft={daysLeft} /> : <TrialBanner companyId={authContext?.companyId} daysLeft={daysLeft} coupon={authContext?.companyData?.coupon} />)}
 
         {isManager && !isReadOnly && !isTrial && typeof renewInDays === 'number' && <RenewBanner companyId={authContext?.companyId} renewInDays={renewInDays} coupon={authContext?.companyData?.coupon} />}
 
