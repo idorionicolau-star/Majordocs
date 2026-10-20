@@ -1,6 +1,7 @@
 
 "use client";
 
+import { locationLabel, siteOf, sitesOf, sortBySite } from '@/lib/sites';
 import { useState, useContext, useMemo } from 'react';
 import { doc, increment, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase/provider';
@@ -34,14 +35,17 @@ export function LocationsManager() {
 
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [newLocationName, setNewLocationName] = useState('');
+  // ponto (loja/sítio) da localização: opcional; agrupa e limita o que cada vendedor vê
+  const [newSite, setNewSite] = useState('');
   const isMultiLocation = companyData?.isMultiLocation || false;
   // várias localizações: plano Business (quem já as tem não as perde — só não se liga de novo)
   const canMulti = isMultiLocation || companyHas(companyData, 'locations');
-  const locations = useMemo(() => companyData?.locations || [], [companyData?.locations]);
+  const locations = useMemo(() => sortBySite(companyData?.locations || []), [companyData?.locations]);
+  const sites = useMemo(() => sitesOf(locations), [locations]);
 
   const handleAddLocation = async () => {
     if (!newLocationName.trim() || !updateCompany) return;
-    const newLocation: Location = { id: uuidv4(), name: newLocationName.trim() };
+    const newLocation: Location = { id: uuidv4(), name: newLocationName.trim(), ...(newSite.trim() ? { site: newSite.trim() } : {}) };
     const updatedLocations = [...locations, newLocation];
     await updateCompany({ locations: updatedLocations });
     setNewLocationName('');
@@ -50,10 +54,16 @@ export function LocationsManager() {
 
   const handleUpdateLocation = async () => {
     if (!editingLocation || !newLocationName.trim() || !updateCompany) return;
-    const updatedLocations = locations.map(l => l.id === editingLocation.id ? { ...l, name: newLocationName.trim() } : l);
+    const site = newSite.trim();
+    const updatedLocations = locations.map(l => {
+      if (l.id !== editingLocation.id) return l;
+      const { site: _old, ...rest } = l;
+      return { ...rest, name: newLocationName.trim(), ...(site ? { site } : {}) };
+    });
     await updateCompany({ locations: updatedLocations });
     setEditingLocation(null);
     setNewLocationName('');
+    setNewSite('');
     toast({ title: 'Localização Atualizada' });
   };
 
@@ -125,10 +135,14 @@ export function LocationsManager() {
                 onChange={(e) => setNewLocationName(e.target.value)}
                 className="mt-2"
               />
+              <Label htmlFor="location-site-edit" className="mt-4 block">Ponto (opcional)</Label>
+              <Input id="location-site-edit" list="location-sites" value={newSite} onChange={(e) => setNewSite(e.target.value)}
+                placeholder="ex.: Matola" className="mt-2" />
+              <p className="mt-1 text-xs text-muted-foreground">Localizações do mesmo ponto ficam juntas. Um vendedor com ponto só vê esse ponto.</p>
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setNewLocationName('')}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => { setNewLocationName(''); setNewSite(''); }}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleUpdateLocation}>Salvar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -155,11 +169,21 @@ export function LocationsManager() {
       {isMultiLocation && (
         <div className="space-y-4 pt-4 border-t">
           <h4 className="font-medium">Gerir Localizações</h4>
-          <div className="flex items-center gap-2">
+          <datalist id="location-sites">{sites.map((st) => <option key={st} value={st} />)}</datalist>
+          <div className="flex flex-wrap items-center gap-2">
             <Input
               placeholder="Nome da nova localização"
               value={newLocationName}
               onChange={(e) => setNewLocationName(e.target.value)}
+              className="min-w-0 flex-[2]"
+            />
+            <Input
+              placeholder="Ponto (opcional, ex.: Matola)"
+              list="location-sites"
+              value={newSite}
+              onChange={(e) => setNewSite(e.target.value)}
+              className="min-w-0 flex-1"
+              data-testid="new-location-site"
             />
             <Button onClick={handleAddLocation}>
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -191,7 +215,7 @@ export function LocationsManager() {
               <div className="flex flex-wrap items-center gap-2">
                 <Label htmlFor="assign-target" className="text-sm">Pôr em</Label>
                 <select id="assign-target" value={dest} onChange={(e) => setTarget(e.target.value)} className="h-10 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm">
-                  {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  {locations.map((l) => <option key={l.id} value={l.id}>{locationLabel(l)}</option>)}
                 </select>
                 <Button onClick={assign} disabled={!chosen.length || moving}>
                   {moving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -204,11 +228,16 @@ export function LocationsManager() {
 
           <div className="rounded-md border">
             <ul className="divide-y">
-              {locations && locations.length > 0 ? locations.map(location => (
+              {locations && locations.length > 0 ? locations.map((location, i) => (
                 <li key={location.id} className="flex items-center justify-between p-3">
-                  <span className="font-medium">{location.name}</span>
+                  <span className="min-w-0">
+                    {sites.length > 0 && siteOf(location) !== siteOf(locations[i - 1] || {}) && (
+                      <span className="block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{siteOf(location) || 'Sem ponto'}</span>
+                    )}
+                    <span className="font-medium">{location.name}</span>
+                  </span>
                   <div className="flex items-center">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingLocation(location); setNewLocationName(location.name); }}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingLocation(location); setNewLocationName(location.name); setNewSite(location.site || ''); }}>
                       <Edit className="h-4 w-4 text-muted-foreground" />
                     </Button>
                   </div>

@@ -1,4 +1,5 @@
 'use client';
+import { inScope, sortBySite } from '@/lib/sites';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import type { InventoryContextType, Product } from '@/lib/types';
@@ -18,7 +19,7 @@ export const InventoryContext = createContext<InventoryContextType | undefined>(
 
 export function InventoryProvider({ children }: { children: ReactNode }) {
   const core = useInventoryCore();
-  const { loading, productsLoading, salesLoading, productionsLoading, ordersLoading, stockMovementsLoading, catalogProductsLoading, catalogCategoriesLoading, rawMaterialsLoading, recipesLoading, companyId, firestore, user, productsData, salesData, stockMovementsData, lastSaleTimestamp, firebaseUser, isReadOnly, isTrial, daysLeft, renewInDays, subscriptionReason, logout, profilePicture, handleSetProfilePicture, canView, canEdit, companyData, products, productionsData, ordersData, catalogProductsData, catalogProductsRaw, catalogCategoriesData, rawMaterialsData, recipesData, locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats, businessStartDate, chatHistory, setChatHistory, updateCompany, markNotificationAsRead, markAllAsRead, clearNotifications, addNotification, categorizeProductWithAI, notifyManagers } = core;
+  const { loading, productsLoading, salesLoading, productionsLoading, ordersLoading, stockMovementsLoading, catalogProductsLoading, catalogCategoriesLoading, rawMaterialsLoading, recipesLoading, companyId, firestore, user, productsData, salesData, stockMovementsData, lastSaleTimestamp, firebaseUser, isReadOnly, isTrial, daysLeft, renewInDays, subscriptionReason, logout, profilePicture, handleSetProfilePicture, canView, canEdit, companyData, products, productionsData, ordersData, catalogProductsData, catalogProductsRaw, catalogCategoriesData, rawMaterialsData, recipesData, locations: allLocations, isMultiLocation, siteScope, firstLocationId, notifications, monthlySalesChartData, dashboardStats, businessStartDate, chatHistory, setChatHistory, updateCompany, markNotificationAsRead, markAllAsRead, clearNotifications, addNotification, categorizeProductWithAI, notifyManagers } = core;
   const authActions = useAuthActions(core);
   const { login, loginWithGoogle, resetPassword, changePassword, registerCompany, registerCompanyWithGoogle } = authActions;
   const productActions = useProductActions(core);
@@ -139,6 +140,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
 
+  const scoped = useMemo(() => {
+    const ok = (loc?: string | null) => inScope(siteScope, loc, firstLocationId);
+    return {
+      locations: sortBySite(siteScope ? allLocations.filter(l => siteScope.has(l.id)) : allLocations),
+      products: siteScope ? products.filter(p => ok(p.location)) : products,
+      allProducts: siteScope ? (productsData || []).filter(p => ok(p.location)) : productsData || [],
+      allSales: siteScope ? (salesData || []).filter(s => ok(s.location)) : salesData || [],
+      allProductions: siteScope ? (productionsData || []).filter(p => ok(p.location)) : productionsData || [],
+      allOrders: siteScope ? (ordersData || []).filter(o => ok(o.location)) : ordersData || [],
+      stockMovements: siteScope ? (stockMovementsData || []).filter(m => ok(m.fromLocationId) || ok(m.toLocationId)) : stockMovementsData || [],
+    };
+  }, [siteScope, firstLocationId, allLocations, products, productsData, salesData, productionsData, ordersData, stockMovementsData]);
+
   const value: InventoryContextType = useMemo(() => ({
     user,
     firebaseUser,
@@ -159,21 +173,23 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     profilePicture, setProfilePicture: handleSetProfilePicture,
     canView, canEdit,
     companyData,
-    products: products,
-    allProducts: productsData || [],
-    sales: (salesData || []).filter(s => !s.deletedAt),
-    allSales: salesData || [],
-    productions: (productionsData || []).filter(p => !p.deletedAt),
-    allProductions: productionsData || [],
-    orders: (ordersData || []).filter(o => !o.deletedAt),
-    allOrders: ordersData || [],
-    stockMovements: stockMovementsData || [],
+    // vendedor com ponto: só vê o stock, as vendas e os movimentos das localizações desse ponto
+    // (as acções — vender, transferir — continuam a usar tudo, para o stock de destino somar certo)
+    products: scoped.products,
+    allProducts: scoped.allProducts,
+    sales: scoped.allSales.filter(s => !s.deletedAt),
+    allSales: scoped.allSales,
+    productions: scoped.allProductions.filter(p => !p.deletedAt),
+    allProductions: scoped.allProductions,
+    orders: scoped.allOrders.filter(o => !o.deletedAt),
+    allOrders: scoped.allOrders,
+    stockMovements: scoped.stockMovements,
     catalogProducts: catalogProductsData || [],
     allCatalogProducts: catalogProductsRaw || [], // inclui a lixeira
     catalogCategories: catalogCategoriesData || [],
     rawMaterials: rawMaterialsData || [],
     recipes: recipesData || [],
-    locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
+    locations: scoped.locations, allLocations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
     businessStartDate,
     chatHistory, setChatHistory,
     addProduct, updateProduct: updateProductEverywhere, deleteProduct,
@@ -212,7 +228,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     canView, canEdit,
     companyData, productsData, salesData, productionsData, ordersData, stockMovementsData, catalogProductsData, catalogProductsRaw, catalogCategoriesData,
     rawMaterialsData, recipesData,
-    locations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
+    scoped, allLocations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
     businessStartDate,
     chatHistory, setChatHistory,
     addProduct, updateProductEverywhere, deleteProduct,

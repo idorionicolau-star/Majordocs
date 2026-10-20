@@ -13,7 +13,7 @@ import { companyMaxUsers, tierById } from '@/lib/tiers';
  * e porque só o servidor pode apagar a conta de autenticação.
  *
  * POST   { companyId, username, email, password, role, permissions }  → cria conta + funcionário
- * PATCH  { companyId, employeeId, username, role, permissions }       → actualiza
+ * PATCH  { companyId, employeeId, username, role, permissions, site? } → actualiza (site: ponto onde trabalha)
  * DELETE { companyId, employeeId }                                    → remove funcionário + conta
  */
 const ROLES = ['Admin', 'Employee', 'Dono'];
@@ -94,7 +94,7 @@ export async function PATCH(req: Request) {
     const a = await authorize(req, body.companyId);
     if ('error' in a) return a.error;
     const { decoded, db } = a;
-    const { companyId, employeeId, username, role, permissions } = body;
+    const { companyId, employeeId, username, role, permissions, site } = body;
 
     if (!employeeId || !ROLES.includes(role)) {
         return NextResponse.json({ error: 'Dados em falta ou inválidos.' }, { status: 400 });
@@ -111,7 +111,11 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: 'A empresa tem de ter pelo menos um Administrador.' }, { status: 400 });
         }
     }
-    await ref.update({ ...(username ? { username } : {}), role, permissions: permissions || {} });
+    await ref.update({
+        ...(username ? { username } : {}), role, permissions: permissions || {},
+        // ponto onde trabalha (só funcionários; vazio = vê tudo)
+        ...(typeof site === 'string' ? { site: role === 'Employee' ? site.trim().slice(0, 60) : '' } : {}),
+    });
     return NextResponse.json({ ok: true });
 }
 

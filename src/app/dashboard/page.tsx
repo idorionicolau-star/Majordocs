@@ -1,4 +1,5 @@
 "use client";
+import { SiteTotals } from "@/components/dashboard/site-totals";
 
 import { useContext } from "react";
 import { InventoryContext } from "@/context/inventory-context";
@@ -51,6 +52,9 @@ export default function DashboardPage() {
 
       {/* 1. Hoje · Atalhos · Atenção — o que se precisa ao abrir a app */}
       <BusinessSummary />
+
+      {/* vários pontos (lojas): quanto vende e quanto tem cada um */}
+      {isPrivilegedUser && <SiteTotals />}
 
       {isPrivilegedUser ? (
         <>

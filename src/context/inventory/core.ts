@@ -1,4 +1,5 @@
 'use client';
+import { inScope, scopeFor } from "@/lib/sites";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { registrationPending } from '@/lib/registration-guard';
@@ -73,6 +74,9 @@ export function useInventoryCore() {
   const locations = useMemo(() => companyData?.locations || [], [companyData]);
 
   const isMultiLocation = useMemo(() => !!companyData?.isMultiLocation, [companyData]);
+  // vendedor com ponto: só as localizações desse ponto (ver lib/sites)
+  const siteScope = useMemo(() => scopeFor(user, companyData), [user, companyData]);
+  const firstLocationId = locations[0]?.id;
 
 
   // Shared activity feed (Facebook-style): companies/{id}/notifications, visible on every device in real time.
@@ -675,7 +679,8 @@ export function useInventoryCore() {
     const currentYear = currentDate.getFullYear();
 
     const monthlySales = salesData?.filter(sale => {
-      if (!isCountableSale(sale)) return false; // apagadas (lixeira) e cotações/pró-formas não contam
+      if (!isCountableSale(sale)) return false;
+      if (!inScope(siteScope, sale.location, firstLocationId)) return false; // apagadas (lixeira) e cotações/pró-formas não contam
       const saleDate = new Date(sale.date);
       return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
     }) || [];
@@ -686,11 +691,12 @@ export function useInventoryCore() {
     const monthlySalesCount = monthlySales.length;
     const averageTicket = monthlySalesCount > 0 ? monthlySalesValue / monthlySalesCount : 0;
 
-    const totalInventoryValue = products?.reduce((sum, p) => sum + (p.stock * p.price), 0) || 0;
-    const totalItemsInStock = products?.reduce((sum, p) => sum + p.stock, 0) || 0;
+    const myProducts = products?.filter(p => inScope(siteScope, p.location, firstLocationId)) || [];
+    const totalInventoryValue = myProducts.reduce((sum, p) => sum + (p.stock * p.price), 0);
+    const totalItemsInStock = myProducts.reduce((sum, p) => sum + p.stock, 0);
 
-    const pendingOrders = ordersData?.filter(o => o.status === 'Pendente' && !o.deletedAt).length || 0;
-    const readyForTransfer = productionsData?.filter(p => p.status === 'Concluído' && !p.deletedAt).length || 0;
+    const pendingOrders = ordersData?.filter(o => o.status === 'Pendente' && !o.deletedAt && inScope(siteScope, o.location, firstLocationId)).length || 0;
+    const readyForTransfer = productionsData?.filter(p => p.status === 'Concluído' && !p.deletedAt && inScope(siteScope, p.location, firstLocationId)).length || 0;
 
     return {
       monthlySalesValue,
@@ -700,7 +706,7 @@ export function useInventoryCore() {
       pendingOrders,
       readyForTransfer,
     };
-  }, [salesData, products, ordersData, productionsData]);
+  }, [salesData, products, ordersData, productionsData, siteScope, firstLocationId]);
 
 
   const updateCompany = useCallback(async (details: Partial<Company>) => {
@@ -708,7 +714,7 @@ export function useInventoryCore() {
       updateDocumentNonBlocking(companyDocRef, details);
     }
   }, [companyDocRef]);
-  return { user, setUser, firebaseUser, setFirebaseUser, companyId, setCompanyId, loading, setLoading, profilePicture, setProfilePicture, notifications, setNotifications, monthlySalesChartData, setMonthlySalesChartData, chatHistory, setChatHistory, router, toast, firestore, auth, wasSyncing, lastSaleTimestamp, setLastSaleTimestamp, companyData, setCompanyData, isReadOnly, isTrial, daysLeft, renewInDays, subscriptionReason, locations, isMultiLocation, postFeed, addNotification, markNotificationAsRead, markAllAsRead, clearNotifications, handleSetProfilePicture, sendPush, assertOnline, isManagerUser, notifyManagers, triggerEmailAlert, logout, canView, canEdit, productsCollectionRef, salesCollectionRef, productionsCollectionRef, ordersCollectionRef, stockMovementsCollectionRef, catalogProductsCollectionRef, catalogCategoriesCollectionRef, rawMaterialsCollectionRef, recipesCollectionRef, companyDocRef, productsData, productsLoading, salesData, salesLoading, productionsData, productionsLoading, ordersData, ordersLoading, stockMovementsData, stockMovementsLoading, catalogProductsData, catalogProductsRaw, catalogProductsLoading, catalogCategoriesData, catalogCategoriesLoading, rawMaterialsData, rawMaterialsLoading, recipesData, recipesLoading, products, businessStartDate, categorizeProductWithAI, dashboardStats, updateCompany };
+  return { user, setUser, firebaseUser, setFirebaseUser, companyId, setCompanyId, loading, setLoading, profilePicture, setProfilePicture, notifications, setNotifications, monthlySalesChartData, setMonthlySalesChartData, chatHistory, setChatHistory, router, toast, firestore, auth, wasSyncing, lastSaleTimestamp, setLastSaleTimestamp, companyData, setCompanyData, isReadOnly, isTrial, daysLeft, renewInDays, subscriptionReason, locations, isMultiLocation, siteScope, firstLocationId, postFeed, addNotification, markNotificationAsRead, markAllAsRead, clearNotifications, handleSetProfilePicture, sendPush, assertOnline, isManagerUser, notifyManagers, triggerEmailAlert, logout, canView, canEdit, productsCollectionRef, salesCollectionRef, productionsCollectionRef, ordersCollectionRef, stockMovementsCollectionRef, catalogProductsCollectionRef, catalogCategoriesCollectionRef, rawMaterialsCollectionRef, recipesCollectionRef, companyDocRef, productsData, productsLoading, salesData, salesLoading, productionsData, productionsLoading, ordersData, ordersLoading, stockMovementsData, stockMovementsLoading, catalogProductsData, catalogProductsRaw, catalogProductsLoading, catalogCategoriesData, catalogCategoriesLoading, rawMaterialsData, rawMaterialsLoading, recipesData, recipesLoading, products, businessStartDate, categorizeProductWithAI, dashboardStats, updateCompany };
 }
 
 export type InventoryCore = ReturnType<typeof useInventoryCore>;
