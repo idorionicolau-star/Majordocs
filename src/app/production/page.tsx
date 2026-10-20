@@ -1,4 +1,5 @@
 "use client";
+import { locationLabel } from '@/lib/sites';
 import { isProductionInStock } from "@/lib/production";
 
 import { useState, useEffect, useMemo, useContext } from "react";
@@ -395,7 +396,7 @@ export default function ProductionPage() {
                           <DropdownMenuSeparator />
                           <DropdownMenuCheckboxItem checked={locationFilter === 'all'} onCheckedChange={() => setLocationFilter('all')}>Todas</DropdownMenuCheckboxItem>
                           {locations.map(loc => (
-                            <DropdownMenuCheckboxItem key={loc.id} checked={locationFilter === loc.id} onCheckedChange={() => setLocationFilter(loc.id)}>{loc.name}</DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem key={loc.id} checked={locationFilter === loc.id} onCheckedChange={() => setLocationFilter(loc.id)}>{locationLabel(loc)}</DropdownMenuCheckboxItem>
                           ))}
                         </ScrollArea>
                       </DropdownMenuContent>

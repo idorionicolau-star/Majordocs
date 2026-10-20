@@ -2,6 +2,7 @@
 
 "use client";
 
+import { LocationSelectItems } from '@/components/ui/location-select-items';
 import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
@@ -275,7 +276,7 @@ function AddCatalogProductForm({
                     <Select onValueChange={field.onChange} value={field.value || stockLocations[0]?.id}>
                       <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                       <SelectContent>
-                        {stockLocations.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                        <LocationSelectItems locations={stockLocations} />
                       </SelectContent>
                     </Select>
                   </FormItem>

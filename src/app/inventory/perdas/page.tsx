@@ -1,5 +1,6 @@
 "use client";
 
+import { locationLabel } from '@/lib/sites';
 import { useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { DeepLinkBanner } from "@/components/deep-link-banner";
@@ -112,7 +113,7 @@ export default function LossesPage() {
                 {locations.length > 1 && (
                     <select value={loc} onChange={(e) => setLoc(e.target.value)} className="h-9 rounded-full border bg-background px-3 text-sm">
                         <option value="all">Todas as localizações</option>
-                        {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                        {locations.map((l) => <option key={l.id} value={l.id}>{locationLabel(l)}</option>)}
                     </select>
                 )}
             </div>

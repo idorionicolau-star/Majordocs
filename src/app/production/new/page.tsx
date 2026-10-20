@@ -1,5 +1,6 @@
 "use client";
 
+import { locationLabel } from '@/lib/sites';
 import { habitualLocation, recordLocation } from "@/lib/habitual-location";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -153,7 +154,7 @@ export default function NewProductionPage() {
                     <div data-tour="prod-location">
                         <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><MapPin className="h-3.5 w-3.5" /> Onde foi produzido</p>
                         <div className="flex flex-wrap gap-1.5">
-                            {locations.map((l) => <Chip key={l.id} active={location === l.id} onClick={() => setLocation(l.id)}>{l.name}</Chip>)}
+                            {locations.map((l) => <Chip key={l.id} active={location === l.id} onClick={() => setLocation(l.id)}>{locationLabel(l)}</Chip>)}
                         </div>
                     </div>
                 )}

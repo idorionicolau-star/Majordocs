@@ -1,5 +1,6 @@
 "use client";
 
+import { LocationSelectItems } from '@/components/ui/location-select-items';
 import { requireEmailConfirmed } from "@/components/billing/email-confirm";
 import { habitualLocation, recordLocation } from "@/lib/habitual-location";
 import { useState, useEffect, useContext } from 'react';
@@ -445,11 +446,7 @@ export default function NewInventoryProductPage() {
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {locations.map((location: Location) => (
-                                                    <SelectItem key={location.id} value={location.id}>
-                                                        {location.name}
-                                                    </SelectItem>
-                                                ))}
+                                                <LocationSelectItems locations={locations} />
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />

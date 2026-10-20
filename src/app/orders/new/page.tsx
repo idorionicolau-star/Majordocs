@@ -1,5 +1,6 @@
 "use client";
 
+import { LocationSelectItems } from '@/components/ui/location-select-items';
 import { habitualLocation, recordLocation } from "@/lib/habitual-location";
 import { useState, useContext, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -435,11 +436,7 @@ export default function NewOrderPage() {
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {locations.map((location: Location) => (
-                                                    <SelectItem key={location.id} value={location.id}>
-                                                        {location.name}
-                                                    </SelectItem>
-                                                ))}
+                                                <LocationSelectItems locations={locations} />
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
