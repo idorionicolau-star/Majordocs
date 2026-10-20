@@ -37,6 +37,7 @@ Gestão de stock, vendas e produção para pequenas e médias empresas em Moçam
   - folha de entrada.
 - **Várias localizações**, transferências (de vários produtos de uma vez), contagens e perdas. As localizações podem ser zonas do mesmo sítio (fábrica, pátio, mostruário) ou lojas noutros pontos.
 - **Pontos:** cada localização pode pertencer a um ponto (ex.: Matola, Boane). O Painel mostra quanto vende e quanto tem cada ponto; um funcionário com ponto só vê e vende o stock desse ponto, e pode transferir para os outros. (Limite: é feito na app, não nas regras do Firestore.)
+- **Envios com confirmação** (opcional, Configurações → Localizações → "Confirmar receção nas transferências"): o que se envia sai da origem e fica em trânsito até o destino confirmar a quantidade que chegou; as faltas ficam registadas com quem enviou e quem recebeu. Separadores Enviar / Por receber / Histórico em Produtos → Transferir; aviso no Painel de quem tem envios por receber; a gestão é avisada das diferenças.
 - **Pesquisa do Inventário** pelo código de barras (ícone do leitor).
 
 ### Produção (fábricas)

@@ -56,6 +56,8 @@ export type NotificationSettings = {
 export type Company = {
   id: string;
   name: string;
+  /** Transferências com confirmação de receção (fica em trânsito até o destino confirmar). */
+  confirmTransfers?: boolean;
   ownerId?: string; // Optional: To track the original creator
   phone?: string;
   address?: string;

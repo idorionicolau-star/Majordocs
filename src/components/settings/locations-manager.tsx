@@ -166,6 +166,17 @@ export function LocationsManager() {
         </p>
       )}
 
+      {isMultiLocation && canMulti && (
+        <div className="flex items-start gap-2 rounded-xl border p-3">
+          <Switch id="confirm-transfers" checked={!!companyData?.confirmTransfers} data-testid="confirm-transfers"
+            onCheckedChange={async (v) => { await updateCompany?.({ confirmTransfers: v }); toast({ title: v ? 'Transferências com confirmação ligadas' : 'Transferências directas' }); }} />
+          <div>
+            <Label htmlFor="confirm-transfers">Confirmar receção nas transferências</Label>
+            <p className="text-xs text-muted-foreground">O que se envia fica em trânsito até quem recebe confirmar a quantidade que chegou. As faltas ficam registadas com quem enviou e quem recebeu.</p>
+          </div>
+        </div>
+      )}
+
       {isMultiLocation && (
         <div className="space-y-4 pt-4 border-t">
           <h4 className="font-medium">Gerir Localizações</h4>

@@ -1,5 +1,6 @@
 "use client";
 import { SiteTotals } from "@/components/dashboard/site-totals";
+import { PendingShipmentsBanner } from "@/components/inventory/pending-shipments-banner";
 
 import { useContext } from "react";
 import { InventoryContext } from "@/context/inventory-context";
@@ -49,6 +50,9 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-4 animate-in fade-in duration-700 pb-10 main-content">
 
       {isPrivilegedUser && <GettingStartedCard />}
+
+      {/* envios que chegaram e esperam confirmação (transferências com confirmação de receção) */}
+      <PendingShipmentsBanner />
 
       {/* 1. Hoje · Atalhos · Atenção — o que se precisa ao abrir a app */}
       <BusinessSummary />

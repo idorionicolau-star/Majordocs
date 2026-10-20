@@ -226,6 +226,13 @@ service cloud.firestore {
         allow create, update, delete: if can(companyId, 'inventory', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
       }
 
+      // Envios com confirmação de receção: quem mexe no stock envia, recebe ou cancela; nunca se apagam
+      match /shipments/{shipmentId} {
+        allow get, list: if can(companyId, 'inventory', 'read');
+        allow create, update: if can(companyId, 'inventory', 'write');
+        allow delete: if false;
+      }
+
       match /stockMovements/{movementId} {
         allow get, list: if can(companyId, 'inventory', 'read');
         allow create: if can(companyId, 'inventory', 'write');
