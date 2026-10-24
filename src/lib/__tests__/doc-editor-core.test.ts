@@ -87,9 +87,10 @@ describe('totais do documento', () => {
 });
 
 describe('rascunho → modelo do PDF', () => {
-    it('rascunho e anulado levam marca de água; emitido não', () => {
+    it('só o anulado leva marca de água; rascunho e emitido não', () => {
         const d = { ...emptyDraft('Factura', 'FAT-1', null), items: [{ id: '1', description: 'Bloco', quantity: 1, unit: 'un', unitPrice: 10 }] };
-        expect(draftToModel(d, null, { status: 'draft' }).style?.watermark).toBe('RASCUNHO');
+        expect(draftToModel(d, null, { status: 'draft' }).style?.watermark).toBeUndefined();
+        expect(draftToModel({ ...d, style: { ...d.style, watermark: 'RASCUNHO' } }, null, { status: 'draft' }).style?.watermark).toBeUndefined();
         expect(draftToModel(d, null, { status: 'cancelled' }).style?.watermark).toBe('ANULADO');
         expect(draftToModel(d, null, { status: 'issued' }).style?.watermark).toBeUndefined();
     });
