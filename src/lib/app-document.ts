@@ -67,12 +67,14 @@ export const validItems = (items: DocItem[]) => items.filter((i) => i.descriptio
 export function draftToModel(d: DocDraft, company: Company | null, extra: { status?: DocStatus; operator?: string } = {}): DocModel {
     const items = validItems(d.items);
     const vat = vatFromPct(items, d.discount, d.vatPct);
-    const wm = extra.status === 'cancelled' ? 'ANULADO' : extra.status === 'draft' ? 'RASCUNHO' : undefined;
+    // só o anulado leva marca de água; o rascunho sai limpo (o "RASCUNHO" atrapalhava enviar o documento)
+    const wm = extra.status === 'cancelled' ? 'ANULADO' : undefined;
+    const kept = d.style.watermark === 'RASCUNHO' ? undefined : d.style.watermark;
     return {
         type: d.type, number: d.number, issueDate: d.issueDate, dueDate: d.dueDate, client: d.client,
         items: items.length ? items : d.items, discount: d.discount, vat, vatPct: d.vatPct || undefined,
         notes: d.notes, paymentTerms: d.paymentTerms, paymentMethod: d.paymentMethod, operator: extra.operator,
-        style: { ...companyDocStyle(company), ...d.style, watermark: wm ?? d.style.watermark },
+        style: { ...companyDocStyle(company), ...d.style, watermark: wm ?? kept },
     };
 }
 
