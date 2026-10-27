@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { LOGO_MAJOR, LOGO_STOCKX } from "./intro-logo";
 
@@ -26,23 +26,20 @@ const WORD_TIME = 0.85;
 const ZOOM = [1.3, 1.38, 0.96, 1];
 /** intervalo entre letras na onda */
 const WAVE = 0.045;
-/** as duas palavras: letras, quando começam, centro, linha de base e largura (coordenadas do logótipo) */
+/** as duas palavras: letras e quando começam */
 const WORDS = [
-    { glyphs: LOGO_MAJOR, at: T.logo, cx: 188, base: 179, w: 265 },
-    { glyphs: LOGO_STOCKX, at: T.word2, cx: 187, base: 273, w: 330 },
+    { glyphs: LOGO_MAJOR, at: T.logo },
+    { glyphs: LOGO_STOCKX, at: T.word2 },
 ];
 
 /** quando cada palavra assenta no lugar */
 const LANDS = WORDS.map((w) => w.at + WORD_TIME * 0.82);
-const BURSTS = WORDS.map((w, i) => ({ at: LANDS[i], cx: w.cx, y: w.base, w: w.w }));
 
 /** O tremor do logótipo quando cada palavra assenta ("drrr"): curto, a perder força, sem ser violento. */
 const SHAKE_X = [0, -4, 3.6, -3, 2.3, -1.6, 0.9, -0.4, 0];
 const SHAKE_Y = [0, 2.2, -2, 1.6, -1.2, 0.8, -0.5, 0.2, 0];
 const SHAKE_R = [0, -0.6, 0.5, -0.4, 0.3, -0.2, 0.1, 0, 0];
 const SHAKE_TIME = 0.42;
-/** grãos de poeira por palavra: finos e muitos, mas sem pesar nos telemóveis */
-const GRAINS = 160;
 const SHAKE = (() => {
     const start = LANDS[0], total = LANDS[LANDS.length - 1] + SHAKE_TIME - start;
     const times: number[] = [], x: number[] = [], y: number[] = [], rotate: number[] = [];
@@ -53,86 +50,6 @@ const SHAKE = (() => {
     return { animate: { x, y, rotate }, transition: { delay: start, duration: total, times, ease: "easeInOut" as const } };
 })();
 
-/**
- * Poeira fina de verdade: muitos grãos brancos e acinzentados saem de debaixo da palavra, travam no ar,
- * sobem devagar e dissipam-se, com nuvens suaves por trás. Desenhada num canvas (leve mesmo em telemóveis fracos).
- */
-function DustCanvas() {
-    const ref = useRef<HTMLCanvasElement>(null);
-    useEffect(() => {
-        const c = ref.current, ctx = c?.getContext("2d");
-        if (!c || !ctx) return;
-        const dpr = 1; // grãos finos não precisam de alta resolução, e assim o canvas pesa 4× menos
-        const box = c.getBoundingClientRect();
-        c.width = box.width * dpr; c.height = box.height * dpr;
-        // o canvas cobre 140% do palco; o logótipo (375 × 375) ocupa 76% do palco, a 12% da borda
-        const S = ((0.76 / 1.4) * c.width) / 375, O = (0.32 / 1.4) * c.width;
-        type Grain = { x: number; y: number; vx: number; vy: number; r: number; a: number; life: number; age: number; grey: boolean; cloud: boolean; seed: number };
-        const grains: Grain[] = [];
-        let seed = 7;
-        const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-        const spawn = (b: (typeof BURSTS)[number]) => {
-            const bx = O + b.cx * S, by = O + b.y * S, half = (b.w * S) / 2;
-            for (let i = 0; i < GRAINS; i++) {
-                const u = rnd() * 2 - 1; // onde sai ao longo da palavra: -1 à esquerda, 1 à direita
-                const side = u < 0 ? -1 : 1;
-                const speed = (40 + rnd() * 170) * dpr * (0.35 + Math.abs(u));
-                grains.push({
-                    x: bx + u * half, y: by + (rnd() - 0.6) * 6 * dpr,
-                    vx: side * speed * (0.6 + rnd() * 0.6) + (rnd() - 0.5) * 30 * dpr, vy: -(8 + rnd() * 70) * dpr,
-                    r: 0.5 + rnd() ** 2 * 1.2, a: 0.25 + rnd() * 0.6, life: 0.7 + rnd() * 1.1, age: 0,
-                    grey: rnd() < 0.35, cloud: false, seed: rnd() * 10,
-                });
-            }
-            for (let i = 0; i < 8; i++) {
-                const u = rnd() * 2 - 1, side = u < 0 ? -1 : 1;
-                grains.push({ x: bx + u * half * 0.9, y: by, vx: side * (20 + rnd() * 50) * dpr, vy: -(5 + rnd() * 20) * dpr, r: (8 + rnd() * 10) * dpr, a: 0.1 + rnd() * 0.1, life: 0.9 + rnd() * 0.6, age: 0, grey: false, cloud: true, seed: 0 });
-            }
-        };
-        // a nuvem é desenhada uma vez e depois só copiada (criar degradês a cada imagem pesa)
-        const puff = document.createElement("canvas");
-        puff.width = puff.height = 64;
-        const pctx = puff.getContext("2d")!;
-        const pg = pctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-        pg.addColorStop(0, "rgba(235,235,240,1)");
-        pg.addColorStop(1, "rgba(235,235,240,0)");
-        pctx.fillStyle = pg;
-        pctx.fillRect(0, 0, 64, 64);
-        const fired = BURSTS.map(() => false);
-        const end = LANDS[LANDS.length - 1] + 2.5;
-        const t0 = performance.now();
-        let last = t0, raf = 0;
-        const frame = (now: number) => {
-            const t = (now - t0) / 1000, dt = Math.min(0.05, (now - last) / 1000);
-            last = now;
-            BURSTS.forEach((b, i) => { if (!fired[i] && t >= b.at) { fired[i] = true; spawn(b); } });
-            ctx.globalAlpha = 1;
-            ctx.clearRect(0, 0, c.width, c.height);
-            for (let i = grains.length - 1; i >= 0; i--) {
-                const g = grains[i];
-                g.age += dt;
-                if (g.age >= g.life) { grains.splice(i, 1); continue; }
-                const drag = Math.exp(-(g.cloud ? 2.5 : 3.2) * dt);
-                g.vx = g.vx * drag + Math.sin(t * 4 + g.seed) * 10 * dpr * dt; // trava no ar, com um pouco de turbulência
-                g.vy = g.vy * drag - 14 * dpr * dt; // e sobe devagar
-                g.x += g.vx * dt; g.y += g.vy * dt;
-                const k = g.age / g.life, fade = k < 0.12 ? k / 0.12 : 1 - (k - 0.12) / 0.88;
-                ctx.globalAlpha = g.a * fade;
-                if (g.cloud) {
-                    const r = g.r * (1 + k * 1.6);
-                    ctx.drawImage(puff, g.x - r, g.y - r, r * 2, r * 2);
-                } else {
-                    ctx.fillStyle = g.grey ? "rgb(200,200,208)" : "#fff";
-                    ctx.fillRect(g.x - g.r, g.y - g.r, g.r * 2, g.r * 2);
-                }
-            }
-            if (t < end) raf = requestAnimationFrame(frame);
-        };
-        raf = requestAnimationFrame(frame);
-        return () => cancelAnimationFrame(raf);
-    }, []);
-    return <canvas ref={ref} className="pointer-events-none absolute" style={{ left: "-20%", top: "-20%", width: "140%", height: "140%" }} aria-hidden />;
-}
 /** o degradê do círculo do logótipo (laranja em baixo à esquerda, azul em cima à direita) */
 const LOGO_GRADIENT = "linear-gradient(45deg, rgb(248,173,0) 15%, rgb(225,51,51) 50%, rgb(124,108,174) 72%, rgb(57,146,254) 85%)";
 /** quanto dura a viagem dos pilares para o centro */
@@ -274,7 +191,7 @@ export function IntroSplash() {
                     <motion.div className="absolute inset-[12%] rounded-full" style={{ background: LOGO_GRADIENT }}
                         initial={{ opacity: reduce ? 1 : 0 }} animate={{ opacity: 1 }} transition={{ delay: reduce ? 0 : T.logo - 0.1, duration: 0.5, ease: "easeInOut" }} />
 
-                    {/* cada palavra: a onda revela-a grande à frente, segura, e recua ("voom") para o lugar, levantando poeira */}
+                    {/* cada palavra: a onda revela-a grande à frente, segura, e recua ("voom") para o lugar, e o logótipo treme */}
                     <div className="absolute inset-[12%]">
                         <svg viewBox="0 0 375 375" className="h-full w-full overflow-visible">
                             <defs>
@@ -311,8 +228,6 @@ export function IntroSplash() {
                     )}
                 </motion.div>
 
-                {/* a poeira fica fora do tremor */}
-                {!reduce && <DustCanvas />}
             </div>
 
             <motion.p className="mt-3 px-6 text-center font-headline text-base font-medium tracking-wide text-white/85"
