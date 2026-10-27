@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { PwaRegister } from "@/components/pwa-register";
 import { ErrorReporter } from "@/components/error-reporter";
 import { INTRO_GATE, IntroSplash } from "@/components/intro-splash";
+import { LOADER_GATE } from "@/components/layout/app-loader";
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -57,8 +58,8 @@ export default function RootLayout({
       className={`${ptSans.variable} ${spaceGrotesk.variable}`}
     >
       <body className="font-body antialiased">
-        {/* decide antes da primeira pintura se a animação de entrada aparece */}
-        <script dangerouslySetInnerHTML={{ __html: INTRO_GATE }} />
+        {/* antes da primeira pintura: se a animação de entrada aparece, e em que objecto começa o ecrã de carregamento */}
+        <script dangerouslySetInnerHTML={{ __html: INTRO_GATE + LOADER_GATE }} />
         <IntroSplash />
         <AppProviders>{children}</AppProviders>
         <Toaster />
