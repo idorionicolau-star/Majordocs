@@ -3,10 +3,11 @@ export type RGB = [number, number, number];
 export type DocThemeId =
     | 'classico' | 'moderno' | 'minimalista' | 'elegante' | 'corporativo' | 'vibrante'
     | 'onda' | 'onda-serena' | 'cartao' | 'cartao-coral' | 'moldura' | 'moldura-noite' | 'faixas' | 'faixas-verdes'
-    | 'estudio' | 'estudio-grafite' | 'canto' | 'canto-dourado' | 'bolhas' | 'bolhas-ceu';
+    | 'estudio' | 'estudio-grafite' | 'canto' | 'canto-dourado' | 'bolhas' | 'bolhas-ceu'
+    | 'vidro' | 'cartaz' | 'atelier' | 'executivo' | 'mare';
 
 /** Cabeçalhos com desenho próprio (ondas, cartão, moldura…): cada um decora também o rodapé e as páginas seguintes. */
-export type DocDecor = 'wave' | 'card' | 'frame' | 'stripes' | 'hatch' | 'corner' | 'circles';
+export type DocDecor = 'wave' | 'card' | 'frame' | 'stripes' | 'hatch' | 'corner' | 'circles' | 'glass' | 'poster' | 'atelier' | 'ribbon' | 'swirl';
 
 export type DocTheme = {
     id: DocThemeId;
@@ -20,9 +21,19 @@ export type DocTheme = {
     defaultAccent: RGB;
     /** segunda cor (ex.: o dourado da Moldura) */
     highlight?: RGB;
+    /** coluna com o número da linha antes do artigo */
+    numbered?: boolean;
 };
 
-export const DECORS: DocDecor[] = ['wave', 'card', 'frame', 'stripes', 'hatch', 'corner', 'circles'];
+/** Caminho em mm numa página A4: ponto inicial e passos, cada um recta [x, y] ou curva [c1x, c1y, c2x, c2y, x, y]. */
+export type DecorPath = [[number, number], number[][]];
+/** As ondas da "Maré" no topo (o rodapé usa-as espelhadas e mais baixas). Iguais no PDF e na pré-visualização. */
+export const SWIRL_NAVY: DecorPath = [[0, 0], [[146, 0], [138, 8, 118, 24, 86, 30], [70, 33, 60, 38, 58, 44], [78, 40, 100, 41, 118, 44], [92, 52, 40, 66, 0, 88]]];
+export const SWIRL_LIGHT: DecorPath = [[0, 0], [[210, 0], [210, 76], [190, 66, 160, 60, 130, 66], [100, 72, 70, 78, 40, 74], [25, 72, 10, 76, 0, 82]]];
+/** Altura (fracção) da onda do rodapé da "Maré" em relação à do topo. */
+export const SWIRL_FOOT = 0.55;
+
+export const DECORS: DocDecor[] = ['wave', 'card', 'frame', 'stripes', 'hatch', 'corner', 'circles', 'glass', 'poster', 'atelier', 'ribbon', 'swirl'];
 export const isDecor = (h: DocTheme['header']): h is DocDecor => (DECORS as string[]).includes(h);
 
 export const DOC_THEMES: DocTheme[] = [
@@ -46,6 +57,11 @@ export const DOC_THEMES: DocTheme[] = [
     { id: 'canto-dourado', name: 'Canto Dourado', description: 'Os cantos em dourado, com letra serifada.', font: 'times', header: 'corner', table: 'grid', boxes: 'plain', totals: 'line', defaultAccent: [161, 98, 7] },
     { id: 'bolhas', name: 'Bolhas', description: 'Círculos de cor a sobrepor-se nos cantos. Leve e moderno.', font: 'helvetica', header: 'circles', table: 'striped', boxes: 'bar', totals: 'block', defaultAccent: [219, 39, 119] },
     { id: 'bolhas-ceu', name: 'Bolhas Céu', description: 'As bolhas em azul-céu.', font: 'helvetica', header: 'circles', table: 'filled', boxes: 'bar', totals: 'block', defaultAccent: [2, 132, 199] },
+    { id: 'vidro', name: 'Vidro', description: 'Topo de cor arredondado e cabeçalho da tabela em vidro, linhas numeradas.', font: 'helvetica', header: 'glass', table: 'plain', boxes: 'boxed', totals: 'block', defaultAccent: [72, 94, 168], highlight: [255, 128, 150], numbered: true },
+    { id: 'cartaz', name: 'Cartaz', description: 'Página toda de cor com uma folha branca, total grande em amarelo.', font: 'helvetica', header: 'poster', table: 'plain', boxes: 'plain', totals: 'line', defaultAccent: [67, 86, 170], highlight: [242, 201, 76], numbered: true },
+    { id: 'atelier', name: 'Atelier', description: 'Fundo riscado, cliente e detalhes lado a lado, total a pagar em barra.', font: 'helvetica', header: 'atelier', table: 'plain', boxes: 'plain', totals: 'line', defaultAccent: [44, 42, 120] },
+    { id: 'executivo', name: 'Executivo', description: 'Fitas vermelhas em fundo escuro, coluna de contactos e duas assinaturas.', font: 'helvetica', header: 'ribbon', table: 'plain', boxes: 'plain', totals: 'block', defaultAccent: [214, 31, 38], numbered: true },
+    { id: 'mare', name: 'Maré', description: 'Ondas azul-marinho em dois cantos, linhas numeradas e contactos no fim.', font: 'helvetica', header: 'swirl', table: 'filled', boxes: 'plain', totals: 'line', defaultAccent: [17, 61, 99], numbered: true },
 ];
 
 export const ACCENT_PRESETS: { name: string; rgb: RGB }[] = [
