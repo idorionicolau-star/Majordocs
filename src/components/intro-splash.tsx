@@ -1,16 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { LOGO_MAJOR, LOGO_STOCKX } from "./intro-logo";
+import { APP_READY_EVENT, isAppReady } from "@/lib/app-ready";
 
 /**
- * Animação de entrada (uma vez por sessão, cerca de 4 s). As quatro cores do logótipo são os quatro pilares da app:
+ * Animação de entrada (uma vez por sessão, cerca de 5,5 s). As quatro cores do logótipo são os quatro pilares da app:
  * Stock (laranja), Vendas (vermelho), Gestão (roxo) e Controlo (azul). Cada um entra com o seu símbolo,
  * juntam-se ao centro e misturam-se no círculo do MajorStockX; depois "Major" e "StockX" aparecem à frente e recuam para o lugar.
  *
  * O ecrã vem já no HTML do servidor (sem "piscar" a app por baixo); o script em `INTRO_GATE` decide antes da
  * primeira pintura se é para mostrar. Um toque salta a animação; quem pede menos movimento vê só o logótipo.
+ *
+ * Funciona como ecrã de carregamento: se no fim a app ainda não estiver pronta (`markAppReady`), o logótipo fica
+ * a "respirar" até estar. O zoom das palavras e o tremor correm no processador gráfico (Web Animations em camadas
+ * próprias), para não cortarem enquanto a app carrega por baixo.
  */
 
 const KEY = "msx-intro";
@@ -26,10 +31,10 @@ const WORD_TIME = 0.85;
 const ZOOM = [1.3, 1.38, 0.96, 1];
 /** intervalo entre letras na onda */
 const WAVE = 0.045;
-/** as duas palavras: letras e quando começam */
+/** as duas palavras: letras, quando começam e o centro de cada uma (em % do logótipo, para o zoom) */
 const WORDS = [
-    { glyphs: LOGO_MAJOR, at: T.logo },
-    { glyphs: LOGO_STOCKX, at: T.word2 },
+    { glyphs: LOGO_MAJOR, at: T.logo, origin: "50.1% 37.9%" },
+    { glyphs: LOGO_STOCKX, at: T.word2, origin: "49.9% 62.7%" },
 ];
 
 /** quando cada palavra assenta no lugar */
@@ -40,15 +45,22 @@ const SHAKE_X = [0, -4, 3.6, -3, 2.3, -1.6, 0.9, -0.4, 0];
 const SHAKE_Y = [0, 2.2, -2, 1.6, -1.2, 0.8, -0.5, 0.2, 0];
 const SHAKE_R = [0, -0.6, 0.5, -0.4, 0.3, -0.2, 0.1, 0, 0];
 const SHAKE_TIME = 0.42;
-const SHAKE = (() => {
-    const start = LANDS[0], total = LANDS[LANDS.length - 1] + SHAKE_TIME - start;
-    const times: number[] = [], x: number[] = [], y: number[] = [], rotate: number[] = [];
-    LANDS.forEach((l) => SHAKE_X.forEach((_, k) => {
-        times.push((l - start + (k * SHAKE_TIME) / (SHAKE_X.length - 1)) / total);
-        x.push(SHAKE_X[k]); y.push(SHAKE_Y[k]); rotate.push(SHAKE_R[k]);
-    }));
-    return { animate: { x, y, rotate }, transition: { delay: start, duration: total, times, ease: "easeInOut" as const } };
-})();
+const SHAKE: Keyframe[] = SHAKE_X.map((x, k) => ({ transform: `translate(${x}px, ${SHAKE_Y[k]}px) rotate(${SHAKE_R[k]}deg)` }));
+/** zoom de cada palavra: à frente, cresce devagar, recua de repente ("voom") e assenta */
+const ZOOM_FRAMES: Keyframe[] = [
+    { transform: `scale(${ZOOM[0]})`, offset: 0, easing: "ease-out" },
+    { transform: `scale(${ZOOM[1]})`, offset: 0.55, easing: "cubic-bezier(0.55, 0, 1, 0.45)" },
+    { transform: `scale(${ZOOM[2]})`, offset: 0.82, easing: "ease-out" },
+    { transform: `scale(${ZOOM[3]})`, offset: 1 },
+];
+/** cada letra sobe um pouco enquanto aparece */
+const LETTER_IN: Keyframe[] = [{ opacity: 0, transform: "translateY(30%)" }, { opacity: 1, transform: "translateY(0)" }];
+/** margem à volta de cada letra para caber a sombra (unidades do logótipo) */
+const PAD = 20;
+/** à espera da app: o logótipo "respira" */
+const BREATHE: Keyframe[] = [{ transform: "scale(1)" }, { transform: "scale(1.035)" }, { transform: "scale(1)" }];
+/** nunca segurar o ecrã mais do que isto, mesmo que a app não avise que está pronta */
+const MAX_WAIT = 15;
 
 /** o degradê do círculo do logótipo (laranja em baixo à esquerda, azul em cima à direita) */
 const LOGO_GRADIENT = "linear-gradient(45deg, rgb(248,173,0) 15%, rgb(225,51,51) 50%, rgb(124,108,174) 72%, rgb(57,146,254) 85%)";
@@ -124,14 +136,50 @@ const DOTS = Array.from({ length: 16 }, (_, i) => ({ x: (i * 37) % 100, y: (i * 
 
 export function IntroSplash() {
     const reduce = useReducedMotion();
-    const [phase, setPhase] = useState<"play" | "out" | "gone">("play");
+    const [phase, setPhase] = useState<"play" | "wait" | "out" | "gone">("play");
+    const shakeRef = useRef<HTMLDivElement>(null);
+    const logoRef = useRef<HTMLDivElement>(null);
+    const wordRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const letterRefs = useRef<(HTMLDivElement | null)[][]>([]);
+    const shineRef = useRef<HTMLSpanElement>(null);
+    const started = useRef(false);
 
     useEffect(() => {
         if (document.documentElement.dataset.intro === "skip") { setPhase("gone"); return; }
+        if (started.current) return;
+        started.current = true;
         try { sessionStorage.setItem(KEY, "1"); } catch { /* navegação privada */ }
-        const t1 = setTimeout(() => setPhase("out"), (reduce ? 0.9 : T.out) * 1000);
-        return () => clearTimeout(t1);
+        // zoom das palavras e tremor: no processador gráfico, sem depender do resto da página
+        const anims: Animation[] = [];
+        // letras: a onda de cada palavra (com menos movimento, aparecem logo)
+        WORDS.forEach((w, wi) => w.glyphs.forEach((_, i) => {
+            const el = letterRefs.current[wi]?.[i];
+            if (!el) return;
+            if (reduce || !el.animate) { el.style.opacity = "1"; return; }
+            anims.push(el.animate(LETTER_IN, { delay: (w.at + i * WAVE) * 1000, duration: 300, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "both" }));
+        }));
+        if (!reduce) {
+            WORDS.forEach((w, i) => {
+                const el = wordRefs.current[i];
+                if (el?.animate) anims.push(el.animate(ZOOM_FRAMES, { delay: w.at * 1000, duration: WORD_TIME * 1000, fill: "both" }));
+            });
+            LANDS.forEach((l) => { if (shakeRef.current?.animate) anims.push(shakeRef.current.animate(SHAKE, { delay: l * 1000, duration: SHAKE_TIME * 1000, easing: "ease-in-out" })); });
+            if (shineRef.current?.animate) anims.push(shineRef.current.animate([{ transform: "translateX(0) skewX(-12deg)" }, { transform: "translateX(510%) skewX(-12deg)" }], { delay: T.shine * 1000, duration: 700, easing: "ease-in-out" }));
+        }
+        // no fim: sai se a app já estiver pronta; senão, espera por ela
+        const end = setTimeout(() => setPhase(isAppReady() ? "out" : "wait"), (reduce ? 0.9 : T.out) * 1000);
+        const cap = setTimeout(() => setPhase("out"), MAX_WAIT * 1000);
+        return () => { clearTimeout(end); clearTimeout(cap); anims.forEach((a) => a.cancel()); };
     }, [reduce]);
+
+    useEffect(() => {
+        if (phase !== "wait") return;
+        if (isAppReady()) { setPhase("out"); return; }
+        const breathe = logoRef.current?.animate?.(BREATHE, { duration: 1800, iterations: Infinity, easing: "ease-in-out" });
+        const ready = () => setPhase("out");
+        window.addEventListener(APP_READY_EVENT, ready);
+        return () => { window.removeEventListener(APP_READY_EVENT, ready); breathe?.cancel(); };
+    }, [phase]);
 
     useEffect(() => {
         if (phase !== "out") return;
@@ -158,82 +206,85 @@ export function IntroSplash() {
             ))}
 
             <div className="relative aspect-square w-[min(80vw,360px)]">
-                {/* tudo o que treme quando as palavras assentam */}
-                <motion.div className="absolute inset-0" style={{ willChange: "transform" }} {...(reduce ? {} : SHAKE)}>
-                    {/* brilho por trás do logótipo */}
-                    <motion.div className="absolute inset-[10%] rounded-full" style={{ background: `conic-gradient(from 200deg, ${ORANGE}, ${RED}, ${PURPLE}, ${BLUE}, ${ORANGE})`, filter: "blur(40px)" }}
-                        initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: reduce ? 0.35 : [0, 0.55, 0.35], scale: 1 }} transition={{ delay: reduce ? 0 : T.merge + 0.2, duration: 0.8 }} />
+                {/* tudo o que treme quando as palavras assentam; por dentro, o que "respira" enquanto a app carrega */}
+                <div ref={shakeRef} className="absolute inset-0" style={{ willChange: "transform" }}>
+                    <div ref={logoRef} className="absolute inset-0">
+                        {/* brilho por trás do logótipo */}
+                        <motion.div className="absolute inset-[10%] rounded-full" style={{ background: `conic-gradient(from 200deg, ${ORANGE}, ${RED}, ${PURPLE}, ${BLUE}, ${ORANGE})`, filter: "blur(40px)", willChange: "opacity, transform" }}
+                            initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: reduce ? 0.35 : [0, 0.55, 0.35], scale: 1 }} transition={{ delay: reduce ? 0 : T.merge + 0.2, duration: 0.8 }} />
 
-                    {/* os quatro pilares */}
-                    {!reduce && PILLARS.map(({ label, color, at, left, top, to, Icon }) => (
-                        <motion.div key={label} className="absolute flex w-[40%] flex-col items-center" style={{ left, top }}
-                            initial={{ opacity: 0, scale: 0.4, x: 0, y: 0 }}
-                            animate={{ opacity: [0, 1, 1, 0], scale: [0.4, 1, 1, 0.5], x: ["0%", "0%", "0%", to[0]], y: ["0%", "0%", "0%", to[1]], filter: ["blur(0px)", "blur(0px)", "blur(0px)", "blur(12px)"] }}
-                            transition={{ duration: T.merge + MOVE - at, times: [0, 0.12, (T.merge - at) / (T.merge + MOVE - at), 1], delay: at, ease: "easeInOut" }}>
-                            <div className="flex aspect-square w-[72%] items-center justify-center rounded-[28%] shadow-2xl" style={{ background: `linear-gradient(145deg, ${color}, color-mix(in srgb, ${color} 70%, #000))`, boxShadow: `0 12px 40px -8px ${color}` }}>
-                                <Icon />
-                            </div>
-                            <span className="mt-2 text-[13px] font-semibold tracking-wide text-white/80">{label}</span>
-                        </motion.div>
-                    ))}
-
-                    {/* as cores juntam-se no círculo */}
-                    <motion.div className="absolute inset-[12%] overflow-hidden rounded-full" style={{ background: `linear-gradient(45deg, ${ORANGE} 15%, ${RED} 45%, ${PURPLE} 70%, ${BLUE} 90%)` }}
-                        initial={{ scale: reduce ? 1 : 0, opacity: reduce ? 1 : 0, rotate: reduce ? 0 : -90 }} animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                        transition={{ delay: reduce ? 0 : T.merge + 0.2, type: "spring", stiffness: 140, damping: 16 }}>
-                        {!reduce && [ORANGE, RED, PURPLE, BLUE].map((c, i) => (
-                            <motion.span key={c} className="absolute h-[70%] w-[70%] rounded-full" style={{ background: c, filter: "blur(22px)", left: ["-10%", "-5%", "40%", "40%"][i], top: ["40%", "-5%", "40%", "-10%"][i] }}
-                                initial={{ scale: 0.2 }} animate={{ scale: 1 }} transition={{ delay: T.merge + 0.25 + i * 0.05, duration: 0.6 }} />
+                        {/* os quatro pilares */}
+                        {!reduce && PILLARS.map(({ label, color, at, left, top, to, Icon }) => (
+                            <motion.div key={label} className="absolute flex w-[40%] flex-col items-center" style={{ left, top }}
+                                initial={{ opacity: 0, scale: 0.4, x: 0, y: 0 }}
+                                animate={{ opacity: [0, 1, 1, 0], scale: [0.4, 1, 1, 0.5], x: ["0%", "0%", "0%", to[0]], y: ["0%", "0%", "0%", to[1]], filter: ["blur(0px)", "blur(0px)", "blur(0px)", "blur(12px)"] }}
+                                transition={{ duration: T.merge + MOVE - at, times: [0, 0.12, (T.merge - at) / (T.merge + MOVE - at), 1], delay: at, ease: "easeInOut" }}>
+                                <div className="flex aspect-square w-[72%] items-center justify-center rounded-[28%] shadow-2xl" style={{ background: `linear-gradient(145deg, ${color}, color-mix(in srgb, ${color} 70%, #000))`, boxShadow: `0 12px 40px -8px ${color}` }}>
+                                    <Icon />
+                                </div>
+                                <span className="mt-2 text-[13px] font-semibold tracking-wide text-white/80">{label}</span>
+                            </motion.div>
                         ))}
-                    </motion.div>
 
-                    {/* o círculo assenta nas cores exactas do logótipo */}
-                    <motion.div className="absolute inset-[12%] rounded-full" style={{ background: LOGO_GRADIENT }}
-                        initial={{ opacity: reduce ? 1 : 0 }} animate={{ opacity: 1 }} transition={{ delay: reduce ? 0 : T.logo - 0.1, duration: 0.5, ease: "easeInOut" }} />
+                        {/* as cores juntam-se no círculo */}
+                        <motion.div className="absolute inset-[12%] overflow-hidden rounded-full" style={{ background: `linear-gradient(45deg, ${ORANGE} 15%, ${RED} 45%, ${PURPLE} 70%, ${BLUE} 90%)`, willChange: "transform" }}
+                            initial={{ scale: reduce ? 1 : 0, opacity: reduce ? 1 : 0, rotate: reduce ? 0 : -90 }} animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                            transition={{ delay: reduce ? 0 : T.merge + 0.2, type: "spring", stiffness: 140, damping: 16 }}>
+                            {!reduce && [ORANGE, RED, PURPLE, BLUE].map((c, i) => (
+                                <motion.span key={c} className="absolute h-[70%] w-[70%] rounded-full" style={{ background: c, filter: "blur(22px)", left: ["-10%", "-5%", "40%", "40%"][i], top: ["40%", "-5%", "40%", "-10%"][i] }}
+                                    initial={{ scale: 0.2 }} animate={{ scale: 1 }} transition={{ delay: T.merge + 0.25 + i * 0.05, duration: 0.6 }} />
+                            ))}
+                        </motion.div>
 
-                    {/* cada palavra: a onda revela-a grande à frente, segura, e recua ("voom") para o lugar, e o logótipo treme */}
-                    <div className="absolute inset-[12%]">
-                        <svg viewBox="0 0 375 375" className="h-full w-full overflow-visible">
+                        {/* o círculo assenta nas cores exactas do logótipo */}
+                        <motion.div className="absolute inset-[12%] rounded-full" style={{ background: LOGO_GRADIENT, willChange: "opacity" }}
+                            initial={{ opacity: reduce ? 1 : 0 }} animate={{ opacity: 1 }} transition={{ delay: reduce ? 0 : T.logo - 0.1, duration: 0.5, ease: "easeInOut" }} />
+
+                        {/* cada palavra, na sua camada: a onda revela-a grande à frente, segura e recua ("voom") para o lugar.
+                            Cada letra é também uma camada própria, animada pelo processador gráfico. */}
+                        <svg width="0" height="0" className="absolute" aria-hidden>
                             <defs>
-                                <filter id="msx-letter-shadow" x="-20%" y="-30%" width="140%" height="170%">
+                                <filter id="msx-letter-shadow" x="-30%" y="-30%" width="160%" height="170%">
                                     <feDropShadow dx="0" dy="5" stdDeviation="5" floodColor="#000" floodOpacity="0.28" />
                                 </filter>
                             </defs>
-                            {WORDS.map(({ glyphs, at }) => (
-                                <g key={at}>
-                                    <motion.g filter="url(#msx-letter-shadow)" style={{ originX: 0.5, originY: 0.5 }}
-                                        initial={reduce ? false : { scale: ZOOM[0] }}
-                                        animate={{ scale: reduce ? 1 : ZOOM }}
-                                        transition={{ delay: at, duration: WORD_TIME, times: [0, 0.55, 0.82, 1], ease: ["easeOut", [0.55, 0, 1, 0.45], "easeOut"] }}>
-                                        {glyphs.map((g, i) => (
-                                            <g key={i} transform={`translate(${g.x} ${g.y})`}>
-                                                <motion.path d={g.d} fill={g.fill}
-                                                    initial={reduce ? false : { opacity: 0, y: 26 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: at + i * WAVE, duration: 0.3, ease: [0.22, 1, 0.36, 1] }} />
-                                            </g>
-                                        ))}
-                                    </motion.g>
-                                </g>
-                            ))}
                         </svg>
+                        {WORDS.map(({ glyphs, at, origin }, w) => (
+                            <div key={at} ref={(el) => { wordRefs.current[w] = el; }} className="absolute inset-[12%]" style={{ transformOrigin: origin, willChange: "transform" }}>
+                                {glyphs.map((g, i) => {
+                                    const [bx, by, bw, bh] = g.box;
+                                    const pct = (v: number) => `${(v / 375) * 100}%`;
+                                    return (
+                                        <div key={i} ref={(el) => { (letterRefs.current[w] ??= [])[i] = el; }} className="absolute"
+                                            style={{ left: pct(bx - PAD), top: pct(by - PAD), width: pct(bw + 2 * PAD), height: pct(bh + 2 * PAD), opacity: 0, willChange: "opacity, transform" }}>
+                                            <svg viewBox={`${bx - PAD} ${by - PAD} ${bw + 2 * PAD} ${bh + 2 * PAD}`} className="h-full w-full overflow-visible">
+                                                <path d={g.d} fill={g.fill} transform={`translate(${g.x} ${g.y})`} filter="url(#msx-letter-shadow)" />
+                                            </svg>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ))}
+
+                        {/* no fim, um brilho atravessa o logótipo */}
+                        {!reduce && (
+                            <div className="pointer-events-none absolute inset-[12%] overflow-hidden rounded-full">
+                                <span ref={shineRef} className="absolute inset-y-0 -left-[40%] w-1/3 -skew-x-12" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)", willChange: "transform" }} />
+                            </div>
+                        )}
                     </div>
-
-                    {/* no fim, um brilho atravessa o logótipo */}
-                    {!reduce && (
-                        <div className="pointer-events-none absolute inset-[12%] overflow-hidden rounded-full">
-                            <motion.span className="absolute inset-y-0 w-1/3 -skew-x-12" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)" }}
-                                initial={{ left: "-40%" }} animate={{ left: "130%" }} transition={{ delay: T.shine, duration: 0.7, ease: "easeInOut" }} />
-                        </div>
-                    )}
-                </motion.div>
-
+                </div>
             </div>
 
             <motion.p className="mt-3 px-6 text-center font-headline text-base font-medium tracking-wide text-white/85"
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduce ? 0.1 : T.slogan, duration: 0.4 }}>
                 Stock, vendas e controlo num só lugar
             </motion.p>
+            {phase === "wait" && (
+                <motion.p className="mt-2 text-xs tracking-wide text-white/50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8, duration: 0.5 }}>
+                    A preparar os seus dados…
+                </motion.p>
+            )}
         </motion.div>
     );
 }

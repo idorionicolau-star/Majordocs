@@ -30,6 +30,7 @@ import { ActivityPing } from '@/components/layout/activity-ping';
 import { whatsappLink } from '@/lib/support';
 
 import { LoadingBar } from './loading-bar';
+import { markAppReady } from '@/lib/app-ready';
 import { SubscriptionExpired } from './subscription-expired';
 
 import { differenceInDays } from 'date-fns';
@@ -129,6 +130,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   }, [authContext?.loading, authContext?.firebaseUser, pathname, router, isAuthPage, isPublicPage]);
 
+
+  // a animação de entrada fica no ecrã até a sessão e os dados estarem prontos
+  const appReady = isPublicPage || !authContext?.loading;
+  React.useEffect(() => { if (appReady) markAppReady(); }, [appReady]);
 
   if (isPublicPage) return <div>{children}</div>;
 
