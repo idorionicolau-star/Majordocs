@@ -22,7 +22,7 @@ Gestão de stock, vendas e produção para pequenas e médias empresas em Moçam
 - **Vender por toque (`/pos/catalogo`):** escolher produtos por imagem ou toque.
 - **Ficha única da venda:** abre-se de qualquer página (Financeiro, Clientes, Relatórios…) e permite corrigir a venda, com registo do que mudou.
 - **Documentos:** proformas, faturas, recibos e guias, com a marca da empresa, em PDF. 25 temas (Clássico, Moderno, Onda, Cartão, Moldura, Faixas, Estúdio, Canto, Bolhas, Vidro, Cartaz, Atelier, Executivo, Maré…), com miniaturas reais na escolha e a mesma aparência na pré-visualização do editor. Carimbo e data ao centro quando não há assinatura do cliente (opcional, desligada por defeito).
-- **Entrada da app:** animação de cerca de 5,5 s ao abrir (uma vez por sessão): Stock, Vendas, Gestão e Controlo, cada um com a sua cor, juntam-se no círculo do logótipo; "Major" e depois "StockX" aparecem numa onda, à frente e um pouco fora do círculo, e recuam para o lugar com um tremor no logótipo e poeira fina branca (canvas). Um toque salta; com "reduzir movimento" só mostra o logótipo.
+- **Entrada da app:** animação de cerca de 5,5 s ao abrir (uma vez por sessão): Stock, Vendas, Gestão e Controlo, cada um com a sua cor, juntam-se no círculo do logótipo; "Major" e depois "StockX" aparecem numa onda, à frente e um pouco fora do círculo, e recuam para o lugar com um tremor no logótipo. Um toque salta; com "reduzir movimento" só mostra o logótipo.
 
 ### Stock e produtos
 - **Produtos** (abas Stock | Catálogo | Movimentos | Perdas).
