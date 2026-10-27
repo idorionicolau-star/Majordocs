@@ -34,6 +34,7 @@ export function DocumentsStyle() {
     const [footer, setFooter] = useState("");
     const [place, setPlace] = useState("");
     const [showSig, setShowSig] = useState(true);
+    const [showClient, setShowClient] = useState(false);
     const [saving, setSaving] = useState(false);
     const [preview, setPreview] = useState("");
     const [busy, setBusy] = useState(false);
@@ -47,6 +48,7 @@ export function DocumentsStyle() {
         setFooter(company.documentFooterNote || "");
         setPlace(company.documentSignaturePlace || "");
         setShowSig(company.documentShowSignatures !== false);
+        setShowClient(company.documentShowClientSignature === true);
     }, [company]);
 
     const t = themeById(theme);
@@ -60,7 +62,7 @@ export function DocumentsStyle() {
             setBusy(true);
             try {
                 const { renderDocPDF } = await import("@/lib/doc-pdf");
-                const doc = await renderDocPDF({ ...SAMPLE, style: { theme, accent: accent || undefined, footerNote: footer || undefined, signaturePlace: place || undefined, showSignatures: showSig } }, company);
+                const doc = await renderDocPDF({ ...SAMPLE, style: { theme, accent: accent || undefined, footerNote: footer || undefined, signaturePlace: place || undefined, showSignatures: showSig, showClientSignature: showClient } }, company);
                 const url = URL.createObjectURL(doc.output("blob"));
                 if (cancelled) { URL.revokeObjectURL(url); return; }
                 setPreview((old) => { if (old) URL.revokeObjectURL(old); return url; });
@@ -71,7 +73,7 @@ export function DocumentsStyle() {
             }
         }, 450);
         return () => { cancelled = true; clearTimeout(timer); };
-    }, [company, theme, accent, footer, place, showSig]);
+    }, [company, theme, accent, footer, place, showSig, showClient]);
 
     const save = async () => {
         if (!inv?.updateCompany) return;
@@ -83,6 +85,7 @@ export function DocumentsStyle() {
                 documentFooterNote: footer.trim(),
                 documentSignaturePlace: place.trim(),
                 documentShowSignatures: showSig,
+                documentShowClientSignature: showClient,
             });
             toast({ title: "Aspecto dos documentos guardado", description: "Aplica-se a todos os documentos que exportar a partir de agora." });
         } finally {
@@ -141,6 +144,12 @@ export function DocumentsStyle() {
                             <span className="text-sm">Mostrar espaço para assinaturas</span>
                             <Switch checked={showSig} onCheckedChange={setShowSig} />
                         </label>
+                        {showSig && (
+                            <label className="flex items-center justify-between gap-3 rounded-xl border px-3 py-2">
+                                <span className="text-sm">Assinatura do cliente <span className="text-muted-foreground">(opcional)</span></span>
+                                <Switch checked={showClient} onCheckedChange={setShowClient} data-testid="doc-client-sig" />
+                            </label>
+                        )}
                     </div>
                     <div className="space-y-1.5">
                         <Label htmlFor="doc-footer">Texto do rodapé</Label>
