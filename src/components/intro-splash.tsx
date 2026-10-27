@@ -7,7 +7,7 @@ import { LOGO_MAJOR, LOGO_STOCKX } from "./intro-logo";
 /**
  * Animação de entrada (uma vez por sessão, cerca de 4 s). As quatro cores do logótipo são os quatro pilares da app:
  * Stock (laranja), Vendas (vermelho), Gestão (roxo) e Controlo (azul). Cada um entra com o seu símbolo,
- * juntam-se ao centro e misturam-se no círculo do MajorStockX; depois as letras de "Major" e "StockX" saltam uma a uma.
+ * juntam-se ao centro e misturam-se no círculo do MajorStockX; depois "Major" e "StockX" aparecem à frente e recuam para o lugar.
  *
  * O ecrã vem já no HTML do servidor (sem "piscar" a app por baixo); o script em `INTRO_GATE` decide antes da
  * primeira pintura se é para mostrar. Um toque salta a animação; quem pede menos movimento vê só o logótipo.
@@ -20,10 +20,39 @@ export const INTRO_GATE = `try{var q=/[?&]intro=1/.test(location.search);if(!q&&
 const ORANGE = "rgb(244,150,9)", RED = "rgb(225,51,51)", PURPLE = "rgb(117,112,182)", BLUE = "rgb(89,128,216)";
 
 // momentos da animação (segundos)
-const T = { stock: 0.2, sales: 0.75, manage: 1.3, control: 1.85, merge: 2.6, logo: 3.1, word2: 3.5, shine: 4.05, slogan: 4.15, out: 4.9 };
-/** intervalo entre letras e o salto de cada uma (mola com ressalto, nada linear) */
-const STAGGER = 0.055;
-const BOUNCE = { type: "spring", stiffness: 520, damping: 13, mass: 0.7 } as const;
+const T = { stock: 0.2, sales: 0.75, manage: 1.3, control: 1.85, merge: 2.6, logo: 3.1, word2: 3.8, shine: 4.55, slogan: 4.6, out: 5.35 };
+/** cada palavra: a onda revela-a à frente (um pouco fora do círculo), cresce devagar, recua de repente e assenta */
+const WORD_TIME = 0.85;
+const ZOOM = [1.3, 1.38, 0.96, 1];
+/** intervalo entre letras na onda */
+const WAVE = 0.045;
+/** as duas palavras: letras, quando começam, centro, linha de base e largura (coordenadas do logótipo) */
+const WORDS = [
+    { glyphs: LOGO_MAJOR, at: T.logo, cx: 188, base: 179, w: 265 },
+    { glyphs: LOGO_STOCKX, at: T.word2, cx: 187, base: 273, w: 330 },
+];
+
+/** Poeira branca (com uns grãos acinzentados) que se levanta dos dois lados quando a palavra assenta. */
+function Dust({ cx, y, w, at }: { cx: number; y: number; w: number; at: number }) {
+    // posições pseudo-aleatórias fixas (iguais no servidor e no navegador)
+    const bits = Array.from({ length: 28 }, (_, i) => {
+        const side = i % 2 ? 1 : -1;
+        const r = ((i * 47) % 100) / 100, q = ((i * 71) % 100) / 100;
+        return { x: cx + side * (w * 0.12 + r * w * 0.4), dx: side * (24 + q * 70), dy: -(8 + r * 38), s: 2 + q * 3.6, d: r * 0.1 };
+    });
+    return <>
+        {[-1, 1].map((side) => (
+            <motion.ellipse key={side} cx={cx + side * w * 0.42} cy={y} rx="34" ry="12" fill="rgb(236,236,240)" filter="url(#msx-puff)"
+                initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: [0, 0.75, 0], scale: [0.3, 1.3, 1.9], x: side * 30 }}
+                transition={{ delay: at, duration: 0.7, ease: "easeOut" }} style={{ originX: 0.5, originY: 0.5 }} />
+        ))}
+        {bits.map((b, i) => (
+            <motion.circle key={i} cx={b.x} cy={y} r={b.s} fill={i % 3 ? "#fff" : "rgb(210,210,216)"}
+                initial={{ opacity: 0, x: 0, y: 0 }} animate={{ opacity: [0, 0.95, 0], x: b.dx, y: [0, b.dy, b.dy + 6] }}
+                transition={{ delay: at + b.d, duration: 0.8, ease: "easeOut" }} />
+        ))}
+    </>;
+}
 /** o degradê do círculo do logótipo (laranja em baixo à esquerda, azul em cima à direita) */
 const LOGO_GRADIENT = "linear-gradient(45deg, rgb(248,173,0) 15%, rgb(225,51,51) 50%, rgb(124,108,174) 72%, rgb(57,146,254) 85%)";
 /** quanto dura a viagem dos pilares para o centro */
@@ -163,24 +192,33 @@ export function IntroSplash() {
                 <motion.div className="absolute inset-[12%] rounded-full" style={{ background: LOGO_GRADIENT }}
                     initial={{ opacity: reduce ? 1 : 0 }} animate={{ opacity: 1 }} transition={{ delay: reduce ? 0 : T.logo - 0.1, duration: 0.5, ease: "easeInOut" }} />
 
-                {/* as letras saltam uma a uma, depressa: primeiro "Major", depois "StockX" */}
+                {/* cada palavra: a onda revela-a grande à frente, segura, e recua ("voom") para o lugar, levantando poeira */}
                 <div className="absolute inset-[12%]">
                     <svg viewBox="0 0 375 375" className="h-full w-full overflow-visible">
                         <defs>
                             <filter id="msx-letter-shadow" x="-20%" y="-30%" width="140%" height="170%">
                                 <feDropShadow dx="0" dy="5" stdDeviation="5" floodColor="#000" floodOpacity="0.28" />
                             </filter>
+                            <filter id="msx-puff" x="-50%" y="-100%" width="200%" height="300%"><feGaussianBlur stdDeviation="6" /></filter>
                         </defs>
-                        <g filter="url(#msx-letter-shadow)">
-                            {[...LOGO_MAJOR.map((g, i) => ({ g, at: T.logo + i * STAGGER })), ...LOGO_STOCKX.map((g, i) => ({ g, at: T.word2 + i * STAGGER }))].map(({ g, at }, k) => (
-                                <g key={k} transform={`translate(${g.x} ${g.y})`}>
-                                    <motion.path d={g.d} fill={g.fill} style={{ originX: 0.5, originY: 1 }}
-                                        initial={reduce ? false : { y: -80, scaleX: 0.75, scaleY: 1.3, opacity: 0 }}
-                                        animate={{ y: 0, scaleX: 1, scaleY: 1, opacity: 1 }}
-                                        transition={{ default: { ...BOUNCE, delay: at }, opacity: { duration: 0.1, delay: at } }} />
-                                </g>
-                            ))}
-                        </g>
+                        {WORDS.map(({ glyphs, at, cx, base, w }) => (
+                            <g key={at}>
+                                <motion.g filter="url(#msx-letter-shadow)" style={{ originX: 0.5, originY: 0.5 }}
+                                    initial={reduce ? false : { scale: ZOOM[0] }}
+                                    animate={{ scale: reduce ? 1 : ZOOM }}
+                                    transition={{ delay: at, duration: WORD_TIME, times: [0, 0.55, 0.82, 1], ease: ["easeOut", [0.55, 0, 1, 0.45], "easeOut"] }}>
+                                    {glyphs.map((g, i) => (
+                                        <g key={i} transform={`translate(${g.x} ${g.y})`}>
+                                            <motion.path d={g.d} fill={g.fill}
+                                                initial={reduce ? false : { opacity: 0, y: 26 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: at + i * WAVE, duration: 0.3, ease: [0.22, 1, 0.36, 1] }} />
+                                        </g>
+                                    ))}
+                                </motion.g>
+                                {!reduce && <Dust cx={cx} y={base} w={w} at={at + WORD_TIME * 0.82} />}
+                            </g>
+                        ))}
                     </svg>
                 </div>
 
