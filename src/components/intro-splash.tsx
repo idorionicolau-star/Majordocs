@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
 /**
- * Animação de entrada (uma vez por sessão). As quatro cores do logótipo são os quatro pilares da app:
+ * Animação de entrada (uma vez por sessão, cerca de 4 s). As quatro cores do logótipo são os quatro pilares da app:
  * Stock (laranja), Vendas (vermelho), Gestão (roxo) e Controlo (azul). Cada um entra com o seu símbolo,
  * juntam-se ao centro e misturam-se no círculo do MajorStockX.
  *
@@ -19,7 +19,9 @@ export const INTRO_GATE = `try{var q=/[?&]intro=1/.test(location.search);if(!q&&
 const ORANGE = "rgb(244,150,9)", RED = "rgb(225,51,51)", PURPLE = "rgb(117,112,182)", BLUE = "rgb(89,128,216)";
 
 // momentos da animação (segundos)
-const T = { stock: 0.15, sales: 0.45, manage: 0.75, control: 1.05, merge: 1.5, logo: 1.95, slogan: 2.15, out: 2.75 };
+const T = { stock: 0.2, sales: 0.75, manage: 1.3, control: 1.85, merge: 2.6, logo: 3.15, slogan: 3.45, out: 4.3 };
+/** quanto dura a viagem dos pilares para o centro */
+const MOVE = 0.6;
 
 const spring = { type: "spring", stiffness: 260, damping: 18 } as const;
 const draw = (delay: number, duration = 0.4) => ({ initial: { pathLength: 0, opacity: 0 }, animate: { pathLength: 1, opacity: 1 }, transition: { delay, duration, ease: "easeOut" } }) as const;
@@ -86,7 +88,7 @@ const PILLARS = [
 ] as const;
 
 // pontinhos de cor a subir devagar no fundo (posições fixas: iguais no servidor e no navegador)
-const DOTS = Array.from({ length: 16 }, (_, i) => ({ x: (i * 37) % 100, y: (i * 53) % 100, c: [ORANGE, RED, PURPLE, BLUE][i % 4], s: 3 + (i % 3) * 2, d: (i % 5) * 0.3 }));
+const DOTS = Array.from({ length: 16 }, (_, i) => ({ x: (i * 37) % 100, y: (i * 53) % 100, c: [ORANGE, RED, PURPLE, BLUE][i % 4], s: 3 + (i % 3) * 2, d: (i % 5) * 0.5 }));
 
 export function IntroSplash() {
     const reduce = useReducedMotion();
@@ -120,7 +122,7 @@ export function IntroSplash() {
         >
             {!reduce && DOTS.map((p, i) => (
                 <motion.span key={i} className="absolute rounded-full" style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.s, height: p.s, background: p.c }}
-                    initial={{ opacity: 0, y: 0 }} animate={{ opacity: [0, 0.45, 0], y: -60 }} transition={{ delay: p.d, duration: 2.6, ease: "easeOut" }} />
+                    initial={{ opacity: 0, y: 0 }} animate={{ opacity: [0, 0.45, 0], y: -60 }} transition={{ delay: p.d, duration: 4, ease: "easeOut" }} />
             ))}
 
             <div className="relative aspect-square w-[min(80vw,360px)]">
@@ -133,7 +135,7 @@ export function IntroSplash() {
                     <motion.div key={label} className="absolute flex w-[40%] flex-col items-center" style={{ left, top }}
                         initial={{ opacity: 0, scale: 0.4, x: 0, y: 0 }}
                         animate={{ opacity: [0, 1, 1, 0], scale: [0.4, 1, 1, 0.5], x: ["0%", "0%", "0%", to[0]], y: ["0%", "0%", "0%", to[1]], filter: ["blur(0px)", "blur(0px)", "blur(0px)", "blur(12px)"] }}
-                        transition={{ duration: T.merge + 0.45 - at, times: [0, 0.18, (T.merge - at) / (T.merge + 0.45 - at), 1], delay: at, ease: "easeInOut" }}>
+                        transition={{ duration: T.merge + MOVE - at, times: [0, 0.12, (T.merge - at) / (T.merge + MOVE - at), 1], delay: at, ease: "easeInOut" }}>
                         <div className="flex aspect-square w-[72%] items-center justify-center rounded-[28%] shadow-2xl" style={{ background: `linear-gradient(145deg, ${color}, color-mix(in srgb, ${color} 70%, #000))`, boxShadow: `0 12px 40px -8px ${color}` }}>
                             <Icon />
                         </div>
@@ -154,11 +156,11 @@ export function IntroSplash() {
                 {/* o logótipo escreve-se da esquerda para a direita e passa um brilho */}
                 <motion.div className="absolute inset-[12%] overflow-hidden rounded-full"
                     initial={{ clipPath: reduce ? "inset(0 0% 0 0)" : "inset(0 100% 0 0)" }} animate={{ clipPath: "inset(0 0% 0 0)" }}
-                    transition={{ delay: reduce ? 0 : T.logo, duration: 0.5, ease: [0.65, 0, 0.35, 1] }}>
+                    transition={{ delay: reduce ? 0 : T.logo, duration: 0.65, ease: [0.65, 0, 0.35, 1] }}>
                     <img src="/logo.svg" alt="" className="h-full w-full" draggable={false} />
                     {!reduce && (
                         <motion.span className="absolute inset-y-0 w-1/3 -skew-x-12" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)" }}
-                            initial={{ left: "-40%" }} animate={{ left: "130%" }} transition={{ delay: T.logo + 0.45, duration: 0.55, ease: "easeInOut" }} />
+                            initial={{ left: "-40%" }} animate={{ left: "130%" }} transition={{ delay: T.logo + 0.6, duration: 0.7, ease: "easeInOut" }} />
                     )}
                 </motion.div>
             </div>
