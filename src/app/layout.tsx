@@ -4,6 +4,7 @@ import { AppProviders } from '@/firebase/client-provider';
 import type { Metadata, Viewport } from 'next';
 import { PT_Sans, Space_Grotesk } from 'next/font/google';
 import { Toaster } from "@/components/ui/toaster";
+import { ProgressHaulHost } from "@/components/haul/progress-haul";
 import { PwaRegister } from "@/components/pwa-register";
 import { ErrorReporter } from "@/components/error-reporter";
 import { IntroSplash } from "@/components/intro-splash";
@@ -64,6 +65,7 @@ export default function RootLayout({
         <IntroSplash />
         <AppProviders>{children}</AppProviders>
         <Toaster />
+        <ProgressHaulHost />
         <PwaRegister />
         <ErrorReporter />
       </body>
