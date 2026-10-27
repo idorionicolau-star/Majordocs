@@ -41,6 +41,8 @@ const SHAKE_X = [0, -4, 3.6, -3, 2.3, -1.6, 0.9, -0.4, 0];
 const SHAKE_Y = [0, 2.2, -2, 1.6, -1.2, 0.8, -0.5, 0.2, 0];
 const SHAKE_R = [0, -0.6, 0.5, -0.4, 0.3, -0.2, 0.1, 0, 0];
 const SHAKE_TIME = 0.42;
+/** grãos de poeira por palavra: finos e muitos, mas sem pesar nos telemóveis */
+const GRAINS = 160;
 const SHAKE = (() => {
     const start = LANDS[0], total = LANDS[LANDS.length - 1] + SHAKE_TIME - start;
     const times: number[] = [], x: number[] = [], y: number[] = [], rotate: number[] = [];
@@ -52,7 +54,7 @@ const SHAKE = (() => {
 })();
 
 /**
- * Poeira fina de verdade: centenas de grãos brancos e acinzentados saem de debaixo da palavra, travam no ar,
+ * Poeira fina de verdade: muitos grãos brancos e acinzentados saem de debaixo da palavra, travam no ar,
  * sobem devagar e dissipam-se, com nuvens suaves por trás. Desenhada num canvas (leve mesmo em telemóveis fracos).
  */
 function DustCanvas() {
@@ -60,7 +62,7 @@ function DustCanvas() {
     useEffect(() => {
         const c = ref.current, ctx = c?.getContext("2d");
         if (!c || !ctx) return;
-        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        const dpr = 1; // grãos finos não precisam de alta resolução, e assim o canvas pesa 4× menos
         const box = c.getBoundingClientRect();
         c.width = box.width * dpr; c.height = box.height * dpr;
         // o canvas cobre 140% do palco; o logótipo (375 × 375) ocupa 76% do palco, a 12% da borda
@@ -71,22 +73,31 @@ function DustCanvas() {
         const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
         const spawn = (b: (typeof BURSTS)[number]) => {
             const bx = O + b.cx * S, by = O + b.y * S, half = (b.w * S) / 2;
-            for (let i = 0; i < 280; i++) {
+            for (let i = 0; i < GRAINS; i++) {
                 const u = rnd() * 2 - 1; // onde sai ao longo da palavra: -1 à esquerda, 1 à direita
                 const side = u < 0 ? -1 : 1;
                 const speed = (40 + rnd() * 170) * dpr * (0.35 + Math.abs(u));
                 grains.push({
                     x: bx + u * half, y: by + (rnd() - 0.6) * 6 * dpr,
                     vx: side * speed * (0.6 + rnd() * 0.6) + (rnd() - 0.5) * 30 * dpr, vy: -(8 + rnd() * 70) * dpr,
-                    r: (0.35 + rnd() ** 2 * 1.3) * dpr, a: 0.25 + rnd() * 0.6, life: 0.7 + rnd() * 1.1, age: 0,
+                    r: 0.5 + rnd() ** 2 * 1.2, a: 0.25 + rnd() * 0.6, life: 0.7 + rnd() * 1.1, age: 0,
                     grey: rnd() < 0.35, cloud: false, seed: rnd() * 10,
                 });
             }
-            for (let i = 0; i < 14; i++) {
+            for (let i = 0; i < 8; i++) {
                 const u = rnd() * 2 - 1, side = u < 0 ? -1 : 1;
                 grains.push({ x: bx + u * half * 0.9, y: by, vx: side * (20 + rnd() * 50) * dpr, vy: -(5 + rnd() * 20) * dpr, r: (8 + rnd() * 10) * dpr, a: 0.1 + rnd() * 0.1, life: 0.9 + rnd() * 0.6, age: 0, grey: false, cloud: true, seed: 0 });
             }
         };
+        // a nuvem é desenhada uma vez e depois só copiada (criar degradês a cada imagem pesa)
+        const puff = document.createElement("canvas");
+        puff.width = puff.height = 64;
+        const pctx = puff.getContext("2d")!;
+        const pg = pctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        pg.addColorStop(0, "rgba(235,235,240,1)");
+        pg.addColorStop(1, "rgba(235,235,240,0)");
+        pctx.fillStyle = pg;
+        pctx.fillRect(0, 0, 64, 64);
         const fired = BURSTS.map(() => false);
         const end = LANDS[LANDS.length - 1] + 2.5;
         const t0 = performance.now();
@@ -95,6 +106,7 @@ function DustCanvas() {
             const t = (now - t0) / 1000, dt = Math.min(0.05, (now - last) / 1000);
             last = now;
             BURSTS.forEach((b, i) => { if (!fired[i] && t >= b.at) { fired[i] = true; spawn(b); } });
+            ctx.globalAlpha = 1;
             ctx.clearRect(0, 0, c.width, c.height);
             for (let i = grains.length - 1; i >= 0; i--) {
                 const g = grains[i];
@@ -105,19 +117,14 @@ function DustCanvas() {
                 g.vy = g.vy * drag - 14 * dpr * dt; // e sobe devagar
                 g.x += g.vx * dt; g.y += g.vy * dt;
                 const k = g.age / g.life, fade = k < 0.12 ? k / 0.12 : 1 - (k - 0.12) / 0.88;
-                ctx.beginPath();
+                ctx.globalAlpha = g.a * fade;
                 if (g.cloud) {
                     const r = g.r * (1 + k * 1.6);
-                    const grad = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, r);
-                    grad.addColorStop(0, `rgba(235,235,240,${g.a * fade})`);
-                    grad.addColorStop(1, "rgba(235,235,240,0)");
-                    ctx.fillStyle = grad;
-                    ctx.arc(g.x, g.y, r, 0, Math.PI * 2);
+                    ctx.drawImage(puff, g.x - r, g.y - r, r * 2, r * 2);
                 } else {
-                    ctx.fillStyle = g.grey ? `rgba(200,200,208,${g.a * fade})` : `rgba(255,255,255,${g.a * fade})`;
-                    ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
+                    ctx.fillStyle = g.grey ? "rgb(200,200,208)" : "#fff";
+                    ctx.fillRect(g.x - g.r, g.y - g.r, g.r * 2, g.r * 2);
                 }
-                ctx.fill();
             }
             if (t < end) raf = requestAnimationFrame(frame);
         };
@@ -235,7 +242,7 @@ export function IntroSplash() {
 
             <div className="relative aspect-square w-[min(80vw,360px)]">
                 {/* tudo o que treme quando as palavras assentam */}
-                <motion.div className="absolute inset-0" {...(reduce ? {} : SHAKE)}>
+                <motion.div className="absolute inset-0" style={{ willChange: "transform" }} {...(reduce ? {} : SHAKE)}>
                     {/* brilho por trás do logótipo */}
                     <motion.div className="absolute inset-[10%] rounded-full" style={{ background: `conic-gradient(from 200deg, ${ORANGE}, ${RED}, ${PURPLE}, ${BLUE}, ${ORANGE})`, filter: "blur(40px)" }}
                         initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: reduce ? 0.35 : [0, 0.55, 0.35], scale: 1 }} transition={{ delay: reduce ? 0 : T.merge + 0.2, duration: 0.8 }} />
