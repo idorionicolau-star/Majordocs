@@ -132,25 +132,32 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   }, [authContext?.loading, authContext?.firebaseUser, pathname, router, isAuthPage, isPublicPage]);
 
 
-  // a animação de entrada fica no ecrã até a sessão e os dados estarem prontos
-  const appReady = isPublicPage || !authContext?.loading;
-  React.useEffect(() => { if (appReady) markAppReady(); }, [appReady]);
+  // A app carrega por fases (sessão, depois os dados): entre elas, por um instante, parecia pronta. O ecrã de
+  // carregamento saía e voltava a entrar, a recomeçar a animação. Agora só sai quando está pronta há 300 ms, com
+  // um fade, e fica sempre no mesmo sítio da árvore (nunca é desmontado a meio, a animação não recomeça).
+  const blocking = !isPublicPage && (!!authContext?.loading || (!authContext?.firebaseUser && !isAuthPage));
+  const loaderPhase = useStickyLoader(blocking);
+  // a animação de entrada também espera por este "pronto" estável
+  React.useEffect(() => { if (loaderPhase !== 'show') markAppReady(); }, [loaderPhase]);
+  const loader = loaderPhase === 'hidden' ? null : (
+    <div className={`fixed inset-0 z-[250] flex items-center justify-center bg-background transition-opacity duration-300 ${loaderPhase === 'leaving' ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
+      <AppLoader />
+    </div>
+  );
 
   if (isPublicPage) return <div>{children}</div>;
 
-  if (authContext?.loading || (!authContext?.firebaseUser && !isAuthPage)) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <AppLoader />
-      </div>
-    );
-  }
+  // o ecrã de carregamento é sempre o primeiro filho do fragmento: o React mantém-no entre as três vistas
+  if (blocking) return <>{loader}</>;
 
   if (isAuthPage) {
     return (
-      <div>
-        {children}
-      </div>
+      <>
+        {loader}
+        <div>
+          {children}
+        </div>
+      </>
     );
   }
 
@@ -158,6 +165,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      {loader}
       <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
         <Suspense fallback={null}>
           <LoadingBar />
@@ -236,4 +244,16 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       </Sheet>
     </>
   );
+}
+
+/** Ecrã de carregamento "pegajoso": aparece logo, mas só sai quando a app está pronta há 300 ms (com 300 ms de fade). */
+function useStickyLoader(blocking: boolean): 'show' | 'leaving' | 'hidden' {
+  const [phase, setPhase] = React.useState<'show' | 'leaving' | 'hidden'>(blocking ? 'show' : 'hidden');
+  React.useEffect(() => {
+    if (blocking) { setPhase('show'); return; }
+    const leave = setTimeout(() => setPhase((p) => (p === 'hidden' ? p : 'leaving')), 300);
+    const hide = setTimeout(() => setPhase('hidden'), 600);
+    return () => { clearTimeout(leave); clearTimeout(hide); };
+  }, [blocking]);
+  return blocking ? 'show' : phase;
 }
