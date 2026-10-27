@@ -6,6 +6,7 @@ import { PT_Sans, Space_Grotesk } from 'next/font/google';
 import { Toaster } from "@/components/ui/toaster";
 import { PwaRegister } from "@/components/pwa-register";
 import { ErrorReporter } from "@/components/error-reporter";
+import { INTRO_GATE, IntroSplash } from "@/components/intro-splash";
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -56,6 +57,9 @@ export default function RootLayout({
       className={`${ptSans.variable} ${spaceGrotesk.variable}`}
     >
       <body className="font-body antialiased">
+        {/* decide antes da primeira pintura se a animação de entrada aparece */}
+        <script dangerouslySetInnerHTML={{ __html: INTRO_GATE }} />
+        <IntroSplash />
         <AppProviders>{children}</AppProviders>
         <Toaster />
         <PwaRegister />
