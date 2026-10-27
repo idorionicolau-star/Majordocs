@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { LOGO_MAJOR, LOGO_STOCKX } from "./intro-logo";
 
 /**
  * Animação de entrada (uma vez por sessão, cerca de 4 s). As quatro cores do logótipo são os quatro pilares da app:
  * Stock (laranja), Vendas (vermelho), Gestão (roxo) e Controlo (azul). Cada um entra com o seu símbolo,
- * juntam-se ao centro e misturam-se no círculo do MajorStockX.
+ * juntam-se ao centro e misturam-se no círculo do MajorStockX; depois as letras de "Major" e "StockX" saltam uma a uma.
  *
  * O ecrã vem já no HTML do servidor (sem "piscar" a app por baixo); o script em `INTRO_GATE` decide antes da
  * primeira pintura se é para mostrar. Um toque salta a animação; quem pede menos movimento vê só o logótipo.
@@ -19,7 +20,12 @@ export const INTRO_GATE = `try{var q=/[?&]intro=1/.test(location.search);if(!q&&
 const ORANGE = "rgb(244,150,9)", RED = "rgb(225,51,51)", PURPLE = "rgb(117,112,182)", BLUE = "rgb(89,128,216)";
 
 // momentos da animação (segundos)
-const T = { stock: 0.2, sales: 0.75, manage: 1.3, control: 1.85, merge: 2.6, logo: 3.15, slogan: 3.45, out: 4.3 };
+const T = { stock: 0.2, sales: 0.75, manage: 1.3, control: 1.85, merge: 2.6, logo: 3.1, word2: 3.5, shine: 4.05, slogan: 4.15, out: 4.9 };
+/** intervalo entre letras e o salto de cada uma (mola com ressalto, nada linear) */
+const STAGGER = 0.055;
+const BOUNCE = { type: "spring", stiffness: 520, damping: 13, mass: 0.7 } as const;
+/** o degradê do círculo do logótipo (laranja em baixo à esquerda, azul em cima à direita) */
+const LOGO_GRADIENT = "linear-gradient(45deg, rgb(248,173,0) 15%, rgb(225,51,51) 50%, rgb(124,108,174) 72%, rgb(57,146,254) 85%)";
 /** quanto dura a viagem dos pilares para o centro */
 const MOVE = 0.6;
 
@@ -153,16 +159,38 @@ export function IntroSplash() {
                     ))}
                 </motion.div>
 
-                {/* o logótipo escreve-se da esquerda para a direita e passa um brilho */}
-                <motion.div className="absolute inset-[12%] overflow-hidden rounded-full"
-                    initial={{ clipPath: reduce ? "inset(0 0% 0 0)" : "inset(0 100% 0 0)" }} animate={{ clipPath: "inset(0 0% 0 0)" }}
-                    transition={{ delay: reduce ? 0 : T.logo, duration: 0.65, ease: [0.65, 0, 0.35, 1] }}>
-                    <img src="/logo.svg" alt="" className="h-full w-full" draggable={false} />
-                    {!reduce && (
-                        <motion.span className="absolute inset-y-0 w-1/3 -skew-x-12" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)" }}
-                            initial={{ left: "-40%" }} animate={{ left: "130%" }} transition={{ delay: T.logo + 0.6, duration: 0.7, ease: "easeInOut" }} />
-                    )}
-                </motion.div>
+                {/* o círculo assenta nas cores exactas do logótipo */}
+                <motion.div className="absolute inset-[12%] rounded-full" style={{ background: LOGO_GRADIENT }}
+                    initial={{ opacity: reduce ? 1 : 0 }} animate={{ opacity: 1 }} transition={{ delay: reduce ? 0 : T.logo - 0.1, duration: 0.5, ease: "easeInOut" }} />
+
+                {/* as letras saltam uma a uma, depressa: primeiro "Major", depois "StockX" */}
+                <div className="absolute inset-[12%]">
+                    <svg viewBox="0 0 375 375" className="h-full w-full overflow-visible">
+                        <defs>
+                            <filter id="msx-letter-shadow" x="-20%" y="-30%" width="140%" height="170%">
+                                <feDropShadow dx="0" dy="5" stdDeviation="5" floodColor="#000" floodOpacity="0.28" />
+                            </filter>
+                        </defs>
+                        <g filter="url(#msx-letter-shadow)">
+                            {[...LOGO_MAJOR.map((g, i) => ({ g, at: T.logo + i * STAGGER })), ...LOGO_STOCKX.map((g, i) => ({ g, at: T.word2 + i * STAGGER }))].map(({ g, at }, k) => (
+                                <g key={k} transform={`translate(${g.x} ${g.y})`}>
+                                    <motion.path d={g.d} fill={g.fill} style={{ originX: 0.5, originY: 1 }}
+                                        initial={reduce ? false : { y: -80, scaleX: 0.75, scaleY: 1.3, opacity: 0 }}
+                                        animate={{ y: 0, scaleX: 1, scaleY: 1, opacity: 1 }}
+                                        transition={{ default: { ...BOUNCE, delay: at }, opacity: { duration: 0.1, delay: at } }} />
+                                </g>
+                            ))}
+                        </g>
+                    </svg>
+                </div>
+
+                {/* no fim, um brilho atravessa o logótipo */}
+                {!reduce && (
+                    <div className="pointer-events-none absolute inset-[12%] overflow-hidden rounded-full">
+                        <motion.span className="absolute inset-y-0 w-1/3 -skew-x-12" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)" }}
+                            initial={{ left: "-40%" }} animate={{ left: "130%" }} transition={{ delay: T.shine, duration: 0.7, ease: "easeInOut" }} />
+                    </div>
+                )}
             </div>
 
             <motion.p className="mt-3 px-6 text-center font-headline text-base font-medium tracking-wide text-white/85"
