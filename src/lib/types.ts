@@ -93,6 +93,8 @@ export type Company = {
   documentFooterNote?: string;
   documentSignaturePlace?: string; // ex.: "Maputo"
   documentShowSignatures?: boolean;
+  /** assinatura do cliente nos documentos (desligada por defeito) */
+  documentShowClientSignature?: boolean;
   status?: 'active' | 'trial' | 'suspended';
   trialEndsAt?: string;
   /** Quando o teste foi (re)iniciado: empresas novas ao registar; antigas no reinício único. Se existir, não há novo reinício. */

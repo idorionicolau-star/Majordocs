@@ -542,6 +542,7 @@ export function DocumentEditor({ docId: docIdProp, initialType }: Props) {
                             <div className="space-y-2">
                                 <label className="flex items-center justify-between gap-3 text-sm"><span>Mostrar logótipo</span><Switch checked={style.showLogo !== false} onCheckedChange={(v) => setStyle({ showLogo: v }, "logo")} /></label>
                                 <label className="flex items-center justify-between gap-3 text-sm"><span>Espaço para assinaturas</span><Switch checked={style.showSignatures !== false} onCheckedChange={(v) => setStyle({ showSignatures: v }, "showsig")} /></label>
+                                {style.showSignatures !== false && <label className="flex items-center justify-between gap-3 text-sm"><span>Assinatura do cliente</span><Switch checked={!!style.showClientSignature} onCheckedChange={(v) => setStyle({ showClientSignature: v }, "showclient")} /></label>}
                             </div>
                             <div className="mt-3 grid grid-cols-2 gap-3">
                                 <Field label="Local da assinatura"><Input value={style.signaturePlace || ""} onChange={(e) => setStyle({ signaturePlace: e.target.value }, "place")} placeholder="Maputo" /></Field>
@@ -553,7 +554,7 @@ export function DocumentEditor({ docId: docIdProp, initialType }: Props) {
                             <Section title="Assinaturas">
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <SignaturePad label="Empresa" value={style.companySignature} disabled={!editable} onChange={(v) => setStyle({ companySignature: v || undefined }, "sig-c")} />
-                                    <SignaturePad label="Cliente" value={style.clientSignature} disabled={!editable} onChange={(v) => setStyle({ clientSignature: v || undefined }, "sig-k")} />
+                                    {style.showClientSignature && <SignaturePad label="Cliente" value={style.clientSignature} disabled={!editable} onChange={(v) => setStyle({ clientSignature: v || undefined }, "sig-k")} />}
                                 </div>
                                 {!style.companySignature && company?.signatureUrl && <p className="mt-2 text-xs text-muted-foreground">Sem assinatura desenhada, usa-se a assinatura/carimbo da empresa das Definições.</p>}
                             </Section>

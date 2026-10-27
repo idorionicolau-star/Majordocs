@@ -119,17 +119,17 @@ export function DocPreview({ model, company }: { model: DocModel; company: Compa
                         </div>
                     )}
 
+                    {st.showSignatures !== false && st.signaturePlace && <div style={{ marginTop: 24, fontSize: 10, color: "#71717a" }}>{st.signaturePlace}, {date(model.issueDate)}</div>}
                     {st.showSignatures !== false && (
-                        <div style={{ display: "flex", gap: 60, marginTop: 56, padding: "0 20px" }}>
-                            {[{ l: "A EMPRESA", s: st.companySignature || company?.signatureUrl }, { l: "O CLIENTE", s: st.clientSignature }].map((x) => (
+                        <div style={{ display: "flex", gap: 60, marginTop: st.signaturePlace ? 12 : 56, padding: "0 20px" }}>
+                            {[{ l: "A EMPRESA", s: st.companySignature || company?.signatureUrl }, ...(st.showClientSignature ? [{ l: "O CLIENTE", s: st.clientSignature }] : [{ l: "", s: undefined }])].map((x, k) => x.l ? (
                                 <div key={x.l} style={{ flex: 1, textAlign: "center" }}>
                                     <div style={{ height: 56, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>{x.s && <img src={x.s} alt="" style={{ maxHeight: 54, maxWidth: "100%" }} />}</div>
                                     <div style={{ borderTop: "1px solid #71717a", paddingTop: 4, fontSize: 9, color: "#71717a", letterSpacing: 1 }}>{x.l}</div>
                                 </div>
-                            ))}
+                            ) : <div key={k} style={{ flex: 1 }} />)}
                         </div>
                     )}
-                    {st.signaturePlace && <div style={{ marginTop: 8, fontSize: 10, color: "#71717a" }}>{st.signaturePlace}, {date(model.issueDate)}</div>}
                 </div>
 
                 <div style={{ position: "absolute", left: 48, right: 48, bottom: 28, borderTop: "1px solid #e4e4e7", paddingTop: 6, fontSize: 9.5, color: "#71717a", display: "flex", justifyContent: "space-between" }}>

@@ -366,10 +366,10 @@ export function downloadSaleDocument(saleOrSales: Sale | Sale[], companyData: Co
             ${companyData?.signatureUrl ? `<img src="${companyData.signatureUrl}" class="signature-image" alt="Assinatura" />` : '<div class="signature-line"></div>'}
             <span class="signature-label">A Empresa</span>
         </div>
-        <div class="signature-box">
+        ${companyData?.documentShowClientSignature ? `<div class="signature-box">
             <div class="signature-line"></div>
             <span class="signature-label">O Cliente</span>
-        </div>
+        </div>` : ''}
     </div>
   `);
 

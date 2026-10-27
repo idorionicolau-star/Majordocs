@@ -25,6 +25,8 @@ export type DocStyle = {
     accent?: string;
     showLogo?: boolean;
     showSignatures?: boolean;
+    /** linha de assinatura do cliente (opcional; desligada por defeito) */
+    showClientSignature?: boolean;
     /** assinatura desenhada de quem emite / do cliente (data URL) */
     companySignature?: string;
     clientSignature?: string;

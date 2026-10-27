@@ -371,24 +371,27 @@ export async function renderDocPDF(m: DocModel, company: Company | null): Promis
 
     // ================= assinaturas =================
     if (st.showSignatures !== false) {
-        ensure(32);
+        const withClient = st.showClientSignature === true;
+        ensure(40);
         y += 3;
         const sigW = 65;
-        const sigY = y + 19;
+        // o local e a data ficam por cima, com espaço próprio: o carimbo/assinatura (até 20 mm) já não os tapa
+        const place = [st.signaturePlace, fmtDate(m.issueDate)].filter(Boolean).join(', ');
+        if (place) { font('italic', 8.5); setText(grey); doc.text(place, M, y); y += 4; }
+        const sigY = y + 23;
         const leftX = M + 6;
         const rightX = R - 6 - sigW;
-        const place = [st.signaturePlace, fmtDate(m.issueDate)].filter(Boolean).join(', ');
-        if (place) { font('italic', 8.5); setText(grey); doc.text(place, M, y); }
         if (companySig) { const s = fit(companySig, sigW, 20); doc.addImage(companySig.data, 'JPEG', leftX + (sigW - s.w) / 2, sigY - s.h - 1, s.w, s.h); }
-        if (clientSig) { const s = fit(clientSig, sigW, 20); doc.addImage(clientSig.data, 'JPEG', rightX + (sigW - s.w) / 2, sigY - s.h - 1, s.w, s.h); }
+        if (withClient && clientSig) { const s = fit(clientSig, sigW, 20); doc.addImage(clientSig.data, 'JPEG', rightX + (sigW - s.w) / 2, sigY - s.h - 1, s.w, s.h); }
         setDraw(grey);
         doc.setLineWidth(0.3);
         doc.line(leftX, sigY, leftX + sigW, sigY);
-        doc.line(rightX, sigY, rightX + sigW, sigY);
+        if (withClient) doc.line(rightX, sigY, rightX + sigW, sigY);
         font('normal', 8);
         setText(grey);
         doc.text('A EMPRESA', leftX + sigW / 2, sigY + 4.5, { align: 'center' });
-        doc.text('O CLIENTE', rightX + sigW / 2, sigY + 4.5, { align: 'center' });
+        if (withClient) doc.text('O CLIENTE', rightX + sigW / 2, sigY + 4.5, { align: 'center' });
+        y = sigY + 8;
     }
 
     // ================= rodapé e marca de água em todas as páginas =================

@@ -39,6 +39,7 @@ export function companyDocStyle(company: Company | null): DocStyle {
         footerNote: company?.documentFooterNote,
         signaturePlace: company?.documentSignaturePlace,
         showSignatures: company?.documentShowSignatures,
+        showClientSignature: company?.documentShowClientSignature === true,
     };
 }
 
