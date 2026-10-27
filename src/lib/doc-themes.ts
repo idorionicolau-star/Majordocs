@@ -1,18 +1,29 @@
 // Temas de exportação dos documentos (PDF). Cada tema decide o aspecto; a cor de destaque é escolhida à parte.
 export type RGB = [number, number, number];
-export type DocThemeId = 'classico' | 'moderno' | 'minimalista' | 'elegante' | 'corporativo' | 'vibrante';
+export type DocThemeId =
+    | 'classico' | 'moderno' | 'minimalista' | 'elegante' | 'corporativo' | 'vibrante'
+    | 'onda' | 'onda-serena' | 'cartao' | 'cartao-coral' | 'moldura' | 'moldura-noite' | 'faixas' | 'faixas-verdes'
+    | 'estudio' | 'estudio-grafite' | 'canto' | 'canto-dourado' | 'bolhas' | 'bolhas-ceu';
+
+/** Cabeçalhos com desenho próprio (ondas, cartão, moldura…): cada um decora também o rodapé e as páginas seguintes. */
+export type DocDecor = 'wave' | 'card' | 'frame' | 'stripes' | 'hatch' | 'corner' | 'circles';
 
 export type DocTheme = {
     id: DocThemeId;
     name: string;
     description: string;
     font: 'helvetica' | 'times';
-    header: 'line' | 'band' | 'minimal' | 'centered' | 'sidebar' | 'block';
+    header: 'line' | 'band' | 'minimal' | 'centered' | 'sidebar' | 'block' | DocDecor;
     table: 'plain' | 'striped' | 'grid' | 'minimal' | 'filled';
     boxes: 'boxed' | 'plain' | 'bar';
     totals: 'line' | 'block';
     defaultAccent: RGB;
+    /** segunda cor (ex.: o dourado da Moldura) */
+    highlight?: RGB;
 };
+
+export const DECORS: DocDecor[] = ['wave', 'card', 'frame', 'stripes', 'hatch', 'corner', 'circles'];
+export const isDecor = (h: DocTheme['header']): h is DocDecor => (DECORS as string[]).includes(h);
 
 export const DOC_THEMES: DocTheme[] = [
     { id: 'classico', name: 'Clássico', description: 'Sóbrio e familiar: linhas finas e caixas cinzentas.', font: 'helvetica', header: 'line', table: 'plain', boxes: 'boxed', totals: 'line', defaultAccent: [24, 24, 27] },
@@ -21,6 +32,20 @@ export const DOC_THEMES: DocTheme[] = [
     { id: 'elegante', name: 'Elegante', description: 'Letra com serifa, cabeçalho centrado e dupla linha.', font: 'times', header: 'centered', table: 'grid', boxes: 'plain', totals: 'line', defaultAccent: [30, 58, 95] },
     { id: 'corporativo', name: 'Corporativo', description: 'Barra lateral de cor e tabela com cabeçalho preenchido.', font: 'helvetica', header: 'sidebar', table: 'filled', boxes: 'boxed', totals: 'block', defaultAccent: [4, 120, 87] },
     { id: 'vibrante', name: 'Vibrante', description: 'Bloco de cor com o título e total em destaque.', font: 'helvetica', header: 'block', table: 'filled', boxes: 'bar', totals: 'block', defaultAccent: [234, 88, 12] },
+    { id: 'onda', name: 'Onda', description: 'Ondas de cor no topo e no rodapé, tabela com cabeçalho cheio.', font: 'helvetica', header: 'wave', table: 'filled', boxes: 'plain', totals: 'block', defaultAccent: [15, 52, 96] },
+    { id: 'onda-serena', name: 'Onda Serena', description: 'As ondas, em turquesa e com letra serifada.', font: 'times', header: 'wave', table: 'minimal', boxes: 'plain', totals: 'line', defaultAccent: [13, 128, 128] },
+    { id: 'cartao', name: 'Cartão', description: 'Topo de cor com o cliente e a tabela num cartão a flutuar.', font: 'helvetica', header: 'card', table: 'plain', boxes: 'boxed', totals: 'block', defaultAccent: [67, 97, 170] },
+    { id: 'cartao-coral', name: 'Cartão Coral', description: 'O cartão, quente e alegre.', font: 'helvetica', header: 'card', table: 'striped', boxes: 'boxed', totals: 'block', defaultAccent: [225, 82, 70] },
+    { id: 'moldura', name: 'Moldura', description: 'Página emoldurada a cor, total em destaque logo no topo.', font: 'helvetica', header: 'frame', table: 'plain', boxes: 'boxed', totals: 'line', defaultAccent: [63, 81, 181], highlight: [250, 204, 21] },
+    { id: 'moldura-noite', name: 'Moldura Noite', description: 'A moldura em azul-noite e dourado.', font: 'times', header: 'frame', table: 'plain', boxes: 'boxed', totals: 'line', defaultAccent: [23, 32, 54], highlight: [212, 175, 55] },
+    { id: 'faixas', name: 'Faixas', description: 'Faixas inclinadas em fundo escuro, ar de estúdio de design.', font: 'helvetica', header: 'stripes', table: 'plain', boxes: 'bar', totals: 'block', defaultAccent: [220, 38, 38] },
+    { id: 'faixas-verdes', name: 'Faixas Verdes', description: 'As faixas, em verde.', font: 'helvetica', header: 'stripes', table: 'striped', boxes: 'bar', totals: 'block', defaultAccent: [22, 163, 74] },
+    { id: 'estudio', name: 'Estúdio', description: 'Riscas finas na diagonal e total destacado ao lado do cliente.', font: 'helvetica', header: 'hatch', table: 'plain', boxes: 'plain', totals: 'line', defaultAccent: [49, 46, 129] },
+    { id: 'estudio-grafite', name: 'Estúdio Grafite', description: 'O estúdio em grafite, com letra serifada.', font: 'times', header: 'hatch', table: 'plain', boxes: 'plain', totals: 'line', defaultAccent: [55, 65, 81] },
+    { id: 'canto', name: 'Canto', description: 'Triângulos de cor nos cantos, título grande à esquerda.', font: 'helvetica', header: 'corner', table: 'filled', boxes: 'boxed', totals: 'block', defaultAccent: [109, 40, 217] },
+    { id: 'canto-dourado', name: 'Canto Dourado', description: 'Os cantos em dourado, com letra serifada.', font: 'times', header: 'corner', table: 'grid', boxes: 'plain', totals: 'line', defaultAccent: [161, 98, 7] },
+    { id: 'bolhas', name: 'Bolhas', description: 'Círculos de cor a sobrepor-se nos cantos. Leve e moderno.', font: 'helvetica', header: 'circles', table: 'striped', boxes: 'bar', totals: 'block', defaultAccent: [219, 39, 119] },
+    { id: 'bolhas-ceu', name: 'Bolhas Céu', description: 'As bolhas em azul-céu.', font: 'helvetica', header: 'circles', table: 'filled', boxes: 'bar', totals: 'block', defaultAccent: [2, 132, 199] },
 ];
 
 export const ACCENT_PRESETS: { name: string; rgb: RGB }[] = [

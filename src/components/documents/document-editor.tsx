@@ -516,13 +516,8 @@ export function DocumentEditor({ docId: docIdProp, initialType }: Props) {
                                     const hex = style.accent || rgbToHex(t.defaultAccent);
                                     return (
                                         <button key={t.id} type="button" onClick={() => setStyle({ theme: t.id }, "theme")} className={cn("overflow-hidden rounded-xl border text-left transition", on ? "border-primary ring-2 ring-primary/40" : "hover:border-foreground/30")}>
-                                            <div className="h-14 w-full bg-white p-1.5">
-                                                <div className="h-2 w-full rounded-sm" style={{ background: t.header === "band" || t.header === "block" ? hex : "transparent", borderBottom: t.header === "band" || t.header === "block" ? "none" : `2px solid ${hex}` }} />
-                                                <div className="mt-1.5 flex gap-1"><div className="h-1.5 flex-1 rounded-sm bg-zinc-200" /><div className="h-1.5 w-4 rounded-sm" style={{ background: hex }} /></div>
-                                                <div className="mt-1 h-1.5 w-3/4 rounded-sm bg-zinc-200" />
-                                                <div className="mt-1 ml-auto h-2 w-1/3 rounded-sm" style={{ background: hex }} />
-                                            </div>
-                                            <div className="px-2 py-1.5 text-xs font-semibold">{t.name}</div>
+                                            <img src={`/doc-themes/${t.id}.jpg`} alt="" loading="lazy" className="aspect-[210/297] w-full bg-white object-cover object-top" />
+                                            <div className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-semibold"><span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: hex }} />{t.name}</div>
                                         </button>
                                     );
                                 })}
