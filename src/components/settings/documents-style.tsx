@@ -105,11 +105,13 @@ export function DocumentsStyle() {
                 <div className="space-y-5">
                     <div className="space-y-2">
                         <Label>Tema</Label>
-                        <div className="grid gap-2 sm:grid-cols-2">
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                             {DOC_THEMES.map((th) => (
-                                <button key={th.id} type="button" onClick={() => setTheme(th.id)}
-                                    className={cn("rounded-xl border p-3 text-left transition", theme === th.id ? "border-primary bg-primary/5 ring-2 ring-primary/30" : "hover:bg-muted/50")}>
-                                    <span className="flex items-center gap-2 font-semibold">
+                                <button key={th.id} type="button" onClick={() => setTheme(th.id)} data-testid={`theme-${th.id}`}
+                                    className={cn("overflow-hidden rounded-xl border p-2 text-left transition", theme === th.id ? "border-primary bg-primary/5 ring-2 ring-primary/30" : "hover:bg-muted/50")}>
+                                    {/* miniatura: o PDF verdadeiro do tema, com a cor do tema */}
+                                    <img src={`/doc-themes/${th.id}.jpg`} alt="" loading="lazy" className="mb-2 aspect-[210/297] w-full rounded-md border bg-white object-cover object-top" />
+                                    <span className="flex items-center gap-2 text-sm font-semibold">
                                         <span className="h-3 w-3 rounded-full" style={{ background: accent || rgbToHex(th.defaultAccent) }} />{th.name}
                                     </span>
                                     <span className="mt-0.5 block text-xs text-muted-foreground">{th.description}</span>

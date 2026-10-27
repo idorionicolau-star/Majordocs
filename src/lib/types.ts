@@ -88,7 +88,7 @@ export type Company = {
   signatureUrl?: string; // Base64 Data URL or Firebase Storage URL for the signature/stamp
   paymentInfo?: string; // Text containing bank accounts, M-Pesa, etc.
   /** Aspecto por defeito dos documentos exportados (ver doc-themes.ts) */
-  documentTheme?: 'classico' | 'moderno' | 'minimalista' | 'elegante' | 'corporativo' | 'vibrante';
+  documentTheme?: import('./doc-themes').DocThemeId;
   documentAccent?: string; // "#rrggbb"
   documentFooterNote?: string;
   documentSignaturePlace?: string; // ex.: "Maputo"

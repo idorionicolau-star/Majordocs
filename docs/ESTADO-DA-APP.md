@@ -21,7 +21,7 @@ Gestão de stock, vendas e produção para pequenas e médias empresas em Moçam
   - tocar no total abre o carrinho.
 - **Vender por toque (`/pos/catalogo`):** escolher produtos por imagem ou toque.
 - **Ficha única da venda:** abre-se de qualquer página (Financeiro, Clientes, Relatórios…) e permite corrigir a venda, com registo do que mudou.
-- **Documentos:** proformas, faturas, recibos e guias, com a marca da empresa, em PDF.
+- **Documentos:** proformas, faturas, recibos e guias, com a marca da empresa, em PDF. 20 temas (Clássico, Moderno, Onda, Cartão, Moldura, Faixas, Estúdio, Canto, Bolhas…), com miniaturas reais na escolha. Carimbo e data ao centro quando não há assinatura do cliente (opcional, desligada por defeito).
 
 ### Stock e produtos
 - **Produtos** (abas Stock | Catálogo | Movimentos | Perdas).

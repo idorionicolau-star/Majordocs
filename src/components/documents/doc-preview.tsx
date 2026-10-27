@@ -37,7 +37,8 @@ export function DocPreview({ model, company }: { model: DocModel; company: Compa
     const t = docTotals({ items: model.items, discount: model.discount, vat: model.vat, paid: model.paid });
     const quote = isQuoteLike(model.type);
     const items = model.items.filter((i) => i.description.trim() || Number(i.unitPrice));
-    const headBand = theme.header === "band" || theme.header === "block";
+    // os temas com desenho próprio (cartão, moldura, onda…) aparecem aqui com a faixa de cor; o PDF tem o desenho completo
+    const headBand = theme.header === "band" || theme.header === "block" || theme.header === "card" || theme.header === "frame" || theme.header === "wave" || theme.header === "stripes";
     const company_ = [company?.taxId ? `NUIT: ${company.taxId}` : "", company?.address, company?.phone, company?.email].filter(Boolean);
 
     const logo = st.showLogo !== false && company?.logoUrl ? <img src={company.logoUrl} alt="" style={{ maxHeight: 56, maxWidth: 160, objectFit: "contain" }} /> : null;
