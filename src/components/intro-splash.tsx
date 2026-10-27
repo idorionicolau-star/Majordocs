@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import { LOGO_MAJOR, LOGO_STOCKX } from "./intro-logo";
 import { APP_READY_EVENT, isAppReady } from "@/lib/app-ready";
 
@@ -11,7 +11,8 @@ import { APP_READY_EVENT, isAppReady } from "@/lib/app-ready";
  * juntam-se ao centro e misturam-se no círculo do MajorStockX; depois "Major" e "StockX" aparecem à frente e recuam para o lugar.
  *
  * O ecrã vem já no HTML do servidor (sem "piscar" a app por baixo); o script em `INTRO_GATE` decide antes da
- * primeira pintura se é para mostrar. Um toque salta a animação; quem pede menos movimento vê só o logótipo.
+ * primeira pintura se é para mostrar. Um toque salta a animação. Corre em todos os aparelhos, mesmo com "reduzir
+ * animações" ligado (muitos Samsung ligam-no na poupança de bateria e só se via o logótipo).
  *
  * Funciona como ecrã de carregamento: se no fim a app ainda não estiver pronta (`markAppReady`), o logótipo fica
  * a "respirar" até estar. O zoom das palavras e o tremor correm no processador gráfico (Web Animations em camadas
@@ -45,7 +46,14 @@ const SHAKE_X = [0, -4, 3.6, -3, 2.3, -1.6, 0.9, -0.4, 0];
 const SHAKE_Y = [0, 2.2, -2, 1.6, -1.2, 0.8, -0.5, 0.2, 0];
 const SHAKE_R = [0, -0.6, 0.5, -0.4, 0.3, -0.2, 0.1, 0, 0];
 const SHAKE_TIME = 0.42;
-const SHAKE: Keyframe[] = SHAKE_X.map((x, k) => ({ transform: `translate(${x}px, ${SHAKE_Y[k]}px) rotate(${SHAKE_R[k]}deg)` }));
+/** os dois tremores numa só animação, do primeiro assentar ao fim do segundo (parado entre eles) */
+const SHAKE_START = LANDS[0];
+const SHAKE_TOTAL = LANDS[LANDS.length - 1] + SHAKE_TIME - SHAKE_START;
+const SHAKE: Keyframe[] = LANDS.flatMap((l) => SHAKE_X.map((x, k) => ({
+    transform: `translate(${x}px, ${SHAKE_Y[k]}px) rotate(${SHAKE_R[k]}deg)`,
+    offset: (l - SHAKE_START + (k * SHAKE_TIME) / (SHAKE_X.length - 1)) / SHAKE_TOTAL,
+    easing: "ease-in-out",
+})));
 /** zoom de cada palavra: à frente, cresce devagar, recua de repente ("voom") e assenta */
 const ZOOM_FRAMES: Keyframe[] = [
     { transform: `scale(${ZOOM[0]})`, offset: 0, easing: "ease-out" },
@@ -135,42 +143,36 @@ const PILLARS = [
 const DOTS = Array.from({ length: 16 }, (_, i) => ({ x: (i * 37) % 100, y: (i * 53) % 100, c: [ORANGE, RED, PURPLE, BLUE][i % 4], s: 3 + (i % 3) * 2, d: (i % 5) * 0.5 }));
 
 export function IntroSplash() {
-    const reduce = useReducedMotion();
     const [phase, setPhase] = useState<"play" | "wait" | "out" | "gone">("play");
     const shakeRef = useRef<HTMLDivElement>(null);
     const logoRef = useRef<HTMLDivElement>(null);
     const wordRefs = useRef<(HTMLDivElement | null)[]>([]);
     const letterRefs = useRef<(HTMLDivElement | null)[][]>([]);
     const shineRef = useRef<HTMLSpanElement>(null);
-    const started = useRef(false);
 
     useEffect(() => {
         if (document.documentElement.dataset.intro === "skip") { setPhase("gone"); return; }
-        if (started.current) return;
-        started.current = true;
         try { sessionStorage.setItem(KEY, "1"); } catch { /* navegação privada */ }
-        // zoom das palavras e tremor: no processador gráfico, sem depender do resto da página
+        // letras, zoom das palavras, tremor e brilho: no processador gráfico, sem depender do resto da página
         const anims: Animation[] = [];
-        // letras: a onda de cada palavra (com menos movimento, aparecem logo)
-        WORDS.forEach((w, wi) => w.glyphs.forEach((_, i) => {
-            const el = letterRefs.current[wi]?.[i];
-            if (!el) return;
-            if (reduce || !el.animate) { el.style.opacity = "1"; return; }
-            anims.push(el.animate(LETTER_IN, { delay: (w.at + i * WAVE) * 1000, duration: 300, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "both" }));
-        }));
-        if (!reduce) {
-            WORDS.forEach((w, i) => {
-                const el = wordRefs.current[i];
-                if (el?.animate) anims.push(el.animate(ZOOM_FRAMES, { delay: w.at * 1000, duration: WORD_TIME * 1000, fill: "both" }));
+        const run = (el: Element | null | undefined, frames: Keyframe[], opts: KeyframeAnimationOptions) => {
+            if (el && typeof el.animate === "function") anims.push(el.animate(frames, opts));
+        };
+        WORDS.forEach((w, wi) => {
+            w.glyphs.forEach((_, i) => {
+                const el = letterRefs.current[wi]?.[i];
+                if (el && typeof el.animate !== "function") el.style.opacity = "1"; // navegador muito antigo: mostra logo
+                run(el, LETTER_IN, { delay: (w.at + i * WAVE) * 1000, duration: 300, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "both" });
             });
-            LANDS.forEach((l) => { if (shakeRef.current?.animate) anims.push(shakeRef.current.animate(SHAKE, { delay: l * 1000, duration: SHAKE_TIME * 1000, easing: "ease-in-out" })); });
-            if (shineRef.current?.animate) anims.push(shineRef.current.animate([{ transform: "translateX(0) skewX(-12deg)" }, { transform: "translateX(510%) skewX(-12deg)" }], { delay: T.shine * 1000, duration: 700, easing: "ease-in-out" }));
-        }
+            run(wordRefs.current[wi], ZOOM_FRAMES, { delay: w.at * 1000, duration: WORD_TIME * 1000, fill: "both" });
+        });
+        run(shakeRef.current, SHAKE, { delay: SHAKE_START * 1000, duration: SHAKE_TOTAL * 1000, easing: "linear" });
+        run(shineRef.current, [{ transform: "translateX(0) skewX(-12deg)" }, { transform: "translateX(510%) skewX(-12deg)" }], { delay: T.shine * 1000, duration: 700, easing: "ease-in-out" });
         // no fim: sai se a app já estiver pronta; senão, espera por ela
-        const end = setTimeout(() => setPhase(isAppReady() ? "out" : "wait"), (reduce ? 0.9 : T.out) * 1000);
+        const end = setTimeout(() => setPhase(isAppReady() ? "out" : "wait"), T.out * 1000);
         const cap = setTimeout(() => setPhase("out"), MAX_WAIT * 1000);
         return () => { clearTimeout(end); clearTimeout(cap); anims.forEach((a) => a.cancel()); };
-    }, [reduce]);
+    }, []);
 
     useEffect(() => {
         if (phase !== "wait") return;
@@ -200,7 +202,7 @@ export function IntroSplash() {
             role="presentation"
             aria-hidden
         >
-            {!reduce && DOTS.map((p, i) => (
+            {DOTS.map((p, i) => (
                 <motion.span key={i} className="absolute rounded-full" style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.s, height: p.s, background: p.c }}
                     initial={{ opacity: 0, y: 0 }} animate={{ opacity: [0, 0.45, 0], y: -60 }} transition={{ delay: p.d, duration: 4, ease: "easeOut" }} />
             ))}
@@ -211,10 +213,10 @@ export function IntroSplash() {
                     <div ref={logoRef} className="absolute inset-0">
                         {/* brilho por trás do logótipo */}
                         <motion.div className="absolute inset-[10%] rounded-full" style={{ background: `conic-gradient(from 200deg, ${ORANGE}, ${RED}, ${PURPLE}, ${BLUE}, ${ORANGE})`, filter: "blur(40px)", willChange: "opacity, transform" }}
-                            initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: reduce ? 0.35 : [0, 0.55, 0.35], scale: 1 }} transition={{ delay: reduce ? 0 : T.merge + 0.2, duration: 0.8 }} />
+                            initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: [0, 0.55, 0.35], scale: 1 }} transition={{ delay: T.merge + 0.2, duration: 0.8 }} />
 
                         {/* os quatro pilares */}
-                        {!reduce && PILLARS.map(({ label, color, at, left, top, to, Icon }) => (
+                        {PILLARS.map(({ label, color, at, left, top, to, Icon }) => (
                             <motion.div key={label} className="absolute flex w-[40%] flex-col items-center" style={{ left, top }}
                                 initial={{ opacity: 0, scale: 0.4, x: 0, y: 0 }}
                                 animate={{ opacity: [0, 1, 1, 0], scale: [0.4, 1, 1, 0.5], x: ["0%", "0%", "0%", to[0]], y: ["0%", "0%", "0%", to[1]], filter: ["blur(0px)", "blur(0px)", "blur(0px)", "blur(12px)"] }}
@@ -228,9 +230,9 @@ export function IntroSplash() {
 
                         {/* as cores juntam-se no círculo */}
                         <motion.div className="absolute inset-[12%] overflow-hidden rounded-full" style={{ background: `linear-gradient(45deg, ${ORANGE} 15%, ${RED} 45%, ${PURPLE} 70%, ${BLUE} 90%)`, willChange: "transform" }}
-                            initial={{ scale: reduce ? 1 : 0, opacity: reduce ? 1 : 0, rotate: reduce ? 0 : -90 }} animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                            transition={{ delay: reduce ? 0 : T.merge + 0.2, type: "spring", stiffness: 140, damping: 16 }}>
-                            {!reduce && [ORANGE, RED, PURPLE, BLUE].map((c, i) => (
+                            initial={{ scale: 0, opacity: 0, rotate: -90 }} animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                            transition={{ delay: T.merge + 0.2, type: "spring", stiffness: 140, damping: 16 }}>
+                            {[ORANGE, RED, PURPLE, BLUE].map((c, i) => (
                                 <motion.span key={c} className="absolute h-[70%] w-[70%] rounded-full" style={{ background: c, filter: "blur(22px)", left: ["-10%", "-5%", "40%", "40%"][i], top: ["40%", "-5%", "40%", "-10%"][i] }}
                                     initial={{ scale: 0.2 }} animate={{ scale: 1 }} transition={{ delay: T.merge + 0.25 + i * 0.05, duration: 0.6 }} />
                             ))}
@@ -238,7 +240,7 @@ export function IntroSplash() {
 
                         {/* o círculo assenta nas cores exactas do logótipo */}
                         <motion.div className="absolute inset-[12%] rounded-full" style={{ background: LOGO_GRADIENT, willChange: "opacity" }}
-                            initial={{ opacity: reduce ? 1 : 0 }} animate={{ opacity: 1 }} transition={{ delay: reduce ? 0 : T.logo - 0.1, duration: 0.5, ease: "easeInOut" }} />
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: T.logo - 0.1, duration: 0.5, ease: "easeInOut" }} />
 
                         {/* cada palavra, na sua camada: a onda revela-a grande à frente, segura e recua ("voom") para o lugar.
                             Cada letra é também uma camada própria, animada pelo processador gráfico. */}
@@ -267,17 +269,15 @@ export function IntroSplash() {
                         ))}
 
                         {/* no fim, um brilho atravessa o logótipo */}
-                        {!reduce && (
-                            <div className="pointer-events-none absolute inset-[12%] overflow-hidden rounded-full">
-                                <span ref={shineRef} className="absolute inset-y-0 -left-[40%] w-1/3 -skew-x-12" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)", willChange: "transform" }} />
-                            </div>
-                        )}
+                        <div className="pointer-events-none absolute inset-[12%] overflow-hidden rounded-full">
+                            <span ref={shineRef} className="absolute inset-y-0 -left-[40%] w-1/3 -skew-x-12" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)", willChange: "transform" }} />
+                        </div>
                     </div>
                 </div>
             </div>
 
             <motion.p className="mt-3 px-6 text-center font-headline text-base font-medium tracking-wide text-white/85"
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduce ? 0.1 : T.slogan, duration: 0.4 }}>
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: T.slogan, duration: 0.4 }}>
                 Stock, vendas e controlo num só lugar
             </motion.p>
             {phase === "wait" && (
