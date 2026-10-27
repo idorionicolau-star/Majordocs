@@ -31,6 +31,7 @@ import { whatsappLink } from '@/lib/support';
 
 import { LoadingBar } from './loading-bar';
 import { markAppReady } from '@/lib/app-ready';
+import { AppLoader } from './app-loader';
 import { SubscriptionExpired } from './subscription-expired';
 
 import { differenceInDays } from 'date-fns';
@@ -140,10 +141,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   if (authContext?.loading || (!authContext?.firebaseUser && !isAuthPage)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="text-sm text-muted-foreground">A carregar aplicação...</p>
-        </div>
+        <AppLoader />
       </div>
     );
   }
