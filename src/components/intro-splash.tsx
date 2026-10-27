@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { LOGO_MAJOR, LOGO_STOCKX } from "./intro-logo";
 import { APP_READY_EVENT, isAppReady } from "@/lib/app-ready";
+import { INTRO_AT_KEY, INTRO_KEY } from "@/lib/intro-gate";
 
 /**
- * Animação de entrada (uma vez por sessão, cerca de 5,5 s). As quatro cores do logótipo são os quatro pilares da app:
+ * Animação de entrada (ao abrir a app; não volta durante 30 min, nem ao recarregar; cerca de 5,5 s). As quatro cores do logótipo são os quatro pilares da app:
  * Stock (laranja), Vendas (vermelho), Gestão (roxo) e Controlo (azul). Cada um entra com o seu símbolo,
  * juntam-se ao centro e misturam-se no círculo do MajorStockX; depois "Major" e "StockX" aparecem à frente e recuam para o lugar.
  *
- * O ecrã vem já no HTML do servidor (sem "piscar" a app por baixo); o script em `INTRO_GATE` decide antes da
+ * O ecrã vem já no HTML do servidor (sem "piscar" a app por baixo); o script `INTRO_GATE` (lib/intro-gate) decide antes da
  * primeira pintura se é para mostrar. Um toque salta a animação. Corre em todos os aparelhos, mesmo com "reduzir
  * animações" ligado (muitos Samsung ligam-no na poupança de bateria e só se via o logótipo).
  *
@@ -18,10 +19,6 @@ import { APP_READY_EVENT, isAppReady } from "@/lib/app-ready";
  * a "respirar" até estar. O zoom das palavras e o tremor correm no processador gráfico (Web Animations em camadas
  * próprias), para não cortarem enquanto a app carrega por baixo.
  */
-
-const KEY = "msx-intro";
-/** Corre antes da primeira pintura: esconde a entrada se já foi vista nesta sessão, em testes automáticos ou nas páginas legais. */
-export const INTRO_GATE = `try{var q=/[?&]intro=1/.test(location.search);if(!q&&(sessionStorage.getItem('${KEY}')||navigator.webdriver||/^\\/(privacidade|termos)/.test(location.pathname)))document.documentElement.dataset.intro='skip'}catch(e){document.documentElement.dataset.intro='skip'}`;
 
 const ORANGE = "rgb(244,150,9)", RED = "rgb(225,51,51)", PURPLE = "rgb(117,112,182)", BLUE = "rgb(89,128,216)";
 
@@ -152,7 +149,7 @@ export function IntroSplash() {
 
     useEffect(() => {
         if (document.documentElement.dataset.intro === "skip") { setPhase("gone"); return; }
-        try { sessionStorage.setItem(KEY, "1"); } catch { /* navegação privada */ }
+        try { sessionStorage.setItem(INTRO_KEY, "1"); localStorage.setItem(INTRO_AT_KEY, String(Date.now())); } catch { /* navegação privada */ }
         // letras, zoom das palavras, tremor e brilho: no processador gráfico, sem depender do resto da página
         const anims: Animation[] = [];
         const run = (el: Element | null | undefined, frames: Keyframe[], opts: KeyframeAnimationOptions) => {

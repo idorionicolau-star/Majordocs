@@ -6,7 +6,8 @@ import { PT_Sans, Space_Grotesk } from 'next/font/google';
 import { Toaster } from "@/components/ui/toaster";
 import { PwaRegister } from "@/components/pwa-register";
 import { ErrorReporter } from "@/components/error-reporter";
-import { INTRO_GATE, IntroSplash } from "@/components/intro-splash";
+import { IntroSplash } from "@/components/intro-splash";
+import { INTRO_GATE } from "@/lib/intro-gate";
 import { LOADER_GATE } from "@/components/layout/app-loader";
 
 const ptSans = PT_Sans({
