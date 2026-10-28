@@ -1,6 +1,8 @@
 "use client";
 
 import { haul } from "@/lib/haul";
+import { getAfterSale } from "@/lib/after-sale";
+import { AfterSaleDialog, printSale, type DoneSale } from "@/components/pos/after-sale-dialog";
 import { LocationSelectItems } from '@/components/ui/location-select-items';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -74,7 +76,7 @@ function save(key: string, value: unknown) {
 }
 
 export function FastSale() {
-    const { products, catalogProducts, sales, locations, isMultiLocation, companyId, user, addBulkSale, isReadOnly } = useInventory();
+    const { products, catalogProducts, sales, locations, isMultiLocation, companyId, user, addBulkSale, isReadOnly, companyData } = useInventory();
     const { customers, addCustomer } = useCRM();
     const { toast } = useToast();
     // Teclado aberto no telemóvel: a barra de confirmar sobe e fica por cima dele.
@@ -97,6 +99,7 @@ export function FastSale() {
     const [notes, setNotes] = useState("");
     const [saving, setSaving] = useState(false);
     const [lastSale, setLastSale] = useState<{ total: number; items: number; client: string } | null>(null);
+    const [done, setDone] = useState<DoneSale | null>(null);
     const [scanOpen, setScanOpen] = useState(false);
     const [cartOpen, setCartOpen] = useState(false);
     /** código lido que ainda não pertence a nenhum produto: o próximo produto tocado fica com ele */
@@ -362,11 +365,12 @@ export function FastSale() {
             const name = client.trim();
             const firstEver = sales.length === 0; // a primeira venda da empresa: mostra "como a app funciona"
             // a barra puxada pelo carrinho enquanto grava
-            await haul("sale", "A registar a venda…", "Venda registada", async () => {
+            let phone: string | undefined;
+            const finished = await haul("sale", "A registar a venda…", "Venda registada", async () => {
                 let customerId: string | undefined;
                 if (name) {
                     const existing = customers.find((c) => normalizeString(c.name) === normalizeString(name));
-                    if (existing) customerId = existing.id;
+                    if (existing) { customerId = existing.id; phone = existing.phone; }
                     else {
                         try { customerId = (await addCustomer({ name })) || undefined; } catch { /* sale still goes through */ }
                     }
@@ -382,7 +386,7 @@ export function FastSale() {
                     subtotal: l.qty * l.price,
                 }));
                 const isToday = date === todayISO();
-                await addBulkSale(items, {
+                const created = await addBulkSale(items, {
                     customerId,
                     clientName: name,
                     documentType: docType,
@@ -395,10 +399,16 @@ export function FastSale() {
                     paymentMethod: payment,
                     amountPaid: isProforma ? 0 : Math.min(paid, total),
                 });
+                return { sales: created || [], items };
             });
             recordLocation(location);
             if (firstEver) toast({ title: "🎉 Primeira venda registada!", description: "Está no Histórico de Vendas, com o documento para imprimir ou enviar." });
             setLastSale({ total, items: lines.length, client: name });
+            // "E agora?": WhatsApp, imprimir, PDF… — ou imprime logo, se este aparelho foi marcado assim
+            const doneSale: DoneSale = { sales: finished.sales, items: finished.items, total, client: name, phone };
+            const ask = finished.sales.length > 0 && getAfterSale() === "ask";
+            if (ask) setDone(doneSale);
+            else if (finished.sales.length > 0) printSale(doneSale, companyData);
             setLines([]);
             setClient("");
             setPaidText("");
@@ -407,7 +417,7 @@ export function FastSale() {
             setNotes("");
             setPickedUp(true);
             setDocType("Venda a Dinheiro");
-            focusSearch();
+            if (!ask) focusSearch();
         } catch (e) {
             const msg = e instanceof Error ? e.message : "Tente de novo.";
             toast({ variant: "destructive", title: "A venda não foi registada", description: msg });
@@ -434,6 +444,7 @@ export function FastSale() {
 
     return (
         <div className="mx-auto w-full max-w-3xl pb-44">
+            <AfterSaleDialog done={done} onClose={(typed) => { setDone(null); if (typed) setText(typed); focusSearch(); }} />
             <BarcodeScanner open={scanOpen} onClose={() => { setScanOpen(false); focusSearch(); }} onScan={(c) => handleCode(c, true)} onUnknown={canLink ? linkCode : undefined} />
             <div className="flex items-center justify-between gap-3">
                 <div>

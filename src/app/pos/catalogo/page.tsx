@@ -1,5 +1,7 @@
 "use client";
 import { haul } from '@/lib/haul';
+import { getAfterSale } from '@/lib/after-sale';
+import { AfterSaleDialog, printSale, type DoneSale } from '@/components/pos/after-sale-dialog';
 import { LocationSelectItems } from '@/components/ui/location-select-items';
 import { habitualLocation, recordLocation } from "@/lib/habitual-location";
 import { ProductPhoto } from "@/components/ui/product-photo";
@@ -59,8 +61,7 @@ import { PosCart } from '@/components/pos/pos-cart';
 import Link from 'next/link';
 import { setSellMode } from '@/lib/sell-mode';
 import { holdCart, resumeCart, parseHeld, type HeldCart } from '@/lib/held-carts';
-import { receiptText, waShareLink } from '@/lib/sale-share';
-import { CheckCircle2, Clock, MessageCircle, Keyboard } from 'lucide-react';
+import { Clock, Keyboard } from 'lucide-react';
 import { AiSuggestions } from '@/components/pos/ai-suggestions';
 
 type CatalogProduct = Omit<Product, 'stock' | 'instanceId' | 'reservedStock' | 'location' | 'lastUpdated'>;
@@ -130,7 +131,7 @@ export default function POSPage() {
     const [held, setHeld] = useState<HeldCart[]>([]);
     const [heldOpen, setHeldOpen] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const [done, setDone] = useState<{ items: CartItem[]; total: number; client: string; phone?: string } | null>(null);
+    const [done, setDone] = useState<DoneSale | null>(null);
 
     // quem vende por toque passa a abrir aqui ao tocar em "Venda Rápida"
     useEffect(() => { setSellMode('toque'); }, []);
@@ -322,7 +323,7 @@ export default function POSPage() {
 
         try {
             // a barra puxada pelo carrinho enquanto grava
-            const finalCustomerId = await haul('sale', 'A registar a venda…', 'Venda registada', async () => {
+            const { finalCustomerId, created } = await haul('sale', 'A registar a venda…', 'Venda registada', async () => {
                 // Resolve customer
                 let finalCustomerId: string | undefined = checkoutCustomerId === 'new' ? undefined : checkoutCustomerId;
 
@@ -339,7 +340,7 @@ export default function POSPage() {
                     }
                 }
 
-                await addBulkSale(cart, {
+                const created = await addBulkSale(cart, {
                     customerId: finalCustomerId,
                     clientName: checkoutClientName || '',
                     documentType: checkoutDocType,
@@ -351,11 +352,15 @@ export default function POSPage() {
                     // A data escolhida no formulário era ignorada (ficava sempre hoje).
                     date: isSameDay(checkoutDate, new Date()) ? new Date().toISOString() : new Date(checkoutDate.getFullYear(), checkoutDate.getMonth(), checkoutDate.getDate(), 12).toISOString(),
                 });
-                return finalCustomerId;
+                return { finalCustomerId, created: created || [] };
             });
 
-            // em vez de um aviso que some: o que fazer a seguir (enviar o recibo, ver a venda, vender outra vez)
-            setDone({ items: cart, total: cartTotal, client: checkoutClientName.trim(), phone: customers.find(c => c.id === finalCustomerId)?.phone });
+            // "E agora?": enviar, imprimir, PDF, ver a venda ou vender outra vez — ou imprime logo, se este aparelho foi marcado assim
+            const doneSale: DoneSale = { sales: created, items: cart, total: cartTotal, client: checkoutClientName.trim(), phone: customers.find(c => c.id === finalCustomerId)?.phone };
+            if (created.length > 0) {
+                if (getAfterSale() === 'print') printSale(doneSale, companyData);
+                else setDone(doneSale);
+            }
 
             clearCart();
             setIsCheckoutOpen(false);
@@ -817,29 +822,7 @@ export default function POSPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Venda concluída: enviar o recibo, ver a venda ou vender outra vez */}
-            <Dialog open={!!done} onOpenChange={(o) => { if (!o) setDone(null); }}>
-                <DialogContent className="sm:max-w-sm" data-testid="sale-done">
-                    <DialogHeader className="items-center text-center">
-                        <CheckCircle2 className="h-12 w-12 text-emerald-500" />
-                        <DialogTitle>Venda registada</DialogTitle>
-                        <DialogDescription className="text-2xl font-bold text-foreground">{done && formatCurrency(done.total)}</DialogDescription>
-                    </DialogHeader>
-                    {done && (
-                        <div className="flex flex-col gap-2">
-                            <Button asChild className="h-12 bg-emerald-600 hover:bg-emerald-700">
-                                <a href={waShareLink(receiptText({ company: companyData?.name, client: done.client, items: done.items, total: done.total, date: new Date(), money: (n) => formatCurrency(n) }), done.phone)} target="_blank" rel="noopener noreferrer">
-                                    <MessageCircle className="mr-2 h-5 w-5" />Enviar recibo por WhatsApp
-                                </a>
-                            </Button>
-                            <Button asChild variant="outline" className="h-12">
-                                <Link href="/sales">Ver a venda e o documento (PDF)</Link>
-                            </Button>
-                            <Button variant="secondary" className="h-12" onClick={() => setDone(null)}>Nova venda</Button>
-                        </div>
-                    )}
-                </DialogContent>
-            </Dialog>
+            <AfterSaleDialog done={done} onClose={(typed) => { setDone(null); if (typed) setSearchQuery(typed); }} />
 
             {/* Carrinhos retidos */}
             <Dialog open={heldOpen} onOpenChange={setHeldOpen}>
