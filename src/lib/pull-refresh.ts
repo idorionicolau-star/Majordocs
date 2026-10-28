@@ -24,3 +24,21 @@ export type RefreshResult = "updated" | "offline" | "unreachable";
 
 export const refreshMessage = (r: RefreshResult) =>
     r === "updated" ? "Atualizado" : r === "offline" ? "Sem internet: últimos dados guardados" : "Sem ligação ao servidor: tente de novo";
+
+/** O objecto do indicador, conforme a página (os mesmos do ecrã de carregamento e dos cartões de confirmação). */
+export type PullObject = "cart" | "truck" | "warehouse" | "mixer" | "laptop";
+
+const PAGE_OBJECTS: [string, PullObject][] = [
+    // os mais específicos primeiro (/sales/carga antes de /sales, /inventory/transfer antes de /inventory)
+    ["/sales/carga", "truck"], ["/inventory/transfer", "truck"], ["/orders", "truck"],
+    ["/pos", "cart"], ["/sales", "cart"], ["/documents", "cart"], ["/customers", "cart"],
+    ["/inventory", "warehouse"], ["/catalog", "warehouse"], ["/raw-materials", "warehouse"],
+    ["/production", "mixer"],
+    ["/dashboard", "laptop"], ["/diagnostico", "laptop"], ["/reports", "laptop"], ["/finance", "laptop"],
+    ["/settings", "laptop"], ["/billing", "laptop"], ["/users", "laptop"],
+];
+
+export function pullObjectFor(pathname: string): PullObject {
+    const hit = PAGE_OBJECTS.find(([p]) => pathname === p || pathname.startsWith(p + "/"));
+    return hit ? hit[1] : "cart";
+}
