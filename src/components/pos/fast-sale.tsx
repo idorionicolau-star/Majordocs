@@ -1,5 +1,6 @@
 "use client";
 
+import { haul } from "@/lib/haul";
 import { LocationSelectItems } from '@/components/ui/location-select-items';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -358,39 +359,42 @@ export function FastSale() {
         if (!canConfirm || !addBulkSale || !user) return;
         setSaving(true);
         try {
-            let customerId: string | undefined;
             const name = client.trim();
-            if (name) {
-                const existing = customers.find((c) => normalizeString(c.name) === normalizeString(name));
-                if (existing) customerId = existing.id;
-                else {
-                    try { customerId = (await addCustomer({ name })) || undefined; } catch { /* sale still goes through */ }
-                }
-            }
-            const items: CartItem[] = lines.map((l) => ({
-                productId: l.productId,
-                productName: l.name,
-                quantity: l.qty,
-                unitPrice: l.price,
-                originalCost: l.cost,
-                unit: l.unit,
-                location: l.location || undefined,
-                subtotal: l.qty * l.price,
-            }));
-            const isToday = date === todayISO();
             const firstEver = sales.length === 0; // a primeira venda da empresa: mostra "como a app funciona"
-            await addBulkSale(items, {
-                customerId,
-                clientName: name,
-                documentType: docType,
-                notes: notes.trim() || undefined,
-                discount: discountInput,
-                applyVat: vat > 0,
-                vatPercentage: vat > 0 ? vatPercentage : 0,
-                isPickedUp: pickedUp,
-                date: isToday ? new Date().toISOString() : new Date(`${date}T12:00:00`).toISOString(),
-                paymentMethod: payment,
-                amountPaid: isProforma ? 0 : Math.min(paid, total),
+            // a barra puxada pelo carrinho enquanto grava
+            await haul("sale", "A registar a venda…", "Venda registada", async () => {
+                let customerId: string | undefined;
+                if (name) {
+                    const existing = customers.find((c) => normalizeString(c.name) === normalizeString(name));
+                    if (existing) customerId = existing.id;
+                    else {
+                        try { customerId = (await addCustomer({ name })) || undefined; } catch { /* sale still goes through */ }
+                    }
+                }
+                const items: CartItem[] = lines.map((l) => ({
+                    productId: l.productId,
+                    productName: l.name,
+                    quantity: l.qty,
+                    unitPrice: l.price,
+                    originalCost: l.cost,
+                    unit: l.unit,
+                    location: l.location || undefined,
+                    subtotal: l.qty * l.price,
+                }));
+                const isToday = date === todayISO();
+                await addBulkSale(items, {
+                    customerId,
+                    clientName: name,
+                    documentType: docType,
+                    notes: notes.trim() || undefined,
+                    discount: discountInput,
+                    applyVat: vat > 0,
+                    vatPercentage: vat > 0 ? vatPercentage : 0,
+                    isPickedUp: pickedUp,
+                    date: isToday ? new Date().toISOString() : new Date(`${date}T12:00:00`).toISOString(),
+                    paymentMethod: payment,
+                    amountPaid: isProforma ? 0 : Math.min(paid, total),
+                });
             });
             recordLocation(location);
             if (firstEver) toast({ title: "🎉 Primeira venda registada!", description: "Está no Histórico de Vendas, com o documento para imprimir ou enviar." });

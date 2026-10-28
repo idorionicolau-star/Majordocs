@@ -1,4 +1,5 @@
 "use client";
+import { haul } from '@/lib/haul';
 import { LocationSelectItems } from '@/components/ui/location-select-items';
 import { habitualLocation, recordLocation } from "@/lib/habitual-location";
 import { ProductPhoto } from "@/components/ui/product-photo";
@@ -320,33 +321,37 @@ export default function POSPage() {
         setIsSubmitting(true);
 
         try {
-            // Resolve customer
-            let finalCustomerId = checkoutCustomerId === 'new' ? undefined : checkoutCustomerId;
+            // a barra puxada pelo carrinho enquanto grava
+            const finalCustomerId = await haul('sale', 'A registar a venda…', 'Venda registada', async () => {
+                // Resolve customer
+                let finalCustomerId: string | undefined = checkoutCustomerId === 'new' ? undefined : checkoutCustomerId;
 
-            if (checkoutClientName && !finalCustomerId) {
-                const normalizedName = checkoutClientName.trim();
-                const existing = customers.find(c => c.name.toLowerCase() === normalizedName.toLowerCase());
-                if (existing) {
-                    finalCustomerId = existing.id;
-                } else {
-                    try {
-                        const newId = await addCustomer({ name: normalizedName });
-                        if (newId) finalCustomerId = newId;
-                    } catch (e) { console.error("Failed to auto-create customer:", e); }
+                if (checkoutClientName && !finalCustomerId) {
+                    const normalizedName = checkoutClientName.trim();
+                    const existing = customers.find(c => c.name.toLowerCase() === normalizedName.toLowerCase());
+                    if (existing) {
+                        finalCustomerId = existing.id;
+                    } else {
+                        try {
+                            const newId = await addCustomer({ name: normalizedName });
+                            if (newId) finalCustomerId = newId;
+                        } catch (e) { console.error("Failed to auto-create customer:", e); }
+                    }
                 }
-            }
 
-            await addBulkSale(cart, {
-                customerId: finalCustomerId,
-                clientName: checkoutClientName || '',
-                documentType: checkoutDocType,
-                notes: checkoutNotes || '',
-                discount: { type: checkoutDiscountType, value: checkoutDiscountValue },
-                applyVat: checkoutApplyVat,
-                vatPercentage: checkoutVatPercentage,
-                isPickedUp: !checkoutPendingPickup,
-                // A data escolhida no formulário era ignorada (ficava sempre hoje).
-                date: isSameDay(checkoutDate, new Date()) ? new Date().toISOString() : new Date(checkoutDate.getFullYear(), checkoutDate.getMonth(), checkoutDate.getDate(), 12).toISOString(),
+                await addBulkSale(cart, {
+                    customerId: finalCustomerId,
+                    clientName: checkoutClientName || '',
+                    documentType: checkoutDocType,
+                    notes: checkoutNotes || '',
+                    discount: { type: checkoutDiscountType, value: checkoutDiscountValue },
+                    applyVat: checkoutApplyVat,
+                    vatPercentage: checkoutVatPercentage,
+                    isPickedUp: !checkoutPendingPickup,
+                    // A data escolhida no formulário era ignorada (ficava sempre hoje).
+                    date: isSameDay(checkoutDate, new Date()) ? new Date().toISOString() : new Date(checkoutDate.getFullYear(), checkoutDate.getMonth(), checkoutDate.getDate(), 12).toISOString(),
+                });
+                return finalCustomerId;
             });
 
             // em vez de um aviso que some: o que fazer a seguir (enviar o recibo, ver a venda, vender outra vez)
