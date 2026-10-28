@@ -7,7 +7,7 @@ import { INTRO_AT_KEY, INTRO_KEY } from "@/lib/intro-gate";
 import { BootProgress } from "@/components/layout/boot-progress";
 
 /**
- * Animação de entrada (ao abrir a app; não volta durante 30 min, nem ao recarregar; cerca de 5,5 s). As quatro cores
+ * Animação de entrada (uma vez por dia em cada aparelho, na primeira abertura; cerca de 5,5 s). As quatro cores
  * do logótipo são os quatro pilares da app: Stock (laranja), Vendas (vermelho), Gestão (roxo) e Controlo (azul). Cada
  * um entra com o seu símbolo, juntam-se ao centro e misturam-se no círculo do MajorStockX; depois "Major" e "StockX"
  * aparecem à frente, recuam para o lugar e o logótipo treme.
