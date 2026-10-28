@@ -36,4 +36,14 @@ describe("boot-progress", () => {
         expect(bootLabel(2)).toBe("A carregar produtos…");
         expect(bootLabel(BOOT_DONE)).toBe("Pronto");
     });
+
+    it("textos ao recarregar dentro da app", () => {
+        const reload = { reload: true };
+        expect(bootLabel(0, "A recarregar…", reload)).toBe("A ligar…");
+        expect(bootLabel(1, "A recarregar…", reload)).toBe("A ligar…");
+        expect(bootLabel(2, "A recarregar…", reload)).toBe("A atualizar produtos…");
+        expect(bootLabel(3, "A recarregar…", reload)).toBe("A atualizar vendas…");
+        expect(bootLabel(BOOT_DONE, "A recarregar…", reload)).toBe("Atualizado");
+        expect(bootLabel(BOOT_DONE, "A recarregar…", { reload: true, offline: true })).toBe("Sem internet: últimos dados guardados");
+    });
 });

@@ -3,6 +3,11 @@
 // Quem publica é o InventoryProvider; a animação de entrada fica fora dele, por isso é uma loja simples e não contexto.
 
 export const BOOT_STEPS = ["A verificar a sessão…", "A abrir a empresa…", "A carregar produtos…", "A carregar vendas…"] as const;
+/**
+ * Ao recarregar com a sessão aberta (puxar para baixo dentro da app) as fases são as mesmas, mas "A verificar a
+ * sessão…" fazia parecer que a pessoa tinha sido desligada: fala-se em atualizar.
+ */
+export const RELOAD_STEPS = ["A ligar…", "A ligar…", "A atualizar produtos…", "A atualizar vendas…"] as const;
 /** -1 antes de o JavaScript arrancar, 0 a 3 as fases, 4 pronto */
 export const BOOT_DONE = BOOT_STEPS.length;
 
@@ -21,7 +26,15 @@ export function bootRange(step: number): [number, number] {
     return [k / BOOT_DONE, (k + 0.85) / BOOT_DONE];
 }
 
-export const bootLabel = (step: number, idle = "A carregar…") => step < 0 ? idle : step >= BOOT_DONE ? "Pronto" : BOOT_STEPS[step];
+/**
+ * O texto da fase. Na recarga, no fim diz "Atualizado" só com internet: sem ela a app abre com os últimos dados
+ * guardados no aparelho, e dizer "Atualizado" seria enganar.
+ */
+export function bootLabel(step: number, idle = "A carregar…", mode: { reload?: boolean; offline?: boolean } = {}) {
+    if (step < 0) return idle;
+    if (step >= BOOT_DONE) return !mode.reload ? "Pronto" : mode.offline ? "Sem internet: últimos dados guardados" : "Atualizado";
+    return (mode.reload ? RELOAD_STEPS : BOOT_STEPS)[step];
+}
 
 let step = -1;
 const listeners = new Set<() => void>();
