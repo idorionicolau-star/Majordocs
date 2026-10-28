@@ -364,8 +364,8 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
         title: "Venda guardada neste aparelho",
         description: `Sem internet. Recibo provisório ${guideNumberForOuterScope} — o número oficial é atribuído quando a ligação voltar.`,
       });
-      downloadSaleDocument(createdSalesForOuterScope, companyData);
-      return;
+      // o documento já não abre sozinho: quem vende escolhe a seguir (imprimir, PDF, WhatsApp…)
+      return createdSalesForOuterScope;
     }
 
     // Desconto grande (≥ 10%) → avisar o gestor.
@@ -395,13 +395,7 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
 
     // Post-transaction UI/Notifications
     if (guideNumberForOuterScope && createdSalesForOuterScope.length > 0) {
-      toast({
-        title: "Venda Registada!",
-        description: `Guia ${guideNumberForOuterScope} gerada com ${items.length} itens.`,
-      });
-      // Try to download single document with all sales
-      downloadSaleDocument(createdSalesForOuterScope, companyData);
-
+      // a confirmação (✓ e "E agora?") é mostrada por quem vende; aqui só os avisos e o email
       await triggerEmailAlert({
         type: 'SALE',
         ...createdSalesForOuterScope[0], // cliente, vendedor, estado…
@@ -431,6 +425,7 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
     }
 
     setLastSaleTimestamp(Date.now());
+    return createdSalesForOuterScope;
   }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, products, productsData, toast, triggerEmailAlert, sendPush, user, notifyManagers]);
 
 

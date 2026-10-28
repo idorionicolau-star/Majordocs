@@ -473,7 +473,7 @@ export interface InventoryContextType {
       /** Amount received now; less than the total leaves the rest as debt (defaults to full) */
       amountPaid?: number;
     }
-  ) => Promise<void>;
+  ) => Promise<Sale[] | void>;
   confirmSalePickup: (sale: Sale) => void;
   deleteSale: (saleId: string) => void;
   addProductionLog: (orderId: string, logData: { quantity: number; notes?: string; }) => void;
