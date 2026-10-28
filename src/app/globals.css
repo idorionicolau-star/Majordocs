@@ -233,5 +233,8 @@
 }
 /* Animação de entrada: escondida quando já foi vista; e nunca fica presa no ecrã se o JavaScript falhar */
 html[data-intro='skip'] .msx-intro { display: none; }
+/* recarregar com a sessão aberta: sem ecrã cheio, o menu e o cabeçalho ficam e só o conteúdo espera (ver lib/nav-hint.ts) */
+html[data-reload] .msx-boot-cover:not(.msx-boot-cover-always) { display: none; }
+html:not([data-reload]) .msx-reload-content { visibility: hidden; }
 .msx-intro { animation: msx-intro-failsafe 0.4s ease 16s forwards; }
 @keyframes msx-intro-failsafe { to { opacity: 0; visibility: hidden; pointer-events: none; } }

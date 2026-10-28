@@ -7,6 +7,7 @@ import { useContext } from "react";
 import { cn } from "@/lib/utils";
 import { InventoryContext } from "@/context/inventory-context";
 import { useNavGroups } from "./use-nav-groups";
+import { useNavHint } from "@/hooks/use-nav-hint";
 import { HelpCircle, LifeBuoy, Lock, LogOut, Settings, User as UserIcon, ShieldCheck } from "lucide-react";
 import { openTour } from "@/components/onboarding/app-tour";
 import { MenuModeToggle } from "./menu-mode-toggle";
@@ -25,6 +26,9 @@ export function Sidebar() {
     const { user, logout, firebaseUser } = useContext(InventoryContext) || { user: null, logout: async () => { }, firebaseUser: null };
 
     const { groups, isActive, simple, hiddenCount, setSimple } = useNavGroups();
+    // a recarregar: o nome da última vez, em vez de "Utilizador"
+    const hint = useNavHint();
+    const name = user?.username || hint?.name;
 
     return (
         <aside className="hidden md:flex flex-col py-6 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 z-50 fixed inset-y-0 left-0 w-64 h-screen transition-all duration-300">
@@ -95,17 +99,17 @@ export function Sidebar() {
                                         <Image src={user.profilePictureUrl} alt="User" width={40} height={40} className="w-full h-full object-cover rounded-full" />
                                     ) : (
                                         <div className="w-full h-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500">
-                                            {user?.username?.charAt(0) || 'U'}
+                                            {name?.charAt(0) || 'U'}
                                         </div>
                                     )}
                                 </div>
                             </div>
                             <div className="flex flex-col overflow-hidden text-left">
                                 <span className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate group-hover:text-primary transition-colors">
-                                    {user?.username || 'Utilizador'}
+                                    {name || 'Utilizador'}
                                 </span>
                                 <span className="text-xs text-slate-400 truncate">
-                                    {firebaseUser?.email || user?.email || ''}
+                                    {firebaseUser?.email || user?.email || hint?.email || ''}
                                 </span>
                             </div>
                         </div>

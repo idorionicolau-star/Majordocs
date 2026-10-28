@@ -31,6 +31,7 @@ import { whatsappLink } from '@/lib/support';
 
 import { LoadingBar } from './loading-bar';
 import { markAppReady } from '@/lib/app-ready';
+import { clearNavHint } from '@/lib/nav-hint';
 import { AppLoader } from './app-loader';
 import { SubscriptionExpired } from './subscription-expired';
 
@@ -113,6 +114,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       router.replace('/login');
     }
 
+    // sem sessão: a próxima abertura volta a ser em ecrã cheio (ver lib/nav-hint.ts)
+    if (!isAuthenticated) clearNavHint();
+
     // Restore last path on mount (only once) — handles the case where
     // root page.tsx redirects to /dashboard after a refresh
     if (isAuthenticated && !hasRestoredRef.current) {
@@ -137,32 +141,34 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   // um fade, e fica sempre no mesmo sítio da árvore (nunca é desmontado a meio, a animação não recomeça).
   const blocking = !isPublicPage && (!!authContext?.loading || (!authContext?.firebaseUser && !isAuthPage));
   const loaderPhase = useStickyLoader(blocking);
+  const waiting = loaderPhase === 'show';
   // a animação de entrada também espera por este "pronto" estável
   React.useEffect(() => { if (loaderPhase !== 'show') markAppReady(); }, [loaderPhase]);
+  // Ecrã cheio: ao abrir a app e ao entrar. Ao recarregar com a sessão aberta (html[data-reload], ver lib/nav-hint.ts)
+  // o CSS esconde-o: o menu e o cabeçalho ficam no lugar e só o conteúdo mostra a animação.
   const loader = loaderPhase === 'hidden' ? null : (
-    <div className={`fixed inset-0 z-[250] flex items-center justify-center bg-background transition-opacity duration-300 ${loaderPhase === 'leaving' ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
+    <div className={`msx-boot-cover fixed inset-0 z-[250] flex items-center justify-center bg-background transition-opacity duration-300 ${isAuthPage ? 'msx-boot-cover-always' : ''} ${loaderPhase === 'leaving' ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
       <AppLoader />
     </div>
   );
 
   if (isPublicPage) return <div>{children}</div>;
 
-  // o ecrã de carregamento é sempre o primeiro filho do fragmento: o React mantém-no entre as três vistas
-  if (blocking) return <>{loader}</>;
-
+  // o ecrã de carregamento é sempre o primeiro filho do fragmento: o React mantém-no entre as vistas
   if (isAuthPage) {
     return (
       <>
         {loader}
-        <div>
-          {children}
-        </div>
+        {!blocking && (
+          <div>
+            {children}
+          </div>
+        )}
       </>
     );
   }
 
-
-
+  // A moldura (menu, cabeçalho, barra de baixo) é a mesma enquanto carrega e depois: não é desmontada, só o conteúdo muda.
   return (
     <>
       {loader}
@@ -174,12 +180,12 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
         {/* Avisos de subscrição: o pagamento é do Dono / Administrador. Um funcionário não pode pagar — vê só,
             se a conta estiver parada, que deve falar com o responsável (sem preços nem "subscreva"). */}
-        {isReadOnly && !isManager && (
+        {!waiting && isReadOnly && !isManager && (
           <div role="status" className="bg-slate-700 text-white text-center py-2.5 px-4 text-sm font-medium sticky top-0 z-[60] shadow-md">
             Modo leitura — por agora não é possível registar. Fale com o responsável da empresa.
           </div>
         )}
-        {isReadOnly && isManager && (
+        {!waiting && isReadOnly && isManager && (
           <div className="bg-gradient-to-r from-amber-600 to-rose-600 text-white text-center py-2.5 px-4 text-sm font-medium sticky top-0 z-[60] shadow-md flex flex-wrap justify-center items-center gap-3 animate-in slide-in-from-top duration-300">
             <span>Modo leitura — a sua assinatura não está activa. Pague para voltar a ter acesso completo na hora.</span>
             <a
@@ -200,9 +206,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         )}
 
         {/* quem veio da EscalePay já pagou lá: sem contagem do teste. Nas páginas de venda não aparece: há um cliente à espera */}
-        {isTrial && isManager && !pathname.startsWith('/pos') && (fromEscalepay ? <EscalepayPendingBanner daysLeft={daysLeft} /> : <TrialBanner companyId={authContext?.companyId} daysLeft={daysLeft} coupon={authContext?.companyData?.coupon} />)}
+        {!waiting && isTrial && isManager && !pathname.startsWith('/pos') && (fromEscalepay ? <EscalepayPendingBanner daysLeft={daysLeft} /> : <TrialBanner companyId={authContext?.companyId} daysLeft={daysLeft} coupon={authContext?.companyData?.coupon} />)}
 
-        {isManager && !isReadOnly && !isTrial && typeof renewInDays === 'number' && <RenewBanner companyId={authContext?.companyId} renewInDays={renewInDays} coupon={authContext?.companyData?.coupon} />}
+        {!waiting && isManager && !isReadOnly && !isTrial && typeof renewInDays === 'number' && <RenewBanner companyId={authContext?.companyId} renewInDays={renewInDays} coupon={authContext?.companyData?.coupon} />}
 
         <div className={`flex min-h-screen w-full bg-transparent ${isTrial ? 'pt-0' : ''}`}>
           <Sidebar />
@@ -210,6 +216,12 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             <Header onSearchClick={() => setOpenCommandMenu(true)} />
             <main className="flex-1 relative overflow-x-clip">
               <SwipeNav>
+                {waiting ? (
+                  // a recarregar: a mesma página, só o conteúdo à espera dos dados
+                  <div className="msx-reload-content flex min-h-[60vh] items-center justify-center" data-testid="reload-content">
+                    <AppLoader label="A recarregar…" />
+                  </div>
+                ) : <>
                 <EmailConfirmHost />
                 <OfflineBanner />
                 <UpdateNotice />
@@ -223,10 +235,12 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                 }>
                   {planLocked && gatedFeature ? <PlanGate feature={gatedFeature} isManager={isManager} /> : children}
                 </Suspense>
+                </>}
               </SwipeNav>
             </main>
           </div>
           <BottomNav onMenuClick={() => setIsMobileNavOpen(true)} />
+          {!waiting && <>
           <TourHost />
           <SeenSync />
           <SupportDialog />
@@ -237,6 +251,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <SaleSheetHost />
           <KeyboardDismiss />
           <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
+          </>}
         </div>
         <SheetContent side="left" className="p-0 glass-panel border-r border-white/10">
           <MobileNav onLinkClick={() => setIsMobileNavOpen(false)} />

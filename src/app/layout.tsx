@@ -10,6 +10,7 @@ import { ErrorReporter } from "@/components/error-reporter";
 import { IntroSplash } from "@/components/intro-splash";
 import { INTRO_GATE } from "@/lib/intro-gate";
 import { LOADER_GATE } from "@/components/layout/app-loader";
+import { RELOAD_GATE } from "@/lib/nav-hint";
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -60,8 +61,9 @@ export default function RootLayout({
       className={`${ptSans.variable} ${spaceGrotesk.variable}`}
     >
       <body className="font-body antialiased">
-        {/* antes da primeira pintura: se a animação de entrada aparece, e em que objecto começa o ecrã de carregamento */}
-        <script dangerouslySetInnerHTML={{ __html: INTRO_GATE + LOADER_GATE }} />
+        {/* antes da primeira pintura: se a animação de entrada aparece, em que objecto começa o ecrã de carregamento
+            e se é uma recarga com a sessão aberta (só o conteúdo espera) */}
+        <script dangerouslySetInnerHTML={{ __html: INTRO_GATE + LOADER_GATE + RELOAD_GATE }} />
         <IntroSplash />
         <AppProviders>{children}</AppProviders>
         <Toaster />
