@@ -25,3 +25,23 @@ describe("puxar para atualizar", () => {
         expect(refreshMessage("unreachable")).toMatch(/Sem ligação/);
     });
 });
+
+describe("objecto do indicador por página", async () => {
+    const { pullObjectFor } = await import("../pull-refresh");
+    it("cada página com o seu objecto", () => {
+        expect(pullObjectFor("/pos")).toBe("cart");
+        expect(pullObjectFor("/pos/catalogo")).toBe("cart");
+        expect(pullObjectFor("/sales")).toBe("cart");
+        expect(pullObjectFor("/sales/carga")).toBe("truck");
+        expect(pullObjectFor("/orders")).toBe("truck");
+        expect(pullObjectFor("/inventory/transfer")).toBe("truck");
+        expect(pullObjectFor("/inventory")).toBe("warehouse");
+        expect(pullObjectFor("/inventory/quick")).toBe("warehouse");
+        expect(pullObjectFor("/catalog")).toBe("warehouse");
+        expect(pullObjectFor("/production/new")).toBe("mixer");
+        expect(pullObjectFor("/dashboard")).toBe("laptop");
+        expect(pullObjectFor("/finance")).toBe("laptop");
+        expect(pullObjectFor("/salesman")).toBe("cart"); // não confunde /sales com /salesman (cai no carrinho por defeito)
+        expect(pullObjectFor("/qualquer")).toBe("cart");
+    });
+});
