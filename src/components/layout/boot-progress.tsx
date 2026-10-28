@@ -34,11 +34,14 @@ export function BootProgress({ dark, idle, className }: { dark?: boolean; idle?:
     const step = useSyncExternalStore(subscribeBootStep, getBootStep, () => -1);
     const reload = useSyncExternalStore(noSubscribe, isReload, () => false);
     const fill = useRef<HTMLDivElement>(null);
+    const prevStep = useRef(-1);
 
     useEffect(() => {
         const el = fill.current;
         if (!el || step < 0 || !el.animate) return;
-        const now = scaleOf(el);
+        // um arranque novo (ex.: entrar com a senha depois do "Pronto" da página de entrar): a barra recomeça do zero
+        const now = step < prevStep.current ? 0 : scaleOf(el);
+        prevStep.current = step;
         el.getAnimations().forEach((a) => a.cancel());
         el.style.animation = "none";
         el.style.transform = `scaleX(${now})`;
