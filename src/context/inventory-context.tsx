@@ -1,5 +1,6 @@
 'use client';
 import { inScope, sortBySite } from '@/lib/sites';
+import { bootStepOf, setBootStep } from '@/lib/boot-progress';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import type { InventoryContextType, Product } from '@/lib/types';
@@ -47,6 +48,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
 
   const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || stockMovementsLoading || catalogProductsLoading || catalogCategoriesLoading || rawMaterialsLoading || recipesLoading;
+
+  // a fase do arranque, para a barra da animação de entrada e do ecrã de carregamento (ver lib/boot-progress.ts)
+  const bootStep = bootStepOf({
+    authLoading: loading,
+    signedIn: !!firebaseUser,
+    productsLoading: productsLoading || catalogProductsLoading || catalogCategoriesLoading || rawMaterialsLoading || recipesLoading,
+    salesLoading: salesLoading || productionsLoading || ordersLoading || stockMovementsLoading,
+  });
+  useEffect(() => { setBootStep(bootStep); }, [bootStep]);
 
 
   // 30-Day Retention Policy Cleanup
