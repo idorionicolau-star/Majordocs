@@ -12,6 +12,7 @@ import {
   ShoppingCart
 } from "lucide-react";
 import { useContext } from "react";
+import { useNavHint } from "@/hooks/use-nav-hint";
 import { InventoryContext } from "@/context/inventory-context";
 import type { ModulePermission } from "@/lib/types";
 import { useKeyboardInset } from "@/hooks/use-keyboard-inset";
@@ -22,18 +23,22 @@ interface BottomNavProps {
 
 /** Os separadores da barra de baixo (a ordem é a mesma do swipe entre páginas). */
 export function useNavTabs() {
-  const { canView, companyData } = useContext(InventoryContext) || {
+  const { canView, companyData, user } = useContext(InventoryContext) || {
     canView: () => false,
-    companyData: null
+    companyData: null,
+    user: null
   };
+  // a recarregar, antes de se saber quem é: o mesmo separador da última vez
+  const hint = useNavHint();
+  const fromHint = !user && !!hint;
 
   // Logic to determine the 4th item (Production vs Orders)
   let fourthItem: { title: string; href: string; icon: any; id: string; also?: string[] } | null = null;
 
-  const showProduction = canView('production' as ModulePermission) &&
+  const showProduction = fromHint ? hint.items.some((i) => i.id === 'production') : canView('production' as ModulePermission) &&
     companyData?.businessType !== 'reseller';
 
-  const showOrders = canView('orders' as ModulePermission) &&
+  const showOrders = fromHint ? hint.items.some((i) => i.id === 'orders') : canView('orders' as ModulePermission) &&
     companyData?.businessType !== 'reseller';
 
   if (showProduction) {
