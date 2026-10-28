@@ -418,17 +418,20 @@ export function useInventoryCore() {
   const permKey = user ? `${user.role}|${JSON.stringify(user.permissions || {})}` : '';
   const may = useMemo(() => {
     const has = (m: ModulePermission) => !!user && (user.role === 'Admin' || user.role === 'Dono' || ['read', 'write'].includes(String(user.permissions?.[m] || '')));
+    const writes = (m: ModulePermission) => !!user && (user.role === 'Admin' || String(user.permissions?.[m] || '') === 'write');
     return {
       inventory: has('inventory'), sales: has('sales'), production: has('production'), orders: has('orders'),
+      // quem vende precisa dos produtos (stock disponível) mesmo sem acesso ao Inventário (as regras deixam ler)
+      sell: writes('sales'),
       raw: has('raw-materials'), catalog: has('settings') || has('inventory') || has('sales'),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- permKey resume o user (papel + permissões)
   }, [permKey]);
 
   const productsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId || !may.inventory) return null;
+    if (!firestore || !companyId || !(may.inventory || may.sell)) return null;
     return collection(firestore, `companies/${companyId}/products`);
-  }, [firestore, companyId, may.inventory]);
+  }, [firestore, companyId, may.inventory, may.sell]);
 
 
   const salesCollectionRef = useMemoFirebase(() => {

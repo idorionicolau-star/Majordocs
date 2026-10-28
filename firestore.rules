@@ -126,6 +126,26 @@ service cloud.firestore {
       );
     }
 
+    // Quem vende sem acesso ao Inventário (Vendas: escrever) só mexe no stock através de uma venda: o stock só desce,
+    // a reserva sobe (venda por levantar) ou desce no máximo o que o stock desceu (levantamento), e o preço só se o
+    // produto ainda não tinha (aprende com a primeira venda). Nunca aumenta stock nem toca noutros campos.
+    function isSaleStockUpdate(companyId) {
+      let before = resource.data;
+      let after = request.resource.data;
+      let stockBefore = before.get('stock', 0);
+      let stockAfter = after.get('stock', 0);
+      let reservedBefore = before.get('reservedStock', 0);
+      let reservedAfter = after.get('reservedStock', 0);
+      let changed = after.diff(before).affectedKeys();
+      return can(companyId, 'sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin())
+        && changed.hasOnly(['stock', 'reservedStock', 'lastUpdated', 'price'])
+        && stockAfter is number && reservedAfter is number
+        && stockAfter <= stockBefore
+        && reservedAfter >= 0
+        && (reservedAfter >= reservedBefore || stockBefore - stockAfter >= reservedBefore - reservedAfter)
+        && (!changed.hasAny(['price']) || before.get('price', 0) <= 0);
+    }
+
     // --- Regras por Coleção ---
 
     // Registo das conversas com o assistente (só escrita pelo próprio; leitura só Super Admin)
@@ -222,8 +242,10 @@ service cloud.firestore {
       }
       
       match /products/{productId} {
-        allow get, list: if can(companyId, 'inventory', 'read');
+        // quem vende precisa de ver os produtos e o stock disponível, mesmo sem acesso ao Inventário
+        allow get, list: if can(companyId, 'inventory', 'read') || can(companyId, 'sales', 'write');
         allow create, update, delete: if can(companyId, 'inventory', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin());
+        allow update: if isSaleStockUpdate(companyId);
       }
 
       // Envios com confirmação de receção: quem mexe no stock envia, recebe ou cancela; nunca se apagam
@@ -235,7 +257,12 @@ service cloud.firestore {
 
       match /stockMovements/{movementId} {
         allow get, list: if can(companyId, 'inventory', 'read');
-        allow create: if can(companyId, 'inventory', 'write');
+        allow create: if can(companyId, 'inventory', 'write')
+          // a saída de stock de uma venda ou levantamento, registada em nome de quem vendeu
+          || (can(companyId, 'sales', 'write') && (isCompanySubscriptionActive(companyId) || isSuperAdmin())
+              && request.resource.data.type == 'OUT'
+              && request.resource.data.quantity is number && request.resource.data.quantity < 0
+              && request.resource.data.userId == request.auth.uid);
         // Nenhum update/delete em movimentos de stock para garantir imutabilidade
         allow update, delete: if false; 
       }
