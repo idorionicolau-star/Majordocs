@@ -5,7 +5,7 @@
 export const NAV_HINT_KEY = "msx-nav-hint";
 
 export type NavHintItem = { title: string; id: string; href: string; locked?: boolean };
-export type NavHint = { items: NavHintItem[]; simple: boolean; name?: string; email?: string };
+export type NavHint = { items: NavHintItem[]; simple: boolean; name?: string; email?: string; photo?: string };
 
 export function parseNavHint(raw: string | null): NavHint | null {
     if (!raw) return null;
@@ -21,6 +21,7 @@ export function parseNavHint(raw: string | null): NavHint | null {
             simple: v.simple === true,
             name: typeof v.name === "string" ? v.name : undefined,
             email: typeof v.email === "string" ? v.email : undefined,
+            photo: typeof v.photo === "string" && /^https:\/\//.test(v.photo) ? v.photo : undefined,
         };
     } catch {
         return null;
@@ -59,10 +60,24 @@ export function clearNavHint() {
     try {
         if (read() === null) return;
         localStorage.removeItem(NAV_HINT_KEY);
-        delete document.documentElement.dataset.reload;
+        const html = document.documentElement;
+        delete html.dataset.reload;
+        html.style.removeProperty("--msx-initials");
+        html.style.removeProperty("--msx-avatar-photo");
     } catch { /* ignore */ }
     notify();
 }
 
-/** Antes da primeira pintura: com sessão guardada, marca o <html> para a recarga mostrar a moldura e não o ecrã cheio. */
-export const RELOAD_GATE = `try{if(localStorage.getItem('${NAV_HINT_KEY}'))document.documentElement.dataset.reload='1'}catch(e){}`;
+/** As iniciais do avatar: "Idório Nicolau" → "IN", "Admin" → "AD". */
+export function initialsOf(name?: string) {
+    const names = (name || "").trim().split(/\s+/);
+    const first = names[0] || "", last = names[names.length - 1] || "";
+    return (names.length > 1 && first && last ? first[0] + last[0] : first.slice(0, 2)).toUpperCase();
+}
+
+/**
+ * Antes da primeira pintura: com sessão guardada, marca o <html> para a recarga mostrar a moldura e não o ecrã cheio,
+ * e põe as iniciais (e a foto) do avatar em variáveis CSS, para o círculo do cabeçalho não aparecer vazio enquanto a
+ * app arranca. As iniciais calculam-se como em `initialsOf`.
+ */
+export const RELOAD_GATE = `try{var h=localStorage.getItem('${NAV_HINT_KEY}');if(h){var d=document.documentElement;d.dataset.reload='1';var v=JSON.parse(h),n=String(v.name||'').trim().split(/\\s+/),f=n[0]||'',l=n[n.length-1]||'',i=(n.length>1&&f&&l?f[0]+l[0]:f.slice(0,2)).toUpperCase();if(typeof v.photo==='string'&&/^https:\\/\\//.test(v.photo))d.style.setProperty('--msx-avatar-photo','url('+JSON.stringify(v.photo)+')');else if(i)d.style.setProperty('--msx-initials',JSON.stringify(i))}}catch(e){}`;

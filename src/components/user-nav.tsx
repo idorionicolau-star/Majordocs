@@ -18,27 +18,18 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { InventoryContext } from "@/context/inventory-context"
-import { Skeleton } from "./ui/skeleton";
+import { initialsOf } from "@/lib/nav-hint";
 
 export function UserNav() {
   const { user, logout, loading, profilePicture, firebaseUser } = useContext(InventoryContext) || { user: null, logout: () => {}, loading: true, profilePicture: null, firebaseUser: null };
 
-  if (loading) {
-    return <Skeleton className="h-10 w-10 rounded-full" />;
-  }
-
   if (!user) {
-    return null;
+    // A arrancar: com sessão guardada o círculo já mostra as iniciais (ou a foto), postas antes da primeira pintura
+    // pelo RELOAD_GATE (lib/nav-hint.ts); sem ela fica a pulsar como antes. O CSS está em globals.css (.msx-avatar-hint).
+    return loading ? <div className="msx-avatar-hint animate-pulse flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-bold" aria-hidden /> : null;
   }
 
-  const getInitials = (name?: string) => {
-    if (!name || typeof name !== 'string') return 'U';
-    const names = name.trim().split(' ');
-    if (names.length > 1 && names[0] && names[names.length - 1]) {
-      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  }
+  const getInitials = (name?: string) => initialsOf(name) || 'U';
 
   return (
     <DropdownMenu>

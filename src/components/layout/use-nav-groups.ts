@@ -64,7 +64,7 @@ export function useNavGroups() {
     // guarda o menu para a próxima recarga (só com tudo carregado, para não guardar um menu a meio)
     useEffect(() => {
         if (!user || loading) return;
-        saveNavHint({ items: allowed.map((i) => ({ title: i.title, id: String(i.id), href: i.href, ...(i.locked ? { locked: true } : {}) })), simple, name: user.username, email: user.email });
+        saveNavHint({ items: allowed.map((i) => ({ title: i.title, id: String(i.id), href: i.href, ...(i.locked ? { locked: true } : {}) })), simple, name: user.username, email: user.email, ...(user.profilePictureUrl ? { photo: user.profilePictureUrl } : {}) });
     }, [user, loading, allowed, simple]);
     const hiddenCount = shown.filter((i) => ADVANCED_HREFS.has(i.href)).length;
 
