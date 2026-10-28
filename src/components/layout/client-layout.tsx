@@ -22,6 +22,7 @@ import { TourHost } from '@/components/onboarding/app-tour';
 import { GuideHost } from '@/components/guide/guide-host';
 import { SaleSheetHost } from '@/components/sales/sale-sheet';
 import { KeyboardDismiss } from '@/components/layout/keyboard-dismiss';
+import { PullToRefresh } from '@/components/layout/pull-to-refresh';
 import { SeenSync } from '@/components/guide/seen-sync';
 import { SupportDialog } from '@/components/support/support-dialog';
 import { PendingCoupon } from '@/components/billing/pending-coupon';
@@ -251,6 +252,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <GuideHost />
           <SaleSheetHost />
           <KeyboardDismiss />
+          <PullToRefresh />
           <CommandMenu open={openCommandMenu} setOpen={setOpenCommandMenu} />
           </>}
         </div>
