@@ -1,5 +1,6 @@
 "use client";
 
+import { haul } from '@/lib/haul';
 import { useState, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -111,14 +112,14 @@ export default function NewUserPage() {
 
             // A conta de acesso e o registo são criados no servidor (as regras do Firestore
             // não deixam um Admin criar o mapa de utilizador de outra pessoa).
-            await authedFetch('/api/employees', 'POST', {
+            await haul('settings', 'A criar a conta…', 'Conta criada', () => authedFetch('/api/employees', 'POST', {
                 companyId,
                 username: values.username,
                 email: fullEmail,
                 password: values.password,
                 role: values.role,
                 permissions: finalPermissions,
-            });
+            }));
 
             toast({
                 title: "Funcionário Adicionado",

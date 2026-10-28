@@ -1,5 +1,6 @@
 "use client";
 
+import { haul } from "@/lib/haul";
 import { locationLabel, sortBySite } from '@/lib/sites';
 import { requireEmailConfirmed } from "@/components/billing/email-confirm";
 import React, { useState, useCallback, useRef, useEffect } from 'react';
@@ -408,48 +409,52 @@ export function FastEntryGrid({ onSuccess }: { onSuccess?: () => void }) {
         setIsSaving(true);
         let successCount = 0;
 
-        for (const row of validRows) {
-            try {
-                // Ensure category exists in catalog
-                const categoryName = row.category.trim() || 'Geral';
-                const catExists = catalogCategories?.some(c => c.name.toLowerCase() === categoryName.toLowerCase());
-                if (!catExists && addCatalogCategory) {
-                    await addCatalogCategory(categoryName);
-                }
+        // o empilhador a puxar a barra enquanto grava (fica vermelho se nenhum produto entrou)
+        await haul("stock", "A dar entrada no stock…", "Stock actualizado", async () => {
+            for (const row of validRows) {
+                try {
+                    // Ensure category exists in catalog
+                    const categoryName = row.category.trim() || 'Geral';
+                    const catExists = catalogCategories?.some(c => c.name.toLowerCase() === categoryName.toLowerCase());
+                    if (!catExists && addCatalogCategory) {
+                        await addCatalogCategory(categoryName);
+                    }
 
-                // Ensure product exists in catalog
-                const prodName = row.name.trim();
-                const prodExists = catalogProducts?.some(p => p.name.toLowerCase() === prodName.toLowerCase());
-                if (!prodExists && addCatalogProduct) {
-                    await addCatalogProduct({
+                    // Ensure product exists in catalog
+                    const prodName = row.name.trim();
+                    const prodExists = catalogProducts?.some(p => p.name.toLowerCase() === prodName.toLowerCase());
+                    if (!prodExists && addCatalogProduct) {
+                        await addCatalogProduct({
+                            name: prodName,
+                            category: categoryName,
+                            price: parseFloat(row.price) || 0,
+                            unit: row.unit || 'un',
+                            lowStockThreshold: parseFloat(row.minStock) || 0,
+                            criticalStockThreshold: Math.floor((parseFloat(row.minStock) || 0) / 2),
+                        });
+                    }
+
+                    const productData: Omit<Product, 'id' | 'companyId' | 'instanceId'> = {
                         name: prodName,
                         category: categoryName,
                         price: parseFloat(row.price) || 0,
+                        stock: parseFloat(row.stock) || 0,
+                        reservedStock: 0,
                         unit: row.unit || 'un',
+                        location: row.location,
+                        cost: parseFloat(row.cost) || 0,
+                        lastUpdated: new Date().toISOString(),
                         lowStockThreshold: parseFloat(row.minStock) || 0,
                         criticalStockThreshold: Math.floor((parseFloat(row.minStock) || 0) / 2),
-                    });
+                    };
+                    await addProduct(productData);
+                    successCount++;
+                } catch (error) {
+                    console.error("Erro ao adicionar produto:", error, row);
                 }
-
-                const productData: Omit<Product, 'id' | 'companyId' | 'instanceId'> = {
-                    name: prodName,
-                    category: categoryName,
-                    price: parseFloat(row.price) || 0,
-                    stock: parseFloat(row.stock) || 0,
-                    reservedStock: 0,
-                    unit: row.unit || 'un',
-                    location: row.location,
-                    cost: parseFloat(row.cost) || 0,
-                    lastUpdated: new Date().toISOString(),
-                    lowStockThreshold: parseFloat(row.minStock) || 0,
-                    criticalStockThreshold: Math.floor((parseFloat(row.minStock) || 0) / 2),
-                };
-                await addProduct(productData);
-                successCount++;
-            } catch (error) {
-                console.error("Erro ao adicionar produto:", error, row);
             }
-        }
+            if (!successCount) throw new Error("nenhum produto adicionado");
+        }).catch(() => { /* o aviso abaixo diz quantos entraram */ });
 
         setIsSaving(false);
         toast({

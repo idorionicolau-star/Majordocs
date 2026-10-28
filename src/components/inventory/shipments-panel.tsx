@@ -1,5 +1,6 @@
 "use client";
 
+import { haul } from "@/lib/haul";
 import { useMemo, useState } from "react";
 import { AlertTriangle, ArrowRight, Check, Loader2, PackageCheck, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ function ReceiveCard({ s, sh, onCancel }: { s: Shipment; sh: Sh; onCancel?: () =
     const confirm = async () => {
         setBusy(true);
         try {
-            const r = await sh.receive(s, parsed, note.trim() || undefined);
+            const r = await haul("transfer", "A confirmar a receção…", "Receção confirmada", () => sh.receive(s, parsed, note.trim() || undefined));
             toast({
                 variant: r.missing.length ? "destructive" : undefined,
                 title: r.missing.length ? `Recebido com diferença (${s.code})` : `Recebido (${s.code})`,
@@ -76,7 +77,7 @@ export function ShipmentsInbox({ sh }: { sh: Sh }) {
     const [busy, setBusy] = useState("");
     const cancel = async (s: Shipment) => {
         setBusy(s.id);
-        try { await sh.cancel(s); toast({ title: `Envio ${s.code} cancelado`, description: `Voltou a ${sh.locName(s.from)}.` }); }
+        try { await haul("transfer", "A cancelar o envio…", "Envio cancelado", () => sh.cancel(s)); toast({ title: `Envio ${s.code} cancelado`, description: `Voltou a ${sh.locName(s.from)}.` }); }
         catch (e) { toast({ variant: "destructive", title: "Não foi possível cancelar", description: e instanceof Error ? e.message : "Erro" }); }
         finally { setBusy(""); }
     };

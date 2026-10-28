@@ -1,5 +1,6 @@
 "use client";
 
+import { haul } from "@/lib/haul";
 import { useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -179,7 +180,7 @@ export function DocumentEditor({ docId: docIdProp, initialType }: Props) {
         return renderDocPDF(modelFor(), company);
     };
     const fileName = () => `${draft.type.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, "_")}_${(draft.number || "rascunho").replace(/[^\w.-]+/g, "_")}.pdf`;
-    const download = async () => { setBusy("pdf"); try { (await pdf()).save(fileName()); } catch (e: any) { toast({ variant: "destructive", title: "Não foi possível gerar o PDF", description: e?.message }); } finally { setBusy(""); } };
+    const download = async () => { setBusy("pdf"); try { (await haul("document", "A preparar o PDF…", "PDF pronto", pdf)).save(fileName()); } catch (e: any) { toast({ variant: "destructive", title: "Não foi possível gerar o PDF", description: e?.message }); } finally { setBusy(""); } };
     const print = async () => {
         setBusy("print");
         try {
@@ -221,7 +222,8 @@ export function DocumentEditor({ docId: docIdProp, initialType }: Props) {
             const docRef = doc(firestore, `companies/${companyId}/documents/${id}`);
             const now = new Date().toISOString();
             const final = { ...draft, number };
-            await runTransaction(firestore, async (tx) => {
+            // a impressora a puxar a barra enquanto emite
+            await haul("document", "A emitir o documento…", "Documento emitido", () => runTransaction(firestore, async (tx) => {
                 const c = await tx.get(companyRef);
                 if (!c.exists()) throw new Error("Empresa não encontrada.");
                 const cd = c.data() as { saleCounter?: number; documentNumbering?: Record<string, { nextNumber?: number; prefix?: string }> };
@@ -249,7 +251,7 @@ export function DocumentEditor({ docId: docIdProp, initialType }: Props) {
                         tx.set(doc(collection(firestore, `companies/${companyId}/sales`)), stripUndefined(sale));
                     });
                 }
-            });
+            }));
             const issued: AppDocument = { ...(meta as AppDocument), ...(final as unknown as AppDocument), id: id!, status: "issued", number, issuedAt: now, issuedBy: user.username, totals: draftTotals(final), updatedAt: now } as AppDocument;
             setMeta(issued);
             savedJson.current = JSON.stringify(final);
