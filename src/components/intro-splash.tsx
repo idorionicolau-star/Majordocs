@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { LOGO_MAJOR, LOGO_STOCKX } from "./intro-logo";
 import { APP_READY_EVENT, isAppReady } from "@/lib/app-ready";
 import { INTRO_AT_KEY, INTRO_KEY } from "@/lib/intro-gate";
+import { BootProgress } from "@/components/layout/boot-progress";
 
 /**
  * Animação de entrada (ao abrir a app; não volta durante 30 min, nem ao recarregar; cerca de 5,5 s). As quatro cores
@@ -112,7 +113,6 @@ ${wordCss}
 .msx-i-shine{${run("msx-i-shine", 0.7, T.shine, "ease-in-out")}}
 .msx-i-slogan{${run("msx-i-rise", 0.4, T.slogan)}}
 .msx-i-wait .msx-i-logo{animation:msx-i-breathe 1.8s ease-in-out infinite}
-.msx-i-waittext{${run("msx-i-fade", 0.5, 0.8)}}
 .msx-i-clock{${run("msx-i-clock", T.out, 0, "linear")}}
 `;
 
@@ -286,7 +286,10 @@ export function IntroSplash() {
             <p className="msx-i-slogan mt-3 px-6 text-center font-headline text-base font-medium tracking-wide text-white/85">
                 Stock, vendas e controlo num só lugar
             </p>
-            {phase === "wait" && <p className="msx-i-waittext mt-2 text-xs tracking-wide text-white/50">A preparar os seus dados…</p>}
+            {/* a barra das fases do arranque: em baixo, longe do logótipo e do slogan; enche e desaparece quando a app está pronta */}
+            <div className="absolute inset-x-0 flex justify-center" style={{ bottom: "max(9%, calc(env(safe-area-inset-bottom) + 24px))" }}>
+                <BootProgress dark />
+            </div>
         </div>
     );
 }

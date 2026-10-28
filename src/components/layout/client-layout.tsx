@@ -33,6 +33,7 @@ import { LoadingBar } from './loading-bar';
 import { markAppReady } from '@/lib/app-ready';
 import { clearNavHint } from '@/lib/nav-hint';
 import { AppLoader } from './app-loader';
+import { BootProgress } from './boot-progress';
 import { SubscriptionExpired } from './subscription-expired';
 
 import { differenceInDays } from 'date-fns';
@@ -148,7 +149,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   // o CSS esconde-o: o menu e o cabeçalho ficam no lugar e só o conteúdo mostra a animação.
   const loader = loaderPhase === 'hidden' ? null : (
     <div className={`msx-boot-cover fixed inset-0 z-[250] flex items-center justify-center bg-background transition-opacity duration-300 ${isAuthPage ? 'msx-boot-cover-always' : ''} ${loaderPhase === 'leaving' ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
-      <AppLoader />
+      <AppLoader label="A carregar aplicação…" footer={<BootProgress className="mt-2" />} />
     </div>
   );
 
@@ -219,7 +220,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                 {waiting ? (
                   // a recarregar: a mesma página, só o conteúdo à espera dos dados
                   <div className="msx-reload-content flex min-h-[60vh] items-center justify-center" data-testid="reload-content">
-                    <AppLoader label="A recarregar…" />
+                    <AppLoader label="A recarregar…" footer={<BootProgress idle="A recarregar…" className="mt-2" />} />
                   </div>
                 ) : <>
                 <EmailConfirmHost />

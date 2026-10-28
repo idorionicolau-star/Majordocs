@@ -196,7 +196,8 @@ function Warehouse() {
 
 const OBJECTS = [Cart, Truck, Laptop, Warehouse];
 
-export function AppLoader({ label = "A carregar aplicação..." }: { label?: string }) {
+/** `footer` substitui o texto (ex.: a barra com as fases do arranque). */
+export function AppLoader({ label = "A carregar aplicação...", footer }: { label?: string; footer?: React.ReactNode }) {
     return (
         <div className="flex flex-col items-center gap-2" role="status" aria-label={label}>
             <style dangerouslySetInnerHTML={{ __html: LOADER_CSS }} />
@@ -204,7 +205,7 @@ export function AppLoader({ label = "A carregar aplicação..." }: { label?: str
                 <div className="msx-loader-floor" />
                 {OBJECTS.map((Obj, i) => <div key={i} className={`msx-obj msx-obj-${i}`}><Obj /></div>)}
             </div>
-            <p className="text-sm text-muted-foreground">{label}</p>
+            {footer ?? <p className="text-sm text-muted-foreground">{label}</p>}
         </div>
     );
 }
