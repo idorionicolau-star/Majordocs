@@ -13,7 +13,7 @@ import { StockHealthScore } from "@/components/diagnostico/stock-health-score";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn, daysAgo, formatCurrency, plural } from "@/lib/utils";
+import { cardMoneySize, cn, daysAgo, formatCardMoney, formatCurrency, plural } from "@/lib/utils";
 import { links } from "@/lib/deep-links";
 import { openSale } from "@/components/sales/sale-sheet";
 
@@ -78,16 +78,16 @@ export default function DiagnosticoPage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-tour="diag-kpis">
-        <Kpi label="Vendas este mês" value={formatCurrency(a.sales.month)} sub={`${plural(a.sales.monthTickets, "venda", "vendas")} · mês passado ${formatCurrency(a.sales.lastMonth)}`} icon={ShoppingCart} />
+        <Kpi label="Vendas este mês" value={a.sales.month} sub={`${plural(a.sales.monthTickets, "venda", "vendas")} · mês passado ${formatCardMoney(a.sales.lastMonth)}`} icon={ShoppingCart} />
         <Kpi
           label="Últimos 30 dias"
-          value={formatCurrency(a.sales.last30)}
+          value={a.sales.last30}
           sub={a.sales.growth30 === null ? "sem base de comparação" : `${a.sales.growth30 >= 0 ? "+" : ""}${a.sales.growth30.toFixed(0)}% vs. 30 dias antes`}
           icon={a.sales.growth30 !== null && a.sales.growth30 < 0 ? TrendingDown : TrendingUp}
           tone={a.sales.growth30 === null ? undefined : a.sales.growth30 >= 0 ? "good" : "bad"}
         />
-        <Kpi label="Valor em stock" value={formatCurrency(a.stock.valueAtPrice)} sub={`${a.stock.productCount} produtos (a preço de venda)`} icon={Package} />
-        <Kpi label="Por receber" value={formatCurrency(a.sales.receivables)} sub={`${plural(a.sales.receivablesList.length, "venda", "vendas")} com saldo em falta`} icon={CircleDollarSign} tone={a.sales.receivables > 0 ? "bad" : "good"} />
+        <Kpi label="Valor em stock" value={a.stock.valueAtPrice} sub={`${a.stock.productCount} produtos (a preço de venda)`} icon={Package} />
+        <Kpi label="Por receber" value={a.sales.receivables} sub={`${plural(a.sales.receivablesList.length, "venda", "vendas")} com saldo em falta`} icon={CircleDollarSign} tone={a.sales.receivables > 0 ? "bad" : "good"} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
@@ -167,8 +167,8 @@ export default function DiagnosticoPage() {
           <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-lg"><TrendingUp className="h-5 w-5 text-primary" /> Vendas</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-2">
-              <MiniKpi label="Hoje" value={formatCurrency(a.sales.today)} sub={plural(a.sales.todayTickets, "venda", "vendas")} />
-              <MiniKpi label="Valor médio por venda" value={a.sales.avgTicket30 ? formatCurrency(a.sales.avgTicket30) : "—"} sub="30 dias" />
+              <MiniKpi label="Hoje" value={formatCardMoney(a.sales.today)} full={formatCurrency(a.sales.today)} sub={plural(a.sales.todayTickets, "venda", "vendas")} />
+              <MiniKpi label="Valor médio por venda" value={a.sales.avgTicket30 ? formatCardMoney(a.sales.avgTicket30) : "—"} full={a.sales.avgTicket30 ? formatCurrency(a.sales.avgTicket30) : undefined} sub="30 dias" />
               <MiniKpi label="Margem bruta" value={a.sales.marginPct30 !== null ? `${a.sales.marginPct30.toFixed(0)}%` : "—"} sub={a.sales.marginPct30 !== null ? "produtos com custo" : `${a.quality.missingCost.length} produtos sem custo`} />
               <MiniKpi label="Última venda" value={fmtDate(a.sales.lastSaleDate)} sub={a.sales.daysSinceLastSale !== null ? daysAgo(a.sales.daysSinceLastSale) : "nenhuma"} tone={salesStale ? "bad" : undefined} />
             </div>
@@ -267,23 +267,24 @@ function AlertCard({ alert }: { alert: Alert }) {
   );
 }
 
-function Kpi({ label, value, sub, icon: Icon, tone }: { label: string; value: string; sub: string; icon: React.ElementType; tone?: "good" | "bad" }) {
+function Kpi({ label, value, sub, icon: Icon, tone }: { label: string; value: number; sub: string; icon: React.ElementType; tone?: "good" | "bad" }) {
+  const text = formatCardMoney(value);
   return (
     <Card className="min-w-0 rounded-2xl">
       <CardContent className="p-4">
         <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}<Icon className="h-4 w-4" /></div>
-        <p className="mt-2 text-xl md:text-2xl font-bold tabular-nums">{value}</p>
+        <p className={cn("mt-2 font-bold tabular-nums [overflow-wrap:anywhere]", cardMoneySize(text))} title={formatCurrency(value)}>{text}</p>
         <p className={cn("mt-1 text-xs text-muted-foreground", tone === "good" && "text-emerald-600", tone === "bad" && "text-red-500")}>{sub}</p>
       </CardContent>
     </Card>
   );
 }
 
-function MiniKpi({ label, value, sub, tone }: { label: string; value: string; sub: string; tone?: "bad" }) {
+function MiniKpi({ label, value, full, sub, tone }: { label: string; value: string; full?: string; sub: string; tone?: "bad" }) {
   return (
     <div className="rounded-xl border p-3">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={cn("mt-1 font-bold tabular-nums", tone === "bad" && "text-red-500")}>{value}</p>
+      <p className={cn("mt-1 font-bold tabular-nums [overflow-wrap:anywhere]", tone === "bad" && "text-red-500")} title={full}>{value}</p>
       <p className="text-[11px] text-muted-foreground">{sub}</p>
     </div>
   );
