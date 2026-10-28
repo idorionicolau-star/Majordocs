@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/select"
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { formatCurrency, normalizeString } from '@/lib/utils';
+import { cardMoneySize, cn, formatCardMoney, formatCurrency, normalizeString } from '@/lib/utils';
 import { Search, Plus, TrendingUp, TrendingDown, DollarSign, Calendar, Trash2, Printer, Download, CreditCard, ShoppingBag, ChevronRight } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
 import { pt, ptBR } from 'date-fns/locale';
@@ -272,7 +272,8 @@ export default function FinancePage() {
             </div>
 
             {/* KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6" data-tour="fin-kpis">
+            {/* três colunas só com largura: num tablet ao alto os cartões ficavam com ~130 px e o valor partia-se a meio */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" data-tour="fin-kpis">
                 <Card className="border-green-100 bg-green-50/50 dark:bg-green-900/10 dark:border-green-800">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center gap-2">
@@ -280,7 +281,7 @@ export default function FinancePage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold text-green-700 dark:text-green-300">{formatCurrency(totalIncome)}</div>
+                        <div className={cn("font-bold tabular-nums [overflow-wrap:anywhere] text-green-700 dark:text-green-300", cardMoneySize(formatCardMoney(totalIncome)))} title={formatCurrency(totalIncome)}>{formatCardMoney(totalIncome)}</div>
                         <p className="text-xs text-green-600/80 mt-1">{periodSales.length} vendas registadas</p>
                     </CardContent>
                 </Card>
@@ -292,7 +293,7 @@ export default function FinancePage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold text-red-700 dark:text-red-300">{formatCurrency(totalExpenses)}</div>
+                        <div className={cn("font-bold tabular-nums [overflow-wrap:anywhere] text-red-700 dark:text-red-300", cardMoneySize(formatCardMoney(totalExpenses)))} title={formatCurrency(totalExpenses)}>{formatCardMoney(totalExpenses)}</div>
                         <p className="text-xs text-red-600/80 mt-1">{periodExpenses.length} despesas registadas</p>
                     </CardContent>
                 </Card>
@@ -304,8 +305,8 @@ export default function FinancePage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className={`text-3xl font-bold ${netProfit >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-600'}`}>
-                            {formatCurrency(netProfit)}
+                        <div className={cn("font-bold tabular-nums [overflow-wrap:anywhere]", cardMoneySize(formatCardMoney(netProfit)), netProfit >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-600')} title={formatCurrency(netProfit)}>
+                            {formatCardMoney(netProfit)}
                         </div>
                         <p className="text-xs text-slate-500 mt-1">Margem operacional do período</p>
                     </CardContent>

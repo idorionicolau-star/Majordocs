@@ -52,10 +52,11 @@ export function calculateSimilarity(str1: string, str2: string): number {
 }
 
 export function formatCompactNumber(value: number) {
-  if (value >= 1_000_000) {
+  // negativos (ex.: prejuízo) também ficam curtos: "-2,5M"
+  if (Math.abs(value) >= 1_000_000) {
     return `${(value / 1_000_000).toLocaleString('pt-MZ', { maximumFractionDigits: 1 })}M`;
   }
-  if (value >= 1000) {
+  if (Math.abs(value) >= 1000) {
     return `${(value / 1000).toLocaleString('pt-MZ', { maximumFractionDigits: 1 })}k`;
   }
   return value.toLocaleString('pt-MZ', { maximumFractionDigits: 2 });
@@ -71,6 +72,19 @@ export function formatCurrency(value: number, options?: Intl.NumberFormatOptions
     currency: 'MZN',
     ...options
   }).format(value);
+}
+
+/**
+ * Valor para um cartão estreito: num telemóvel o cartão tem pouco mais de 140 px e "1 265 216 537,00 MZN" saía
+ * por fora. A partir de um milhão usa o formato curto do painel ("110M MTn"); o valor exacto vai no `title`.
+ */
+export function formatCardMoney(value: number) {
+  return Math.abs(value) >= 1_000_000 ? formatCurrency(value, { compact: true }) : formatCurrency(value);
+}
+
+/** Letra mais pequena para os valores compridos (ex.: "999 999,00 MZN"), para caberem numa linha do cartão. */
+export function cardMoneySize(text: string) {
+  return text.length <= 11 ? "text-xl md:text-2xl" : text.length <= 14 ? "text-lg md:text-xl" : "text-base md:text-lg";
 }
 
 /** "1 venda", "3 vendas" */
