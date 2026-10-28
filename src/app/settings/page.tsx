@@ -1,6 +1,7 @@
 
 "use client";
 
+import { haul } from '@/lib/haul';
 import { useEffect, useState, useContext, useRef } from "react";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -392,7 +393,6 @@ export default function SettingsPage() {
       return;
     }
     setIsSubmitting(true);
-    toast({ title: 'A atualizar...', description: 'A guardar os dados da empresa.' });
     const dataToSave = {
       ...companyDetails,
       countEveryDays: countEvery(companyDetails.countEveryDays),
@@ -400,7 +400,8 @@ export default function SettingsPage() {
         Object.entries(docNumberingMap).filter(([_, v]) => v.prefix)
       ),
     };
-    await updateCompany(dataToSave);
+    // a engrenagem a puxar a barra enquanto guarda
+    await haul('settings', 'A guardar os dados da empresa…', 'Dados guardados', () => updateCompany(dataToSave));
     toast({ title: 'Sucesso!', description: 'Os dados da empresa foram atualizados.' });
     setIsSubmitting(false);
   };

@@ -1,5 +1,6 @@
 "use client";
 
+import { haul } from "@/lib/haul";
 import { locationLabel } from '@/lib/sites';
 import { habitualLocation, recordLocation } from "@/lib/habitual-location";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -95,18 +96,22 @@ export default function NewProductionPage() {
         if (location) recordLocation(location);
         const failed: { name: string; error: string }[] = [];
         let done = 0;
-        for (const it of valid) {
-            try {
-                await addProduction({
-                    productName: it.name, quantity: it.n, unit: it.unit, ...(isMultiLocation && location ? { location } : {}), date: day,
-                    ...(it.materials ? { materialsUsed: fromDrafts(it.materials) } : {}),
-                    ...(it.notes && it.notes.trim() ? { notes: it.notes } : {}),
-                }, { silent: true });
-                done++;
-            } catch (e) {
-                failed.push({ name: it.name, error: friendlyError(e, "editar Produção, Inventário e Matéria-Prima") });
+        // a betoneira a puxar a barra enquanto regista (fica vermelha se nada foi registado)
+        await haul("production", "A registar a produção…", "Produção registada", async () => {
+            for (const it of valid) {
+                try {
+                    await addProduction({
+                        productName: it.name, quantity: it.n, unit: it.unit, ...(isMultiLocation && location ? { location } : {}), date: day,
+                        ...(it.materials ? { materialsUsed: fromDrafts(it.materials) } : {}),
+                        ...(it.notes && it.notes.trim() ? { notes: it.notes } : {}),
+                    }, { silent: true });
+                    done++;
+                } catch (e) {
+                    failed.push({ name: it.name, error: friendlyError(e, "editar Produção, Inventário e Matéria-Prima") });
+                }
             }
-        }
+            if (!done) throw new Error("nada registado");
+        }).catch(() => { /* o aviso abaixo explica o que falhou */ });
         setBusy(false);
         const when = dateLabel(day);
         toast({

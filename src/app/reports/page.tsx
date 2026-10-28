@@ -2,6 +2,7 @@
 
 "use client";
 
+import { haul } from '@/lib/haul';
 import { useState, useMemo, useContext } from 'react';
 import { format, startOfDay, endOfDay, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -199,14 +200,16 @@ export default function ReportsPage() {
     }
 
     setIsProcessing(true);
-    toast({ title: "A gerar PDF...", description: "O seu relatório está a ser preparado." });
 
     try {
-      const { generateLocalReportSummary } = await import('@/lib/local-ai');
-      const aiSummary = generateLocalReportSummary(salesForPeriod, companyData?.name || 'nossa empresa', getPeriodDescription());
+      // o gráfico a puxar a barra enquanto prepara o relatório
+      await haul('report', 'A preparar o relatório…', 'Relatório pronto', async () => {
+        const { generateLocalReportSummary } = await import('@/lib/local-ai');
+        const aiSummary = generateLocalReportSummary(salesForPeriod, companyData?.name || 'nossa empresa', getPeriodDescription());
 
-      const { generateReportPDF } = await import('@/lib/pdf-generator');
-      generateReportPDF(salesForPeriod, reportSummary, companyData, selectedDate, aiSummary, getPeriodDescription());
+        const { generateReportPDF } = await import('@/lib/pdf-generator');
+        generateReportPDF(salesForPeriod, reportSummary, companyData, selectedDate, aiSummary, getPeriodDescription());
+      });
 
       toast({ title: "Sucesso!", description: "O seu relatório em PDF foi descarregado." });
 

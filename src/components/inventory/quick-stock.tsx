@@ -1,5 +1,6 @@
 "use client";
 
+import { haul } from "@/lib/haul";
 import { LocationSelectItems } from '@/components/ui/location-select-items';
 import { requireEmailConfirmed } from "@/components/billing/email-confirm";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -642,14 +643,15 @@ export function QuickStock({ initialMode = "in" }: { initialMode?: QuickMode }) 
         if (!(await requireEmailConfirmed())) return; // conta nova: confirma o email antes do primeiro produto
         setSaving(true);
         try {
-            const confirmed = await commitQuickStock({
+            // o empilhador a puxar a barra enquanto grava
+            const confirmed = await haul("stock", mode === "count" ? "A gravar a contagem…" : mode === "out" ? "A registar a saída…" : "A dar entrada no stock…", "Stock actualizado", () => commitQuickStock({
                 firestore,
                 companyId,
                 user: { id: user.id, username: user.username },
                 mode,
                 lines: lineList,
                 note,
-            });
+            }));
             // Anti-roubo: faltas na contagem e saídas por perda/quebra avisam o gestor com o valor.
             if (mode === "count") {
                 const short = lineList.filter((l) => l.systemStock - l.qty > 0.0001);

@@ -1,5 +1,6 @@
 "use client";
 
+import { haul } from '@/lib/haul';
 import { useMemo, useState, useContext, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
@@ -131,7 +132,7 @@ export default function EditUserPage() {
             else if (values.role === 'Dono') finalPermissions = permissionsForDono;
 
             // No servidor: as regras do Firestore não deixam mudar a função de um funcionário.
-            await authedFetch('/api/employees', 'PATCH', {
+            await haul('settings', 'A guardar as alterações…', 'Alterações guardadas', () => authedFetch('/api/employees', 'PATCH', {
                 companyId,
                 employeeId: employeeToEdit.id,
                 username: values.username,
@@ -139,7 +140,7 @@ export default function EditUserPage() {
                 permissions: finalPermissions,
                 // ponto: só para funcionários (Admin e Dono veem sempre tudo)
                 site: values.role === 'Employee' ? (values.site || '') : '',
-            });
+            }));
 
             toast({
                 title: "Registo de Utilizador Atualizado",

@@ -1,6 +1,7 @@
 
 'use client';
 
+import { haul } from '@/lib/haul';
 import { useState, useContext } from 'react';
 import { emailLink, SUPPORT, whatsappLink } from "@/lib/support";
 import { useRouter } from 'next/navigation';
@@ -53,7 +54,12 @@ export default function LoginPage() {
       return;
     }
     try {
-      const success = await login(data.email, data.password);
+      // a chave a puxar a barra enquanto entra (os erros continuam a aparecer no aviso de sempre)
+      const success = await haul('auth', 'A entrar…', 'Bem-vindo', async () => {
+        const ok = await login(data.email, data.password);
+        if (!ok) throw new Error('login');
+        return ok;
+      }).catch(() => false);
       if (success) {
         toast({
           title: 'Login bem-sucedido!',

@@ -1,5 +1,6 @@
 "use client";
 
+import { haul } from "@/lib/haul";
 import { locationLabel } from '@/lib/sites';
 import { useMemo, useState } from "react";
 import { Edit, Loader2, Search } from "lucide-react";
@@ -73,7 +74,7 @@ function EditorBody({ production, onDone }: { production: Production; onDone: ()
         if (busy || !(n > 0) || !dateOk) return;
         setBusy(true);
         try {
-            await editProduction(production.id, { productName: name, quantity: n, unit, date: day, location: isMultiLocation ? location : undefined, notes, materialsUsed: fromDrafts(materials) });
+            await haul("production", "A guardar a produção…", "Produção guardada", () => editProduction(production.id, { productName: name, quantity: n, unit, date: day, location: isMultiLocation ? location : undefined, notes, materialsUsed: fromDrafts(materials) }));
             toast({ title: "Produção corrigida", description: "O stock do produto e da matéria-prima foram acertados." });
             onDone();
         } catch (e) {

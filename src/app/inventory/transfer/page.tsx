@@ -1,4 +1,5 @@
 "use client";
+import { haul } from "@/lib/haul";
 import { locationLabel, sortBySite } from "@/lib/sites";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -74,7 +75,7 @@ export default function TransferStockPage() {
         setBusy(true);
         if (sh.enabled) {
             try {
-                const code = await sh.send(from, to, valid.map(({ row, qty }) => ({ name: row.name, unit: row.unit, qty })));
+                const code = await haul("transfer", "A enviar para o outro ponto…", "Envio registado", () => sh.send(from, to, valid.map(({ row, qty }) => ({ name: row.name, unit: row.unit, qty }))));
                 setBasket({});
                 toast({ title: `Envio ${code} em trânsito`, description: `Saiu de ${locName(from)}. Entra em ${locName(to)} quando lá confirmarem a receção.` });
             } catch (e) {
@@ -84,14 +85,18 @@ export default function TransferStockPage() {
         }
         const failed: string[] = [];
         let done = 0;
-        for (const { row, qty } of valid) {
-            try {
-                const r = await transferStock(row.name, from, to, qty, { silent: true });
-                if (r.ok) done++; else failed.push(`${row.name}: ${r.error}`);
-            } catch (e) {
-                failed.push(`${row.name}: ${e instanceof Error ? e.message : "erro"}`);
+        // o camião a puxar a barra enquanto transfere (fica vermelho se nada passou)
+        await haul("transfer", "A transferir…", "Transferência feita", async () => {
+            for (const { row, qty } of valid) {
+                try {
+                    const r = await transferStock(row.name, from, to, qty, { silent: true });
+                    if (r.ok) done++; else failed.push(`${row.name}: ${r.error}`);
+                } catch (e) {
+                    failed.push(`${row.name}: ${e instanceof Error ? e.message : "erro"}`);
+                }
             }
-        }
+            if (!done) throw new Error("nada transferido");
+        }).catch(() => { /* o aviso abaixo explica o que falhou */ });
         setBusy(false);
         if (done) setBasket((b) => Object.fromEntries(Object.entries(b).filter(([n]) => failed.some((f) => f.startsWith(`${n}:`)))));
         toast({

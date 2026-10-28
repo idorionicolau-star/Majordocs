@@ -1,6 +1,7 @@
 
 'use client';
 
+import { haul } from '@/lib/haul';
 import { useState, useContext, useEffect } from 'react';
 import { savePendingCoupon, PENDING_COUPON_KEY } from '@/components/billing/pending-coupon';
 import { saveOrigin } from '@/components/billing/escalepay-claim';
@@ -82,7 +83,12 @@ export default function RegisterPage() {
 
     keepInvite();
     try {
-      const success = await context.registerCompany(data.companyName, data.adminUsername?.trim() || deriveUsername(data.adminEmail), data.adminEmail, data.adminPassword, data.businessType);
+      const registerCompany = context.registerCompany;
+      const success = await haul('auth', 'A criar a sua empresa…', 'Empresa criada', async () => {
+        const r = await registerCompany(data.companyName, data.adminUsername?.trim() || deriveUsername(data.adminEmail), data.adminEmail, data.adminPassword, data.businessType);
+        if (!r) throw new Error('registo');
+        return r;
+      }).catch(() => false as const);
       if (success === 'existing') {
         dropInvite(); // o código de convite é para empresas novas
         toast({ title: 'Já tinha conta', description: 'Este email já tinha uma empresa — a entrar nela…' });
