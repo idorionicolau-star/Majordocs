@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { LOGO_MAJOR, LOGO_STOCKX } from "./intro-logo";
 import { APP_READY_EVENT, isAppReady } from "@/lib/app-ready";
-import { INTRO_AT_KEY, INTRO_KEY } from "@/lib/intro-gate";
+import { INTRO_AT_KEY, INTRO_KEY, INTRO_PLAY_EVENT } from "@/lib/intro-gate";
 import { BootProgress } from "@/components/layout/boot-progress";
 
 /**
@@ -175,10 +175,18 @@ const ICONS = [StockIcon, SalesIcon, ManageIcon, ControlIcon];
 
 export function IntroSplash() {
     const [phase, setPhase] = useState<"play" | "wait" | "out" | "gone">("play");
+    // cada vez que toca de novo (ao entrar com a senha, só o super-administrador) a árvore é nova: o CSS recomeça
+    const [run, setRun] = useState(0);
     const clockRef = useRef<HTMLSpanElement>(null);
 
     useEffect(() => {
-        if (document.documentElement.dataset.intro === "skip") { setPhase("gone"); return; }
+        const again = () => { delete document.documentElement.dataset.intro; setPhase("play"); setRun((r) => r + 1); };
+        window.addEventListener(INTRO_PLAY_EVENT, again);
+        return () => window.removeEventListener(INTRO_PLAY_EVENT, again);
+    }, []);
+
+    useEffect(() => {
+        if (run === 0 && document.documentElement.dataset.intro === "skip") { setPhase("gone"); return; }
         try { sessionStorage.setItem(INTRO_KEY, "1"); localStorage.setItem(INTRO_AT_KEY, String(Date.now())); } catch { /* navegação privada */ }
         // o fim conta-se pela própria animação CSS (que começou antes do JavaScript): sai se a app estiver pronta, senão espera
         let done = false;
@@ -188,7 +196,7 @@ export function IntroSplash() {
         clock?.finished.then(end, end);
         const cap = setTimeout(() => setPhase("out"), MAX_WAIT * 1000);
         return () => { done = true; clearTimeout(cap); clearTimeout(fallback); };
-    }, []);
+    }, [run]);
 
     useEffect(() => {
         if (phase !== "wait") return;
@@ -208,7 +216,8 @@ export function IntroSplash() {
 
     return (
         <div
-            className={`msx-intro fixed inset-0 z-[300] flex flex-col items-center justify-center overflow-hidden ${phase === "out" ? "msx-i-out" : ""} ${phase === "wait" ? "msx-i-wait" : ""}`}
+            key={run}
+            className={`msx-intro fixed inset-0 z-[450] flex flex-col items-center justify-center overflow-hidden ${phase === "out" ? "msx-i-out" : ""} ${phase === "wait" ? "msx-i-wait" : ""}`}
             style={{ background: "radial-gradient(circle at 50% 42%, #1a2233 0%, #0b0f17 62%)" }}
             onClick={() => setPhase("out")}
             role="presentation"
