@@ -20,6 +20,8 @@ import { useSubscriptionState } from '@/hooks/useSubscriptionState';
 import { links } from '@/lib/deep-links';
 import { isCountableSale } from '@/lib/sale-filters';
 import { canRestartTrial } from '@/lib/trial';
+import { isGuestMode, GUEST_USER, GUEST_COMPANY, exitGuestMode } from '@/lib/guest-mode';
+import { DEMO_PRODUCTS } from '@/lib/demo-data';
 import { TRIAL_DAYS } from '@/lib/plans';
 import { authedFetch } from '@/lib/api-client';
 import { aliasMap, applyAliases } from '@/lib/rename';
@@ -286,6 +288,7 @@ export function useInventoryCore() {
 
   const logout = useCallback(async () => {
     try {
+      exitGuestMode();
       await signOut(auth);
       // onAuthStateChanged will handle the state updates (setUser, setFirebaseUser etc.)
       // and ClientLayout will handle the redirect.
@@ -297,6 +300,21 @@ export function useInventoryCore() {
 
 
   useEffect(() => {
+    if (!firebaseUser && isGuestMode()) {
+      setUser(GUEST_USER);
+      setFirebaseUser({
+        uid: "guest-demo-uid",
+        email: "convidado@majorstockx.demo",
+        displayName: "Convidado (Teste)",
+        isAnonymous: true,
+      } as any);
+      setCompanyId("demo-company");
+      setCompanyData(GUEST_COMPANY);
+      setLoading(false);
+    }
+  }, [firebaseUser]);
+
+  useEffect(() => {
     let cancelled = false;
     const isTransient = (e: unknown) => {
       const code = String((e as { code?: string })?.code || '');
@@ -304,7 +322,8 @@ export function useInventoryCore() {
       return code === 'unavailable' || code === 'deadline-exceeded' || code === 'resource-exhausted' || /offline|network|unavailable/i.test(msg);
     };
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
+
+  const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
       setAuthReady(true);
       if (fbUser) {
         setFirebaseUser(fbUser);
@@ -346,6 +365,19 @@ export function useInventoryCore() {
           }
         }
       } else {
+        if (isGuestMode()) {
+          setUser(GUEST_USER);
+          setFirebaseUser({
+            uid: "guest-demo-uid",
+            email: "convidado@majorstockx.demo",
+            displayName: "Convidado (Teste)",
+            isAnonymous: true,
+          } as any);
+          setCompanyId("demo-company");
+          setCompanyData(GUEST_COMPANY);
+          setLoading(false);
+          return;
+        }
         setUser(null);
         setFirebaseUser(null);
         setCompanyId(null);
@@ -396,6 +428,7 @@ export function useInventoryCore() {
 
 
   const canView = (module: ModulePermission) => {
+    if (isGuestMode() || companyId === 'demo-company') return true;
     if (!user) return false;
     if (user.role === 'Admin' || user.role === 'Dono') return true;
     const level = user.permissions?.[module];
@@ -404,6 +437,7 @@ export function useInventoryCore() {
 
 
   const canEdit = (module: ModulePermission) => {
+    if (isGuestMode() || companyId === 'demo-company') return true;
     if (!user) return false;
     if (user.role === 'Admin') return true;
     if (user.role === 'Dono') return false;
@@ -483,7 +517,7 @@ export function useInventoryCore() {
 
 
   const companyDocRef = useMemoFirebase(() => {
-    if (!firestore || !companyId) return null;
+    if (!firestore || !companyId || companyId === 'demo-company') return null;
     return doc(firestore, `companies`, companyId);
   }, [firestore, companyId]);
 
@@ -542,6 +576,7 @@ export function useInventoryCore() {
 
 
   const products = useMemo(() => {
+    if (isGuestMode() || companyId === 'demo-company') return DEMO_PRODUCTS;
     if (!productsData) return [];
 
     const productMap = new Map<string, Product & { sourceIds: string[] }>();

@@ -35,6 +35,7 @@ import { markAppReady } from '@/lib/app-ready';
 import { clearNavHint } from '@/lib/nav-hint';
 import { INTRO_ALWAYS_KEY, INTRO_PLAY_EVENT } from '@/lib/intro-gate';
 import { isSuperAdminEmail } from '@/lib/super-admin';
+import { isGuestMode, getGuestRemainingMinutes, exitGuestMode } from '@/lib/guest-mode';
 import { AppLoader } from './app-loader';
 import { BootProgress } from './boot-progress';
 import { SubscriptionExpired } from './subscription-expired';
@@ -62,7 +63,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const authContext = React.useContext(InventoryContext);
-  const isManager = authContext?.user?.role === 'Admin' || authContext?.user?.role === 'Dono';
+  const isGuest = typeof window !== 'undefined' && isGuestMode();
+  const isManager = isGuest || authContext?.user?.role === 'Admin' || authContext?.user?.role === 'Dono';
   // página fora do plano da empresa: mostra o que o plano seguinte dá (ver lib/tiers.ts)
   const gatedFeature = featureForPath(pathname);
   const planLocked = !!gatedFeature && !companyHas(authContext?.companyData, gatedFeature);
@@ -103,7 +105,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const isAuthenticated = !!authContext?.firebaseUser;
+    const isAuthenticated = !!authContext?.firebaseUser || isGuest;
 
     // Save current path if authenticated and not on auth pages
     if (isAuthenticated && !isAuthPage && pathname) {
@@ -111,7 +113,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     }
 
     if (isAuthenticated && isAuthPage) {
-      router.replace('/dashboard');
+      router.replace(isGuest ? '/pos?demo=1' : '/dashboard');
     }
 
     if (!isAuthenticated && !isAuthPage && !isPublicPage) {
@@ -155,7 +157,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   // A app carrega por fases (sessão, depois os dados): entre elas, por um instante, parecia pronta. O ecrã de
   // carregamento saía e voltava a entrar, a recomeçar a animação. Agora só sai quando está pronta há 300 ms, com
   // um fade, e fica sempre no mesmo sítio da árvore (nunca é desmontado a meio, a animação não recomeça).
-  const blocking = !isPublicPage && (!!authContext?.loading || (!authContext?.firebaseUser && !isAuthPage));
+  const blocking = !isPublicPage && !isGuest && (!!authContext?.loading || (!authContext?.firebaseUser && !isAuthPage));
   const loaderPhase = useStickyLoader(blocking);
   const waiting = loaderPhase === 'show';
   // a animação de entrada também espera por este "pronto" estável
@@ -193,6 +195,27 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <LoadingBar />
           <NavigationObserver onNavigate={handleNavigationTransition} />
         </Suspense>
+
+        {/* Aviso Modo Convidado */}
+        {!waiting && isGuest && (
+          <div role="status" className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white text-center py-2.5 px-4 text-xs md:text-sm font-medium sticky top-0 z-[60] shadow-md flex flex-wrap justify-center items-center gap-2">
+            <span>⏳ <b>Modo Convidado ({getGuestRemainingMinutes()} min):</b> A testar com 30 produtos de demonstração.</span>
+            <a
+              href="/register"
+              onClick={() => exitGuestMode()}
+              className="bg-white text-blue-700 hover:bg-white/90 px-3 py-1 rounded-md text-xs font-bold transition-all shadow-sm"
+            >
+              Criar Conta Definitiva
+            </a>
+            <button
+              type="button"
+              onClick={() => { exitGuestMode(); window.location.href = '/login'; }}
+              className="text-white/80 hover:text-white underline text-xs ml-1"
+            >
+              Sair do Teste
+            </button>
+          </div>
+        )}
 
         {/* Avisos de subscrição: o pagamento é do Dono / Administrador. Um funcionário não pode pagar — vê só,
             se a conta estiver parada, que deve falar com o responsável (sem preços nem "subscreva"). */}

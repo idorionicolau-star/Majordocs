@@ -17,7 +17,8 @@ import { InventoryContext } from '@/context/inventory-context';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Info } from 'lucide-react';
+import { Info, Sparkles } from 'lucide-react';
+import { enterGuestMode } from '@/lib/guest-mode';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -45,6 +46,15 @@ export default function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
+
+  const handleGuestLogin = () => {
+    enterGuestMode();
+    toast({
+      title: 'Modo Convidado Activado!',
+      description: 'A entrar para testar livremente durante 30 minutos...',
+    });
+    router.push('/pos?demo=1');
+  };
 
   const handleLogin = async (data: LoginFormValues) => {
     setIsLoading(true);
@@ -198,6 +208,17 @@ export default function LoginPage() {
                   Entrar com o Google
                 </>
               )}
+            </Button>
+
+            <Button
+              variant="outline"
+              type="button"
+              disabled={isLoading || isGoogleLoading}
+              onClick={handleGuestLogin}
+              className="w-full border-blue-500/40 bg-blue-50/80 text-blue-700 hover:bg-blue-100 hover:text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50 font-semibold py-2.5 transition-all shadow-sm flex items-center justify-center gap-2"
+            >
+              <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              Experimentar como Convidado (30 min)
             </Button>
           </div>
         </CardContent>
