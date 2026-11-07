@@ -52,6 +52,7 @@ function serverConfirmed(firestore: Firestore, companyId: string, stops: Unsubsc
 export function PullToRefresh() {
     const firestore = useFirestore();
     const companyId = useContext(InventoryContext)?.companyId;
+    const isGuest = !!useContext(InventoryContext)?.isGuest;
     const box = useRef<HTMLDivElement>(null);
     const obj = useRef<HTMLDivElement>(null);
     const busy = useRef(false);
@@ -82,9 +83,12 @@ export function PullToRefresh() {
             const stops: Unsubscribe[] = [];
             try {
                 // refaz a ligação (as listas voltam a sincronizar sozinhas) e espera que o servidor as confirme
-                await disableNetwork(firestore);
-                await enableNetwork(firestore);
-                if (companyId) await Promise.race([serverConfirmed(firestore, companyId, stops), timeout(10000)]);
+                // convidado: os dados estão no aparelho, não há servidor a confirmar
+                if (!isGuest) {
+                    await disableNetwork(firestore);
+                    await enableNetwork(firestore);
+                }
+                if (companyId && !isGuest) await Promise.race([serverConfirmed(firestore, companyId, stops), timeout(10000)]);
             } catch {
                 result = navigator.onLine ? "unreachable" : "offline";
                 enableNetwork(firestore).catch(() => {});

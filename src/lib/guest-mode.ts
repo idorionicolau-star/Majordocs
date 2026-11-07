@@ -652,7 +652,7 @@ export function addGuestSale(sale: Sale): void {
     userName: sale.soldBy || GUEST_USER.username,
     timestamp: sale.date || new Date().toISOString(),
   };
-  writeStore("movements", [movement, ...getGuestStockMovements()]);
+  writeStore("movements", [movement, ...getRawGuestMovements()]);
 
   const customers = getGuestCustomers();
   const match = customers.find((c) => (sale.customerId ? c.id === sale.customerId : c.name === sale.clientName));
@@ -706,8 +706,33 @@ export function deleteGuestCustomer(id: string): void {
 
 // --- Só leitura (a demonstração não os altera) -------------------------------
 
-export function getGuestStockMovements(): StockMovement[] {
+/**
+ * A app lê `timestamp` dos movimentos como um Timestamp do Firestore (`.toDate()`, `.toMillis()`): o dashboard e o
+ * histórico rebentavam com "timestamp.toDate is not a function". No aparelho guarda-se texto ISO (o JSON não guarda
+ * funções); ao ler, devolve-se um objeto com o mesmo formato do Timestamp.
+ */
+function fsTimestamp(v: unknown) {
+  const raw = v as { seconds?: number; toDate?: () => Date } | string | number | Date | null | undefined;
+  let ms = Date.now();
+  if (raw instanceof Date) ms = raw.getTime();
+  else if (typeof raw === "string" || typeof raw === "number") ms = new Date(raw).getTime();
+  else if (raw && typeof raw.seconds === "number") ms = raw.seconds * 1000;
+  if (!Number.isFinite(ms)) ms = Date.now();
+  return {
+    seconds: Math.floor(ms / 1000),
+    nanoseconds: (ms % 1000) * 1e6,
+    toDate: () => new Date(ms),
+    toMillis: () => ms,
+  };
+}
+
+/** Movimentos como se guardam no aparelho (timestamp em texto ISO). */
+function getRawGuestMovements(): StockMovement[] {
   return readStore<StockMovement[]>("movements", () => INITIAL_GUEST_MOVEMENTS);
+}
+
+export function getGuestStockMovements(): StockMovement[] {
+  return getRawGuestMovements().map((m) => ({ ...m, timestamp: fsTimestamp(m.timestamp) }));
 }
 
 export function getGuestOrders(): Order[] {

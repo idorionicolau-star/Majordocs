@@ -141,7 +141,7 @@ describe('catálogos de demonstração', () => {
     expect(GUEST_PRODUCTS).toHaveLength(30);
     const names = GUEST_COMPANY.locations!.map((l) => l.name);
     expect(names).toEqual([...GUEST_LOCATIONS]);
-    expect(GUEST_PRODUCTS.every((p) => names.includes(p.location))).toBe(true);
+    expect(GUEST_PRODUCTS.every((p) => names.includes(p.location ?? ''))).toBe(true);
     getGuestSales().forEach((s) => expect(names).toContain(s.location));
     getGuestStockMovements().forEach((m) => {
       if (m.fromLocationId) expect(names).toContain(m.fromLocationId);
@@ -154,5 +154,33 @@ describe('catálogos de demonstração', () => {
     expect(guestLocation('Prateleira F1')).toBe('Loja Principal');
     expect(guestLocation('Setor Tintas')).toBe('Armazém Principal');
     expect(guestLocation('')).toBe('Armazém Principal');
+  });
+});
+
+describe('timestamp dos movimentos (como o do Firestore)', () => {
+  it('tem toDate() e toMillis(): o dashboard e o histórico dependem disto', () => {
+    enterGuestMode();
+    const movements = getGuestStockMovements();
+    expect(movements.length).toBeGreaterThan(0);
+    movements.forEach((m) => {
+      const ts = m.timestamp as { toDate: () => Date; toMillis: () => number; seconds: number };
+      expect(typeof ts.toDate).toBe('function');
+      expect(ts.toDate()).toBeInstanceOf(Date);
+      expect(Number.isNaN(ts.toDate().getTime())).toBe(false);
+      expect(ts.toMillis()).toBe(ts.toDate().getTime());
+      expect(ts.seconds).toBe(Math.floor(ts.toMillis() / 1000));
+    });
+  });
+
+  it('continua a funcionar depois de uma venda e de ler várias vezes (nada de objetos gravados)', () => {
+    enterGuestMode();
+    addGuestSale(sale());
+    getGuestStockMovements();
+    addGuestSale(sale({ id: 'guest-sale-2', quantity: 2, subtotal: 1160, totalValue: 1160 }));
+    const movements = getGuestStockMovements();
+    expect(movements[0].reason).toContain('VD-2026/0999');
+    movements.forEach((m) => expect(Number.isNaN((m.timestamp as { toDate: () => Date }).toDate().getTime())).toBe(false));
+    const stored = JSON.parse(localStorage.getItem('majorstockx-guest-movements')!);
+    stored.forEach((m: { timestamp: unknown }) => expect(typeof m.timestamp).toBe('string'));
   });
 });
