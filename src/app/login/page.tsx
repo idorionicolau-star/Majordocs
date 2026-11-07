@@ -51,9 +51,9 @@ export default function LoginPage() {
     enterGuestMode();
     toast({
       title: 'Modo Convidado Activado!',
-      description: 'A entrar para testar livremente durante 30 minutos...',
+      description: 'A entrar com dados completos de demonstração dos últimos 30 dias...',
     });
-    router.push('/pos?demo=1');
+    router.push('/dashboard');
   };
 
   const handleLogin = async (data: LoginFormValues) => {

@@ -1,6 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Expense } from '@/lib/types';
+import { isGuestMode, getGuestExpenses } from '@/lib/guest-mode';
 import { useInventory } from '@/context/inventory-context';
 import { db } from '@/firebase/index';
 import { collection, onSnapshot, query, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
@@ -24,6 +25,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (companyId === 'demo-company' || isGuestMode()) {
+            setExpenses(getGuestExpenses());
+            setLoading(false);
+            return;
+        }
+
         if (!companyId || !canFinance) {
             setExpenses([]);
             setLoading(false);
@@ -52,6 +59,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }, [companyId, canFinance]);
 
     const addExpense = async (expenseData: Omit<Expense, 'id' | 'registeredBy'>) => {
+        if (companyId === 'demo-company' || isGuestMode()) {
+            const newE: Expense = {
+                id: `exp-${Date.now()}`,
+                ...expenseData,
+                registeredBy: user?.username || 'Gestor Comercial',
+            };
+            setExpenses(prev => [newE, ...prev]);
+            toast({ title: 'Despesa registada', description: `${expenseData.description}` });
+            return;
+        }
         if (!companyId || !user) return;
         try {
             const expensesRef = collection(db, `companies/${companyId}/expenses`);

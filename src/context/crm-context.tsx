@@ -1,6 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Customer } from '@/lib/types';
+import { isGuestMode, getGuestCustomers } from '@/lib/guest-mode';
 import { useInventory } from '@/context/inventory-context';
 import { db } from '@/firebase/index';
 import { collection, onSnapshot, query, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
@@ -26,6 +27,12 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     const [retry, setRetry] = useState(0);
 
     useEffect(() => {
+        if (companyId === 'demo-company' || isGuestMode()) {
+            setCustomers(getGuestCustomers());
+            setLoading(false);
+            return;
+        }
+
         if (!companyId || !allowed) {
             setCustomers([]);
             setLoading(false);
@@ -66,6 +73,20 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     }, [companyId, allowed, retry]);
 
     const addCustomer = async (customerData: Omit<Customer, 'id' | 'totalPurchases' | 'lastVisit'>): Promise<string | undefined> => {
+        if (companyId === 'demo-company' || isGuestMode()) {
+            const newC: Customer = {
+                id: `cust-${Date.now()}`,
+                name: customerData.name,
+                phone: customerData.phone,
+                email: customerData.email,
+                notes: customerData.notes,
+                totalPurchases: 0,
+                lastVisit: new Date().toISOString(),
+            };
+            setCustomers(prev => [...prev, newC]);
+            toast({ title: 'Cliente adicionado com sucesso!' });
+            return newC.id;
+        }
         if (!companyId || !user) return undefined;
         try {
             const customersRef = collection(db, `companies/${companyId}/customers`);

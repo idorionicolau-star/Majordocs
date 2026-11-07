@@ -20,7 +20,7 @@ import { useSubscriptionState } from '@/hooks/useSubscriptionState';
 import { links } from '@/lib/deep-links';
 import { isCountableSale } from '@/lib/sale-filters';
 import { canRestartTrial } from '@/lib/trial';
-import { isGuestMode, GUEST_USER, GUEST_COMPANY, exitGuestMode } from '@/lib/guest-mode';
+import { isGuestMode, GUEST_USER, GUEST_COMPANY, exitGuestMode, getGuestProducts, getGuestSales, getGuestStockMovements, getGuestOrders, getGuestProductions, getGuestNotifications } from '@/lib/guest-mode';
 import { DEMO_PRODUCTS } from '@/lib/demo-data';
 import { TRIAL_DAYS } from '@/lib/plans';
 import { authedFetch } from '@/lib/api-client';
@@ -301,6 +301,7 @@ export function useInventoryCore() {
 
   useEffect(() => {
     if (!firebaseUser && isGuestMode()) {
+      setNotifications(getGuestNotifications());
       setUser(GUEST_USER);
       setFirebaseUser({
         uid: "guest-demo-uid",
@@ -563,10 +564,22 @@ export function useInventoryCore() {
   // Produtos que mudaram de nome: o histórico (gravado com o nome antigo, que não se reescreve) aparece
   // com o nome actual em todas as páginas — relatórios, histórico do produto, reservas, encomendas.
   const aliases = useMemo(() => aliasMap(catalogProductsData, productsData), [catalogProductsData, productsData]);
-  const salesData = useMemo(() => applyAliases(salesRaw, aliases), [salesRaw, aliases]);
-  const productionsData = useMemo(() => applyAliases(productionsRaw, aliases), [productionsRaw, aliases]);
-  const ordersData = useMemo(() => applyAliases(ordersRaw, aliases), [ordersRaw, aliases]);
-  const stockMovementsData = useMemo(() => applyAliases(stockMovementsRaw, aliases), [stockMovementsRaw, aliases]);
+  const salesData = useMemo(() => {
+    if (isGuestMode() || companyId === 'demo-company') return getGuestSales();
+    return applyAliases(salesRaw, aliases);
+  }, [salesRaw, aliases, companyId]);
+  const productionsData = useMemo(() => {
+    if (isGuestMode() || companyId === 'demo-company') return getGuestProductions();
+    return applyAliases(productionsRaw, aliases);
+  }, [productionsRaw, aliases, companyId]);
+  const ordersData = useMemo(() => {
+    if (isGuestMode() || companyId === 'demo-company') return getGuestOrders();
+    return applyAliases(ordersRaw, aliases);
+  }, [ordersRaw, aliases, companyId]);
+  const stockMovementsData = useMemo(() => {
+    if (isGuestMode() || companyId === 'demo-company') return getGuestStockMovements();
+    return applyAliases(stockMovementsRaw, aliases);
+  }, [stockMovementsRaw, aliases, companyId]);
 
   const { data: catalogCategoriesData, isLoading: catalogCategoriesLoading } = useCollection<CatalogCategory>(catalogCategoriesCollectionRef);
 
@@ -576,7 +589,7 @@ export function useInventoryCore() {
 
 
   const products = useMemo(() => {
-    if (isGuestMode() || companyId === 'demo-company') return DEMO_PRODUCTS;
+    if (isGuestMode() || companyId === 'demo-company') return getGuestProducts();
     if (!productsData) return [];
 
     const productMap = new Map<string, Product & { sourceIds: string[] }>();

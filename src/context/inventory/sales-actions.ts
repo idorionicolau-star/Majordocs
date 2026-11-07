@@ -24,6 +24,21 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
     }
+    if (isGuestMode() || companyId === 'demo-company') {
+      const guideNumber = `VD-${new Date().getFullYear()}/${String(Math.floor(Math.random() * 800) + 200).padStart(4, '0')}`;
+      const created: Sale = {
+        id: `guest-sale-${Date.now()}`,
+        ...newSaleData,
+        guideNumber,
+        soldBy: user?.username || 'Gestor Comercial',
+        status: newSaleData.status || 'Pago',
+      };
+      addGuestSale(created);
+      setLastSaleTimestamp(Date.now());
+      toast({ title: 'Venda registada com sucesso!', description: `Documento ${guideNumber} emitido.` });
+      return;
+    }
+
     if (!firestore || !companyId || !productsCollectionRef) throw new Error("Firestore não está pronto.");
 
     const settings = companyData?.notificationSettings;
@@ -243,6 +258,40 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
     }
+    if (isGuestMode() || companyId === 'demo-company') {
+      const nowIso = saleData.date || new Date().toISOString();
+      const guideNumber = `VD-${new Date().getFullYear()}/${String(Math.floor(Math.random() * 800) + 200).padStart(4, '0')}`;
+      const created: Sale[] = items.map((item, idx) => ({
+        id: `guest-sale-${Date.now()}-${idx}`,
+        date: nowIso,
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        unit: item.unit || 'un',
+        unitPrice: item.unitPrice,
+        unitCost: item.originalCost || item.unitPrice * 0.75,
+        subtotal: item.subtotal,
+        totalValue: item.subtotal,
+        amountPaid: item.subtotal,
+        soldBy: user?.username || 'Gestor Comercial',
+        guideNumber,
+        location: item.location || 'Armazém Principal',
+        customerId: saleData.customerId,
+        clientName: saleData.clientName || 'Consumidor Final (Balcão)',
+        status: 'Pago',
+        documentType: saleData.documentType || 'Venda a Dinheiro',
+        paymentMethod: saleData.paymentMethod || 'Numerário',
+        transactionId: `txn-${Date.now()}`,
+      }));
+      created.forEach(addGuestSale);
+      setLastSaleTimestamp(Date.now());
+      toast({
+        title: 'Venda registada com sucesso!',
+        description: `Documento ${guideNumber} emitido. O stock e os relatórios foram actualizados.`,
+      });
+      return created;
+    }
+
     if (!firestore || !companyId || !productsCollectionRef || !user) throw new Error("Firestore não está pronto.");
     if (!items || items.length === 0) throw new Error("O carrinho está vazio.");
 
