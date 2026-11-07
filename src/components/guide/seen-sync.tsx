@@ -14,9 +14,11 @@ export function SeenSync() {
     const ctx = useContext(InventoryContext);
     const firestore = useFirestore();
     const uid = ctx?.firebaseUser?.uid;
+    const isGuest = !!ctx?.isGuest;
 
     useEffect(() => {
-        if (!firestore || !uid) return;
+        // convidado: não tem conta no servidor — fica só o que está no aparelho (sem ler nem gravar users/guest-demo-uid)
+        if (!firestore || !uid || isGuest) return;
         let alive = true;
         const ref = doc(firestore, `users/${uid}`);
         const write = (names: string[]) => {
@@ -53,7 +55,7 @@ export function SeenSync() {
             alive = false;
             setSeenRemote(null);
         };
-    }, [firestore, uid]);
+    }, [firestore, uid, isGuest]);
 
     return null;
 }

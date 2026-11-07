@@ -45,14 +45,15 @@ function useFeed() {
     const ctx = useContext(InventoryContext);
     const companyId = ctx?.companyId;
     const user = ctx?.user;
+    const isGuest = !!ctx?.isGuest;
     const isManager = !!user && (user.role === "Admin" || user.role === "Dono");
     const [items, setItems] = useState<FeedItem[]>([]);
 
     useEffect(() => {
-        if (!companyId || !user) return;
+        if (!companyId || !user || isGuest) return; // o convidado não tem feed no servidor
         const q = query(collection(firestore, `companies/${companyId}/notifications`), orderBy("createdAt", "desc"), limit(60));
         return onSnapshot(q, (snap) => setItems(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<FeedItem, "id">) }))), (e) => console.warn("[feed]", e));
-    }, [firestore, companyId, user]);
+    }, [firestore, companyId, user, isGuest]);
 
     const visible = useMemo(
         () => items.filter((n) => (n.actorId !== user?.id || n.type === "stock") && (n.audience !== "managers" || isManager)),

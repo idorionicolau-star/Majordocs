@@ -40,13 +40,13 @@ function useIsManager() {
 /** Live list of price reviews for managers. */
 export function usePriceReviews(pendingOnly: boolean) {
     const firestore = useFirestore();
-    const { companyId } = useInventory();
+    const { companyId, isGuest } = useInventory();
     const isManager = useIsManager();
     const [items, setItems] = useState<PriceReview[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!companyId || !isManager) { setItems([]); setLoading(false); return; }
+        if (!companyId || !isManager || isGuest) { setItems([]); setLoading(false); return; }
         const ref = collection(firestore, `companies/${companyId}/priceReviews`);
         const q = pendingOnly ? query(ref, where("status", "==", "pending")) : query(ref, orderBy("createdAt", "desc"), limit(60));
         return onSnapshot(q, (snap) => {
@@ -55,7 +55,7 @@ export function usePriceReviews(pendingOnly: boolean) {
             setItems(list);
             setLoading(false);
         }, (e) => { console.warn("[priceReviews]", e); setLoading(false); });
-    }, [firestore, companyId, isManager, pendingOnly]);
+    }, [firestore, companyId, isManager, isGuest, pendingOnly]);
 
     return { items, loading, isManager };
 }
