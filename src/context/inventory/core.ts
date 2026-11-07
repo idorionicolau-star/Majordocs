@@ -567,7 +567,7 @@ export function useInventoryCore() {
   const salesData = useMemo(() => {
     if (isGuestMode() || companyId === 'demo-company') return getGuestSales();
     return applyAliases(salesRaw, aliases);
-  }, [salesRaw, aliases, companyId]);
+  }, [salesRaw, aliases, companyId, lastSaleTimestamp]);
   const productionsData = useMemo(() => {
     if (isGuestMode() || companyId === 'demo-company') return getGuestProductions();
     return applyAliases(productionsRaw, aliases);

@@ -394,6 +394,7 @@ export const INITIAL_GUEST_MOVEMENTS: StockMovement[] = [
     reason: "Entrada Fornecedor — Limak Cimentos (Factura Forn. 8812)",
     userId: "guest-user",
     userName: "Gestor Comercial",
+    timestamp: daysAgoIso(20, 9, 0),
   },
   {
     id: "mov-02",
@@ -405,6 +406,7 @@ export const INITIAL_GUEST_MOVEMENTS: StockMovement[] = [
     reason: "Lote de Produção Própria #142 (Vibropensada)",
     userId: "guest-user",
     userName: "Gestor Comercial",
+    timestamp: daysAgoIso(15, 14, 0),
   },
   {
     id: "mov-03",
@@ -416,6 +418,7 @@ export const INITIAL_GUEST_MOVEMENTS: StockMovement[] = [
     reason: "Descarga de Ferro da Matola",
     userId: "guest-user",
     userName: "Gestor Comercial",
+    timestamp: daysAgoIso(10, 11, 0),
   },
   {
     id: "mov-04",
@@ -427,6 +430,7 @@ export const INITIAL_GUEST_MOVEMENTS: StockMovement[] = [
     reason: "Perda/Quebra no manuseio de empilhador",
     userId: "guest-user",
     userName: "Gestor Comercial",
+    timestamp: daysAgoIso(8, 16, 0),
   },
   {
     id: "mov-05",
@@ -438,6 +442,7 @@ export const INITIAL_GUEST_MOVEMENTS: StockMovement[] = [
     reason: "Saco rasgado durante descarregamento",
     userId: "guest-user",
     userName: "Gestor Comercial",
+    timestamp: daysAgoIso(4, 15, 0),
   },
   {
     id: "mov-06",
@@ -449,6 +454,7 @@ export const INITIAL_GUEST_MOVEMENTS: StockMovement[] = [
     reason: "Auditoria e Contagem Física de Stock (Conferido)",
     userId: "guest-user",
     userName: "Gestor Comercial",
+    timestamp: daysAgoIso(2, 10, 0),
   }
 ];
 
@@ -468,7 +474,9 @@ export const INITIAL_GUEST_ORDERS: Order[] = [
     clientName: "Construtora Horizonte & Filhos, Lda",
     deliveryDate: daysAgoIso(-2, 10, 0), // Entrega daqui a 2 dias
     location: "Armazém B",
-    status: "Pendente"
+    status: "Pendente",
+    quantityProduced: 0,
+    productionLogs: []
   },
   {
     id: "ord-02",
@@ -481,7 +489,9 @@ export const INITIAL_GUEST_ORDERS: Order[] = [
     clientName: "Eng. Carlos Machava",
     deliveryDate: daysAgoIso(3, 14, 0),
     location: "Pátio de Produção",
-    status: "Concluída"
+    status: "Concluída",
+    quantityProduced: 500,
+    productionLogs: []
   }
 ];
 
