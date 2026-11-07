@@ -18,7 +18,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Info, Sparkles } from 'lucide-react';
-import { enterGuestMode } from '@/lib/guest-mode';
+import { enterGuestMode, applyServerRemaining } from '@/lib/guest-mode';
+import { guestTrialStart } from '@/lib/guest-trial-client';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -47,8 +48,30 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  const handleGuestLogin = () => {
-    enterGuestMode();
+  const [isGuestLoading, setIsGuestLoading] = useState(false);
+
+  const handleGuestLogin = async () => {
+    setIsGuestLoading(true);
+    // O servidor guarda o tempo por aparelho e por rede: sair e voltar continua a contagem (não recomeça). Sem rede
+    // (null) vale o relógio do aparelho.
+    const reply = await guestTrialStart();
+    if (reply?.tracked && !reply.allowed) {
+      setIsGuestLoading(false);
+      toast({
+        variant: 'destructive',
+        title: reply.reason === 'network' ? 'Testes a mais nesta rede' : 'Tempo de teste esgotado',
+        description: reply.reason === 'network'
+          ? 'Esta rede já abriu muitos testes. Crie a sua conta para continuar.'
+          : 'Os 30 minutos de teste já foram usados neste aparelho. Crie a sua conta para continuar.',
+      });
+      return;
+    }
+    if (reply?.tracked) applyServerRemaining(reply.remainingMs);
+    if (!enterGuestMode()) {
+      setIsGuestLoading(false);
+      toast({ variant: 'destructive', title: 'Tempo de teste esgotado', description: 'Os 30 minutos de teste já foram usados neste aparelho. Crie a sua conta para continuar.' });
+      return;
+    }
     toast({
       title: 'Modo Convidado Activado!',
       description: 'A entrar com dados completos de demonstração dos últimos 30 dias...',
@@ -221,7 +244,7 @@ export default function LoginPage() {
 
             <Button
               type="button"
-              disabled={isLoading || isGoogleLoading}
+              disabled={isLoading || isGoogleLoading || isGuestLoading}
               onClick={handleGuestLogin}
               className="group relative h-auto w-full overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 px-4 py-3 text-white shadow-lg shadow-blue-600/30 ring-1 ring-white/20 transition-all hover:scale-[1.01] hover:brightness-110 hover:shadow-xl hover:shadow-blue-600/40 active:scale-[0.99]"
             >
@@ -229,7 +252,7 @@ export default function LoginPage() {
               <span className="relative flex items-center justify-center gap-3">
                 <Sparkles className="h-6 w-6 shrink-0" />
                 <span className="flex flex-col items-start text-left leading-tight">
-                  <span className="text-base font-bold">Experimentar como Convidado</span>
+                  <span className="text-base font-bold">{isGuestLoading ? 'A abrir o teste...' : 'Experimentar como Convidado'}</span>
                   <span className="text-xs font-normal text-white/85">Sem registo · 30 min com dados de exemplo</span>
                 </span>
               </span>
