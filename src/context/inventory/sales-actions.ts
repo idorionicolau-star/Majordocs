@@ -13,10 +13,10 @@ import type { ProductActions } from './product-actions';
 import { links } from '@/lib/deep-links';
 import { locationIn, pickActive } from '@/lib/product-ref';
 import { expectedReserved } from '@/lib/reserved-stock';
-import { isGuestMode, addGuestSale } from '@/lib/guest-mode';
+import { addGuestSale } from '@/lib/guest-mode';
 
 export function useSalesActions(core: InventoryCore, deps: { product_actions: ProductActions }) {
-  const { isReadOnly, toast, firestore, companyId, productsCollectionRef, companyData, isMultiLocation, locations, user, sendPush, triggerEmailAlert, setLastSaleTimestamp, products, notifyManagers, isManagerUser, productsData, salesData, ordersData } = core;
+  const { isGuest, isReadOnly, toast, firestore, companyId, productsCollectionRef, companyData, isMultiLocation, locations, user, sendPush, triggerEmailAlert, setLastSaleTimestamp, products, notifyManagers, isManagerUser, productsData, salesData, ordersData } = core;
   const { checkStockAndNotify } = deps.product_actions;
 
 
@@ -25,7 +25,7 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
     }
-    if (isGuestMode() || companyId === 'demo-company') {
+    if (isGuest) {
       const guideNumber = `VD-${new Date().getFullYear()}/${String(Math.floor(Math.random() * 800) + 200).padStart(4, '0')}`;
       const created: Sale = {
         id: `guest-sale-${Date.now()}`,
@@ -233,7 +233,7 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
     }
 
     setLastSaleTimestamp(Date.now());
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, productsData, toast, triggerEmailAlert, user, sendPush]);
+  }, [isGuest, firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, productsData, toast, triggerEmailAlert, user, sendPush]);
 
 
   const addBulkSale = useCallback(async (
@@ -259,7 +259,7 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
       toast({ variant: "destructive", title: "Conta em modo leitura", description: "Modo leitura activo — contacte o suporte para reactivar o acesso completo." });
       return;
     }
-    if (isGuestMode() || companyId === 'demo-company') {
+    if (isGuest) {
       const nowIso = saleData.date || new Date().toISOString();
       const guideNumber = `VD-${new Date().getFullYear()}/${String(Math.floor(Math.random() * 800) + 200).padStart(4, '0')}`;
       const created: Sale[] = items.map((item, idx) => ({
@@ -476,7 +476,7 @@ export function useSalesActions(core: InventoryCore, deps: { product_actions: Pr
 
     setLastSaleTimestamp(Date.now());
     return createdSalesForOuterScope;
-  }, [firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, products, productsData, toast, triggerEmailAlert, sendPush, user, notifyManagers]);
+  }, [isGuest, firestore, companyId, productsCollectionRef, isMultiLocation, locations, companyData, products, productsData, toast, triggerEmailAlert, sendPush, user, notifyManagers]);
 
 
 

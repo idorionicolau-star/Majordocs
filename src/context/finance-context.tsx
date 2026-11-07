@@ -1,7 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Expense } from '@/lib/types';
-import { isGuestMode, getGuestExpenses } from '@/lib/guest-mode';
+import { isGuestCompany, getGuestExpenses, addGuestExpense, updateGuestExpense, deleteGuestExpense, GUEST_DATA_EVENT } from '@/lib/guest-mode';
 import { useInventory } from '@/context/inventory-context';
 import { db } from '@/firebase/index';
 import { collection, onSnapshot, query, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
@@ -24,11 +24,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const isGuest = isGuestCompany(companyId);
+
     useEffect(() => {
-        if (companyId === 'demo-company' || isGuestMode()) {
-            setExpenses(getGuestExpenses());
+        if (isGuest) {
+            const load = () => setExpenses(getGuestExpenses());
+            load();
             setLoading(false);
-            return;
+            window.addEventListener(GUEST_DATA_EVENT, load);
+            return () => window.removeEventListener(GUEST_DATA_EVENT, load);
         }
 
         if (!companyId || !canFinance) {
@@ -56,16 +60,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         });
 
         return () => unsubscribe();
-    }, [companyId, canFinance]);
+    }, [companyId, canFinance, isGuest]);
 
     const addExpense = async (expenseData: Omit<Expense, 'id' | 'registeredBy'>) => {
-        if (companyId === 'demo-company' || isGuestMode()) {
+        if (isGuest) {
             const newE: Expense = {
                 id: `exp-${Date.now()}`,
                 ...expenseData,
                 registeredBy: user?.username || 'Gestor Comercial',
             };
-            setExpenses(prev => [newE, ...prev]);
+            addGuestExpense(newE);
             toast({ title: 'Despesa registada', description: `${expenseData.description}` });
             return;
         }
@@ -86,6 +90,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     };
 
     const updateExpense = async (id: string, data: Partial<Expense>) => {
+        if (isGuest) {
+            updateGuestExpense(id, data);
+            toast({ title: "Despesa atualizada" });
+            return;
+        }
         if (!companyId) return;
         try {
             const expenseRef = doc(db, `companies/${companyId}/expenses`, id);
@@ -99,6 +108,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     };
 
     const deleteExpense = async (id: string) => {
+        if (isGuest) {
+            deleteGuestExpense(id);
+            toast({ title: "Despesa removida" });
+            return;
+        }
         if (!companyId) return;
         try {
             const expenseRef = doc(db, `companies/${companyId}/expenses`, id);

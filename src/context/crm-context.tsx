@@ -1,7 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Customer } from '@/lib/types';
-import { isGuestMode, getGuestCustomers } from '@/lib/guest-mode';
+import { isGuestCompany, getGuestCustomers, addGuestCustomer, updateGuestCustomer, deleteGuestCustomer, GUEST_DATA_EVENT } from '@/lib/guest-mode';
 import { useInventory } from '@/context/inventory-context';
 import { db } from '@/firebase/index';
 import { collection, onSnapshot, query, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
@@ -26,11 +26,16 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     // Um erro desliga o onSnapshot para sempre; este contador volta a ligá-lo.
     const [retry, setRetry] = useState(0);
 
+    const isGuest = isGuestCompany(companyId);
+
     useEffect(() => {
-        if (companyId === 'demo-company' || isGuestMode()) {
-            setCustomers(getGuestCustomers());
+        if (isGuest) {
+            // dados do convidado: guardados no aparelho; voltam a ler-se sempre que mudam (ex.: uma venda soma ao cliente)
+            const load = () => setCustomers(getGuestCustomers());
+            load();
             setLoading(false);
-            return;
+            window.addEventListener(GUEST_DATA_EVENT, load);
+            return () => window.removeEventListener(GUEST_DATA_EVENT, load);
         }
 
         if (!companyId || !allowed) {
@@ -70,10 +75,10 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         });
 
         return () => { unsubscribe(); if (retryTimer) clearTimeout(retryTimer); };
-    }, [companyId, allowed, retry]);
+    }, [companyId, allowed, retry, isGuest]);
 
     const addCustomer = async (customerData: Omit<Customer, 'id' | 'totalPurchases' | 'lastVisit'>): Promise<string | undefined> => {
-        if (companyId === 'demo-company' || isGuestMode()) {
+        if (isGuest) {
             const newC: Customer = {
                 id: `cust-${Date.now()}`,
                 name: customerData.name,
@@ -83,7 +88,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
                 totalPurchases: 0,
                 lastVisit: new Date().toISOString(),
             };
-            setCustomers(prev => [...prev, newC]);
+            addGuestCustomer(newC);
             toast({ title: 'Cliente adicionado com sucesso!' });
             return newC.id;
         }
@@ -107,6 +112,11 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     };
 
     const updateCustomer = async (id: string, data: Partial<Customer>) => {
+        if (isGuest) {
+            updateGuestCustomer(id, data);
+            toast({ title: "Cliente atualizado" });
+            return;
+        }
         if (!companyId) return;
         try {
             const customerRef = doc(db, `companies/${companyId}/customers`, id);
@@ -120,6 +130,11 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     };
 
     const deleteCustomer = async (id: string) => {
+        if (isGuest) {
+            deleteGuestCustomer(id);
+            toast({ title: "Cliente removido" });
+            return;
+        }
         if (!companyId) return;
         try {
             const customerRef = doc(db, `companies/${companyId}/customers`, id);

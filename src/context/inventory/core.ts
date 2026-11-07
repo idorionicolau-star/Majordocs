@@ -20,8 +20,7 @@ import { useSubscriptionState } from '@/hooks/useSubscriptionState';
 import { links } from '@/lib/deep-links';
 import { isCountableSale } from '@/lib/sale-filters';
 import { canRestartTrial } from '@/lib/trial';
-import { isGuestMode, GUEST_USER, GUEST_COMPANY, exitGuestMode, getGuestProducts, getGuestSales, getGuestStockMovements, getGuestOrders, getGuestProductions, getGuestNotifications } from '@/lib/guest-mode';
-import { DEMO_PRODUCTS } from '@/lib/demo-data';
+import { isGuestMode, isGuestCompany, getGuestRemainingSeconds, GUEST_USER, GUEST_COMPANY, GUEST_COMPANY_ID, GUEST_SESSION_EVENT, GUEST_DATA_EVENT, exitGuestMode, getGuestProducts, getGuestSales, getGuestStockMovements, getGuestOrders, getGuestProductions, getGuestNotifications } from '@/lib/guest-mode';
 import { TRIAL_DAYS } from '@/lib/plans';
 import { authedFetch } from '@/lib/api-client';
 import { aliasMap, applyAliases } from '@/lib/rename';
@@ -39,6 +38,12 @@ export function useInventoryCore() {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseAuthUser | null>(null);
 
   const [companyId, setCompanyId] = useState<string | null>(null);
+  // Sessão de convidado = a empresa fictícia está activa. Decide-se por aqui (estado da sessão), nunca só pela chave do
+  // localStorage: senão quem entra com a conta real dentro dos 30 minutos via dados fictícios no lugar dos seus.
+  const isGuest = isGuestCompany(companyId);
+  const companyIdRef = useRef<string | null>(null);
+  companyIdRef.current = companyId;
+  const [guestVersion, setGuestVersion] = useState(0);
 
   const [loading, setLoading] = useState(true);
 
@@ -84,7 +89,7 @@ export function useInventoryCore() {
   // Shared activity feed (Facebook-style): companies/{id}/notifications, visible on every device in real time.
   // `dedupeId` makes the doc id fixed so the same alert (e.g. critical stock of a product today) is only posted once.
   const postFeed = useCallback(async (n: { type: string; title: string; body?: string; link?: string; audience?: 'all' | 'managers'; dedupeId?: string }): Promise<boolean> => {
-    if (!firestore || !companyId || !user) return false;
+    if (!firestore || !companyId || isGuest || !user) return false;
     const col = collection(firestore, `companies/${companyId}/notifications`);
     const ref = n.dedupeId ? doc(col, n.dedupeId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 140)) : doc(col);
     try {
@@ -103,7 +108,7 @@ export function useInventoryCore() {
     } catch {
       return false; // dedupe doc already exists (update not allowed) or offline error
     }
-  }, [firestore, companyId, user]);
+  }, [firestore, companyId, user, isGuest]);
 
 
   const addNotification = useCallback((notification: Omit<AppNotification, 'id' | 'date' | 'read'>) => {
@@ -299,21 +304,63 @@ export function useInventoryCore() {
   }, [auth, toast]);
 
 
+  // Liga a sessão fictícia (sem Firebase): utilizador, empresa e notificações do convidado.
+  const applyGuest = useCallback(() => {
+    setNotifications(getGuestNotifications());
+    setUser(GUEST_USER);
+    setFirebaseUser({
+      uid: "guest-demo-uid",
+      email: GUEST_USER.email,
+      displayName: "Convidado (Teste)",
+      isAnonymous: true,
+    } as any);
+    setCompanyId(GUEST_COMPANY_ID);
+    setCompanyData(GUEST_COMPANY);
+    setLoading(false);
+  }, []);
+
+  // Desliga-a: volta ao estado de "sem sessão" (o ClientLayout leva para o login).
+  const dropGuest = useCallback(() => {
+    if (!isGuestCompany(companyIdRef.current)) return;
+    setUser(null);
+    setFirebaseUser(null);
+    setCompanyId(null);
+    setCompanyData(null);
+    setNotifications([]);
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
-    if (!firebaseUser && isGuestMode()) {
-      setNotifications(getGuestNotifications());
-      setUser(GUEST_USER);
-      setFirebaseUser({
-        uid: "guest-demo-uid",
-        email: "convidado@majorstockx.demo",
-        displayName: "Convidado (Teste)",
-        isAnonymous: true,
-      } as any);
-      setCompanyId("demo-company");
-      setCompanyData(GUEST_COMPANY);
-      setLoading(false);
-    }
-  }, [firebaseUser]);
+    const sync = () => {
+      if (isGuestMode()) applyGuest();
+      else dropGuest();
+    };
+    sync(); // arranque: uma sessão de convidado ainda válida volta a abrir
+    const onData = () => setGuestVersion((v) => v + 1);
+    window.addEventListener(GUEST_SESSION_EVENT, sync);
+    window.addEventListener(GUEST_DATA_EVENT, onData);
+    return () => {
+      window.removeEventListener(GUEST_SESSION_EVENT, sync);
+      window.removeEventListener(GUEST_DATA_EVENT, onData);
+    };
+  }, [applyGuest, dropGuest]);
+
+  // Os 30 minutos acabam mesmo: termina a sessão fictícia, apaga os dados e leva ao login (não fica a usar-se por cima).
+  useEffect(() => {
+    if (!isGuest) return;
+    let done = false;
+    const finish = () => {
+      if (done || getGuestRemainingSeconds() > 0) return;
+      done = true;
+      exitGuestMode(); // dispara dropGuest
+      toast({ title: 'Tempo de teste esgotado', description: 'Crie a sua conta para guardar o histórico e continuar a utilizar.' });
+      router.replace('/login');
+    };
+    const timer = setTimeout(finish, getGuestRemainingSeconds() * 1000 + 250);
+    const onVisible = () => { if (document.visibilityState === 'visible') finish(); }; // separador que dormiu em segundo plano
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearTimeout(timer); document.removeEventListener('visibilitychange', onVisible); };
+  }, [isGuest, router, toast]);
 
   useEffect(() => {
     let cancelled = false;
@@ -324,9 +371,11 @@ export function useInventoryCore() {
     };
 
 
-  const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
       setAuthReady(true);
       if (fbUser) {
+        // entrou com uma conta real: acaba a sessão de convidado e apaga os dados fictícios
+        exitGuestMode();
         setFirebaseUser(fbUser);
         // Registo a meio: a empresa está gravada só neste aparelho até o servidor confirmar. Abrir já a sessão lia essa
         // cópia local, os dados da empresa eram pedidos antes de ela existir no servidor (recusados → "Algo correu mal")
@@ -367,16 +416,7 @@ export function useInventoryCore() {
         }
       } else {
         if (isGuestMode()) {
-          setUser(GUEST_USER);
-          setFirebaseUser({
-            uid: "guest-demo-uid",
-            email: "convidado@majorstockx.demo",
-            displayName: "Convidado (Teste)",
-            isAnonymous: true,
-          } as any);
-          setCompanyId("demo-company");
-          setCompanyData(GUEST_COMPANY);
-          setLoading(false);
+          applyGuest();
           return;
         }
         setUser(null);
@@ -387,11 +427,16 @@ export function useInventoryCore() {
     });
 
     return () => { cancelled = true; unsubscribeAuth(); };
-  }, [auth, firestore, logout]);
+  }, [auth, firestore, logout, applyGuest]);
 
 
   useEffect(() => {
     let unsubscribeEmployee: () => void = () => { };
+
+    if (isGuest) {
+      // sessão fictícia: não há perfil no servidor (ler daria 'permission-denied' e o logout()) 
+      return () => unsubscribeEmployee();
+    }
 
     if (firebaseUser && companyId) {
       setNotifications([]); // Clear notifications on company change
@@ -425,11 +470,10 @@ export function useInventoryCore() {
     }
 
     return () => unsubscribeEmployee();
-  }, [firebaseUser, companyId, firestore, logout, authReady]);
+  }, [firebaseUser, companyId, firestore, logout, authReady, isGuest]);
 
 
   const canView = (module: ModulePermission) => {
-    if (isGuestMode() || companyId === 'demo-company') return true;
     if (!user) return false;
     if (user.role === 'Admin' || user.role === 'Dono') return true;
     const level = user.permissions?.[module];
@@ -438,7 +482,6 @@ export function useInventoryCore() {
 
 
   const canEdit = (module: ModulePermission) => {
-    if (isGuestMode() || companyId === 'demo-company') return true;
     if (!user) return false;
     if (user.role === 'Admin') return true;
     if (user.role === 'Dono') return false;
@@ -464,63 +507,63 @@ export function useInventoryCore() {
   }, [permKey]);
 
   const productsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId || !(may.inventory || may.sell)) return null;
+    if (!firestore || !companyId || isGuest || !(may.inventory || may.sell)) return null;
     return collection(firestore, `companies/${companyId}/products`);
-  }, [firestore, companyId, may.inventory, may.sell]);
+  }, [firestore, companyId, isGuest, may.inventory, may.sell]);
 
 
   const salesCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId || !may.sales) return null;
+    if (!firestore || !companyId || isGuest || !may.sales) return null;
     return collection(firestore, `companies/${companyId}/sales`);
-  }, [firestore, companyId, may.sales]);
+  }, [firestore, companyId, isGuest, may.sales]);
 
 
   const productionsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId || !may.production) return null;
+    if (!firestore || !companyId || isGuest || !may.production) return null;
     return collection(firestore, `companies/${companyId}/productions`);
-  }, [firestore, companyId, may.production]);
+  }, [firestore, companyId, isGuest, may.production]);
 
 
   const ordersCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId || !may.orders) return null;
+    if (!firestore || !companyId || isGuest || !may.orders) return null;
     return collection(firestore, `companies/${companyId}/orders`);
-  }, [firestore, companyId, may.orders]);
+  }, [firestore, companyId, isGuest, may.orders]);
 
 
   const stockMovementsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId || !may.inventory) return null;
+    if (!firestore || !companyId || isGuest || !may.inventory) return null;
     return collection(firestore, `companies/${companyId}/stockMovements`);
-  }, [firestore, companyId, may.inventory]);
+  }, [firestore, companyId, isGuest, may.inventory]);
 
 
   const catalogProductsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId || !may.catalog) return null;
+    if (!firestore || !companyId || isGuest || !may.catalog) return null;
     return collection(firestore, `companies/${companyId}/catalogProducts`);
-  }, [firestore, companyId, may.catalog]);
+  }, [firestore, companyId, isGuest, may.catalog]);
 
 
   const catalogCategoriesCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId || !may.catalog) return null;
+    if (!firestore || !companyId || isGuest || !may.catalog) return null;
     return collection(firestore, `companies/${companyId}/catalogCategories`);
-  }, [firestore, companyId, may.catalog]);
+  }, [firestore, companyId, isGuest, may.catalog]);
 
 
   const rawMaterialsCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId || !may.raw) return null;
+    if (!firestore || !companyId || isGuest || !may.raw) return null;
     return collection(firestore, `companies/${companyId}/rawMaterials`);
-  }, [firestore, companyId, may.raw]);
+  }, [firestore, companyId, isGuest, may.raw]);
 
 
   const recipesCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !companyId || !may.raw) return null;
+    if (!firestore || !companyId || isGuest || !may.raw) return null;
     return collection(firestore, `companies/${companyId}/recipes`);
-  }, [firestore, companyId, may.raw]);
+  }, [firestore, companyId, isGuest, may.raw]);
 
 
   const companyDocRef = useMemoFirebase(() => {
-    if (!firestore || !companyId || companyId === 'demo-company') return null;
+    if (!firestore || !companyId || isGuest) return null;
     return doc(firestore, `companies`, companyId);
-  }, [firestore, companyId]);
+  }, [firestore, companyId, isGuest]);
 
 
   useEffect(() => {
@@ -565,21 +608,21 @@ export function useInventoryCore() {
   // com o nome actual em todas as páginas — relatórios, histórico do produto, reservas, encomendas.
   const aliases = useMemo(() => aliasMap(catalogProductsData, productsData), [catalogProductsData, productsData]);
   const salesData = useMemo(() => {
-    if (isGuestMode() || companyId === 'demo-company') return getGuestSales();
+    if (isGuest) return getGuestSales();
     return applyAliases(salesRaw, aliases);
-  }, [salesRaw, aliases, companyId, lastSaleTimestamp]);
+  }, [salesRaw, aliases, isGuest, guestVersion]);
   const productionsData = useMemo(() => {
-    if (isGuestMode() || companyId === 'demo-company') return getGuestProductions();
+    if (isGuest) return getGuestProductions();
     return applyAliases(productionsRaw, aliases);
-  }, [productionsRaw, aliases, companyId]);
+  }, [productionsRaw, aliases, isGuest]);
   const ordersData = useMemo(() => {
-    if (isGuestMode() || companyId === 'demo-company') return getGuestOrders();
+    if (isGuest) return getGuestOrders();
     return applyAliases(ordersRaw, aliases);
-  }, [ordersRaw, aliases, companyId]);
+  }, [ordersRaw, aliases, isGuest]);
   const stockMovementsData = useMemo(() => {
-    if (isGuestMode() || companyId === 'demo-company') return getGuestStockMovements();
+    if (isGuest) return getGuestStockMovements();
     return applyAliases(stockMovementsRaw, aliases);
-  }, [stockMovementsRaw, aliases, companyId]);
+  }, [stockMovementsRaw, aliases, isGuest, guestVersion]);
 
   const { data: catalogCategoriesData, isLoading: catalogCategoriesLoading } = useCollection<CatalogCategory>(catalogCategoriesCollectionRef);
 
@@ -589,7 +632,7 @@ export function useInventoryCore() {
 
 
   const products = useMemo(() => {
-    if (isGuestMode() || companyId === 'demo-company') return getGuestProducts();
+    if (isGuest) return getGuestProducts();
     if (!productsData) return [];
 
     const productMap = new Map<string, Product & { sourceIds: string[] }>();
@@ -616,20 +659,20 @@ export function useInventoryCore() {
     });
 
     return Array.from(productMap.values());
-  }, [productsData, companyId, lastSaleTimestamp]);
+  }, [productsData, isGuest, guestVersion]);
 
 
   // Teste gratuito: as empresas que já existiam recebem UMA vez 14 dias novos, a contar de agora (o servidor decide e garante o "uma vez").
   const trialRestartAsked = useRef(false);
   useEffect(() => {
-    if (trialRestartAsked.current || !firebaseUser || !canRestartTrial(companyData)) return;
+    if (isGuest || trialRestartAsked.current || !firebaseUser || !canRestartTrial(companyData)) return;
     trialRestartAsked.current = true;
     authedFetch('/api/billing/trial-restart', 'POST', {})
       .then((r) => {
         if (r?.restarted) toast({ title: 'Teste gratuito renovado', description: `Tem mais ${TRIAL_DAYS} dias para experimentar o MajorStockX.` });
       })
       .catch(() => { trialRestartAsked.current = false; });
-  }, [firebaseUser, companyData, toast]);
+  }, [firebaseUser, companyData, toast, isGuest]);
 
   useEffect(() => {
     if (companyDocRef) {
@@ -765,7 +808,7 @@ export function useInventoryCore() {
       updateDocumentNonBlocking(companyDocRef, details);
     }
   }, [companyDocRef]);
-  return { user, setUser, firebaseUser, setFirebaseUser, companyId, setCompanyId, loading, setLoading, profilePicture, setProfilePicture, notifications, setNotifications, monthlySalesChartData, setMonthlySalesChartData, chatHistory, setChatHistory, router, toast, firestore, auth, wasSyncing, lastSaleTimestamp, setLastSaleTimestamp, companyData, setCompanyData, isReadOnly, isTrial, daysLeft, renewInDays, subscriptionReason, locations, isMultiLocation, siteScope, firstLocationId, postFeed, addNotification, markNotificationAsRead, markAllAsRead, clearNotifications, handleSetProfilePicture, sendPush, assertOnline, isManagerUser, notifyManagers, triggerEmailAlert, logout, canView, canEdit, productsCollectionRef, salesCollectionRef, productionsCollectionRef, ordersCollectionRef, stockMovementsCollectionRef, catalogProductsCollectionRef, catalogCategoriesCollectionRef, rawMaterialsCollectionRef, recipesCollectionRef, companyDocRef, productsData, productsLoading, salesData, salesLoading, productionsData, productionsLoading, ordersData, ordersLoading, stockMovementsData, stockMovementsLoading, catalogProductsData, catalogProductsRaw, catalogProductsLoading, catalogCategoriesData, catalogCategoriesLoading, rawMaterialsData, rawMaterialsLoading, recipesData, recipesLoading, products, businessStartDate, categorizeProductWithAI, dashboardStats, updateCompany };
+  return { isGuest, user, setUser, firebaseUser, setFirebaseUser, companyId, setCompanyId, loading, setLoading, profilePicture, setProfilePicture, notifications, setNotifications, monthlySalesChartData, setMonthlySalesChartData, chatHistory, setChatHistory, router, toast, firestore, auth, wasSyncing, lastSaleTimestamp, setLastSaleTimestamp, companyData, setCompanyData, isReadOnly, isTrial, daysLeft, renewInDays, subscriptionReason, locations, isMultiLocation, siteScope, firstLocationId, postFeed, addNotification, markNotificationAsRead, markAllAsRead, clearNotifications, handleSetProfilePicture, sendPush, assertOnline, isManagerUser, notifyManagers, triggerEmailAlert, logout, canView, canEdit, productsCollectionRef, salesCollectionRef, productionsCollectionRef, ordersCollectionRef, stockMovementsCollectionRef, catalogProductsCollectionRef, catalogCategoriesCollectionRef, rawMaterialsCollectionRef, recipesCollectionRef, companyDocRef, productsData, productsLoading, salesData, salesLoading, productionsData, productionsLoading, ordersData, ordersLoading, stockMovementsData, stockMovementsLoading, catalogProductsData, catalogProductsRaw, catalogProductsLoading, catalogCategoriesData, catalogCategoriesLoading, rawMaterialsData, rawMaterialsLoading, recipesData, recipesLoading, products, businessStartDate, categorizeProductWithAI, dashboardStats, updateCompany };
 }
 
 export type InventoryCore = ReturnType<typeof useInventoryCore>;
