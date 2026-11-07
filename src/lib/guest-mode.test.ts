@@ -1,0 +1,158 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import {
+  GUEST_KEY, GUEST_COMPANY, GUEST_COMPANY_ID, GUEST_DURATION_MINUTES, GUEST_DATA_EVENT, GUEST_SESSION_EVENT,
+  isGuestCompany, isGuestMode, getGuestRemainingSeconds, enterGuestMode, exitGuestMode,
+  getGuestProducts, getGuestSales, getGuestStockMovements, getGuestCustomers, getGuestExpenses,
+  addGuestSale, addGuestExpense, updateGuestExpense, deleteGuestExpense,
+  addGuestCustomer, updateGuestCustomer, deleteGuestCustomer,
+} from '@/lib/guest-mode';
+import { DEMO_PRODUCTS, GUEST_PRODUCTS, GUEST_LOCATIONS, guestLocation } from '@/lib/demo-data';
+import type { Sale } from '@/lib/types';
+
+function memoryStorage() {
+  const m = new Map<string, string>();
+  return {
+    get length() { return m.size; },
+    key: (i: number) => Array.from(m.keys())[i] ?? null,
+    getItem: (k: string) => (m.has(k) ? m.get(k)! : null),
+    setItem: (k: string, v: string) => { m.set(k, String(v)); },
+    removeItem: (k: string) => { m.delete(k); },
+    clear: () => m.clear(),
+  };
+}
+
+const events: string[] = [];
+
+beforeEach(() => {
+  events.length = 0;
+  vi.stubGlobal('localStorage', memoryStorage());
+  vi.stubGlobal('sessionStorage', memoryStorage());
+  vi.stubGlobal('window', { dispatchEvent: (e: Event) => { events.push(e.type); return true; } });
+});
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
+
+const sale = (over: Partial<Sale> = {}): Sale => ({
+  id: 'guest-sale-1', date: new Date().toISOString(), productId: 'demo-cim-01', productName: 'Cimento Portland 32.5N Limak 50kg',
+  quantity: 10, unit: 'saco', unitPrice: 580, unitCost: 480, subtotal: 5800, totalValue: 5800, amountPaid: 5800,
+  soldBy: 'Gestor Comercial', guideNumber: 'VD-2026/0999', location: 'Armazém Principal', customerId: 'cust-02',
+  clientName: 'Mestre Inácio Chissano', status: 'Pago', documentType: 'Venda a Dinheiro', paymentMethod: 'Numerário', ...over,
+});
+
+describe('sessão de convidado', () => {
+  it('decide-se pela empresa fictícia, não pela chave do localStorage', () => {
+    expect(isGuestCompany(GUEST_COMPANY_ID)).toBe(true);
+    expect(isGuestCompany('uma-empresa-real')).toBe(false);
+    expect(isGuestCompany(null)).toBe(false);
+    expect(GUEST_COMPANY.id).toBe(GUEST_COMPANY_ID);
+  });
+
+  it('entra, conta 30 minutos e avisa a app', () => {
+    enterGuestMode();
+    expect(isGuestMode()).toBe(true);
+    expect(getGuestRemainingSeconds()).toBeGreaterThan(GUEST_DURATION_MINUTES * 60 - 5);
+    expect(events).toContain(GUEST_SESSION_EVENT);
+  });
+
+  it('ao fim dos 30 minutos a sessão e os dados desaparecem', () => {
+    enterGuestMode();
+    addGuestSale(sale());
+    localStorage.setItem(GUEST_KEY, String(Date.now() - (GUEST_DURATION_MINUTES * 60 + 5) * 1000));
+    expect(getGuestRemainingSeconds()).toBe(0);
+    expect(isGuestMode()).toBe(false);
+    expect(localStorage.getItem(GUEST_KEY)).toBeNull();
+    expect(localStorage.getItem('majorstockx-guest-sales')).toBeNull();
+  });
+
+  it('sair apaga só os dados do convidado, não os de outras funcionalidades', () => {
+    localStorage.setItem('majorstockx-demo-sale-abc', '1');
+    localStorage.setItem('majorstockx-cart-abc', '[]');
+    enterGuestMode();
+    getGuestProducts();
+    exitGuestMode();
+    expect(localStorage.getItem(GUEST_KEY)).toBeNull();
+    expect(localStorage.getItem('majorstockx-guest-products')).toBeNull();
+    expect(localStorage.getItem('majorstockx-demo-sale-abc')).toBe('1');
+    expect(localStorage.getItem('majorstockx-cart-abc')).toBe('[]');
+  });
+
+  it('cada sessão começa do zero (nada da anterior)', () => {
+    enterGuestMode();
+    addGuestExpense({ id: 'x', description: 'teste', amount: 1, category: 'Outros', date: new Date().toISOString(), status: 'Pago', registeredBy: 'a' });
+    enterGuestMode();
+    expect(getGuestExpenses().some((e) => e.id === 'x')).toBe(false);
+  });
+});
+
+describe('dados do convidado persistem e mexem uns nos outros', () => {
+  it('uma venda tira stock, regista a saída e soma ao cliente', () => {
+    enterGuestMode();
+    const before = getGuestProducts().find((p) => p.id === 'demo-cim-01')!.stock;
+    const customerBefore = getGuestCustomers().find((c) => c.id === 'cust-02')!;
+    const salesBefore = getGuestSales().length;
+    const movementsBefore = getGuestStockMovements().length;
+    events.length = 0;
+
+    addGuestSale(sale());
+
+    expect(getGuestProducts().find((p) => p.id === 'demo-cim-01')!.stock).toBe(before - 10);
+    expect(getGuestSales()).toHaveLength(salesBefore + 1);
+    const movements = getGuestStockMovements();
+    expect(movements).toHaveLength(movementsBefore + 1);
+    expect(movements[0]).toMatchObject({ type: 'OUT', quantity: -10, productId: 'demo-cim-01' });
+    const customerAfter = getGuestCustomers().find((c) => c.id === 'cust-02')!;
+    expect(customerAfter.totalPurchases).toBe(customerBefore.totalPurchases + 5800);
+    expect(events).toContain(GUEST_DATA_EVENT);
+  });
+
+  it('o stock nunca fica negativo', () => {
+    enterGuestMode();
+    addGuestSale(sale({ quantity: 99999, subtotal: 1, totalValue: 1 }));
+    expect(getGuestProducts().find((p) => p.id === 'demo-cim-01')!.stock).toBe(0);
+  });
+
+  it('despesas: criar, editar e apagar guardam-se', () => {
+    enterGuestMode();
+    addGuestExpense({ id: 'e-novo', description: 'Gasóleo', amount: 900, category: 'Transporte', date: new Date().toISOString(), status: 'Pago', registeredBy: 'a' });
+    expect(getGuestExpenses()[0].id).toBe('e-novo');
+    updateGuestExpense('e-novo', { amount: 1000 });
+    expect(getGuestExpenses().find((e) => e.id === 'e-novo')!.amount).toBe(1000);
+    deleteGuestExpense('e-novo');
+    expect(getGuestExpenses().some((e) => e.id === 'e-novo')).toBe(false);
+  });
+
+  it('clientes: criar, editar e apagar guardam-se', () => {
+    enterGuestMode();
+    addGuestCustomer({ id: 'c-novo', name: 'Cliente Novo', phone: '', totalPurchases: 0, lastVisit: new Date().toISOString() });
+    expect(getGuestCustomers().some((c) => c.id === 'c-novo')).toBe(true);
+    updateGuestCustomer('c-novo', { name: 'Cliente Editado' });
+    expect(getGuestCustomers().find((c) => c.id === 'c-novo')!.name).toBe('Cliente Editado');
+    deleteGuestCustomer('c-novo');
+    expect(getGuestCustomers().some((c) => c.id === 'c-novo')).toBe(false);
+  });
+});
+
+describe('catálogos de demonstração', () => {
+  it('a demonstração de primeiros passos continua com os 5 produtos de exemplo', () => {
+    expect(DEMO_PRODUCTS).toHaveLength(5);
+    expect(DEMO_PRODUCTS.every((p) => p.name.includes('(exemplo)'))).toBe(true);
+  });
+
+  it('o convidado tem 30 produtos, todos numa das localizações da empresa', () => {
+    expect(GUEST_PRODUCTS).toHaveLength(30);
+    const names = GUEST_COMPANY.locations!.map((l) => l.name);
+    expect(names).toEqual([...GUEST_LOCATIONS]);
+    expect(GUEST_PRODUCTS.every((p) => names.includes(p.location))).toBe(true);
+    getGuestSales().forEach((s) => expect(names).toContain(s.location));
+    getGuestStockMovements().forEach((m) => {
+      if (m.fromLocationId) expect(names).toContain(m.fromLocationId);
+      if (m.toLocationId) expect(names).toContain(m.toLocationId);
+    });
+  });
+
+  it('guestLocation agrupa os sub-locais', () => {
+    expect(guestLocation('Pátio Aberto')).toBe('Pátio de Produção');
+    expect(guestLocation('Prateleira F1')).toBe('Loja Principal');
+    expect(guestLocation('Setor Tintas')).toBe('Armazém Principal');
+    expect(guestLocation('')).toBe('Armazém Principal');
+  });
+});

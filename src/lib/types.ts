@@ -384,6 +384,8 @@ export type ChatMessage = {
 };
 
 export interface InventoryContextType {
+  /** Sessão de convidado (empresa fictícia, sem Firebase). */
+  isGuest: boolean;
   // Auth related
   user: Employee | null;
   firebaseUser: any | null;

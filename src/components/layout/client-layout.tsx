@@ -35,7 +35,6 @@ import { markAppReady } from '@/lib/app-ready';
 import { clearNavHint } from '@/lib/nav-hint';
 import { INTRO_ALWAYS_KEY, INTRO_PLAY_EVENT } from '@/lib/intro-gate';
 import { isSuperAdminEmail } from '@/lib/super-admin';
-import { isGuestMode, exitGuestMode } from '@/lib/guest-mode';
 import { GuestBanner } from './guest-banner';
 import { AppLoader } from './app-loader';
 import { BootProgress } from './boot-progress';
@@ -64,8 +63,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const authContext = React.useContext(InventoryContext);
-  const isGuest = typeof window !== 'undefined' && isGuestMode();
-  const isManager = isGuest || authContext?.user?.role === 'Admin' || authContext?.user?.role === 'Dono';
+  // decide-se pelo estado da sessão (empresa fictícia activa), não pelo localStorage: não depende do browser no 1.º render (sem avisos de hidratação)
+  const isGuest = !!authContext?.isGuest;
+  const isManager = authContext?.user?.role === 'Admin' || authContext?.user?.role === 'Dono';
   // página fora do plano da empresa: mostra o que o plano seguinte dá (ver lib/tiers.ts)
   const gatedFeature = featureForPath(pathname);
   const planLocked = !!gatedFeature && !companyHas(authContext?.companyData, gatedFeature);
@@ -106,7 +106,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const isAuthenticated = !!authContext?.firebaseUser || isGuest;
+    const isAuthenticated = !!authContext?.firebaseUser;
 
     // Save current path if authenticated and not on auth pages
     if (isAuthenticated && !isAuthPage && pathname) {
@@ -158,7 +158,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   // A app carrega por fases (sessão, depois os dados): entre elas, por um instante, parecia pronta. O ecrã de
   // carregamento saía e voltava a entrar, a recomeçar a animação. Agora só sai quando está pronta há 300 ms, com
   // um fade, e fica sempre no mesmo sítio da árvore (nunca é desmontado a meio, a animação não recomeça).
-  const blocking = !isPublicPage && !isGuest && (!!authContext?.loading || (!authContext?.firebaseUser && !isAuthPage));
+  const blocking = !isPublicPage && (!!authContext?.loading || (!authContext?.firebaseUser && !isAuthPage));
   const loaderPhase = useStickyLoader(blocking);
   const waiting = loaderPhase === 'show';
   // a animação de entrada também espera por este "pronto" estável

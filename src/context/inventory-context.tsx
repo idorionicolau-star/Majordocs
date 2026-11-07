@@ -20,7 +20,7 @@ export const InventoryContext = createContext<InventoryContextType | undefined>(
 
 export function InventoryProvider({ children }: { children: ReactNode }) {
   const core = useInventoryCore();
-  const { loading, productsLoading, salesLoading, productionsLoading, ordersLoading, stockMovementsLoading, catalogProductsLoading, catalogCategoriesLoading, rawMaterialsLoading, recipesLoading, companyId, firestore, user, productsData, salesData, stockMovementsData, lastSaleTimestamp, firebaseUser, isReadOnly, isTrial, daysLeft, renewInDays, subscriptionReason, logout, profilePicture, handleSetProfilePicture, canView, canEdit, companyData, products, productionsData, ordersData, catalogProductsData, catalogProductsRaw, catalogCategoriesData, rawMaterialsData, recipesData, locations: allLocations, isMultiLocation, siteScope, firstLocationId, notifications, monthlySalesChartData, dashboardStats, businessStartDate, chatHistory, setChatHistory, updateCompany, markNotificationAsRead, markAllAsRead, clearNotifications, addNotification, categorizeProductWithAI, notifyManagers } = core;
+  const { isGuest, toast, loading, productsLoading, salesLoading, productionsLoading, ordersLoading, stockMovementsLoading, catalogProductsLoading, catalogCategoriesLoading, rawMaterialsLoading, recipesLoading, companyId, firestore, user, productsData, salesData, stockMovementsData, lastSaleTimestamp, firebaseUser, isReadOnly, isTrial, daysLeft, renewInDays, subscriptionReason, logout, profilePicture, handleSetProfilePicture, canView, canEdit, companyData, products, productionsData, ordersData, catalogProductsData, catalogProductsRaw, catalogCategoriesData, rawMaterialsData, recipesData, locations: allLocations, isMultiLocation, siteScope, firstLocationId, notifications, monthlySalesChartData, dashboardStats, businessStartDate, chatHistory, setChatHistory, updateCompany, markNotificationAsRead, markAllAsRead, clearNotifications, addNotification, categorizeProductWithAI, notifyManagers } = core;
   const authActions = useAuthActions(core);
   const { login, loginWithGoogle, resetPassword, changePassword, registerCompany, registerCompanyWithGoogle } = authActions;
   const productActions = useProductActions(core);
@@ -47,6 +47,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const restoreItem = useCallback((collectionName: string, id: string) => (collectionName === 'productions' ? restoreProduction(id) : restoreItemBase(collectionName, id)), [restoreProduction, restoreItemBase]);
 
 
+  // Modo convidado: só se vende, registam despesas e gerem clientes. O resto escreveria no Firestore (recusado pelas
+  // regras, ou pior, em fila para mais tarde) — por isso diz-se a verdade e não se faz nada.
+  const guestBlocked = useCallback(async () => {
+    toast({ title: 'Disponível na conta definitiva', description: 'No modo convidado pode vender, registar despesas e gerir clientes. Crie a sua conta para usar tudo.' });
+    return undefined;
+  }, [toast]);
+  const guestQuiet = useCallback(async () => undefined, []);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const blockInGuest = <F extends (...args: any[]) => any>(fn: F): F => (isGuest ? (guestBlocked as unknown as F) : fn);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const quietInGuest = <F extends (...args: any[]) => any>(fn: F): F => (isGuest ? (guestQuiet as unknown as F) : fn);
+
   const isDataLoading = loading || productsLoading || salesLoading || productionsLoading || ordersLoading || stockMovementsLoading || catalogProductsLoading || catalogCategoriesLoading || rawMaterialsLoading || recipesLoading;
 
   // a fase do arranque, para a barra da animação de entrada e do ecrã de carregamento (ver lib/boot-progress.ts)
@@ -61,7 +73,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   // 30-Day Retention Policy Cleanup
   useEffect(() => {
-    if (!companyId || !firestore || !user || user.role !== 'Admin') return;
+    if (isGuest || !companyId || !firestore || !user || user.role !== 'Admin') return;
 
     const cleanupOldDeletedItems = async () => {
       const retentionPeriod = 30 * 24 * 60 * 60 * 1000; // 30 days in ms
@@ -97,12 +109,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     // Run cleanup with a small delay to ensure data is loaded
     const timer = setTimeout(cleanupOldDeletedItems, 5000);
     return () => clearTimeout(timer);
-  }, [companyId, firestore, user, productsData, salesData, hardDelete]);
+  }, [isGuest, companyId, firestore, user, productsData, salesData, hardDelete]);
 
 
   // Auto-Sync Smart Thresholds Background
   useEffect(() => {
-    if (!companyId || !firestore || !productsData || !stockMovementsData) return;
+    if (isGuest || !companyId || !firestore || !productsData || !stockMovementsData) return;
 
     const tryAutoSync = () => {
       syncSmartThresholds();
@@ -111,12 +123,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     // Run slightly after mount to not block UI rendering
     const timer = setTimeout(tryAutoSync, 8000);
     return () => clearTimeout(timer);
-  }, [companyId, firestore, productsData, stockMovementsData, syncSmartThresholds]);
+  }, [isGuest, companyId, firestore, productsData, stockMovementsData, syncSmartThresholds]);
 
 
   // Real-time Event-Driven Prediction Recalculation (Após Vendas)
   useEffect(() => {
-    if (!lastSaleTimestamp || lastSaleTimestamp === 0) return;
+    if (isGuest || !lastSaleTimestamp || lastSaleTimestamp === 0) return;
 
     // Wait 5 seconds to ensure Firebase snapshot is complete, then force a sync (true)
     const timer = setTimeout(() => {
@@ -124,7 +136,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }, 5000);
 
     return () => clearTimeout(timer);
-  }, [lastSaleTimestamp, syncSmartThresholds]);
+  }, [isGuest, lastSaleTimestamp, syncSmartThresholds]);
 
 
   // confirmAction implementation
@@ -164,6 +176,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [siteScope, firstLocationId, allLocations, products, productsData, salesData, productionsData, ordersData, stockMovementsData]);
 
   const value: InventoryContextType = useMemo(() => ({
+    isGuest,
     user,
     firebaseUser,
     companyId,
@@ -202,37 +215,38 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     locations: scoped.locations, allLocations, isMultiLocation, notifications, monthlySalesChartData, dashboardStats,
     businessStartDate,
     chatHistory, setChatHistory,
-    addProduct, updateProduct: updateProductEverywhere, deleteProduct,
-    auditStock, transferStock, updateProductStock, updateCompany, addSale, addBulkSale, confirmSalePickup, addProductionLog,
-    addProduction, updateProduction, editProduction, deleteProduction, deleteOrder, finalizeOrder, deliverOrderPart, deleteSale,
-    clearProductsCollection,
-    mergeProducts, renameProduct, mergeIntoVariant,
-    restoreItem,
-    hardDelete,
-    deleteCatalogProducts, updateCatalogProducts, deleteCatalogCategory,
-    exportCompanyData,
-    syncSmartThresholds,
-    setAutoThresholds,
+    addProduct: blockInGuest(addProduct), updateProduct: blockInGuest(updateProductEverywhere), deleteProduct: blockInGuest(deleteProduct),
+    auditStock: blockInGuest(auditStock), transferStock: blockInGuest(transferStock), updateProductStock: blockInGuest(updateProductStock), updateCompany: blockInGuest(updateCompany), addSale, addBulkSale, confirmSalePickup: blockInGuest(confirmSalePickup), addProductionLog: blockInGuest(addProductionLog),
+    addProduction: blockInGuest(addProduction), updateProduction: blockInGuest(updateProduction), editProduction: blockInGuest(editProduction), deleteProduction: blockInGuest(deleteProduction), deleteOrder: blockInGuest(deleteOrder), finalizeOrder: blockInGuest(finalizeOrder), deliverOrderPart: blockInGuest(deliverOrderPart), deleteSale: blockInGuest(deleteSale),
+    clearProductsCollection: blockInGuest(clearProductsCollection),
+    mergeProducts: blockInGuest(mergeProducts), renameProduct: blockInGuest(renameProduct), mergeIntoVariant: blockInGuest(mergeIntoVariant),
+    restoreItem: blockInGuest(restoreItem),
+    hardDelete: blockInGuest(hardDelete),
+    deleteCatalogProducts: blockInGuest(deleteCatalogProducts), updateCatalogProducts: blockInGuest(updateCatalogProducts), deleteCatalogCategory: blockInGuest(deleteCatalogCategory),
+    exportCompanyData: blockInGuest(exportCompanyData),
+    syncSmartThresholds: quietInGuest(syncSmartThresholds),
+    setAutoThresholds: blockInGuest(setAutoThresholds),
 
     markNotificationAsRead, markAllAsRead, clearNotifications, addNotification,
-    recalculateReservedStock,
-    pendingOfflineSales, syncOfflineSales,
-    addCatalogProduct, addCatalogCategory,
-    addRawMaterial,
-    createRawMaterial,
-    updateRawMaterial,
-    deleteRawMaterial,
-    addRecipe,
-    updateRecipe,
+    recalculateReservedStock: quietInGuest(recalculateReservedStock),
+    pendingOfflineSales, syncOfflineSales: quietInGuest(syncOfflineSales),
+    addCatalogProduct: blockInGuest(addCatalogProduct), addCatalogCategory: blockInGuest(addCatalogCategory),
+    addRawMaterial: blockInGuest(addRawMaterial),
+    createRawMaterial: blockInGuest(createRawMaterial),
+    updateRawMaterial: blockInGuest(updateRawMaterial),
+    deleteRawMaterial: blockInGuest(deleteRawMaterial),
+    addRecipe: blockInGuest(addRecipe),
+    updateRecipe: blockInGuest(updateRecipe),
     // deleteRecipe,
     categorizeProductWithAI,
 
-    availableUnits, addUnit, editUnit, removeUnit,
-    availableCategories, addCategory, editCategory, removeCategory,
+    availableUnits, addUnit: blockInGuest(addUnit), editUnit: blockInGuest(editUnit), removeUnit: blockInGuest(removeUnit),
+    availableCategories, addCategory: blockInGuest(addCategory), editCategory: blockInGuest(editCategory), removeCategory: blockInGuest(removeCategory),
 
     confirmAction,
     notifyManagers,
   }), [
+    isGuest, guestBlocked, guestQuiet,
     user, firebaseUser, companyId, isDataLoading, isReadOnly, isTrial, daysLeft, renewInDays, subscriptionReason,
     login, loginWithGoogle, logout, resetPassword, registerCompany, registerCompanyWithGoogle, profilePicture, handleSetProfilePicture,
     canView, canEdit,

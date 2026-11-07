@@ -1,16 +1,37 @@
 import type { Employee, Company, Product, Sale, Expense, Customer, StockMovement, Order, Production, AppNotification } from "@/lib/types";
-import { DEMO_PRODUCTS } from "@/lib/demo-data";
+import { GUEST_PRODUCTS, GUEST_LOCATIONS, guestLocation } from "@/lib/demo-data";
 
 export const GUEST_KEY = "majorstockx-guest-mode";
 export const GUEST_DURATION_MINUTES = 30;
+/** Id da empresa fictícia. É ISTO (e não a chave do localStorage) que diz à app que a sessão é de convidado. */
+export const GUEST_COMPANY_ID = "demo-company";
+/** Disparado quando se entra/sai do modo convidado (a app liga/desliga a sessão fictícia). */
+export const GUEST_SESSION_EVENT = "msx:guest-session";
+/** Disparado quando os dados do convidado mudam (a app volta a ler). */
+export const GUEST_DATA_EVENT = "msx:guest-data";
 
+const STORE_PREFIX = "majorstockx-guest-";
+const DISMISSED_KEY = "majorstockx-guest-dismissed";
+
+function emit(name: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.dispatchEvent(new Event(name));
+  } catch {
+    /* ignore */
+  }
+}
+
+export const isGuestCompany = (companyId?: string | null): boolean => companyId === GUEST_COMPANY_ID;
+
+/** Há uma sessão de convidado a decorrer (chave presente e dentro dos 30 minutos). Só para arrancar/terminar a sessão — a app decide por GUEST_COMPANY_ID. */
 export function isGuestMode(): boolean {
   if (typeof window === "undefined") return false;
   try {
     const started = localStorage.getItem(GUEST_KEY);
     if (!started) return false;
     const elapsed = Date.now() - parseInt(started, 10);
-    if (elapsed > GUEST_DURATION_MINUTES * 60 * 1000) {
+    if (!Number.isFinite(elapsed) || elapsed > GUEST_DURATION_MINUTES * 60 * 1000) {
       exitGuestMode();
       return false;
     }
@@ -37,8 +58,24 @@ export function getGuestRemainingSeconds(): number {
 export function enterGuestMode(): void {
   if (typeof window === "undefined") return;
   try {
+    // recomeça sempre do zero: dados de uma sessão anterior não passam para esta
+    clearGuestStorage();
     localStorage.setItem(GUEST_KEY, Date.now().toString());
-    sessionStorage.removeItem("majorstockx-guest-dismissed");
+    sessionStorage.removeItem(DISMISSED_KEY);
+  } catch {
+    /* ignore */
+  }
+  emit(GUEST_SESSION_EVENT);
+}
+
+function clearGuestStorage(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(STORE_PREFIX)) keys.push(k);
+    }
+    keys.forEach((k) => localStorage.removeItem(k));
   } catch {
     /* ignore */
   }
@@ -47,15 +84,12 @@ export function enterGuestMode(): void {
 export function exitGuestMode(): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.removeItem(GUEST_KEY);
-    localStorage.removeItem("majorstockx-guest-sales");
-    localStorage.removeItem("majorstockx-guest-products");
-    localStorage.removeItem("majorstockx-guest-expenses");
-    localStorage.removeItem("majorstockx-guest-customers");
-    sessionStorage.removeItem("majorstockx-guest-dismissed");
+    clearGuestStorage();
+    sessionStorage.removeItem(DISMISSED_KEY);
   } catch {
     /* ignore */
   }
+  emit(GUEST_SESSION_EVENT);
 }
 
 // -----------------------------------------------------------------------------
@@ -63,7 +97,7 @@ export function exitGuestMode(): void {
 // -----------------------------------------------------------------------------
 
 export const GUEST_COMPANY: Company = {
-  id: "demo-company",
+  id: GUEST_COMPANY_ID,
   name: "Ferragens & Construção Central (Convidado)",
   businessType: "manufacturer",
   phone: "+258 84 300 1234",
@@ -72,11 +106,7 @@ export const GUEST_COMPANY: Company = {
   email: "contacto@ferragenscentral.co.mz",
   curingDays: 3,
   countEveryDays: 30,
-  locations: [
-    { id: "Armazém Principal", name: "Armazém Principal" },
-    { id: "Pátio de Produção", name: "Pátio de Produção" },
-    { id: "Loja Principal", name: "Loja Principal" }
-  ],
+  locations: GUEST_LOCATIONS.map((name) => ({ id: name, name })),
   validUnits: ["un", "saco", "kg", "m³", "barra", "rolo", "balde", "lata", "garrafão", "fardo", "caixa"],
   validCategories: [
     "Materiais de Construção",
@@ -100,7 +130,7 @@ export const GUEST_USER: Employee = {
   username: "Gestor Comercial",
   email: "convidado@majorstockx.demo",
   role: "Admin",
-  companyId: "demo-company",
+  companyId: GUEST_COMPANY_ID,
   permissions: {
     dashboard: "write",
     diagnostico: "write",
@@ -374,7 +404,7 @@ function createSaleItem(
     clientName,
     customerId,
     paymentMethod,
-    location,
+    location: guestLocation(location),
     status: "Pago"
   };
 }
@@ -414,7 +444,7 @@ export const INITIAL_GUEST_MOVEMENTS: StockMovement[] = [
     productName: "Varão de Aço 12 mm (12m)",
     type: "IN",
     quantity: 60,
-    toLocationId: "Setor Metais",
+    toLocationId: "Armazém Principal",
     reason: "Descarga de Ferro da Matola",
     userId: "guest-user",
     userName: "Gestor Comercial",
@@ -450,7 +480,7 @@ export const INITIAL_GUEST_MOVEMENTS: StockMovement[] = [
     productName: "Arroz Vaporizado 25 kg",
     type: "ADJUSTMENT",
     quantity: 0,
-    toLocationId: "Palete Alimentar 1",
+    toLocationId: "Armazém Principal",
     reason: "Auditoria e Contagem Física de Stock (Conferido)",
     userId: "guest-user",
     userName: "Gestor Comercial",
@@ -473,7 +503,7 @@ export const INITIAL_GUEST_ORDERS: Order[] = [
     totalValue: 23400,
     clientName: "Construtora Horizonte & Filhos, Lda",
     deliveryDate: daysAgoIso(-2, 10, 0), // Entrega daqui a 2 dias
-    location: "Armazém B",
+    location: "Armazém Principal",
     status: "Pendente",
     quantityProduced: 0,
     productionLogs: []
@@ -561,99 +591,123 @@ export const INITIAL_GUEST_NOTIFICATIONS: AppNotification[] = [
 ];
 
 // -----------------------------------------------------------------------------
-// Getters & Setters Reativos (Persistentes na Sessão do Convidado)
+// Dados do convidado: guardados no aparelho, só durante a sessão (ver exitGuestMode)
 // -----------------------------------------------------------------------------
 
-export function getGuestProducts(): Product[] {
-  if (typeof window === "undefined") return DEMO_PRODUCTS;
+function readStore<T>(name: string, seed: () => T): T {
+  if (typeof window === "undefined") return seed();
   try {
-    const raw = localStorage.getItem("majorstockx-guest-products");
-    if (raw) return JSON.parse(raw);
-    localStorage.setItem("majorstockx-guest-products", JSON.stringify(DEMO_PRODUCTS));
-    return DEMO_PRODUCTS;
-  } catch {
-    return DEMO_PRODUCTS;
-  }
-}
-
-export function deductGuestProductStock(productId: string, quantitySold: number): void {
-  if (typeof window === "undefined") return;
-  try {
-    const prods = getGuestProducts();
-    const updated = prods.map(p => {
-      if (p.id === productId || p.name === productId) {
-        return { ...p, stock: Math.max(0, p.stock - quantitySold) };
-      }
-      return p;
-    });
-    localStorage.setItem("majorstockx-guest-products", JSON.stringify(updated));
-  } catch {
-    /* ignore */
-  }
-}
-
-export function getGuestSales(): Sale[] {
-  if (typeof window === "undefined") return generateInitialGuestSales();
-  try {
-    const raw = localStorage.getItem("majorstockx-guest-sales");
-    if (raw) return JSON.parse(raw);
-    const initial = generateInitialGuestSales();
-    localStorage.setItem("majorstockx-guest-sales", JSON.stringify(initial));
+    const raw = localStorage.getItem(STORE_PREFIX + name);
+    if (raw) return JSON.parse(raw) as T;
+    const initial = seed();
+    localStorage.setItem(STORE_PREFIX + name, JSON.stringify(initial));
     return initial;
   } catch {
-    return generateInitialGuestSales();
+    return seed();
   }
 }
 
-export function addGuestSale(sale: Sale): void {
+function writeStore<T>(name: string, value: T): void {
   if (typeof window === "undefined") return;
   try {
-    const current = getGuestSales();
-    const updated = [sale, ...current];
-    localStorage.setItem("majorstockx-guest-sales", JSON.stringify(updated));
-    deductGuestProductStock(sale.productId, sale.quantity);
+    localStorage.setItem(STORE_PREFIX + name, JSON.stringify(value));
   } catch {
     /* ignore */
   }
+  emit(GUEST_DATA_EVENT);
 }
 
-export function getGuestExpenses(): Expense[] {
-  if (typeof window === "undefined") return INITIAL_GUEST_EXPENSES;
-  try {
-    const raw = localStorage.getItem("majorstockx-guest-expenses");
-    if (raw) return JSON.parse(raw);
-    localStorage.setItem("majorstockx-guest-expenses", JSON.stringify(INITIAL_GUEST_EXPENSES));
-    return INITIAL_GUEST_EXPENSES;
-  } catch {
-    return INITIAL_GUEST_EXPENSES;
+// --- Produtos ---------------------------------------------------------------
+
+export function getGuestProducts(): Product[] {
+  return readStore<Product[]>("products", () => GUEST_PRODUCTS);
+}
+
+// --- Vendas -----------------------------------------------------------------
+
+export function getGuestSales(): Sale[] {
+  return readStore<Sale[]>("sales", generateInitialGuestSales);
+}
+
+/** Regista a venda e tudo o que ela mexe: stock do produto, movimento de saída e total do cliente. */
+export function addGuestSale(sale: Sale): void {
+  writeStore("sales", [sale, ...getGuestSales()]);
+
+  const products = getGuestProducts();
+  const product = products.find((p) => p.id === sale.productId || p.name === sale.productName);
+  writeStore(
+    "products",
+    products.map((p) => (p === product ? { ...p, stock: Math.max(0, p.stock - sale.quantity) } : p))
+  );
+
+  const movement: StockMovement = {
+    id: `mov-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    productId: product?.id || sale.productId,
+    productName: sale.productName,
+    type: "OUT",
+    quantity: -Math.abs(sale.quantity),
+    fromLocationId: sale.location || product?.location || "Armazém Principal",
+    reason: `Venda ${sale.guideNumber}`,
+    userId: GUEST_USER.id,
+    userName: sale.soldBy || GUEST_USER.username,
+    timestamp: sale.date || new Date().toISOString(),
+  };
+  writeStore("movements", [movement, ...getGuestStockMovements()]);
+
+  const customers = getGuestCustomers();
+  const match = customers.find((c) => (sale.customerId ? c.id === sale.customerId : c.name === sale.clientName));
+  if (match) {
+    writeStore(
+      "customers",
+      customers.map((c) =>
+        c.id === match.id
+          ? { ...c, totalPurchases: (c.totalPurchases || 0) + (sale.totalValue || sale.subtotal || 0), lastVisit: sale.date || new Date().toISOString() }
+          : c
+      )
+    );
   }
+}
+
+// --- Despesas ---------------------------------------------------------------
+
+export function getGuestExpenses(): Expense[] {
+  return readStore<Expense[]>("expenses", () => INITIAL_GUEST_EXPENSES);
 }
 
 export function addGuestExpense(expense: Expense): void {
-  if (typeof window === "undefined") return;
-  try {
-    const current = getGuestExpenses();
-    const updated = [expense, ...current];
-    localStorage.setItem("majorstockx-guest-expenses", JSON.stringify(updated));
-  } catch {
-    /* ignore */
-  }
+  writeStore("expenses", [expense, ...getGuestExpenses()]);
 }
+
+export function updateGuestExpense(id: string, data: Partial<Expense>): void {
+  writeStore("expenses", getGuestExpenses().map((e) => (e.id === id ? { ...e, ...data } : e)));
+}
+
+export function deleteGuestExpense(id: string): void {
+  writeStore("expenses", getGuestExpenses().filter((e) => e.id !== id));
+}
+
+// --- Clientes ---------------------------------------------------------------
 
 export function getGuestCustomers(): Customer[] {
-  if (typeof window === "undefined") return INITIAL_GUEST_CUSTOMERS;
-  try {
-    const raw = localStorage.getItem("majorstockx-guest-customers");
-    if (raw) return JSON.parse(raw);
-    localStorage.setItem("majorstockx-guest-customers", JSON.stringify(INITIAL_GUEST_CUSTOMERS));
-    return INITIAL_GUEST_CUSTOMERS;
-  } catch {
-    return INITIAL_GUEST_CUSTOMERS;
-  }
+  return readStore<Customer[]>("customers", () => INITIAL_GUEST_CUSTOMERS);
 }
 
+export function addGuestCustomer(customer: Customer): void {
+  writeStore("customers", [...getGuestCustomers(), customer]);
+}
+
+export function updateGuestCustomer(id: string, data: Partial<Customer>): void {
+  writeStore("customers", getGuestCustomers().map((c) => (c.id === id ? { ...c, ...data } : c)));
+}
+
+export function deleteGuestCustomer(id: string): void {
+  writeStore("customers", getGuestCustomers().filter((c) => c.id !== id));
+}
+
+// --- Só leitura (a demonstração não os altera) -------------------------------
+
 export function getGuestStockMovements(): StockMovement[] {
-  return INITIAL_GUEST_MOVEMENTS;
+  return readStore<StockMovement[]>("movements", () => INITIAL_GUEST_MOVEMENTS);
 }
 
 export function getGuestOrders(): Order[] {
