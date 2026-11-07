@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   GUEST_KEY, GUEST_COMPANY, GUEST_COMPANY_ID, GUEST_DURATION_MINUTES, GUEST_DATA_EVENT, GUEST_SESSION_EVENT,
   isGuestCompany, isGuestMode, getGuestRemainingSeconds, enterGuestMode, exitGuestMode,
+  touchGuestSession, applyServerRemaining, getGuestDeviceId, discardGuestData,
   getGuestProducts, getGuestSales, getGuestStockMovements, getGuestCustomers, getGuestExpenses,
   addGuestSale, addGuestExpense, updateGuestExpense, deleteGuestExpense,
   addGuestCustomer, updateGuestCustomer, deleteGuestCustomer,
@@ -78,7 +79,7 @@ describe('sessão de convidado', () => {
 
     enterGuestMode();
     expect(isGuestMode()).toBe(true);
-    expect(getGuestRemainingSeconds()).toBeGreaterThan(GUEST_DURATION_MINUTES * 60 - 5); // o relógio recomeça
+    expect(getGuestRemainingSeconds()).toBeGreaterThan(GUEST_DURATION_MINUTES * 60 - 5); // quase nada gasto: continua dos 30
     expect(getGuestSales().some((x) => x.id === 'guest-sale-1')).toBe(true);
     expect(getGuestProducts().find((p) => p.id === 'demo-cim-01')!.stock).toBe(stock - 10);
     expect(getGuestExpenses().some((e) => e.id === 'e-fica')).toBe(true);
@@ -204,5 +205,80 @@ describe('timestamp dos movimentos (como o do Firestore)', () => {
     movements.forEach((m) => expect(Number.isNaN((m.timestamp as { toDate: () => Date }).toDate().getTime())).toBe(false));
     const stored = JSON.parse(localStorage.getItem('majorstockx-guest-movements')!);
     stored.forEach((m: { timestamp: unknown }) => expect(typeof m.timestamp).toBe('string'));
+  });
+});
+
+describe('o relógio continua (não recomeça)', () => {
+  const MIN = 60_000;
+  /** Usa a app durante `minutes` minutos: bate de 15 em 15 segundos, como a app. */
+  function useFor(minutes: number) {
+    for (let i = 0; i < minutes * 4; i++) { vi.advanceTimersByTime(15_000); touchGuestSession(); }
+  }
+
+  it('sair e voltar horas depois continua dos minutos que sobravam', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-07T10:00:00Z'));
+    expect(enterGuestMode()).toBe(true);
+    useFor(10);
+    exitGuestMode();
+    vi.advanceTimersByTime(5 * 60 * MIN);
+    expect(enterGuestMode()).toBe(true);
+    const left = getGuestRemainingSeconds();
+    expect(left).toBeGreaterThan(19 * 60 + 40);
+    expect(left).toBeLessThanOrEqual(20 * 60);
+  });
+
+  it('sem batimentos (separador fechado) o tempo parado não conta', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-07T10:00:00Z'));
+    enterGuestMode();
+    useFor(2);
+    vi.advanceTimersByTime(40 * MIN); // fechou o separador sem sair
+    const left = getGuestRemainingSeconds();
+    expect(left).toBeGreaterThan(27 * 60 + 40);
+    expect(left).toBeLessThanOrEqual(28 * 60);
+  });
+
+  it('ao gastar os 30 minutos já não deixa entrar', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-07T10:00:00Z'));
+    enterGuestMode();
+    useFor(31);
+    expect(isGuestMode()).toBe(false);
+    expect(getGuestRemainingSeconds()).toBe(0);
+    expect(enterGuestMode()).toBe(false);
+    vi.advanceTimersByTime(24 * 60 * MIN);
+    expect(enterGuestMode()).toBe(false); // passar um dia não dá tempo novo
+  });
+
+  it('limpar os dados do convidado não devolve tempo', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-07T10:00:00Z'));
+    enterGuestMode();
+    useFor(31);
+    discardGuestData();
+    expect(enterGuestMode()).toBe(false);
+  });
+
+  it('o servidor só pode tirar tempo, nunca dar', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-07T10:00:00Z'));
+    enterGuestMode();
+    useFor(5);
+    applyServerRemaining(10 * MIN); // o servidor diz que só restam 10
+    expect(getGuestRemainingSeconds()).toBeLessThanOrEqual(10 * 60);
+    applyServerRemaining(30 * MIN); // diz 30: ignora-se
+    expect(getGuestRemainingSeconds()).toBeLessThanOrEqual(10 * 60);
+  });
+
+  it('o código do aparelho é estável e discardGuestData não o apaga', () => {
+    const id = getGuestDeviceId();
+    expect(id).toMatch(/^[a-f0-9]{32}$/);
+    expect(getGuestDeviceId()).toBe(id);
+    enterGuestMode();
+    addGuestExpense({ id: 'x', description: 'x', amount: 1, category: 'Outros', date: new Date().toISOString(), status: 'Pago', registeredBy: 'a' });
+    discardGuestData();
+    expect(getGuestDeviceId()).toBe(id);
+    expect(getGuestExpenses().some((e) => e.id === 'x')).toBe(false); // os dados fictícios foram embora (voltam os de exemplo)
   });
 });

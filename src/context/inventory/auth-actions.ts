@@ -8,6 +8,7 @@ import { allPermissions } from '@/lib/data';
 import type { InventoryCore } from './core';
 import { trialEndFrom } from '@/lib/trial';
 import { beginRegistration, endRegistration } from '@/lib/registration-guard';
+import { discardGuestData } from '@/lib/guest-mode';
 
 export function useAuthActions(core: InventoryCore) {
   const { auth, toast, firestore } = core;
@@ -245,6 +246,7 @@ export function useAuthActions(core: InventoryCore) {
         console.warn("Falha ao enviar e-mail de boas-vindas, mas o registo foi bem-sucedido:", emailError);
       }
 
+      discardGuestData(); // a conta nova começa vazia: o que se fez como convidado não sobe
       return true;
     } catch (error: any) {
       console.error('Registration error: ', error);
@@ -355,6 +357,7 @@ export function useAuthActions(core: InventoryCore) {
         console.warn("Falha ao enviar e-mail de boas-vindas, mas o registo foi bem-sucedido:", emailError);
       }
 
+      discardGuestData(); // a conta nova começa vazia: o que se fez como convidado não sobe
       return true;
     } catch (error: any) {
       console.error('Registration with Google error: ', error);

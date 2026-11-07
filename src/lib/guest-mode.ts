@@ -1,8 +1,10 @@
 import type { Employee, Company, Product, Sale, Expense, Customer, StockMovement, Order, Production, AppNotification } from "@/lib/types";
 import { GUEST_PRODUCTS, GUEST_LOCATIONS, guestLocation } from "@/lib/demo-data";
+import { GUEST_TRIAL_LIMIT_MS, GUEST_TRIAL_GAP_MS } from "@/lib/guest-trial";
 
+/** Sessão a decorrer: guarda a hora em que começou (some ao sair). */
 export const GUEST_KEY = "majorstockx-guest-mode";
-export const GUEST_DURATION_MINUTES = 30;
+export const GUEST_DURATION_MINUTES = GUEST_TRIAL_LIMIT_MS / 60000;
 /** Id da empresa fictícia. É ISTO (e não a chave do localStorage) que diz à app que a sessão é de convidado. */
 export const GUEST_COMPANY_ID = "demo-company";
 /** Disparado quando se entra/sai do modo convidado (a app liga/desliga a sessão fictícia). */
@@ -12,9 +14,17 @@ export const GUEST_DATA_EVENT = "msx:guest-data";
 
 const STORE_PREFIX = "majorstockx-guest-";
 const DISMISSED_KEY = "majorstockx-guest-dismissed";
+/** Último "ainda cá estou" da sessão: se a app fecha, o tempo em que esteve fechada não conta. */
+const BEAT_KEY = STORE_PREFIX + "beat";
+/** Tempo já gasto em sessões acabadas (ms). Fica no aparelho entre sessões: sair e voltar CONTINUA a contagem. */
+const USED_KEY = STORE_PREFIX + "used";
 /** Versão do formato dos dados guardados: se mudar, os dados antigos do convidado são deitados fora (não ficam com formatos velhos). */
 const SCHEMA_KEY = STORE_PREFIX + "schema";
 const SCHEMA_VERSION = "2";
+/** Código deste aparelho para o servidor (ver lib/guest-trial.ts): o tempo conta por aparelho, e a rede limita quantos abre. */
+const DEVICE_KEY = STORE_PREFIX + "device";
+/** As chaves do relógio nunca se apagam com os dados (senão limpar os dados dava tempo novo). */
+const CLOCK_KEYS = [GUEST_KEY, BEAT_KEY, USED_KEY, DEVICE_KEY];
 
 function emit(name: string): void {
   if (typeof window === "undefined") return;
@@ -27,15 +37,74 @@ function emit(name: string): void {
 
 export const isGuestCompany = (companyId?: string | null): boolean => companyId === GUEST_COMPANY_ID;
 
-/** Há uma sessão de convidado a decorrer (chave presente e dentro dos 30 minutos). Só para arrancar/terminar a sessão — a app decide por GUEST_COMPANY_ID. */
+// -----------------------------------------------------------------------------
+// Relógio do aparelho. O servidor guarda o mesmo por IP (ver lib/guest-trial.ts e
+// lib/guest-trial-client.ts); aqui conta-se também, para funcionar sem rede.
+// -----------------------------------------------------------------------------
+
+function readNum(key: string): number | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return null;
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeNum(key: string, n: number): void {
+  try {
+    localStorage.setItem(key, String(Math.round(n)));
+  } catch {
+    /* ignore */
+  }
+}
+
+const clampUsed = (n: number) => Math.min(GUEST_TRIAL_LIMIT_MS, Math.max(0, n));
+
+/** Sem batimento há mais de um minuto: a sessão acabou no último batimento (o tempo parado não conta). */
+function settleStale(now: number): void {
+  const start = readNum(GUEST_KEY);
+  if (start === null) return;
+  const last = readNum(BEAT_KEY) ?? start;
+  if (now - last > GUEST_TRIAL_GAP_MS) {
+    writeNum(USED_KEY, clampUsed((readNum(USED_KEY) ?? 0) + Math.max(0, last - start)));
+    try {
+      localStorage.removeItem(GUEST_KEY);
+      localStorage.removeItem(BEAT_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+/** Tempo gasto no total, contando a sessão a decorrer. */
+function usedMsLocal(now: number): number {
+  settleStale(now);
+  const start = readNum(GUEST_KEY);
+  return clampUsed((readNum(USED_KEY) ?? 0) + (start !== null ? Math.max(0, now - start) : 0));
+}
+
+/** Quanto resta do teste (conta o que já se gastou, mesmo sem sessão a decorrer). */
+export function getGuestRemainingSeconds(): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    return Math.max(0, Math.floor((GUEST_TRIAL_LIMIT_MS - usedMsLocal(Date.now())) / 1000));
+  } catch {
+    return 0;
+  }
+}
+
+/** Há uma sessão de convidado a decorrer e ainda resta tempo. Só para arrancar/terminar a sessão — a app decide por GUEST_COMPANY_ID. */
 export function isGuestMode(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    const started = localStorage.getItem(GUEST_KEY);
-    if (!started) return false;
-    const elapsed = Date.now() - parseInt(started, 10);
-    if (!Number.isFinite(elapsed) || elapsed > GUEST_DURATION_MINUTES * 60 * 1000) {
-      exitGuestMode();
+    const now = Date.now();
+    const left = GUEST_TRIAL_LIMIT_MS - usedMsLocal(now);
+    if (readNum(GUEST_KEY) === null) return false;
+    if (left <= 0) {
+      exitGuestMode(); // o tempo acabou
       return false;
     }
     return true;
@@ -44,27 +113,73 @@ export function isGuestMode(): boolean {
   }
 }
 
-export function getGuestRemainingSeconds(): number {
-  if (typeof window === "undefined") return 0;
+/** Batimento: "ainda cá estou". Reabre a sessão se o aparelho adormeceu. Devolve false quando o tempo acabou. */
+export function touchGuestSession(): boolean {
+  if (typeof window === "undefined") return false;
   try {
-    const started = localStorage.getItem(GUEST_KEY);
-    if (!started) return 0;
-    const elapsed = Date.now() - parseInt(started, 10);
-    const totalSeconds = GUEST_DURATION_MINUTES * 60;
-    const left = totalSeconds - Math.floor(elapsed / 1000);
-    return Math.max(0, left);
+    const now = Date.now();
+    if (GUEST_TRIAL_LIMIT_MS - usedMsLocal(now) <= 0) {
+      exitGuestMode();
+      return false;
+    }
+    if (readNum(GUEST_KEY) === null) writeNum(GUEST_KEY, now);
+    writeNum(BEAT_KEY, now);
+    return true;
   } catch {
-    return 0;
+    return false;
   }
 }
 
-/** Apaga os dados do convidado guardados no aparelho (não mexe na sessão). */
+/** Adota o tempo que o servidor diz que resta, se for menor do que o do aparelho (nunca dá tempo a mais). */
+export function applyServerRemaining(remainingMs: number): void {
+  if (typeof window === "undefined" || !Number.isFinite(remainingMs)) return;
+  try {
+    const now = Date.now();
+    const local = usedMsLocal(now);
+    const server = clampUsed(GUEST_TRIAL_LIMIT_MS - remainingMs);
+    if (server > local) writeNum(USED_KEY, clampUsed((readNum(USED_KEY) ?? 0) + (server - local)));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Código deste aparelho (32 letras/números), criado à primeira vez. Sem armazenamento, devolve um que não se guarda. */
+export function getGuestDeviceId(): string {
+  const fresh = () => {
+    const bytes = new Uint8Array(16);
+    if (typeof crypto !== "undefined" && crypto.getRandomValues) crypto.getRandomValues(bytes);
+    else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  };
+  if (typeof window === "undefined") return fresh();
+  try {
+    const have = localStorage.getItem(DEVICE_KEY);
+    if (have && /^[a-f0-9]{32}$/.test(have)) return have;
+    const id = fresh();
+    localStorage.setItem(DEVICE_KEY, id);
+    return id;
+  } catch {
+    return fresh();
+  }
+}
+
+/**
+ * Apaga os dados fictícios do convidado (vendas, despesas, clientes…). Usa-se quando ele ativa a conta de teste: a conta
+ * nova começa vazia e nada do que mexeu como convidado sobe para o servidor. O relógio NÃO se apaga.
+ */
+export function discardGuestData(): void {
+  if (typeof window === "undefined") return;
+  clearGuestData();
+  emit(GUEST_DATA_EVENT);
+}
+
+/** Apaga os dados do convidado guardados no aparelho (não mexe na sessão nem no relógio). */
 function clearGuestData(): void {
   try {
     const keys: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.startsWith(STORE_PREFIX) && k !== GUEST_KEY) keys.push(k);
+      if (k && k.startsWith(STORE_PREFIX) && !CLOCK_KEYS.includes(k)) keys.push(k);
     }
     keys.forEach((k) => localStorage.removeItem(k));
   } catch {
@@ -84,26 +199,37 @@ function ensureSchema(): void {
 }
 
 /**
- * Entra no modo convidado: o relógio de 30 minutos recomeça, mas os dados (vendas, despesas, clientes…) que o convidado
- * já tinha no aparelho continuam lá — sair e voltar a entrar retoma de onde ficou.
+ * Entra no modo convidado. O relógio CONTINUA de onde ficou (não recomeça) e os dados (vendas, despesas, clientes…)
+ * também. Devolve false se o tempo do teste já acabou.
  */
-export function enterGuestMode(): void {
-  if (typeof window === "undefined") return;
+export function enterGuestMode(): boolean {
+  if (typeof window === "undefined") return false;
   try {
     ensureSchema();
-    localStorage.setItem(GUEST_KEY, Date.now().toString());
+    const now = Date.now();
+    if (GUEST_TRIAL_LIMIT_MS - usedMsLocal(now) <= 0) return false;
+    if (readNum(GUEST_KEY) === null) writeNum(GUEST_KEY, now);
+    writeNum(BEAT_KEY, now);
     sessionStorage.removeItem(DISMISSED_KEY);
   } catch {
-    /* ignore */
+    return false;
   }
   emit(GUEST_SESSION_EVENT);
+  return true;
 }
 
-/** Termina a sessão de convidado (sair, tempo esgotado ou entrada com conta real). Os dados ficam no aparelho. */
+/** Termina a sessão de convidado (sair, tempo esgotado ou entrada com conta real). O tempo gasto e os dados ficam no aparelho. */
 export function exitGuestMode(): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.removeItem(GUEST_KEY);
+    const now = Date.now();
+    settleStale(now);
+    const start = readNum(GUEST_KEY);
+    if (start !== null) {
+      writeNum(USED_KEY, clampUsed((readNum(USED_KEY) ?? 0) + Math.max(0, now - start)));
+      localStorage.removeItem(GUEST_KEY);
+      localStorage.removeItem(BEAT_KEY);
+    }
     sessionStorage.removeItem(DISMISSED_KEY);
   } catch {
     /* ignore */

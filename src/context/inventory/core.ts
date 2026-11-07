@@ -20,7 +20,8 @@ import { useSubscriptionState } from '@/hooks/useSubscriptionState';
 import { links } from '@/lib/deep-links';
 import { isCountableSale } from '@/lib/sale-filters';
 import { canRestartTrial } from '@/lib/trial';
-import { isGuestMode, isGuestCompany, getGuestRemainingSeconds, GUEST_USER, GUEST_COMPANY, GUEST_COMPANY_ID, GUEST_SESSION_EVENT, GUEST_DATA_EVENT, exitGuestMode, getGuestProducts, getGuestSales, getGuestStockMovements, getGuestOrders, getGuestProductions, getGuestNotifications } from '@/lib/guest-mode';
+import { isGuestMode, isGuestCompany, getGuestRemainingSeconds, GUEST_USER, GUEST_COMPANY, GUEST_COMPANY_ID, GUEST_SESSION_EVENT, GUEST_DATA_EVENT, exitGuestMode, touchGuestSession, applyServerRemaining, getGuestProducts, getGuestSales, getGuestStockMovements, getGuestOrders, getGuestProductions, getGuestNotifications } from '@/lib/guest-mode';
+import { guestTrialPing, guestTrialEnd } from '@/lib/guest-trial-client';
 import { TRIAL_DAYS } from '@/lib/plans';
 import { authedFetch } from '@/lib/api-client';
 import { aliasMap, applyAliases } from '@/lib/rename';
@@ -345,22 +346,46 @@ export function useInventoryCore() {
     };
   }, [applyGuest, dropGuest]);
 
-  // Os 30 minutos acabam mesmo: termina a sessão fictícia e leva ao login (não fica a usar-se por cima). Os dados do
-  // convidado ficam no aparelho: ao entrar outra vez retoma-se de onde ficou.
+  // O relógio do convidado: os 30 minutos gastam-se só lá dentro e CONTINUAM de onde ficaram ao sair e voltar (não
+  // recomeçam). Enquanto o separador está aberto e visível, bate de 15 em 15 segundos no aparelho e no servidor (que
+  // guarda o tempo por aparelho/rede, ver /api/guest-trial) e adota o que resta lá, nunca mais do que o do aparelho.
+  // Os dados do convidado ficam no aparelho; ao acabar o tempo leva ao login.
   useEffect(() => {
     if (!isGuest) return;
     let done = false;
     const finish = () => {
-      if (done || getGuestRemainingSeconds() > 0) return;
+      if (done) return;
       done = true;
       exitGuestMode(); // dispara dropGuest
-      toast({ title: 'Tempo de teste esgotado', description: 'Crie a sua conta para guardar o histórico e continuar a utilizar.' });
+      toast({ title: 'Tempo de teste esgotado', description: 'Crie a sua conta para continuar. Os dados de teste não passam para a conta nova.' });
       router.replace('/login');
     };
-    const timer = setTimeout(finish, getGuestRemainingSeconds() * 1000 + 250);
-    const onVisible = () => { if (document.visibilityState === 'visible') finish(); }; // separador que dormiu em segundo plano
+    const beat = async () => {
+      if (done || document.visibilityState !== 'visible') return; // separador escondido: o tempo parado não conta
+      if (!touchGuestSession()) return finish();
+      const reply = await guestTrialPing();
+      if (done) return;
+      if (reply?.tracked) {
+        applyServerRemaining(reply.allowed ? reply.remainingMs : 0);
+        if (!reply.allowed) return finish();
+      }
+      if (getGuestRemainingSeconds() <= 0) finish();
+    };
+    const tick = () => { if (!done && getGuestRemainingSeconds() <= 0) finish(); };
+    void beat();
+    const beatTimer = setInterval(beat, 15_000);
+    const tickTimer = setInterval(tick, 1_000);
+    const onVisible = () => { if (document.visibilityState === 'visible') void beat(); };
+    const onLeave = () => { if (!done) void guestTrialEnd(); };
     document.addEventListener('visibilitychange', onVisible);
-    return () => { clearTimeout(timer); document.removeEventListener('visibilitychange', onVisible); };
+    window.addEventListener('pagehide', onLeave);
+    return () => {
+      clearInterval(beatTimer);
+      clearInterval(tickTimer);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pagehide', onLeave);
+      onLeave(); // saiu (ou a sessão acabou): fecha a sessão no servidor
+    };
   }, [isGuest, router, toast]);
 
   useEffect(() => {
@@ -375,7 +400,7 @@ export function useInventoryCore() {
     const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
       setAuthReady(true);
       if (fbUser) {
-        // entrou com uma conta real: acaba a sessão de convidado e apaga os dados fictícios
+        // entrou com uma conta real: acaba a sessão de convidado (os dados de teste só se apagam ao ativar a conta, no registo)
         exitGuestMode();
         setFirebaseUser(fbUser);
         // Registo a meio: a empresa está gravada só neste aparelho até o servidor confirmar. Abrir já a sessão lia essa
