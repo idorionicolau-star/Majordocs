@@ -616,7 +616,7 @@ export function useInventoryCore() {
     });
 
     return Array.from(productMap.values());
-  }, [productsData]);
+  }, [productsData, companyId, lastSaleTimestamp]);
 
 
   // Teste gratuito: as empresas que já existiam recebem UMA vez 14 dias novos, a contar de agora (o servidor decide e garante o "uma vez").

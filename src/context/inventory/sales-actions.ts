@@ -13,6 +13,7 @@ import type { ProductActions } from './product-actions';
 import { links } from '@/lib/deep-links';
 import { locationIn, pickActive } from '@/lib/product-ref';
 import { expectedReserved } from '@/lib/reserved-stock';
+import { isGuestMode, addGuestSale } from '@/lib/guest-mode';
 
 export function useSalesActions(core: InventoryCore, deps: { product_actions: ProductActions }) {
   const { isReadOnly, toast, firestore, companyId, productsCollectionRef, companyData, isMultiLocation, locations, user, sendPush, triggerEmailAlert, setLastSaleTimestamp, products, notifyManagers, isManagerUser, productsData, salesData, ordersData } = core;
