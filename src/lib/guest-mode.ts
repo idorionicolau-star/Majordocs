@@ -12,6 +12,9 @@ export const GUEST_DATA_EVENT = "msx:guest-data";
 
 const STORE_PREFIX = "majorstockx-guest-";
 const DISMISSED_KEY = "majorstockx-guest-dismissed";
+/** Versão do formato dos dados guardados: se mudar, os dados antigos do convidado são deitados fora (não ficam com formatos velhos). */
+const SCHEMA_KEY = STORE_PREFIX + "schema";
+const SCHEMA_VERSION = "2";
 
 function emit(name: string): void {
   if (typeof window === "undefined") return;
@@ -55,11 +58,39 @@ export function getGuestRemainingSeconds(): number {
   }
 }
 
+/** Apaga os dados do convidado guardados no aparelho (não mexe na sessão). */
+function clearGuestData(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(STORE_PREFIX) && k !== GUEST_KEY) keys.push(k);
+    }
+    keys.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Dados guardados por uma versão antiga do formato não se reaproveitam. */
+function ensureSchema(): void {
+  try {
+    if (localStorage.getItem(SCHEMA_KEY) === SCHEMA_VERSION) return;
+    clearGuestData();
+    localStorage.setItem(SCHEMA_KEY, SCHEMA_VERSION);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Entra no modo convidado: o relógio de 30 minutos recomeça, mas os dados (vendas, despesas, clientes…) que o convidado
+ * já tinha no aparelho continuam lá — sair e voltar a entrar retoma de onde ficou.
+ */
 export function enterGuestMode(): void {
   if (typeof window === "undefined") return;
   try {
-    // recomeça sempre do zero: dados de uma sessão anterior não passam para esta
-    clearGuestStorage();
+    ensureSchema();
     localStorage.setItem(GUEST_KEY, Date.now().toString());
     sessionStorage.removeItem(DISMISSED_KEY);
   } catch {
@@ -68,23 +99,11 @@ export function enterGuestMode(): void {
   emit(GUEST_SESSION_EVENT);
 }
 
-function clearGuestStorage(): void {
-  try {
-    const keys: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith(STORE_PREFIX)) keys.push(k);
-    }
-    keys.forEach((k) => localStorage.removeItem(k));
-  } catch {
-    /* ignore */
-  }
-}
-
+/** Termina a sessão de convidado (sair, tempo esgotado ou entrada com conta real). Os dados ficam no aparelho. */
 export function exitGuestMode(): void {
   if (typeof window === "undefined") return;
   try {
-    clearGuestStorage();
+    localStorage.removeItem(GUEST_KEY);
     sessionStorage.removeItem(DISMISSED_KEY);
   } catch {
     /* ignore */
@@ -591,12 +610,13 @@ export const INITIAL_GUEST_NOTIFICATIONS: AppNotification[] = [
 ];
 
 // -----------------------------------------------------------------------------
-// Dados do convidado: guardados no aparelho, só durante a sessão (ver exitGuestMode)
+// Dados do convidado: guardados no aparelho; sobrevivem a sair/entrar e ao fim dos 30 minutos
 // -----------------------------------------------------------------------------
 
 function readStore<T>(name: string, seed: () => T): T {
   if (typeof window === "undefined") return seed();
   try {
+    ensureSchema();
     const raw = localStorage.getItem(STORE_PREFIX + name);
     if (raw) return JSON.parse(raw) as T;
     const initial = seed();
