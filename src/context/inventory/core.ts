@@ -345,7 +345,8 @@ export function useInventoryCore() {
     };
   }, [applyGuest, dropGuest]);
 
-  // Os 30 minutos acabam mesmo: termina a sessão fictícia, apaga os dados e leva ao login (não fica a usar-se por cima).
+  // Os 30 minutos acabam mesmo: termina a sessão fictícia e leva ao login (não fica a usar-se por cima). Os dados do
+  // convidado ficam no aparelho: ao entrar outra vez retoma-se de onde ficou.
   useEffect(() => {
     if (!isGuest) return;
     let done = false;

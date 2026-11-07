@@ -53,33 +53,55 @@ describe('sessão de convidado', () => {
     expect(events).toContain(GUEST_SESSION_EVENT);
   });
 
-  it('ao fim dos 30 minutos a sessão e os dados desaparecem', () => {
+  it('ao fim dos 30 minutos a sessão acaba, mas os dados ficam', () => {
     enterGuestMode();
     addGuestSale(sale());
+    const sales = getGuestSales().length;
     localStorage.setItem(GUEST_KEY, String(Date.now() - (GUEST_DURATION_MINUTES * 60 + 5) * 1000));
     expect(getGuestRemainingSeconds()).toBe(0);
     expect(isGuestMode()).toBe(false);
     expect(localStorage.getItem(GUEST_KEY)).toBeNull();
-    expect(localStorage.getItem('majorstockx-guest-sales')).toBeNull();
+    enterGuestMode();
+    expect(getGuestSales()).toHaveLength(sales);
   });
 
-  it('sair apaga só os dados do convidado, não os de outras funcionalidades', () => {
-    localStorage.setItem('majorstockx-demo-sale-abc', '1');
-    localStorage.setItem('majorstockx-cart-abc', '[]');
+  it('sair e voltar a entrar retoma de onde ficou (vendas, stock, despesas, clientes)', () => {
     enterGuestMode();
-    getGuestProducts();
+    const stock = getGuestProducts().find((p) => p.id === 'demo-cim-01')!.stock;
+    addGuestSale(sale());
+    addGuestExpense({ id: 'e-fica', description: 'fica', amount: 1, category: 'Outros', date: new Date().toISOString(), status: 'Pago', registeredBy: 'a' });
+    addGuestCustomer({ id: 'c-fica', name: 'Fica', phone: '', totalPurchases: 0, lastVisit: new Date().toISOString() });
+
     exitGuestMode();
+    expect(isGuestMode()).toBe(false);
     expect(localStorage.getItem(GUEST_KEY)).toBeNull();
-    expect(localStorage.getItem('majorstockx-guest-products')).toBeNull();
-    expect(localStorage.getItem('majorstockx-demo-sale-abc')).toBe('1');
-    expect(localStorage.getItem('majorstockx-cart-abc')).toBe('[]');
+
+    enterGuestMode();
+    expect(isGuestMode()).toBe(true);
+    expect(getGuestRemainingSeconds()).toBeGreaterThan(GUEST_DURATION_MINUTES * 60 - 5); // o relógio recomeça
+    expect(getGuestSales().some((x) => x.id === 'guest-sale-1')).toBe(true);
+    expect(getGuestProducts().find((p) => p.id === 'demo-cim-01')!.stock).toBe(stock - 10);
+    expect(getGuestExpenses().some((e) => e.id === 'e-fica')).toBe(true);
+    expect(getGuestCustomers().some((c) => c.id === 'c-fica')).toBe(true);
   });
 
-  it('cada sessão começa do zero (nada da anterior)', () => {
+  it('não mexe nos dados de outras funcionalidades', () => {
+    localStorage.setItem('majorstockx-demo-sale-abc', '1');
     enterGuestMode();
-    addGuestExpense({ id: 'x', description: 'teste', amount: 1, category: 'Outros', date: new Date().toISOString(), status: 'Pago', registeredBy: 'a' });
+    exitGuestMode();
+    expect(localStorage.getItem('majorstockx-demo-sale-abc')).toBe('1');
+  });
+
+  it('dados guardados por um formato antigo não se reaproveitam', () => {
+    localStorage.setItem('majorstockx-guest-products', JSON.stringify([{ id: 'velho', name: 'Velho', stock: 1, location: 'Setor Metais' }]));
     enterGuestMode();
-    expect(getGuestExpenses().some((e) => e.id === 'x')).toBe(false);
+    const products = getGuestProducts();
+    expect(products).toHaveLength(30);
+    expect(products.some((p) => p.id === 'velho')).toBe(false);
+    // e, uma vez no formato certo, não volta a limpar
+    addGuestSale(sale());
+    enterGuestMode();
+    expect(getGuestSales().some((x) => x.id === 'guest-sale-1')).toBe(true);
   });
 });
 

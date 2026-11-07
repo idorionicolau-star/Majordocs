@@ -210,15 +210,29 @@ export default function LoginPage() {
               )}
             </Button>
 
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Ou experimente sem criar conta</span>
+              </div>
+            </div>
+
             <Button
-              variant="outline"
               type="button"
               disabled={isLoading || isGoogleLoading}
               onClick={handleGuestLogin}
-              className="w-full border-blue-500/40 bg-blue-50/80 text-blue-700 hover:bg-blue-100 hover:text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50 font-semibold py-2.5 transition-all shadow-sm flex items-center justify-center gap-2"
+              className="group relative h-auto w-full overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 px-4 py-3 text-white shadow-lg shadow-blue-600/30 ring-1 ring-white/20 transition-all hover:scale-[1.01] hover:brightness-110 hover:shadow-xl hover:shadow-blue-600/40 active:scale-[0.99]"
             >
-              <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              Experimentar como Convidado (30 min)
+              <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover:translate-x-full" aria-hidden="true" />
+              <span className="relative flex items-center justify-center gap-3">
+                <Sparkles className="h-6 w-6 shrink-0" />
+                <span className="flex flex-col items-start text-left leading-tight">
+                  <span className="text-base font-bold">Experimentar como Convidado</span>
+                  <span className="text-xs font-normal text-white/85">Sem registo · 30 min com dados de exemplo</span>
+                </span>
+              </span>
             </Button>
           </div>
         </CardContent>
