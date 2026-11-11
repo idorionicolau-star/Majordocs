@@ -1,7 +1,8 @@
 'use client';
 
 import type { ModulePermission, PermissionLevel } from '@/lib/types';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider, GoogleAuthProvider, signInWithPopup, sendEmailVerification } from 'firebase/auth';
+import { googleProvider } from '@/lib/google-provider';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider, signInWithPopup, sendEmailVerification } from 'firebase/auth';
 import { shouldHintPassword, signInMethods } from '@/lib/sign-in-methods';
 import { collection, doc, writeBatch, getDoc } from 'firebase/firestore';
 import { allPermissions } from '@/lib/data';
@@ -47,7 +48,7 @@ export function useAuthActions(core: InventoryCore) {
     // enquanto se verifica se a conta tem empresa, a abertura da sessão espera (sem "Sessão terminada" pelo meio)
     beginRegistration();
     try {
-      const provider = new GoogleAuthProvider();
+      const provider = googleProvider();
       const result = await signInWithPopup(auth, provider);
 
       // Verify if the user exists in our users collection
@@ -275,7 +276,7 @@ export function useAuthActions(core: InventoryCore) {
 
     beginRegistration();
     try {
-      const provider = new GoogleAuthProvider();
+      const provider = googleProvider();
       const userCredential = await signInWithPopup(auth, provider);
       const newUserId = userCredential.user.uid;
       const adminEmail = userCredential.user.email || '';
