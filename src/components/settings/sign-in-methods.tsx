@@ -4,9 +4,10 @@
 // Com as duas ligadas, entrar por uma nunca apaga a outra (ver lib/sign-in-methods.ts).
 import { useCallback, useEffect, useState } from "react";
 import {
-    EmailAuthProvider, GoogleAuthProvider, getAuth, linkWithCredential, linkWithPopup, onAuthStateChanged, reauthenticateWithPopup,
+    EmailAuthProvider, getAuth, linkWithCredential, linkWithPopup, onAuthStateChanged, reauthenticateWithPopup,
     reload, sendEmailVerification, updatePassword, type User,
 } from "firebase/auth";
+import { googleProvider } from "@/lib/google-provider";
 import { CheckCircle2, KeyRound, Loader2, MailWarning } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,7 @@ export function SignInMethodsCard() {
         if (!user) return;
         setBusy("google");
         try {
-            await linkWithPopup(user, new GoogleAuthProvider());
+            await linkWithPopup(user, googleProvider());
             await refresh();
             toast({ title: "Google ligado", description: "Agora pode entrar com o Google ou com email e senha." });
         } catch (e) {
@@ -73,7 +74,7 @@ export function SignInMethodsCard() {
             } catch (err: any) {
                 // entrou há muito tempo: confirma com o Google e tenta outra vez
                 if (err?.code !== "auth/requires-recent-login" || !methods.google) throw err;
-                await reauthenticateWithPopup(user, new GoogleAuthProvider());
+                await reauthenticateWithPopup(user, googleProvider(user.email));
                 await addPassword();
             }
             await refresh();
