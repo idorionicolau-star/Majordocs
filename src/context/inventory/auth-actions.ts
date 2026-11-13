@@ -51,11 +51,12 @@ export function useAuthActions(core: InventoryCore) {
       const provider = googleProvider();
       const result = await signInWithPopup(auth, provider);
 
-      // Verify if the user exists in our users collection
+      // Verify if the user exists in our users collection with a valid companyId
       if (firestore) {
         const userDoc = await getDoc(doc(firestore, `users/${result.user.uid}`));
-        if (!userDoc.exists()) {
-          // Conta Google sem empresa: em vez de a pôr fora, leva-a a criar a empresa (só falta o nome)
+        const data = userDoc.data();
+        if (!userDoc.exists() || !data?.companyId) {
+          // Conta Google sem empresa: faz logout imediato para não deixar sessão ativa no Firebase Auth
           await auth.signOut();
           return { noCompany: result.user.email || '' };
         }
@@ -284,7 +285,8 @@ export function useAuthActions(core: InventoryCore) {
 
       // Check if user already has a company
       const existingUserMap = await getDoc(doc(firestore, `users/${newUserId}`));
-      if (existingUserMap.exists()) {
+      const existingData = existingUserMap.data();
+      if (existingUserMap.exists() && existingData?.companyId) {
         await auth.signOut();
         toast({
           variant: 'destructive',
