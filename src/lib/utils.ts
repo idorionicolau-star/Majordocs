@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { Sale, Company } from "./types";
+import { getPrintFormat, type PrintFormat } from "./print-format";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -87,6 +88,20 @@ export function cardMoneySize(text: string) {
   return text.length <= 11 ? "text-xl md:text-2xl" : text.length <= 14 ? "text-lg md:text-xl" : "text-base md:text-lg";
 }
 
+/**
+ * Abre o talão (impressora térmica) numa janela, com o botão Imprimir. A janela abre já, no toque (os navegadores
+ * bloqueiam janelas abertas mais tarde); o talão é escrito quando o módulo chega.
+ */
+export function printSaleReceipt(sales: Sale[], companyData: Company | null, width: 58 | 80) {
+  const w = window.open('', '_blank');
+  if (!w) return;
+  import('./receipt').then(({ receiptHtml, receiptModel }) => {
+    const actions = `<div class="actions"><button class="print" onclick="window.print()">🖨️ Imprimir talão</button><button onclick="window.close()">Fechar</button></div>`;
+    w.document.write(receiptHtml(receiptModel(sales, companyData), width, actions));
+    w.document.close();
+  });
+}
+
 /** "1 venda", "3 vendas" */
 export function plural(n: number, one: string, many: string) {
   return `${n} ${n === 1 ? one : many}`;
@@ -99,12 +114,16 @@ export function daysAgo(n: number) {
   return `há ${n} dias`;
 }
 
-export function downloadSaleDocument(saleOrSales: Sale | Sale[], companyData: Company | null) {
+export function downloadSaleDocument(saleOrSales: Sale | Sale[], companyData: Company | null, opts?: { format?: PrintFormat }) {
   const isBrowser = typeof window !== 'undefined';
   if (!isBrowser) return;
 
   const salesArray = Array.isArray(saleOrSales) ? saleOrSales : [saleOrSales];
   if (salesArray.length === 0) return;
+
+  // Aparelho com impressora de talão (Definições → Documentos): imprime o talão de 58/80 mm em vez da folha A4.
+  const format = opts?.format ?? getPrintFormat();
+  if (format !== 'a4') { printSaleReceipt(salesArray, companyData, format === '58' ? 58 : 80); return; }
 
   const sale = salesArray[0];
 

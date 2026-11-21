@@ -23,6 +23,7 @@ import { StartFresh } from "@/components/settings/start-fresh";
 import { FullReset } from "@/components/settings/full-reset";
 import { DocumentsStyle } from "@/components/settings/documents-style";
 import { AfterSaleSetting } from "@/components/settings/after-sale-setting";
+import { PrintFormatSetting } from "@/components/settings/print-format-setting";
 import { RecycleBin } from "@/components/settings/recycle-bin";
 import { UnitsCategoriesManager } from "@/components/settings/units-categories-manager";
 import { CategoryMergeTool } from "@/components/settings/category-merge-tool";
@@ -952,6 +953,7 @@ export default function SettingsPage() {
 
               <TabsContent value="documents">
                 <AfterSaleSetting />
+                <PrintFormatSetting />
                 <DocumentsStyle />
               </TabsContent>
 

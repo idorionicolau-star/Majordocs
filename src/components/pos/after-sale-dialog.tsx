@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { links } from "@/lib/deep-links";
 import { receiptText, waShareLink } from "@/lib/sale-share";
 import { setAfterSale } from "@/lib/after-sale";
+import { getPrintFormat } from "@/lib/print-format";
 import { downloadSaleDocument, formatCurrency } from "@/lib/utils";
 import type { CartItem, Company, Sale } from "@/lib/types";
 
@@ -84,7 +85,7 @@ export function AfterSaleDialog({ done, onClose }: { done: DoneSale | null; onCl
                         </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                        <Button variant="outline" className="h-12" onClick={print} data-testid="after-sale-print"><Printer className="mr-2 h-5 w-5" />Imprimir</Button>
+                        <Button variant="outline" className="h-12" onClick={print} data-testid="after-sale-print"><Printer className="mr-2 h-5 w-5" />{getPrintFormat() === "a4" ? "Imprimir" : "Imprimir talão"}</Button>
                         <Button variant="outline" className="h-12" onClick={pdf} data-testid="after-sale-pdf"><FileDown className="mr-2 h-5 w-5" />PDF</Button>
                     </div>
                     {guide && (
